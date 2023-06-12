@@ -1,0 +1,45 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           grisette-synth-lib
+version:        0.1.0.0
+synopsis:       Library for building synthesizers with Grisette
+description:    Library for building synthesizers with Grisette
+category:       Formal Methods, Theorem Provers, Symbolic Computation, SMT
+homepage:       https://github.com/lsrcz/grisette-synth-lib#readme
+bug-reports:    https://github.com/lsrcz/grisette-synth-lib/issues
+author:         Sirui Lu, Rastislav Bodík
+maintainer:     Sirui Lu (siruilu@cs.washington.edu)
+copyright:      2023 Sirui Lu
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    CHANGELOG.md
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/lsrcz/grisette-synth-lib
+
+flag fast
+  description: Compile with O2 optimization
+  manual: False
+  default: True
+
+library
+  other-modules:
+      Paths_grisette_synth_lib
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.14 && <5
+    , grisette >=0.3.0 && <0.4
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0

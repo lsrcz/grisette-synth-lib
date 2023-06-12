@@ -1,0 +1,36 @@
+name: grisette-synth-lib
+version: 0.1.0.0
+synopsis: Library for building synthesizers with Grisette
+description: Library for building synthesizers with Grisette
+category: Formal Methods, Theorem Provers, Symbolic Computation, SMT
+author: "Sirui Lu, Rastislav Bodík"
+maintainer: Sirui Lu (siruilu@cs.washington.edu)
+license: BSD3
+license-file: LICENSE
+github: lsrcz/grisette-synth-lib
+copyright: "2023 Sirui Lu"
+extra-source-files:
+- CHANGELOG.md
+- README.md
+
+dependencies:
+- base >= 4.14 && < 5
+- grisette >= 0.3.0 && < 0.4
+
+flags: {
+  fast: {
+    description: "Compile with O2 optimization",
+    manual: False,
+    default: True,
+  }
+}
+
+when:
+  - condition: flag(fast)
+    then:
+      ghc-options: -O2
+    else:
+      ghc-options: -O0
+
+library:
+  source-dirs: src
