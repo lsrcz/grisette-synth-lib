@@ -31,6 +31,10 @@ flag fast
   default: True
 
 library
+  exposed-modules:
+      Component.Circuit
+      Component.Index
+      Component.SemMap
   other-modules:
       Paths_grisette_synth_lib
   hs-source-dirs:
@@ -38,6 +42,7 @@ library
   build-depends:
       base >=4.14 && <5
     , grisette >=0.3.0 && <0.4
+    , mtl
   default-language: Haskell2010
   if flag(fast)
     ghc-options: -O2
