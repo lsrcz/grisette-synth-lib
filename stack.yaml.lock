@@ -3,7 +3,21 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    hackage: grisette-0.3.0.0@sha256:23028205381115a1599f2efce2be1a19d6732fea4748fed3a1403004cd7b71b5,7928
+    pantry-tree:
+      sha256: 5366636afdf1d6af5422d78f0483b35ce5dbbefdf9cd75015321eb79b468fa34
+      size: 9144
+  original:
+    hackage: grisette-0.3.0.0
+- completed:
+    hackage: quickcheck-with-counterexamples-1.2@sha256:d322d79008602df26f5eb4e1379e5b58bf1a92604df8601e71e200cfc3e847a3,1688
+    pantry-tree:
+      sha256: 0046517e3cc2adebfce19d4aad05a06dcf55ec9e572fa1c661ba9abe81386484
+      size: 724
+  original:
+    hackage: quickcheck-with-counterexamples-1.2
 snapshots:
 - completed:
     sha256: e019cd29e3f7f9dbad500225829a3f7a50f73c674614f2f452e21bb8bf5d99ea

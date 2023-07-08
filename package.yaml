@@ -17,6 +17,10 @@ dependencies:
 - base >= 4.14 && < 5
 - grisette >= 0.3.0 && < 0.4
 - mtl
+- bytestring
+- unordered-containers
+- QuickCheck
+- quickcheck-with-counterexamples
 
 flags: {
   fast: {
@@ -35,3 +39,9 @@ when:
 
 library:
   source-dirs: src
+
+executables:
+  arith:
+    source-dirs: arith
+    main: Main.hs
+    dependencies: grisette-synth-lib

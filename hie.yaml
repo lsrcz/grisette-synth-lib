@@ -2,3 +2,12 @@ cradle:
   stack:
     - path: "./src"
       component: "grisette-synth-lib:lib"
+
+    - path: "./arith/Main.hs"
+      component: "grisette-synth-lib:exe:arith"
+
+    - path: "./arith/Sem.hs"
+      component: "grisette-synth-lib:exe:arith"
+
+    - path: "./arith/Paths_grisette_synth_lib.hs"
+      component: "grisette-synth-lib:exe:arith"
