@@ -52,12 +52,6 @@ instance Index SymInteger where
   atIndex e [] i = mrgThrowError e
   atIndex e (x : xs) i = mrgIf (i ==~ 0) (mrgReturn x) $ atIndex e xs (i - 1)
 
-instance (KnownNat n, 1 <= n) => Index (SymIntN n) where
-  mkInputIndex = fromIntegral
-  mkInternalIndex numInputs v = fromIntegral $ numInputs + v
-  atIndex e [] i = mrgThrowError e
-  atIndex e (x : xs) i = mrgIf (i ==~ 0) (mrgReturn x) $ atIndex e xs (i - 1)
-
 instance (KnownNat n, 1 <= n) => Index (SymWordN n) where
   mkInputIndex = fromIntegral
   mkInternalIndex numInputs v = fromIntegral $ numInputs + v
@@ -75,6 +69,12 @@ instance Index (UnionM Int) where
       else mrgThrowError e
 
 instance CIndex Integer where
+  mkCInputIndex = fromIntegral
+  mkCInternalIndex numInputs v = fromIntegral $ numInputs + v
+  atCIndex e [] i = throwError e
+  atCIndex e (x : xs) i = if i == 0 then return x else atCIndex e xs (i - 1)
+
+instance (KnownNat n, 1 <= n) => CIndex (WordN n) where
   mkCInputIndex = fromIntegral
   mkCInternalIndex numInputs v = fromIntegral $ numInputs + v
   atCIndex e [] i = throwError e
