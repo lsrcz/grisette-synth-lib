@@ -21,6 +21,7 @@ dependencies:
 - unordered-containers
 - QuickCheck
 - quickcheck-with-counterexamples
+- sbv
 
 flags: {
   fast: {

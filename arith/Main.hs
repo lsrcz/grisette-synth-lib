@@ -2,9 +2,11 @@
 
 module Main where
 
+import Component.CEGIS
 import Component.CInputGen
 import Component.Circuit
 import Component.ConcreteCircuit
+import Component.InputGen
 import Component.Monad
 import Component.ProgramSpec
 import Component.QuickCheck
@@ -15,7 +17,11 @@ import Grisette
 import Sem
 import Test.QuickCheck
 
-spec :: CircuitSpec B.ByteString (SimpleOpSemMap B.ByteString VerificationConditions SymInteger)
+spec ::
+  CircuitSpec
+    B.ByteString
+    ( SimpleUniversalSemMap B.ByteString VerificationConditions SymInteger VerificationConditions Integer
+    )
 spec =
   defaultCircuitSpec
     [ (ComponentSpec "+" 3, 1),
@@ -23,7 +29,7 @@ spec =
     ]
     2
     1
-    arithSem
+    arithUSem
 
 v :: M VerificationConditions (Circuit B.ByteString SymInteger)
 v = genCircuit AssertionViolation spec
@@ -31,7 +37,7 @@ v = genCircuit AssertionViolation spec
 r :: M VerificationConditions [SymInteger]
 r = do
   v1 <- v
-  interpretCircuit AssertionViolation [1, 2] v1 arithSem (const $ const ())
+  interpretCircuit AssertionViolation [1, 2] v1 arithSem (SimpleSGen $ const (simpleFresh ()))
 
 concreteCircuit :: CCircuit B.ByteString Integer
 concreteCircuit =
@@ -47,14 +53,61 @@ qcspec = PlainCSpec qcspec'
     qcspec' [a, b] (Right [c]) = c == a + b + a * b
     qcspec' _ _ = False
 
+qcsspec :: PlainSSpec VerificationConditions SymInteger
+qcsspec = PlainSSpec qcsspec'
+  where
+    qcsspec' :: [SymInteger] -> Either VerificationConditions [SymInteger] -> SymBool
+    qcsspec' [a, b] (Right [c]) = c ==~ a + b + a * b
+    qcsspec' _ _ = con False
+
 gen :: SimpleCGen Integer
 gen = SimpleCGen $ \i -> vectorOf 2 (resize i arbitrary)
+
+qcProblem ::
+  QuickCheckProblem
+    VerificationConditions
+    Integer
+    B.ByteString
+    ( SimpleUniversalSemMap
+        B.ByteString
+        VerificationConditions
+        SymInteger
+        VerificationConditions
+        Integer
+    )
+    Integer
+qcProblem = QuickCheckProblem gen [200] qcspec arithUSem concreteCircuit
+
+igen :: SimpleSGen B.ByteString SymInteger
+igen = SimpleSGen $ const $ simpleFresh ()
+
+cegisQCProblem :: CegisQCProblem
+  VerificationConditions
+  SymInteger
+  VerificationConditions
+  Integer
+  B.ByteString
+  B.ByteString
+  SymInteger
+  Integer
+cegisQCProblem =
+  CegisQCProblem
+    gen
+    [100]
+    qcspec
+    arithUSem
+    qcsspec
+    spec
+    AssertionViolation
+    AssertionViolation
+    arithUSem
+    igen
 
 main :: IO ()
 main = do
   let r1 = runFreshT r "x"
   print r1
-  r <- quickCheckCCircuit (QuickCheckProblem gen [200] qcspec arithUSem concreteCircuit)
+  r <- quickCheckCCircuit qcProblem
   print r
 
   let v =
@@ -62,4 +115,7 @@ main = do
           [4, 5]
           concreteCircuit
           arithUSem
+  print v
+
+  v <- cegisQC (precise z3) cegisQCProblem
   print v

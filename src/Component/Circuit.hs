@@ -17,6 +17,7 @@ import Data.List
 import GHC.Generics
 import Grisette
 import Grisette.Experimental
+import Component.InputGen
 
 data Node op idx = Node
   { nodeOp :: op,
@@ -96,6 +97,7 @@ circuitInputSymmetryReduction e sem c = go (cirNodes c)
             [v1, v2] -> symAssertWith e (v1 <=~ v2)
         CommutativeAssociativeListOperands -> do
           mrgTraverse_ (\(v1, v2) -> symAssertWith e (v1 <=~ v2)) $ zip vis (tail vis)
+        _ -> return ()
       go vs
 
 {-
@@ -193,13 +195,13 @@ genECircuit ::
     Mergeable e,
     UnionLike m,
     Index idx,
-    GenSymSimpleConstrained spec a,
-    MonadFresh m
+    MonadFresh m,
+    IntermediateSGen intermediateSGen op a
   ) =>
   e ->
   [a] ->
   Circuit op idx ->
-  (op -> Int -> spec) ->
+  intermediateSGen ->
   m (ECircuit op idx a)
 genECircuit e inputs (Circuit inum nodes o) spec =
   (\x -> ECircuit inum x o) . (goInputs 0 inputs ++) <$> go nodes
@@ -210,7 +212,7 @@ genECircuit e inputs (Circuit inum nodes o) spec =
     go [] = return []
     go (Node op idx inputIdx : xs) = do
       r <- go xs
-      g <- traverse (simpleFreshConstrained e . spec op) [-1 .. length inputIdx - 1]
+      g <- traverse (intermediateGen spec op) [-1 .. length inputIdx - 1]
       case g of
         ret : inputs ->
           return $ ENode op (idx, ret) (zip inputIdx inputs) : r
@@ -284,21 +286,22 @@ semanticsCorrect err sem (ECircuit _ enodes _) = go enodes
 interpretCircuit ::
   ( MonadError e m,
     MonadFresh m,
-    GenSymSimpleConstrained spec a,
     Index idx,
     UnionLike m,
     Mergeable e,
     SEq a,
-    SemMap fm op g e a
+    SemMap fm op g e a,
+    IntermediateSGen intermediateSGen op a,
+    Mergeable a
   ) =>
   e ->
   [a] ->
   Circuit op idx ->
   fm ->
-  (op -> Int -> spec) ->
+  intermediateSGen ->
   m [a]
-interpretCircuit err inputs c@(Circuit inum nodes oidx) sem spec = do
-  ec <- genECircuit err inputs c spec
+interpretCircuit err inputs c@(Circuit inum nodes oidx) sem igen = do
+  ec <- genECircuit err inputs c igen
   connected err ec
   semanticsCorrect err sem ec
   mrgTraverse (go (getOutputs ec)) (ecirOutputIdx ec)

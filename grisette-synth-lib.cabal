@@ -37,6 +37,7 @@ library
       Component.Circuit
       Component.ConcreteCircuit
       Component.Index
+      Component.InputGen
       Component.Monad
       Component.ProgramSpec
       Component.QuickCheck
@@ -52,6 +53,7 @@ library
     , grisette >=0.3.0 && <0.4
     , mtl
     , quickcheck-with-counterexamples
+    , sbv
     , unordered-containers
   default-language: Haskell2010
   if flag(fast)
@@ -74,6 +76,7 @@ executable arith
     , grisette-synth-lib
     , mtl
     , quickcheck-with-counterexamples
+    , sbv
     , unordered-containers
   default-language: Haskell2010
   if flag(fast)
