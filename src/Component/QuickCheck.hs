@@ -21,15 +21,19 @@ data QuickCheckProblem e c cop csm cidx where
     } ->
     QuickCheckProblem e c cop csm cidx
 
-data QuickCheckResult c
+data QuickCheckResult e c
   = NoCounterExample
-  | CounterExample {ceRemainingSize :: [Int], ceCounterExample :: [c]}
+  | CounterExample
+      { ceRemainingSize :: [Int],
+        ceCounterExample :: [c],
+        ceExecutionResult :: Either e [c]
+      }
   deriving (Show)
 
 quickCheckCCircuit ::
   forall e c cop csm cidx.
   QuickCheckProblem e c cop csm cidx ->
-  IO (QuickCheckResult c)
+  IO (QuickCheckResult e c)
 quickCheckCCircuit (QuickCheckProblem inputGen size spec csm c) =
   go size
   where
@@ -43,5 +47,10 @@ quickCheckCCircuit (QuickCheckProblem inputGen size spec csm c) =
                in cspec spec input p
           )
       case r of
-        Just (v :&: ()) -> return $ CounterExample (s : ss) v
+        Just (v :&: ()) ->
+          return $
+            CounterExample
+              (s : ss)
+              v
+              (interpretCCircuit v c csm)
         _ -> go ss
