@@ -1,11 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Component.CInputGen where
 
 import Test.QuickCheck
 
-class CInputGen gen c where
+class CInputGen gen c | gen -> c where
   cInputGen :: gen -> Int -> Gen [c]
 
 newtype SizedCGen c = SizedCGen
