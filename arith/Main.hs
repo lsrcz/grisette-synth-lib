@@ -6,7 +6,7 @@ import Component.CEGIS
 import Component.CInputGen
 import Component.Circuit
 import Component.ConcreteCircuit
-import Component.InputGen
+import Component.IntermediateGen
 import Component.Monad
 import Component.ProgramSpec
 import Component.QuickCheck
@@ -37,7 +37,7 @@ v = genCircuit AssertionViolation spec
 r :: M VerificationConditions [SymInteger]
 r = do
   v1 <- v
-  interpretCircuit AssertionViolation [1, 2] v1 arithSem (HomogeneousSGen $ simpleFresh ())
+  interpretCircuit AssertionViolation [1, 2] v1 arithSem 1 (HomogeneousSGen $ const $ simpleFresh ())
 
 concreteCircuit :: CCircuit B.ByteString Integer
 concreteCircuit =
@@ -79,7 +79,7 @@ qcProblem ::
 qcProblem = QuickCheckProblem gen [200] qcspec arithUSem concreteCircuit
 
 igen :: HomogeneousSGen B.ByteString SymInteger
-igen = HomogeneousSGen $ simpleFresh ()
+igen = HomogeneousSGen $ const $ simpleFresh ()
 
 cegisQCProblem ::
   CegisQCProblem

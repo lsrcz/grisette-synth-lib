@@ -9,7 +9,7 @@ import Component.CInputGen
 import Component.Circuit
 import Component.ConcreteCircuit
 import Component.Index
-import Component.InputGen
+import Component.IntermediateGen
 import Component.Monad
 import Component.ProgramSpec
 import Component.QuickCheck
@@ -32,7 +32,7 @@ sbvCheckSatResult SBVC.Unsat = Unsat
 sbvCheckSatResult SBVC.Unk = Unk
 
 cegis' ::
-  forall n sprogram cinput inputGenState guesserState cprogram e.
+  forall n sprogram cinput guesserState inputGenCurrSize inputGenState cprogram e.
   ( ToCon sprogram cprogram,
     EvaluateSym sprogram,
     Mergeable e,
@@ -42,8 +42,8 @@ cegis' ::
   ) =>
   GrisetteSMTConfig n ->
   (ExceptT e UnionM sprogram -> SymBool) ->
-  (guesserState -> cinput -> ExceptT e UnionM sprogram -> (SymBool, guesserState)) ->
-  (inputGenState -> cprogram -> IO (Either SolvingFailure (cinput, inputGenState))) ->
+  (guesserState -> inputGenCurrSize -> cinput -> ExceptT e UnionM sprogram -> (SymBool, guesserState)) ->
+  (inputGenState -> cprogram -> IO (Either SolvingFailure (cinput, inputGenCurrSize, inputGenState))) ->
   ExceptT e UnionM sprogram ->
   guesserState ->
   inputGenState ->
@@ -66,11 +66,12 @@ cegis' config initialCondition sspec verifier prog initialGuesserState initialGe
   where
     guess ::
       guesserState ->
+      inputGenCurrSize ->
       cinput ->
       SymBiMap ->
       SBVC.Query (SymBiMap, guesserState, Either SolvingFailure cprogram)
-    guess st input origSymbolMap = do
-      let (SymBool t, newGuesserState) = sspec st input prog
+    guess st inputGenCurrentSize input origSymbolMap = do
+      let (SymBool t, newGuesserState) = sspec st inputGenCurrentSize input prog
       (newSymbolMap, lowered) <- lowerSinglePrimCached config t origSymbolMap
       SBV.constrain lowered
       r <- SBVC.checkSat
@@ -97,9 +98,9 @@ cegis' config initialCondition sspec verifier prog initialGuesserState initialGe
       case r of
         Left Unsat -> return $ Right (cexes, cprog)
         Left v -> return $ Left v
-        Right (cex, newInputGenState) -> do
+        Right (cex, inputGenCurrentSize, newInputGenState) -> do
           (newSymbolMap, newGuesserState, res) <-
-            guess guesserState cex origSymbolMap
+            guess guesserState inputGenCurrentSize cex origSymbolMap
           loop newGuesserState newInputGenState res (cex : cexes) newSymbolMap
     loop _ _ (Left v) _ _ = return $ Left v
 
@@ -157,24 +158,24 @@ cegisQC config (CegisQCProblem cgen cgenSize cspecFunc csem sspecFunc gen err ie
         Left _ -> return $ con False
         Right _ -> return $ con True
 
-    sspecCurrent :: Int -> [c] -> ExceptT e UnionM (Circuit op idx) -> ExceptT e UnionM [s]
-    sspecCurrent idx input sprogram = flip runFreshT (FreshIdentWithInfo "x" idx) $ do
+    sspecCurrent :: Int -> Int -> [c] -> ExceptT e UnionM (Circuit op idx) -> ExceptT e UnionM [s]
+    sspecCurrent idx inputGenCurrentSize input sprogram = flip runFreshT (FreshIdentWithInfo "x" idx) $ do
       s <- lift sprogram
-      interpretCircuit ierr (toSym input :: [s]) s sem igen
+      interpretCircuit ierr (toSym input :: [s]) s sem inputGenCurrentSize igen
 
-    sspec' :: Int -> [c] -> ExceptT e UnionM (Circuit op idx) -> (SymBool, Int)
-    sspec' idx input sprogram =
+    sspec' :: Int -> Int -> [c] -> ExceptT e UnionM (Circuit op idx) -> (SymBool, Int)
+    sspec' idx inputGenCurrentSize input sprogram =
       ( simpleMerge $ do
-          v <- runExceptT $ sspecCurrent idx input sprogram
+          v <- runExceptT $ sspecCurrent idx inputGenCurrentSize input sprogram
           mrgReturn $ sspec sspecFunc (toSym input) v,
         idx + 1
       )
 
-    cspec' :: [Int] -> CCircuit cop cidx -> IO (Either SolvingFailure ([c], [Int]))
+    cspec' :: [Int] -> CCircuit cop cidx -> IO (Either SolvingFailure ([c], Int, [Int]))
     cspec' [] _ = return $ Left Unsat
     cspec' sizes cprog = do
       r <- quickCheckCCircuit (QuickCheckProblem cgen sizes cspecFunc csem cprog)
       case r of
         NoCounterExample -> return $ Left Unsat
-        CounterExample {ceRemainingSize = ss', ceCounterExample = v} ->
-          return $ Right (v, ss')
+        CounterExample {ceCurrentSize = s', ceRemainingSize = ss', ceCounterExample = v} ->
+          return $ Right (v, s', ss')

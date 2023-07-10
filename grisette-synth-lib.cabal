@@ -37,7 +37,7 @@ library
       Component.Circuit
       Component.ConcreteCircuit
       Component.Index
-      Component.InputGen
+      Component.IntermediateGen
       Component.Monad
       Component.ProgramSpec
       Component.QuickCheck

@@ -11,7 +11,7 @@
 module Component.Circuit where
 
 import Component.Index
-import Component.InputGen
+import Component.IntermediateGen
 import Component.SemMap
 import Control.Monad.Except
 import Data.List
@@ -201,9 +201,10 @@ genECircuit ::
   e ->
   [a] ->
   Circuit op idx ->
+  Int ->
   intermediateSGen ->
   m (ECircuit op idx a)
-genECircuit e inputs (Circuit inum nodes o) spec =
+genECircuit e inputs (Circuit inum nodes o) intermediateSize gen =
   (\x -> ECircuit inum x o) . (goInputs 0 inputs ++) <$> go nodes
   where
     goInputs _ [] = []
@@ -212,7 +213,7 @@ genECircuit e inputs (Circuit inum nodes o) spec =
     go [] = return []
     go (Node op idx inputIdx : xs) = do
       r <- go xs
-      g <- traverse (intermediateGen spec op) [-1 .. length inputIdx - 1]
+      g <- traverse (intermediateGen gen intermediateSize op) [-1 .. length inputIdx - 1]
       case g of
         ret : inputs ->
           return $ ENode op (idx, ret) (zip inputIdx inputs) : r
@@ -298,10 +299,11 @@ interpretCircuit ::
   [a] ->
   Circuit op idx ->
   fm ->
+  Int ->
   intermediateSGen ->
   m [a]
-interpretCircuit err inputs c@(Circuit inum nodes oidx) sem igen = do
-  ec <- genECircuit err inputs c igen
+interpretCircuit err inputs c@(Circuit inum nodes oidx) sem intermediateSize igen = do
+  ec <- genECircuit err inputs c intermediateSize igen
   connected err ec
   semanticsCorrect err sem ec
   mrgTraverse (go (getOutputs ec)) (ecirOutputIdx ec)
