@@ -11,13 +11,13 @@
 module Component.Circuit where
 
 import Component.Index
+import Component.InputGen
 import Component.SemMap
 import Control.Monad.Except
 import Data.List
 import GHC.Generics
 import Grisette
 import Grisette.Experimental
-import Component.InputGen
 
 data Node op idx = Node
   { nodeOp :: op,

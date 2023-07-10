@@ -37,7 +37,7 @@ v = genCircuit AssertionViolation spec
 r :: M VerificationConditions [SymInteger]
 r = do
   v1 <- v
-  interpretCircuit AssertionViolation [1, 2] v1 arithSem (SimpleSGen $ const (simpleFresh ()))
+  interpretCircuit AssertionViolation [1, 2] v1 arithSem (HomogeneousSGen $ simpleFresh ())
 
 concreteCircuit :: CCircuit B.ByteString Integer
 concreteCircuit =
@@ -78,18 +78,19 @@ qcProblem ::
     Integer
 qcProblem = QuickCheckProblem gen [200] qcspec arithUSem concreteCircuit
 
-igen :: SimpleSGen B.ByteString SymInteger
-igen = SimpleSGen $ const $ simpleFresh ()
+igen :: HomogeneousSGen B.ByteString SymInteger
+igen = HomogeneousSGen $ simpleFresh ()
 
-cegisQCProblem :: CegisQCProblem
-  VerificationConditions
-  SymInteger
-  VerificationConditions
-  Integer
-  B.ByteString
-  B.ByteString
-  SymInteger
-  Integer
+cegisQCProblem ::
+  CegisQCProblem
+    VerificationConditions
+    SymInteger
+    VerificationConditions
+    Integer
+    B.ByteString
+    B.ByteString
+    SymInteger
+    Integer
 cegisQCProblem =
   CegisQCProblem
     gen

@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Component.CEGIS where
@@ -12,6 +12,7 @@ import Component.Index
 import Component.InputGen
 import Component.Monad
 import Component.ProgramSpec
+import Component.QuickCheck
 import Component.SemMap
 import Control.Monad.Except
 import Control.Monad.IO.Class
@@ -23,7 +24,6 @@ import Grisette.Backend.SBV.Data.SMT.Lowering
 import Grisette.Backend.SBV.Data.SMT.SymBiMap
 import Grisette.Experimental
 import Grisette.Internal.Backend.SBV
-import Component.QuickCheck
 
 sbvCheckSatResult :: SBVC.CheckSatResult -> SolvingFailure
 sbvCheckSatResult SBVC.Sat = error "Should not happen"
@@ -169,7 +169,7 @@ cegisQC config (CegisQCProblem cgen cgenSize cspecFunc csem sspecFunc gen err ie
           mrgReturn $ sspec sspecFunc (toSym input) v,
         idx + 1
       )
-    
+
     cspec' :: [Int] -> CCircuit cop cidx -> IO (Either SolvingFailure ([c], [Int]))
     cspec' [] _ = return $ Left Unsat
     cspec' sizes cprog = do
