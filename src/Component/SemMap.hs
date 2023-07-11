@@ -24,6 +24,7 @@ class X f
 data OpSem g e a = OpSem
   { opGroup :: g,
     opOperands :: NOperands,
+    opOutputNum :: Int,
     opFunc ::
       forall m.
       ( MonadError e m,
@@ -32,7 +33,7 @@ data OpSem g e a = OpSem
         Mergeable a
       ) =>
       [a] ->
-      m a
+      m [a]
   }
 
 applyOp ::
@@ -43,23 +44,25 @@ applyOp ::
   ) =>
   OpSem g e a ->
   [a] ->
-  m a
-applyOp (OpSem _ _ f) = f
+  m [a]
+applyOp (OpSem _ _ _ f) = f
 
 data OpCSem e a where
   OpCSem ::
     NOperands ->
+    Int ->
     ( [a] ->
-      Either e a
+      Either e [a]
     ) ->
     OpCSem e a
 
-applyCOp :: OpCSem e a -> [a] -> Either e a
-applyCOp (OpCSem _ f) = f
+applyCOp :: OpCSem e a -> [a] -> Either e [a]
+applyCOp (OpCSem _ _ f) = f
 
 data UniversalOpSem g e a = UniversalOpSem
   { uopGroup :: g,
     uopOperands :: NOperands,
+    uopOutputNum :: Int,
     uopFunc ::
       forall m.
       ( MonadError e m,
@@ -67,21 +70,22 @@ data UniversalOpSem g e a = UniversalOpSem
         Mergeable a
       ) =>
       [a] ->
-      m a
+      m [a]
   }
 
 promoteToOpSem :: UniversalOpSem g e a -> OpSem g e a
-promoteToOpSem (UniversalOpSem g o f) = OpSem g o f
+promoteToOpSem (UniversalOpSem g o on f) = OpSem g o on f
 
 downgradeToOpCSem ::
   forall ce e c a g.
   (ToSym ce e, ToCon e ce, ToSym c a, ToCon a c, Mergeable e, Mergeable a) =>
   UniversalOpSem g e a ->
   OpCSem ce c
-downgradeToOpCSem (UniversalOpSem _ o f) =
+downgradeToOpCSem (UniversalOpSem _ o on f) =
   OpCSem
     o
-    ( \x -> case f (toSym x :: [a]) :: ExceptT e UnionM a of
+    on
+    ( \x -> case f (toSym x :: [a]) :: ExceptT e UnionM [a] of
         ExceptT (SingleU v) -> fromJust $ toCon v
         _ -> undefined
     )

@@ -24,11 +24,12 @@ spec ::
     )
 spec =
   defaultCircuitSpec
-    [ (ComponentSpec "+" 3, 1),
-      (ComponentSpec "*" 2, 1)
+    [ (ComponentSpec "+" 3 1, 1),
+      (ComponentSpec "*" 2 1, 1),
+      (ComponentSpec "+-" 2 2, 1)
     ]
     2
-    1
+    2
     arithUSem
 
 v :: M VerificationConditions (Circuit B.ByteString SymInteger)
@@ -43,21 +44,21 @@ concreteCircuit :: CCircuit B.ByteString Integer
 concreteCircuit =
   CCircuit
     2
-    [CNode "+" 3 [0, 1, 2], CNode "*" 2 [0, 1]]
-    [3]
+    [CNode "+" [3] [0, 1, 2], CNode "*" [2] [0, 1], CNode "+-" [4, 5] [2, 3]]
+    [4, 5]
 
 qcspec :: PlainCSpec VerificationConditions Integer
 qcspec = PlainCSpec qcspec'
   where
     qcspec' :: [Integer] -> Either VerificationConditions [Integer] -> Bool
-    qcspec' [a, b] (Right [c]) = c == a + b + a * b
+    qcspec' [a, b] (Right [c, d]) = c == (a + b + a * b + a * b) && d == (-(a + b))
     qcspec' _ _ = False
 
 qcsspec :: PlainSSpec VerificationConditions SymInteger
 qcsspec = PlainSSpec qcsspec'
   where
     qcsspec' :: [SymInteger] -> Either VerificationConditions [SymInteger] -> SymBool
-    qcsspec' [a, b] (Right [c]) = c ==~ a + b + a * b
+    qcsspec' [a, b] (Right [c, d]) = c ==~ (a + b + a * b + a * b) &&~ d ==~ (-(a + b))
     qcsspec' _ _ = con False
 
 gen :: SimpleCGen Integer
@@ -106,6 +107,8 @@ cegisQCProblem =
 
 main :: IO ()
 main = do
+  let v1 = runFreshT v "x"
+  print v1
   let r1 = runFreshT r "x"
   print r1
   r <- quickCheckCCircuit qcProblem

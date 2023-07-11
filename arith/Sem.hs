@@ -15,21 +15,27 @@ arithSem =
   SimpleOpSemMap $
     M.fromList
       [ ( "+",
-          OpSem "+" CommutativeAssociativeListOperands $ mrgReturn . foldl1' (+)
+          OpSem "+" CommutativeAssociativeListOperands 1 $ mrgReturn . singleton . foldl1' (+)
         ),
         ( "*",
-          OpSem "*" CommutativeAssociativeListOperands $ mrgReturn . foldl1' (*)
+          OpSem "*" CommutativeAssociativeListOperands 1 $ mrgReturn . singleton . foldl1' (*)
         ),
         ( "-",
-          OpSem "-" (NOperands 2) $
+          OpSem "-" (NOperands 2) 1 $
             \case
-              [a, b] -> mrgReturn $ a - b
+              [a, b] -> mrgReturn [a - b]
               _ -> mrgThrowError AssertionViolation
         ),
         ( "uminus",
-          OpSem "uminus" (NOperands 1) $
+          OpSem "uminus" (NOperands 1) 1 $
             \case
-              [a] -> mrgReturn $ -a
+              [a] -> mrgReturn [-a]
+        ),
+        ( "+-",
+          OpSem "+-" (NOperands 2) 2 $
+            \case
+              [a, b] -> return [a + b, a - b]
+              _ -> throwError AssertionViolation
         )
       ]
 
@@ -38,21 +44,28 @@ arithCSem =
   SimpleOpCSemMap $
     M.fromList
       [ ( "+",
-          OpCSem CommutativeAssociativeListOperands $ return . foldl1' (+)
+          OpCSem CommutativeAssociativeListOperands 1 $ return . singleton . foldl1' (+)
         ),
         ( "*",
-          OpCSem CommutativeAssociativeListOperands $ return . foldl1' (*)
+          OpCSem CommutativeAssociativeListOperands 1 $ return . singleton . foldl1' (*)
         ),
         ( "-",
-          OpCSem (NOperands 2) $
+          OpCSem (NOperands 2) 1 $
             \case
-              [a, b] -> return $ a - b
+              [a, b] -> return [a - b]
               _ -> throwError AssertionViolation
         ),
         ( "uminus",
-          OpCSem (NOperands 1) $
+          OpCSem (NOperands 1) 1 $
             \case
-              [a] -> return $ -a
+              [a] -> return [-a]
+              _ -> throwError AssertionViolation
+        ),
+        ( "+-",
+          OpCSem (NOperands 2) 2 $
+            \case
+              [a, b] -> return [a + b, a - b]
+              _ -> throwError AssertionViolation
         )
       ]
 
@@ -61,20 +74,26 @@ arithUSem =
   SimpleUniversalSemMap $
     M.fromList
       [ ( "+",
-          UniversalOpSem "+" CommutativeAssociativeListOperands $ mrgReturn . foldl1' (+)
+          UniversalOpSem "+" CommutativeAssociativeListOperands 1 $ mrgReturn . singleton . foldl1' (+)
         ),
         ( "*",
-          UniversalOpSem "*" CommutativeAssociativeListOperands $ mrgReturn . foldl1' (*)
+          UniversalOpSem "*" CommutativeAssociativeListOperands 1 $ mrgReturn . singleton . foldl1' (*)
         ),
         ( "-",
-          UniversalOpSem "-" (NOperands 2) $
+          UniversalOpSem "-" (NOperands 2) 1 $
             \case
-              [a, b] -> mrgReturn $ a - b
+              [a, b] -> mrgReturn [a - b]
               _ -> mrgThrowError AssertionViolation
         ),
         ( "uminus",
-          UniversalOpSem "uminus" (NOperands 1) $
+          UniversalOpSem "uminus" (NOperands 1) 1 $
             \case
-              [a] -> mrgReturn $ -a
+              [a] -> mrgReturn [-a]
+        ),
+        ( "+-",
+          UniversalOpSem "+-" (NOperands 2) 2 $
+            \case
+              [a, b] -> mrgReturn $ [a + b, a - b]
+              _ -> mrgThrowError AssertionViolation
         )
       ]

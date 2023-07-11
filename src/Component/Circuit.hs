@@ -21,7 +21,7 @@ import Grisette.Experimental
 
 data Node op idx = Node
   { nodeOp :: op,
-    nodeIdx :: idx,
+    nodeIdx :: [idx],
     nodeInputIdx :: [idx]
   }
   deriving (Show, Eq, Generic)
@@ -37,7 +37,8 @@ data Circuit op idx = Circuit
 
 data ComponentSpec op = ComponentSpec
   { compSpecOp :: op,
-    compSpecInputNum :: Int
+    compSpecInputNum :: Int,
+    compSpecOutputNum :: Int
   }
 
 data CircuitSpec op fm = CircuitSpec
@@ -56,24 +57,37 @@ circuitAcyclic e c = go (cirNodes c)
   where
     go [] = mrgReturn ()
     go (Node _ vo vis : vs) = do
-      go1 vo vis
+      go1 (head vo) vis
       go vs
     go1 _ [] = mrgReturn ()
     go1 vo (vi : vis) = do
       symAssertWith e (vi <~ vo)
       go1 vo vis
 
-circuitDistinctSlot :: (MonadError e m, Mergeable e, UnionLike m, Index idx) => e -> Circuit op idx -> m ()
-circuitDistinctSlot e c = go (cirNodes c)
+circuitDistinctSlot ::
+  (MonadError e m, Mergeable e, UnionLike m, Index idx) =>
+  e ->
+  Circuit op idx ->
+  m ()
+circuitDistinctSlot e c = goIndices indices
   where
-    go [] = mrgReturn ()
-    go (n : vs) = do
-      go1 (nodeIdx n) vs
-      go vs
-    go1 _ [] = mrgReturn ()
-    go1 vo (n : vs) = do
-      symAssertWith e (vo /=~ nodeIdx n)
-      go1 vo vs
+    indices = cirNodes c >>= nodeIdx
+    goIndices [] = mrgReturn ()
+    goIndices [x] = mrgReturn ()
+    goIndices (x : xs) = do
+      mrgTraverse_ (\y -> symAssertWith e (x /=~ y)) xs
+      goIndices xs
+
+{-
+go [] = mrgReturn ()
+go (n : vs) = do
+  go1 (nodeIdx n) vs
+  go vs
+go1 _ [] = mrgReturn ()
+go1 vo (n : vs) = do
+  symAssertWith e (vo /=~ nodeIdx n)
+  go1 vo vs
+  -}
 
 circuitInputSymmetryReduction ::
   ( MonadError e m,
@@ -90,7 +104,7 @@ circuitInputSymmetryReduction e sem c = go (cirNodes c)
   where
     go [] = mrgReturn ()
     go (Node op _ vis : vs) = do
-      let OpSem _ inputFeat _ = opSem sem op
+      let OpSem _ inputFeat _ _ = opSem sem op
       case inputFeat of
         CommutativeTwoOperands -> do
           case vis of
@@ -163,21 +177,22 @@ genCircuit e (CircuitSpec components inum onum fm doSymmRed) = do
     specs' [] = []
     specs' ((x, n) : xs) = replicate n x ++ specs' xs
     specs = specs' components
-    compNum = length specs
-    genNode (ComponentSpec op opinum) = do
+    compNum = sum $ compSpecOutputNum <$> specs
+    genNode (ComponentSpec op opinum oponum) = do
       o :: idx <- simpleFreshConstrained e (SOrdBound (fromIntegral inum) (fromIntegral $ inum + compNum) () :: SOrdBound idx ())
+      let os = fmap ((o +) . fromIntegral) [0 .. oponum - 1]
       i :: [idx] <-
         simpleFreshConstrained
           e
           (SimpleListSpec opinum (SOrdBound 0 (fromIntegral $ inum + compNum) () :: SOrdBound idx ()))
-      mrgSingle $ Node op o i
+      mrgSingle $ Node op os i
 
 type ValWithIdx idx a = (idx, a)
 
 data ENode op idx a
   = ENode
       { enodeOp :: op,
-        enodeResult :: ValWithIdx idx a,
+        enodeResult :: [ValWithIdx idx a],
         enodeInputs :: [ValWithIdx idx a]
       }
   | IENode {ienodeInput :: ValWithIdx idx a}
@@ -213,11 +228,13 @@ genECircuit e inputs (Circuit inum nodes o) intermediateSize gen =
     go [] = return []
     go (Node op idx inputIdx : xs) = do
       r <- go xs
-      g <- traverse (intermediateGen gen intermediateSize op) [-1 .. length inputIdx - 1]
-      case g of
-        ret : inputs ->
-          return $ ENode op (idx, ret) (zip inputIdx inputs) : r
-        _ -> error "Should not happen"
+      ret <-
+        traverse (intermediateGen gen intermediateSize op) $
+          SGenOutput <$> [0 .. length idx - 1]
+      inputs <-
+        traverse (intermediateGen gen intermediateSize op) $
+          SGenInput <$> [0 .. length inputIdx - 1]
+      return $ ENode op (zip idx ret) (zip inputIdx inputs) : r
 
 connected ::
   forall op idx a e m.
@@ -236,9 +253,9 @@ connected e (ECircuit _ enodes _) =
     outputs =
       ( \case
           ENode _ idxv _ -> idxv
-          IENode idxv -> idxv
+          IENode idxv -> [idxv]
       )
-        <$> enodes
+        =<< enodes
     inputs :: [(idx, a)]
     inputs =
       ( \case
@@ -253,9 +270,9 @@ interpretOp ::
   op ->
   fm ->
   [a] ->
-  m a
+  m [a]
 interpretOp op fm args = case opSemMaybe fm op of
-  Just (OpSem _ _ func) -> func args
+  Just (OpSem _ _ _ func) -> func args
   Nothing -> error "interpretOp: no semantics"
 
 semanticsCorrect ::
@@ -278,10 +295,10 @@ semanticsCorrect err sem (ECircuit _ enodes _) = go enodes
     go :: [ENode op idx a] -> m ()
     go [] = mrgReturn ()
     go (IENode {} : xs) = go xs
-    go (ENode op (_, retVal) vis : xs) = do
+    go (ENode op rets vis : xs) = do
       let args = snd <$> vis
       r <- interpretOp op sem args
-      symAssertWith err (retVal ==~ r)
+      symAssertWith err (fmap snd rets ==~ r)
       go xs
 
 interpretCircuit ::
@@ -311,9 +328,9 @@ interpretCircuit err inputs c@(Circuit inum nodes oidx) sem intermediateSize ige
     getOutputs (ECircuit _ enodes _) =
       ( \case
           ENode _ r _ -> r
-          IENode r -> r
+          IENode r -> [r]
       )
-        <$> enodes
+        =<< enodes
     go [] _ = mrgThrowError err
     go ((i, v) : xs) idx =
       mrgIf (i ==~ idx) (mrgReturn v) (go xs idx)

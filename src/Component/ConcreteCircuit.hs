@@ -16,7 +16,7 @@ import Grisette
 
 data CNode op idx = CNode
   { cnodeOp :: op,
-    cnodeIdx :: idx,
+    cnodeIdx :: [idx],
     cnodeInputIdx :: [idx]
   }
   deriving (Show, Eq, Generic)
@@ -49,10 +49,10 @@ interpretCCircuit ::
   Either e [c]
 interpretCCircuit inputs c@(CCircuit ninput nodes oidx) sem | ninput /= length inputs = error "Bad inputs"
 interpretCCircuit inputs c@(CCircuit ninput nodes oidx) sem =
-  go inputs (sortOn cnodeIdx nodes)
+  go inputs (sortOn (head . cnodeIdx) nodes)
   where
     go l [] = traverse (atCIndex (error "Bad circuit") l) oidx
-    go l (CNode _ o _ : _) | mkCIndex ninput (length l) /= o = error "Bad circuit"
+    go l (CNode _ o _ : _) | mkCIndex ninput (length l) /= (head o) = error "Bad circuit"
     go l (CNode op o i : xs) = do
       next <- applyCOp (opCSem sem op) $ fromRight (error "Bad circuit") . atCIndex (error "Bad circuit") l <$> i
-      go (l ++ [next]) xs
+      go (l ++ next) xs

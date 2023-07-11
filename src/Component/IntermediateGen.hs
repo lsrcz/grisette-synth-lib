@@ -4,6 +4,7 @@
 
 module Component.IntermediateGen
   ( IntermediateSGen (..),
+    SGenPosition (..),
     HomogeneousSGen (..),
     SimpleSGen (..),
   )
@@ -11,13 +12,18 @@ where
 
 import Grisette
 
+data SGenPosition
+  = SGenInput Int
+  | SGenOutput Int
+  deriving (Show, Eq)
+
 class IntermediateSGen gen op s | gen -> op s where
   intermediateGen ::
     (MonadFresh m) =>
     gen ->
     Int ->
     op ->
-    Int ->
+    SGenPosition ->
     m s
 
 newtype HomogeneousSGen op s = HomogeneousSGen
@@ -34,7 +40,7 @@ newtype SimpleSGen op s = SimpleSGen
       MonadFresh m =>
       Int ->
       op ->
-      Int ->
+      SGenPosition ->
       m s
   }
 
