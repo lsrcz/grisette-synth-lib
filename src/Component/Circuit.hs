@@ -42,7 +42,7 @@ data ComponentSpec e op
         csOutputNum :: Int
       }
   | ComponentGenOpSpec
-      { csgOp :: forall m. (MonadFresh m, MonadError e m) => m op,
+      { csgOp :: forall m. (MonadFresh m, MonadError e m, UnionLike m) => m op,
         csInputNum :: Int,
         csOutputNum :: Int
       }
