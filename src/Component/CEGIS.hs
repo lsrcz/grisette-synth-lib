@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -17,8 +18,8 @@ import Component.SemMap
 import Control.Monad.Except
 import Control.Monad.IO.Class
 import Data.Maybe
-import qualified Data.SBV as SBV
-import qualified Data.SBV.Control as SBVC
+import Data.SBV qualified as SBV
+import Data.SBV.Control qualified as SBVC
 import Grisette
 import Grisette.Backend.SBV.Data.SMT.Lowering
 import Grisette.Backend.SBV.Data.SMT.SymBiMap
@@ -133,7 +134,7 @@ data CegisQCProblem e s ce c op cop idx cidx where
       cqpCSpec :: cspec,
       cqpCSemMap :: csm,
       cqpSSpec :: sspec,
-      cqpSCircuitGenSpec :: CircuitSpec op sm,
+      cqpSCircuitGenSpec :: CircuitSpec e op sm,
       cqpSCircuitGenError :: e,
       cqpSCircuitInterpretError :: e,
       cqpSemMap :: sm,

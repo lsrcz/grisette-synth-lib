@@ -35,21 +35,27 @@ data Circuit op idx = Circuit
   deriving (Show, Eq, Generic)
   deriving (Mergeable, SEq, EvaluateSym) via (Default (Circuit op idx))
 
-data ComponentSpec op = ComponentSpec
-  { compSpecOp :: op,
-    compSpecInputNum :: Int,
-    compSpecOutputNum :: Int
-  }
+data ComponentSpec e op
+  = ComponentSpec
+      { csOp :: op,
+        csInputNum :: Int,
+        csOutputNum :: Int
+      }
+  | ComponentGenOpSpec
+      { csgOp :: forall m. (MonadFresh m, MonadError e m) => m op,
+        csInputNum :: Int,
+        csOutputNum :: Int
+      }
 
-data CircuitSpec op fm = CircuitSpec
-  { cirSpecComponents :: [(ComponentSpec op, Int)],
+data CircuitSpec e op fm = CircuitSpec
+  { cirSpecComponents :: [(ComponentSpec e op, Int)],
     cirSpecInputNum :: Int,
     cirSpecOutputNum :: Int,
     cirSpecSem :: fm,
     cirDoSymmReduction :: Bool
   }
 
-defaultCircuitSpec :: [(ComponentSpec op, Int)] -> Int -> Int -> fm -> CircuitSpec op fm
+defaultCircuitSpec :: [(ComponentSpec e op, Int)] -> Int -> Int -> fm -> CircuitSpec e op fm
 defaultCircuitSpec components inum onum sem = CircuitSpec components inum onum sem True
 
 circuitAcyclic :: (MonadError e m, Mergeable e, UnionLike m, Index idx) => e -> Circuit op idx -> m ()
@@ -163,7 +169,7 @@ genCircuit ::
     SemMap fm op a e g
   ) =>
   e ->
-  CircuitSpec op fm ->
+  CircuitSpec e op fm ->
   m (Circuit op idx)
 genCircuit e (CircuitSpec components inum onum fm doSymmRed) = do
   o :: [idx] <- simpleFreshConstrained e (SimpleListSpec onum (SOrdBound 0 (fromIntegral $ inum + compNum) () :: SOrdBound idx ()))
@@ -177,7 +183,16 @@ genCircuit e (CircuitSpec components inum onum fm doSymmRed) = do
     specs' [] = []
     specs' ((x, n) : xs) = replicate n x ++ specs' xs
     specs = specs' components
-    compNum = sum $ compSpecOutputNum <$> specs
+    compNum = sum $ csOutputNum <$> specs
+    genNode (ComponentGenOpSpec op opinum oponum) = do
+      o :: idx <- simpleFreshConstrained e (SOrdBound (fromIntegral inum) (fromIntegral $ inum + compNum) () :: SOrdBound idx ())
+      let os = fmap ((o +) . fromIntegral) [0 .. oponum - 1]
+      i :: [idx] <-
+        simpleFreshConstrained
+          e
+          (SimpleListSpec opinum (SOrdBound 0 (fromIntegral $ inum + compNum) () :: SOrdBound idx ()))
+      op1 <- op
+      mrgSingle $ Node op1 os i
     genNode (ComponentSpec op opinum oponum) = do
       o :: idx <- simpleFreshConstrained e (SOrdBound (fromIntegral inum) (fromIntegral $ inum + compNum) () :: SOrdBound idx ())
       let os = fmap ((o +) . fromIntegral) [0 .. oponum - 1]

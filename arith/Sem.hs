@@ -1,14 +1,41 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Sem where
 
 import Component.SemMap
 import Control.Monad.Except
-import qualified Data.ByteString as B
-import qualified Data.HashMap.Strict as M
+import Data.ByteString qualified as B
+import Data.HashMap.Strict qualified as M
 import Data.List
+import GHC.Generics
 import Grisette
+
+data OpCode a
+  = Plus
+  | Mul
+  | Minus
+  | UMinus
+  | PlusMinus
+  | PlusN a
+  deriving (Show, Generic)
+  deriving (Mergeable, EvaluateSym) via (Default (OpCode a))
+
+deriving via
+  (Default (OpCode s))
+  instance
+    ToSym c s => ToSym (OpCode c) (OpCode s)
+
+deriving via
+  (Default (OpCode c))
+  instance
+    ToCon s c => ToCon (OpCode s) (OpCode c)
 
 arithSem :: SimpleOpSemMap B.ByteString VerificationConditions SymInteger
 arithSem =
@@ -97,3 +124,26 @@ arithUSem =
               _ -> mrgThrowError AssertionViolation
         )
       ]
+
+getArithOpCodeUSem :: OpCode SymInteger -> UniversalOpSem B.ByteString VerificationConditions SymInteger
+getArithOpCodeUSem = \case
+  Plus -> opUSem arithUSem "+"
+  Mul -> opUSem arithUSem "*"
+  Minus -> opUSem arithUSem "-"
+  UMinus -> opUSem arithUSem "uminus"
+  PlusMinus -> opUSem arithUSem "+-"
+  PlusN n -> UniversalOpSem "+n" (NOperands 1) 1 $
+    \case
+      [v] -> mrgReturn [v + n]
+      _ -> mrgThrowError AssertionViolation
+
+data USem = USem
+
+instance SemMap USem (OpCode SymInteger) B.ByteString VerificationConditions SymInteger where
+  opSem _ = promoteToOpSem . getArithOpCodeUSem
+  opSemMaybe _ = Just . promoteToOpSem . getArithOpCodeUSem
+
+instance CSemMap USem (OpCode Integer) VerificationConditions Integer where
+  opCSem _ c = downgradeToOpCSem (getArithOpCodeUSem (toSym c :: OpCode SymInteger) :: UniversalOpSem B.ByteString VerificationConditions SymInteger)
+  opCSemMaybe _ c =
+    Just $ downgradeToOpCSem (getArithOpCodeUSem (toSym c :: OpCode SymInteger) :: UniversalOpSem B.ByteString VerificationConditions SymInteger)

@@ -2,14 +2,15 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Component.SemMap where
 
 import Control.Monad.Except
-import qualified Data.ByteString as B
-import qualified Data.HashMap.Strict as M
+import Data.ByteString qualified as B
+import Data.HashMap.Strict qualified as M
 import Data.Maybe
 import Grisette
 
@@ -94,6 +95,10 @@ class SemMap fm op g e a | fm -> op g e a where
   opSemMaybe :: fm -> op -> Maybe (OpSem g e a)
   opSem :: fm -> op -> OpSem g e a
 
+class USemMap fm op g e a | fm -> op g e a where
+  opUSemMaybe :: fm -> op -> Maybe (UniversalOpSem g e a)
+  opUSem :: fm -> op -> UniversalOpSem g e a
+
 class CSemMap fm op e a | fm -> op e a where
   opCSemMaybe :: fm -> op -> Maybe (OpCSem e a)
   opCSem :: fm -> op -> OpCSem e a
@@ -127,6 +132,19 @@ instance SemMap (SimpleOpSemMap B.ByteString e a) B.ByteString B.ByteString e a 
 instance CSemMap (SimpleOpCSemMap B.ByteString e a) B.ByteString e a where
   opCSemMaybe = flip M.lookup . unSimpleOpCSemMap
   opCSem = (M.!) . unSimpleOpCSemMap
+
+instance
+  USemMap
+    (SimpleUniversalSemMap B.ByteString e a ce c)
+    B.ByteString
+    B.ByteString
+    e
+    a
+  where
+  opUSemMaybe semMap opcode =
+    M.lookup opcode (unSimpleUniversalSemMap semMap)
+  opUSem semMap opcode =
+    unSimpleUniversalSemMap semMap M.! opcode
 
 instance
   SemMap

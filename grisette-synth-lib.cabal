@@ -65,6 +65,8 @@ executable arith
   main-is: Main.hs
   other-modules:
       Sem
+      TestComponentGenOpSpec
+      TestMultipleOutputs
       Paths_grisette_synth_lib
   hs-source-dirs:
       arith
