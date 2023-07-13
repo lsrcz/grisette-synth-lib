@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Component.ConcreteCircuit where
@@ -13,6 +15,7 @@ import Data.Either (fromRight)
 import Data.List
 import GHC.Generics
 import Grisette
+import Prettyprinter
 
 data CNode op idx = CNode
   { cnodeOp :: op,
@@ -20,6 +23,23 @@ data CNode op idx = CNode
     cnodeInputIdx :: [idx]
   }
   deriving (Show, Eq, Generic)
+
+prettyPrintRegisters :: Pretty idx => [idx] -> Doc ann
+prettyPrintRegisters =
+  encloseSep lparen rparen (comma <> space)
+    . fmap (\x -> "r" <> pretty x)
+
+instance (Pretty op, Pretty idx) => Pretty (CNode op idx) where
+  pretty (CNode op idx iidx)
+    | length idx == 1 =
+        "r" <> pretty (head idx)
+          <+> "="
+          <+> pretty op
+            <> prettyPrintRegisters iidx
+    | otherwise =
+        prettyPrintRegisters idx
+          <+> "="
+          <+> pretty op <> prettyPrintRegisters iidx
 
 deriving via
   (Default (CNode cop cidx))
@@ -33,6 +53,25 @@ data CCircuit op idx = CCircuit
     ccirOutputIdx :: [idx]
   }
   deriving (Show, Eq, Generic)
+
+instance (Pretty op, Pretty idx, CIndex idx) => Pretty (CCircuit op idx) where
+  pretty (CCircuit ninput nodes oidx) =
+    vsep
+      [ nest 2 $
+          vsep
+            [ prettyPrintRegisters
+                (mkCIndex ninput <$> [0 .. ninput - 1] :: [idx])
+                <+> "=>"
+                <+> lbracket,
+              vsep (pretty <$> sortOn (head . cnodeIdx) nodes),
+              "return"
+                <+> ( if length oidx == 1
+                        then "r" <> pretty (head oidx)
+                        else prettyPrintRegisters oidx
+                    )
+            ],
+        rbracket
+      ]
 
 deriving via
   (Default (CCircuit cop cidx))

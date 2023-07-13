@@ -52,6 +52,7 @@ library
     , bytestring
     , grisette >=0.3.0 && <0.4
     , mtl
+    , prettyprinter
     , quickcheck-with-counterexamples
     , sbv
     , unordered-containers
@@ -77,6 +78,7 @@ executable arith
     , grisette >=0.3.0 && <0.4
     , grisette-synth-lib
     , mtl
+    , prettyprinter
     , quickcheck-with-counterexamples
     , sbv
     , unordered-containers
