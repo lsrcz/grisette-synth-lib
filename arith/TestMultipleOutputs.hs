@@ -40,7 +40,15 @@ v = genCircuit AssertionViolation spec
 r :: M VerificationConditions [SymInteger]
 r = do
   v1 <- v
-  interpretCircuit AssertionViolation [1, 2] v1 arithSem 1 (HomogeneousSGen $ const $ simpleFresh ())
+  interpretCircuit
+    AssertionViolation
+    [1, 2]
+    v1
+    arithSem
+    1
+    ( HomogeneousSGen $ const $ simpleFresh () ::
+        HomogeneousSGen B.ByteString SymInteger
+    )
 
 concreteCircuit :: CCircuit B.ByteString Integer
 concreteCircuit =
