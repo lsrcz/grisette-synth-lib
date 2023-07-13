@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -16,6 +17,7 @@ where
 import Control.Monad.Except
 import GHC.TypeLits
 import Grisette
+import Data.Word
 
 class SOrd i => Index i where
   mkInputIndex :: Int -> i
@@ -68,11 +70,20 @@ instance Index (UnionM Int) where
       then return $ l !! i1
       else mrgThrowError e
 
-instance CIndex Integer where
-  mkCInputIndex = fromIntegral
-  mkCInternalIndex numInputs v = fromIntegral $ numInputs + v
-  atCIndex e [] i = throwError e
+#define CINDEX_CONCRETE_INTEGER(t) \
+instance CIndex t where \
+  mkCInputIndex = fromIntegral; \
+  mkCInternalIndex numInputs v = fromIntegral $ numInputs + v; \
+  atCIndex e [] i = throwError e; \
   atCIndex e (x : xs) i = if i == 0 then return x else atCIndex e xs (i - 1)
+
+#if 1
+CINDEX_CONCRETE_INTEGER(Integer)
+CINDEX_CONCRETE_INTEGER(Word8)
+CINDEX_CONCRETE_INTEGER(Word16)
+CINDEX_CONCRETE_INTEGER(Word32)
+CINDEX_CONCRETE_INTEGER(Word64)
+#endif 
 
 instance (KnownNat n, 1 <= n) => CIndex (WordN n) where
   mkCInputIndex = fromIntegral
