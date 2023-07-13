@@ -1,4 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module TestComponentGenOpSpec where
 
@@ -12,13 +13,15 @@ import Component.QuickCheck
 import Component.SemMap
 import Data.ByteString qualified as B
 import Grisette
+import Prettyprinter
+import Prettyprinter.Util
 import Sem
 import Test.QuickCheck
 
 concreteCircuit :: CCircuit (OpCode Integer) Integer
 concreteCircuit =
   CCircuit
-    1
+    ["input"]
     [CNode (PlusN 203) [1] [0]]
     [1]
 
@@ -49,7 +52,7 @@ spec ::
 spec =
   defaultCircuitSpec
     [(ComponentGenOpSpec (PlusN <$> simpleFresh ()) 1 1, 1)]
-    1
+    ["input"]
     1
     USem
 
@@ -89,6 +92,7 @@ cegisQCProblem =
 
 testComponentGenOpSpec :: IO ()
 testComponentGenOpSpec = do
+  putDocW 80 $ pretty concreteCircuit
   r <- quickCheckCCircuit qcProblem
   print r
   v <- cegisQC (precise z3) cegisQCProblem

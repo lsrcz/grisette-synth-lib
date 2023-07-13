@@ -30,7 +30,7 @@ spec =
       (ComponentSpec "*" 2 1, 1),
       (ComponentSpec "+-" 2 2, 1)
     ]
-    2
+    ["input0", "input1"]
     2
     arithUSem
 
@@ -53,7 +53,7 @@ r = do
 concreteCircuit :: CCircuit B.ByteString Integer
 concreteCircuit =
   CCircuit
-    2
+    ["input0", "input1"]
     [CNode "+" [3] [0, 1, 2], CNode "*" [2] [0, 1], CNode "+-" [4, 5] [2, 3]]
     [4, 5]
 

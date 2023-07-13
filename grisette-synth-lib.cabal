@@ -39,6 +39,8 @@ library
       Component.Index
       Component.IntermediateGen
       Component.Monad
+      Component.OpPrettyPrinter
+      Component.PrettyPrinterUtil
       Component.ProgramSpec
       Component.QuickCheck
       Component.SemMap
@@ -51,11 +53,13 @@ library
     , base >=4.14 && <5
     , bytestring
     , grisette >=0.3.0 && <0.4
+    , hashable
     , mtl
     , prettyprinter
     , quickcheck-with-counterexamples
     , sbv
     , unordered-containers
+    , utf8-string
   default-language: Haskell2010
   if flag(fast)
     ghc-options: -O2
@@ -77,11 +81,13 @@ executable arith
     , bytestring
     , grisette >=0.3.0 && <0.4
     , grisette-synth-lib
+    , hashable
     , mtl
     , prettyprinter
     , quickcheck-with-counterexamples
     , sbv
     , unordered-containers
+    , utf8-string
   default-language: Haskell2010
   if flag(fast)
     ghc-options: -O2

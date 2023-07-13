@@ -9,13 +9,16 @@
 
 module Sem where
 
+import Component.OpPrettyPrinter
 import Component.SemMap
 import Control.Monad.Except
 import Data.ByteString qualified as B
 import Data.HashMap.Strict qualified as M
+import Data.Hashable
 import Data.List
 import GHC.Generics
 import Grisette
+import Prettyprinter
 
 data OpCode a
   = Plus
@@ -36,6 +39,30 @@ deriving via
   (Default (OpCode c))
   instance
     ToCon s c => ToCon (OpCode s) (OpCode c)
+
+instance Pretty a => Pretty (OpCode a) where
+  pretty = \case
+    Plus -> "+"
+    Mul -> "*"
+    Minus -> "-"
+    UMinus -> "uminus"
+    PlusMinus -> "+-"
+    PlusN n -> "add" <> parens (pretty n)
+
+instance (Pretty a, Pretty idx, Hashable idx) => OpRegNamer (OpCode a) idx where
+  nameOutputs = \case
+    Plus -> simpleRegName "r"
+    Mul -> simpleRegName "r"
+    Minus -> simpleRegName "r"
+    UMinus -> simpleRegName "r"
+    PlusMinus -> simpleRegName "r"
+    PlusN _ -> simpleRegName "sum"
+
+instance OpPrinterDescription (OpCode a) where
+  describeArgs (PlusN _) 1 = [Just "value"]
+  opIsBinaryInfix (PlusN _) = False
+  opIsBinaryInfix UMinus = False
+  opIsBinaryInfix _ = True
 
 arithSem :: SimpleOpSemMap B.ByteString VerificationConditions SymInteger
 arithSem =

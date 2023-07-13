@@ -23,6 +23,8 @@ dependencies:
 - quickcheck-with-counterexamples
 - sbv
 - prettyprinter
+- hashable
+- utf8-string
 
 flags: {
   fast: {

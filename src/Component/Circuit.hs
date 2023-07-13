@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
@@ -14,6 +15,7 @@ import Component.Index
 import Component.IntermediateGen
 import Component.SemMap
 import Control.Monad.Except
+import Data.ByteString qualified as B
 import Data.List
 import GHC.Generics
 import Grisette
@@ -28,7 +30,7 @@ data Node op idx = Node
   deriving (Mergeable, SEq, EvaluateSym) via (Default (Node op idx))
 
 data Circuit op idx = Circuit
-  { cirInputNum :: Int,
+  { cirInputNames :: [B.ByteString],
     cirNodes :: [Node op idx],
     cirOutputIdx :: [idx]
   }
@@ -49,14 +51,14 @@ data ComponentSpec e op
 
 data CircuitSpec e op fm = CircuitSpec
   { cirSpecComponents :: [(ComponentSpec e op, Int)],
-    cirSpecInputNum :: Int,
+    cirSpecInputNames :: [B.ByteString],
     cirSpecOutputNum :: Int,
     cirSpecSem :: fm,
     cirDoSymmReduction :: Bool
   }
 
-defaultCircuitSpec :: [(ComponentSpec e op, Int)] -> Int -> Int -> fm -> CircuitSpec e op fm
-defaultCircuitSpec components inum onum sem = CircuitSpec components inum onum sem True
+defaultCircuitSpec :: [(ComponentSpec e op, Int)] -> [B.ByteString] -> Int -> fm -> CircuitSpec e op fm
+defaultCircuitSpec components inputNames onum sem = CircuitSpec components inputNames onum sem True
 
 circuitAcyclic :: (MonadError e m, Mergeable e, UnionLike m, Index idx) => e -> Circuit op idx -> m ()
 circuitAcyclic e c = go (cirNodes c)
@@ -171,15 +173,16 @@ genCircuit ::
   e ->
   CircuitSpec e op fm ->
   m (Circuit op idx)
-genCircuit e (CircuitSpec components inum onum fm doSymmRed) = do
+genCircuit e (CircuitSpec components inames onum fm doSymmRed) = do
   o :: [idx] <- simpleFreshConstrained e (SimpleListSpec onum (SOrdBound 0 (fromIntegral $ inum + compNum) () :: SOrdBound idx ()))
   n <- mrgTraverse genNode specs
-  let circuit = Circuit inum n o
+  let circuit = Circuit inames n o
   circuitAcyclic e circuit
   circuitDistinctSlot e circuit
   when doSymmRed $ circuitInputSymmetryReduction e fm circuit
   mrgSingle circuit
   where
+    inum = length inames
     specs' [] = []
     specs' ((x, n) : xs) = replicate n x ++ specs' xs
     specs = specs' components
@@ -230,7 +233,7 @@ data ENode op idx a
   deriving (Show, Eq)
 
 data ECircuit op idx a = ECircuit
-  { ecirInputNum :: Int,
+  { ecirInputNames :: [B.ByteString],
     ecirNodes :: [ENode op idx a],
     ecirOutputIdx :: [idx]
   }
@@ -250,8 +253,8 @@ genECircuit ::
   Int ->
   intermediateSGen ->
   m (ECircuit op idx a)
-genECircuit e inputs (Circuit inum nodes o) intermediateSize gen =
-  (\x -> ECircuit inum x o) . (goInputs 0 inputs ++) <$> go nodes
+genECircuit e inputs (Circuit inames nodes o) intermediateSize gen =
+  (\x -> ECircuit inames x o) . (goInputs 0 inputs ++) <$> go nodes
   where
     goInputs _ [] = []
     goInputs idx (x : xs) =
