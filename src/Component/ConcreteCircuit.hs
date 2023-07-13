@@ -62,7 +62,7 @@ instance (Pretty op, Pretty idx, CIndex idx) => Pretty (CCircuit op idx) where
             [ prettyPrintRegisters
                 (mkCIndex ninput <$> [0 .. ninput - 1] :: [idx])
                 <+> "=>"
-                <+> lbracket,
+                <+> lbrace,
               vsep (pretty <$> sortOn (head . cnodeIdx) nodes),
               "return"
                 <+> ( if length oidx == 1
@@ -70,7 +70,7 @@ instance (Pretty op, Pretty idx, CIndex idx) => Pretty (CCircuit op idx) where
                         else prettyPrintRegisters oidx
                     )
             ],
-        rbracket
+        rbrace
       ]
 
 deriving via
