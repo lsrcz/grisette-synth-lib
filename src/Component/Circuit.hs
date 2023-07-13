@@ -185,7 +185,15 @@ genCircuit e (CircuitSpec components inum onum fm doSymmRed) = do
     specs = specs' components
     compNum = sum $ csOutputNum <$> specs
     genNode (ComponentGenOpSpec op opinum oponum) = do
-      o :: idx <- simpleFreshConstrained e (SOrdBound (fromIntegral inum) (fromIntegral $ inum + compNum) () :: SOrdBound idx ())
+      o :: idx <-
+        simpleFreshConstrained
+          e
+          ( SOrdBound
+              (fromIntegral inum)
+              (fromIntegral $ inum + compNum - oponum + 1)
+              () ::
+              SOrdBound idx ()
+          )
       let os = fmap ((o +) . fromIntegral) [0 .. oponum - 1]
       i :: [idx] <-
         simpleFreshConstrained
@@ -194,7 +202,15 @@ genCircuit e (CircuitSpec components inum onum fm doSymmRed) = do
       op1 <- op
       mrgSingle $ Node op1 os i
     genNode (ComponentSpec op opinum oponum) = do
-      o :: idx <- simpleFreshConstrained e (SOrdBound (fromIntegral inum) (fromIntegral $ inum + compNum) () :: SOrdBound idx ())
+      o :: idx <-
+        simpleFreshConstrained
+          e
+          ( SOrdBound
+              (fromIntegral inum)
+              (fromIntegral $ inum + compNum - oponum + 1)
+              () ::
+              SOrdBound idx ()
+          )
       let os = fmap ((o +) . fromIntegral) [0 .. oponum - 1]
       i :: [idx] <-
         simpleFreshConstrained
