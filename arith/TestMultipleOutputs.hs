@@ -79,7 +79,7 @@ qcProblem ::
         Integer
     )
     Integer
-qcProblem = QuickCheckProblem gen [200] qcspec arithUSem concreteCircuit
+qcProblem = QuickCheckProblem gen [200] qcspec arithUSem concreteCircuit 10000
 
 igen :: HomogeneousSGen B.ByteString SymInteger
 igen = HomogeneousSGen $ const $ simpleFresh ()
@@ -100,6 +100,7 @@ cegisQCProblem =
     [100]
     qcspec
     arithUSem
+    10000
     qcsspec
     spec
     AssertionViolation

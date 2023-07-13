@@ -17,7 +17,8 @@ data QuickCheckProblem e c cop csm cidx where
       qcpGenSize :: [Int],
       qcpSpec :: cspec,
       qcpSemMap :: csm,
-      qcpProgram :: CCircuit cop cidx
+      qcpProgram :: CCircuit cop cidx,
+      qcpMaxSuccess :: Int
     } ->
     QuickCheckProblem e c cop csm cidx
 
@@ -35,14 +36,14 @@ quickCheckCCircuit ::
   forall e c cop csm cidx.
   QuickCheckProblem e c cop csm cidx ->
   IO (QuickCheckResult e c)
-quickCheckCCircuit (QuickCheckProblem inputGen size spec csm c) =
+quickCheckCCircuit (QuickCheckProblem inputGen size spec csm c ms) =
   go size
   where
     go [] = return NoCounterExample
     go (s : ss) = do
       r <-
         quickCheckWith
-          stdArgs {chatty = False}
+          stdArgs {chatty = False, maxSuccess = ms}
           ( forAll (cInputGen inputGen s) $ \input ->
               let p = interpretCCircuit input c csm
                in cspec spec input p

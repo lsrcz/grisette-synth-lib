@@ -133,6 +133,7 @@ data CegisQCProblem e s ce c op cop idx cidx where
       cqpCGenSize :: [Int],
       cqpCSpec :: cspec,
       cqpCSemMap :: csm,
+      cqpCMaxSuccess :: Int,
       cqpSSpec :: sspec,
       cqpSCircuitGenSpec :: CircuitSpec e op sm,
       cqpSCircuitGenError :: e,
@@ -147,7 +148,7 @@ cegisQC ::
   GrisetteSMTConfig n ->
   CegisQCProblem e s ce c op cop idx cidx ->
   IO (Either SolvingFailure ([[c]], CCircuit cop cidx))
-cegisQC config (CegisQCProblem cgen cgenSize cspecFunc csem sspecFunc gen err ierr sem igen) =
+cegisQC config (CegisQCProblem cgen cgenSize cspecFunc csem cmaxSuccess sspecFunc gen err ierr sem igen) =
   cegis' config initialCondition sspec' cspec' x 0 cgenSize
   where
     x :: ExceptT e UnionM (Circuit op idx)
@@ -175,7 +176,7 @@ cegisQC config (CegisQCProblem cgen cgenSize cspecFunc csem sspecFunc gen err ie
     cspec' :: [Int] -> CCircuit cop cidx -> IO (Either SolvingFailure ([c], Int, [Int]))
     cspec' [] _ = return $ Left Unsat
     cspec' sizes cprog = do
-      r <- quickCheckCCircuit (QuickCheckProblem cgen sizes cspecFunc csem cprog)
+      r <- quickCheckCCircuit (QuickCheckProblem cgen sizes cspecFunc csem cprog cmaxSuccess)
       case r of
         NoCounterExample -> return $ Left Unsat
         CounterExample {ceCurrentSize = s', ceRemainingSize = ss', ceCounterExample = v} ->

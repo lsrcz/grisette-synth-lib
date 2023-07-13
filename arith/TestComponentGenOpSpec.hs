@@ -39,7 +39,7 @@ qcProblem ::
     (OpCode Integer)
     USem
     Integer
-qcProblem = QuickCheckProblem gen [200] qcspec USem concreteCircuit
+qcProblem = QuickCheckProblem gen [200] qcspec USem concreteCircuit 10000
 
 spec ::
   CircuitSpec
@@ -79,6 +79,7 @@ cegisQCProblem =
     [100]
     qcspec
     USem
+    10000
     qcsspec
     spec
     AssertionViolation
