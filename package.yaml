@@ -17,31 +17,24 @@ dependencies:
   - base >= 4.14 && < 5
   - grisette >= 0.4.1 && < 0.5
   - mtl
-  - bytestring
   - unordered-containers
   - QuickCheck
   - quickcheck-with-counterexamples
   - sbv
   - prettyprinter
   - hashable
-  - utf8-string
+  - text
 
-flags:
-  {
-    fast:
-      {
-        description: "Compile with O2 optimization",
-        manual: False,
-        default: True,
-      },
-  }
-
-when:
-  - condition: flag(fast)
-    then:
-      ghc-options: -O2
-    else:
-      ghc-options: -O0
+ghc-options:
+  - -Wextra
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-record-updates
+  - -Wmissing-export-lists
+  - -Wmissing-home-modules
+  - -Wmissing-import-lists
+  - -Wpartial-fields
+  - -Wunused-type-patterns
 
 library:
   source-dirs: src
@@ -50,3 +43,15 @@ library:
 #     source-dirs: arith
 #     main: Main.hs
 #     dependencies: grisette-synth-lib
+
+tests:
+  spec:
+    main: Main.hs
+    source-dirs: test
+    dependencies:
+      - grisette-synth-lib
+      - test-framework
+      - test-framework-hunit
+      - test-framework-quickcheck2
+      - HUnit
+      - text

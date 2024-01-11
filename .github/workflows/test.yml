@@ -1,0 +1,196 @@
+# Based on https://gist.github.com/mstksg/11f753d891cee5980326a8ea8c865233
+
+name: Haskell Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - development
+      - "releases/*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+        plan:
+          - {
+              build: stack,
+              arg: "--stack-yaml stack-lts-18.28.yaml",
+              ismain: false,
+              experimental: false,
+              ghc: "8107",
+              cachekey: "stack-18.28",
+            }
+          - {
+              build: stack,
+              arg: "--stack-yaml stack-lts-18.28-lowerbound.yaml",
+              ismain: false,
+              experimental: false,
+              ghc: "8107",
+              cachekey: "stack-18.28-l",
+            }
+          - {
+              build: stack,
+              arg: "--stack-yaml stack-lts-19.33.yaml",
+              ismain: false,
+              experimental: false,
+              ghc: "902",
+              cachekey: "stack-19.33",
+            }
+          - {
+              build: stack,
+              arg: "--stack-yaml stack-lts-20.26.yaml",
+              ismain: false,
+              experimental: false,
+              ghc: "928",
+              cachekey: "stack-20.26",
+            }
+          - {
+              build: stack,
+              arg: "--stack-yaml stack-lts-21.25.yaml",
+              ismain: false,
+              experimental: false,
+              ghc: "948",
+              cachekey: "stack-21.25",
+            }
+          - {
+              build: stack,
+              arg: "",
+              ismain: true,
+              experimental: false,
+              ghc: "963",
+              cachekey: "stack-22.4",
+            }
+          - {
+              build: stack,
+              arg: "--stack-yaml stack-nightly.yaml",
+              ismain: false,
+              experimental: false,
+              ghc: "963",
+              cachekey: "stack-nightly",
+            }
+          - {
+              build: cabal,
+              arg: "--constraint=sbv<10",
+              ismain: false,
+              experimental: false,
+              ghc: "8107",
+              cachekey: "cabal-8107",
+            }
+          - {
+              build: cabal,
+              arg: "--constraint=sbv<10",
+              ismain: false,
+              experimental: false,
+              ghc: "902",
+              cachekey: "cabal-902",
+            }
+          - {
+              build: cabal,
+              arg: "",
+              ismain: false,
+              experimental: false,
+              ghc: "928",
+              cachekey: "cabal-928",
+            }
+          - {
+              build: cabal,
+              arg: "",
+              ismain: false,
+              experimental: false,
+              ghc: "948",
+              cachekey: "cabal-948",
+            }
+          - {
+              build: cabal,
+              arg: "",
+              ismain: false,
+              experimental: false,
+              ghc: "963",
+              cachekey: "cabal-963",
+            }
+
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.plan.experimental }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: cachix/install-nix-action@v22
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - uses: cachix/cachix-action@v12
+        with:
+          name: grisette-linux
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: Cache key
+        id: cache_key
+        run: |
+          echo "stack=$(shasum stack.yaml | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "package=$(shasum package.yaml | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Use minimal flake
+        run: |
+          cp .github/workflows/flake-ci.nix flake.nix
+          case ${{ matrix.os }} in
+            macOS-latest)
+              sed -i '' "s/pkgs.haskell.packages.\"ghc902\"/pkgs.haskell.packages.\"ghc${{ matrix.plan.ghc }}\"/" flake.nix
+              ;;
+            ubuntu-latest)
+              sed -i "s/pkgs.haskell.packages.\"ghc902\"/pkgs.haskell.packages.\"ghc${{ matrix.plan.ghc }}\"/" flake.nix
+              ;;
+          esac
+
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.stack
+            ~/.cabal
+            dist-newstyle
+          key: stack-${{ matrix.os }}-${{ matrix.plan.cachekey }}-${{ steps.cache_key.outputs.package }}
+          restore-keys: |
+            stack-${{ matrix.os }}-${{ matrix.plan.cachekey }}
+            stack-${{ matrix.os }}
+
+      - name: Build & Test
+        id: test
+        run: |
+          set -ex
+          case "$BUILD" in
+            stack)
+              nix develop --allow-dirty --no-warn-dirty -c stack --no-terminal $ARGS test --fast --flag grisette:-optimize --bench --no-run-benchmarks --coverage --haddock --no-haddock-deps --test-arguments "--jxml=test-report.xml"
+              ;;
+            cabal)
+              nix develop --allow-dirty --no-warn-dirty -c cabal update
+              nix develop --allow-dirty --no-warn-dirty -c cabal test --disable-optimization --flags=-optimize $ARGS -- --jxml=test-report.xml
+              ;;
+          esac
+          set +ex
+        env:
+          ARGS: ${{ matrix.plan.arg }}
+          BUILD: ${{ matrix.plan.build }}
+
+      - uses: phoenix-actions/test-reporting@v8
+        with:
+          name: Tests-${{ matrix.os }}-${{ matrix.plan.build }}-${{ matrix.plan.ghc }}
+          path: "**/test-report.xml"
+          reporter: java-junit
+        if: matrix.os == 'ubuntu-latest' && (success() || failure ())
+
+      - name: Generate coverage report
+        uses: 8c6794b6/hpc-codecov-action@v2
+        with:
+          target: stack:all
+        if: matrix.os == 'ubuntu-latest' && matrix.plan.ismain
+
+      - name: Send coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+        if: matrix.os == 'ubuntu-latest' && matrix.plan.ismain
