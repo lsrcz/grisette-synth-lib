@@ -33,14 +33,14 @@ data OpCode a
 deriving via
   (Default (OpCode s))
   instance
-    ToSym c s => ToSym (OpCode c) (OpCode s)
+    (ToSym c s) => ToSym (OpCode c) (OpCode s)
 
 deriving via
   (Default (OpCode c))
   instance
-    ToCon s c => ToCon (OpCode s) (OpCode c)
+    (ToCon s c) => ToCon (OpCode s) (OpCode c)
 
-instance Pretty a => Pretty (OpCode a) where
+instance (Pretty a) => Pretty (OpCode a) where
   pretty = \case
     Plus -> "+"
     Mul -> "*"
