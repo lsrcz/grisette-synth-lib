@@ -168,7 +168,7 @@ jobs:
               ;;
             cabal)
               nix develop --allow-dirty --no-warn-dirty -c cabal update
-              nix develop --allow-dirty --no-warn-dirty -c cabal test --disable-optimization --flags=-optimize $ARGS -- --jxml=test-report.xml
+              nix develop --allow-dirty --no-warn-dirty -c cabal run --disable-optimization --flags=-optimize $ARGS spec -- --jxml=test-report.xml
               ;;
           esac
           set +ex
