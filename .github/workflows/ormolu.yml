@@ -5,19 +5,20 @@ on:
   push:
     branches:
       - main
-      - 'releases/*'
+      - development
+      - "releases/*"
 
 jobs:
   ormolu:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: haskell-actions/run-ormolu@v14
-      with:
-        mode: inplace
-        version: 0.5.3.0
-    - name: apply formatting changes
-      uses: stefanzweifel/git-auto-commit-action@v5
-      if: ${{ always() }}
-      with:
-        commit_message: ":art: automated ormolu commit"
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/run-ormolu@v14
+        with:
+          mode: inplace
+          version: 0.5.3.0
+      - name: apply formatting changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        if: ${{ always() }}
+        with:
+          commit_message: ":art: automated ormolu commit"
