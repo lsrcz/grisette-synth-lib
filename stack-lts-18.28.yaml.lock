@@ -7,14 +7,28 @@ packages:
 - completed:
     hackage: doctest-0.18.2@sha256:489a6e8d3d687845798a73f7b53b43ebec1a8368d7cd6a959a91080ed253bcd7,7241
     pantry-tree:
-      size: 7975
       sha256: cacfd1af86ef3ec7531c528a2771451a47d218a0eca05db00141d29644aef80f
+      size: 7975
   original:
     hackage: doctest-0.18.2
+- completed:
+    hackage: grisette-0.4.1.0@sha256:40d516031b2b4a915e9c887efd8c398271b654e56b3468ba571ae6398c7bbc3c,10752
+    pantry-tree:
+      sha256: 67e27b2cfa75bf8295ca9b842cfd1c7dd6421ea419693772962238f10106dcf1
+      size: 12335
+  original:
+    hackage: grisette-0.4.1.0
+- completed:
+    hackage: quickcheck-with-counterexamples-1.2@sha256:d322d79008602df26f5eb4e1379e5b58bf1a92604df8601e71e200cfc3e847a3,1688
+    pantry-tree:
+      sha256: 0046517e3cc2adebfce19d4aad05a06dcf55ec9e572fa1c661ba9abe81386484
+      size: 724
+  original:
+    hackage: quickcheck-with-counterexamples-1.2
 snapshots:
 - completed:
+    sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68
     size: 590100
     url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml
-    sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68
   original:
     url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml

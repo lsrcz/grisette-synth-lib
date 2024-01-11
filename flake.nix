@@ -1,5 +1,5 @@
 {
-  description = "Library for building synthesizers with Grisette";
+  description = "Symbolic evaluation as a library";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
@@ -7,14 +7,13 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        
-        hPkgs = pkgs.haskell.packages."ghc927";
-        
+
+        hPkgs = pkgs.haskell.packages."ghc963";
+
         myDevTools = [
           hPkgs.ghc # GHC compiler in the desired version (will be available on PATH)
           # hPkgs.ghcid # Continuous terminal Haskell compile checker
           # hPkgs.ormolu # Haskell formatter
-          hPkgs.implicit-hie
           hPkgs.hlint # Haskell codestyle checker
           hPkgs.haskell-language-server # LSP server for editor
           hPkgs.cabal-install
@@ -22,6 +21,7 @@
           pkgs.zlib # External C library needed by some Haskell packages
           pkgs.boolector
           pkgs.z3
+          pkgs.nixpkgs-fmt
         ];
         # Wrap Stack to work with our Nix integration. We don't want to modify
         # stack.yaml so non-Nix users don't notice anything.
@@ -41,7 +41,10 @@
               "
           '';
         };
-      in {
+      in
+      {
+        formatter.x86_64-linux = pkgs.nixpkgs-fmt;
+
         devShells.default = pkgs.mkShell {
           buildInputs = myDevTools;
 

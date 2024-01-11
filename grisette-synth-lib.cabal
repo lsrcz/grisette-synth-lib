@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.36.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -13,7 +13,7 @@ homepage:       https://github.com/lsrcz/grisette-synth-lib#readme
 bug-reports:    https://github.com/lsrcz/grisette-synth-lib/issues
 author:         Sirui Lu, Rastislav Bodík
 maintainer:     Sirui Lu (siruilu@cs.washington.edu)
-copyright:      2023 Sirui Lu
+copyright:      2023-2024 Sirui Lu
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -32,18 +32,7 @@ flag fast
 
 library
   exposed-modules:
-      Component.CEGIS
-      Component.CInputGen
-      Component.Circuit
-      Component.ConcreteCircuit
-      Component.Index
-      Component.IntermediateGen
-      Component.Monad
-      Component.OpPrettyPrinter
-      Component.PrettyPrinterUtil
-      Component.ProgramSpec
-      Component.QuickCheck
-      Component.SemMap
+      Grisette.Lib.Synth.Context
   other-modules:
       Paths_grisette_synth_lib
   hs-source-dirs:
@@ -52,35 +41,7 @@ library
       QuickCheck
     , base >=4.14 && <5
     , bytestring
-    , grisette >=0.3.0 && <0.4
-    , hashable
-    , mtl
-    , prettyprinter
-    , quickcheck-with-counterexamples
-    , sbv
-    , unordered-containers
-    , utf8-string
-  default-language: Haskell2010
-  if flag(fast)
-    ghc-options: -O2
-  else
-    ghc-options: -O0
-
-executable arith
-  main-is: Main.hs
-  other-modules:
-      Sem
-      TestComponentGenOpSpec
-      TestMultipleOutputs
-      Paths_grisette_synth_lib
-  hs-source-dirs:
-      arith
-  build-depends:
-      QuickCheck
-    , base >=4.14 && <5
-    , bytestring
-    , grisette >=0.3.0 && <0.4
-    , grisette-synth-lib
+    , grisette >=0.4.1 && <0.5
     , hashable
     , mtl
     , prettyprinter

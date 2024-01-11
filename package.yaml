@@ -8,31 +8,33 @@ maintainer: Sirui Lu (siruilu@cs.washington.edu)
 license: BSD3
 license-file: LICENSE
 github: lsrcz/grisette-synth-lib
-copyright: "2023 Sirui Lu"
+copyright: "2023-2024 Sirui Lu"
 extra-source-files:
-- CHANGELOG.md
-- README.md
+  - CHANGELOG.md
+  - README.md
 
 dependencies:
-- base >= 4.14 && < 5
-- grisette >= 0.3.0 && < 0.4
-- mtl
-- bytestring
-- unordered-containers
-- QuickCheck
-- quickcheck-with-counterexamples
-- sbv
-- prettyprinter
-- hashable
-- utf8-string
+  - base >= 4.14 && < 5
+  - grisette >= 0.4.1 && < 0.5
+  - mtl
+  - bytestring
+  - unordered-containers
+  - QuickCheck
+  - quickcheck-with-counterexamples
+  - sbv
+  - prettyprinter
+  - hashable
+  - utf8-string
 
-flags: {
-  fast: {
-    description: "Compile with O2 optimization",
-    manual: False,
-    default: True,
+flags:
+  {
+    fast:
+      {
+        description: "Compile with O2 optimization",
+        manual: False,
+        default: True,
+      },
   }
-}
 
 when:
   - condition: flag(fast)
@@ -43,9 +45,8 @@ when:
 
 library:
   source-dirs: src
-
-executables:
-  arith:
-    source-dirs: arith
-    main: Main.hs
-    dependencies: grisette-synth-lib
+# executables:
+#   arith:
+#     source-dirs: arith
+#     main: Main.hs
+#     dependencies: grisette-synth-lib
