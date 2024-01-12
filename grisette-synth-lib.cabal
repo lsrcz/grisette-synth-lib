@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Grisette.Lib.Synth.Context
+      Grisette.Lib.Synth.Util.Pretty
   other-modules:
       Paths_grisette_synth_lib
   hs-source-dirs:
@@ -51,6 +52,7 @@ test-suite spec
   main-is: Main.hs
   other-modules:
       Grisette.Lib.Synth.ContextTest
+      Grisette.Lib.Synth.Util.PrettyTest
       Paths_grisette_synth_lib
   hs-source-dirs:
       test

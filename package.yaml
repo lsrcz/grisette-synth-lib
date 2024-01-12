@@ -24,6 +24,7 @@ dependencies:
   - prettyprinter
   - hashable
   - text
+  - prettyprinter
 
 ghc-options:
   - -Wextra
