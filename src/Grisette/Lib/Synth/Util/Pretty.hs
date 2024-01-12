@@ -5,6 +5,7 @@ module Grisette.Lib.Synth.Util.Pretty
   ( encloseListIfNotSingle,
     encloseList,
     renderDoc,
+    Doc,
   )
 where
 

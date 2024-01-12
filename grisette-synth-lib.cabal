@@ -28,6 +28,8 @@ source-repository head
 library
   exposed-modules:
       Grisette.Lib.Synth.Context
+      Grisette.Lib.Synth.Operator.OpPretty
+      Grisette.Lib.Synth.Operator.VarId
       Grisette.Lib.Synth.Util.Pretty
       Grisette.Lib.Synth.Util.Show
   other-modules:
@@ -53,6 +55,7 @@ test-suite spec
   main-is: Main.hs
   other-modules:
       Grisette.Lib.Synth.ContextTest
+      Grisette.Lib.Synth.Operator.OpPrettyTest
       Grisette.Lib.Synth.Util.PrettyTest
       Grisette.Lib.Synth.Util.ShowTest
       Paths_grisette_synth_lib

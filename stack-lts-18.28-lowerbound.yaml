@@ -66,6 +66,7 @@ extra-deps:
   - parallel-3.2.2.0
   - text-1.2.4.1
   - prettyprinter-1.5.0
+  - prettyprinter-ansi-terminal-1.1.1
   - test-framework-0.8.2.0
   - test-framework-hunit-0.3.0.2
   - test-framework-quickcheck2-0.3.0.5

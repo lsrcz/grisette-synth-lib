@@ -166,6 +166,13 @@ packages:
   original:
     hackage: prettyprinter-1.5.0
 - completed:
+    hackage: prettyprinter-ansi-terminal-1.1.1@sha256:76af37649159fbc39c0c528fabb90d40ad86d6da3b005b987b8d42dc90c44441,1886
+    pantry-tree:
+      sha256: cdd9c10e6431b5552a1a22194300ecec760c99fa1f8d2bdfc32b6d0cf3a3589d
+      size: 596
+  original:
+    hackage: prettyprinter-ansi-terminal-1.1.1
+- completed:
     hackage: test-framework-0.8.2.0@sha256:dd57d100cf1581ce4da589567a7114851f31eb42f381a78c5f83fb6fd7b6f020,6551
     pantry-tree:
       sha256: 403466db070663de731e304fea730e9f2a19e32f1029caa1f99f553e9ff43d26
