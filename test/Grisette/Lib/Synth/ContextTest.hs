@@ -2,7 +2,9 @@
 
 module Grisette.Lib.Synth.ContextTest (contextTest) where
 
+import Control.Monad.State.Class (modify)
 import qualified Control.Monad.State.Lazy as Lazy
+import qualified Control.Monad.State.Strict as Strict
 import qualified Data.Text as T
 import Grisette
   ( GenSymSimple (simpleFresh),
@@ -71,5 +73,12 @@ contextTest =
                 unionIf "a" (simpleFresh ()) (result "b") ::
                 SymbolicContext T.Text SymInteger
         let expected = return (symIte "a" (isym "x" 0) "b")
+        actual @?= expected,
+      testCase "mergeIfNeeded for strict StateT" $ do
+        let actual =
+              flip Strict.runStateT "x" $
+                unionIf "a" (modify (+ 1) >> result "b") (result "c") ::
+                SymbolicContext T.Text (SymInteger, SymInteger)
+        let expected = return (symIte "a" "b" "c", symIte "a" ("x" + 1) "x")
         actual @?= expected
     ]
