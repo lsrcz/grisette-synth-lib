@@ -20,9 +20,9 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (Default (Default), GPretty (gpretty), Mergeable)
-import Grisette.Lib.Synth.Operator.VarId (ConcreteVarId)
 import Grisette.Lib.Synth.Util.Pretty (Doc, encloseList, encloseListIfNotSingle)
 import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 data OpPrettyError op varId
   = IncorrectNumberOfArguments op Int

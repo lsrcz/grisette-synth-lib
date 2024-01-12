@@ -29,9 +29,9 @@ library
   exposed-modules:
       Grisette.Lib.Synth.Context
       Grisette.Lib.Synth.Operator.OpPretty
-      Grisette.Lib.Synth.Operator.VarId
       Grisette.Lib.Synth.Util.Pretty
       Grisette.Lib.Synth.Util.Show
+      Grisette.Lib.Synth.VarId
   other-modules:
       Paths_grisette_synth_lib
   hs-source-dirs:
