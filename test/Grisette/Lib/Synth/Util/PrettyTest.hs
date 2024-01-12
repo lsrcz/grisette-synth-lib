@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Grisette.Lib.Synth.Util.PrettyTest (prettyTest) where
@@ -8,10 +9,15 @@ import Grisette.Lib.Synth.Util.Pretty
     encloseListIfNotSingle,
     renderDoc,
   )
-import Prettyprinter (Doc, group, vsep)
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
+
+#if MIN_VERSION_prettyprinter(1,7,0)
+import Prettyprinter (Doc, group, vsep)
+#else
+import Data.Text.Prettyprint.Doc (Doc, group, vsep)
+#endif
 
 enclose :: [Doc ann] -> Doc ann
 enclose = encloseList "[" "]" ","

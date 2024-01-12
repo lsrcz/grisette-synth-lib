@@ -36,16 +36,16 @@ library
       src
   ghc-options: -Wextra -Wcompat -Widentities -Wincomplete-record-updates -Wmissing-export-lists -Wmissing-home-modules -Wmissing-import-lists -Wpartial-fields -Wunused-type-patterns
   build-depends:
-      QuickCheck
+      QuickCheck ==2.14.*
     , base >=4.14 && <5
     , grisette >=0.4.1 && <0.5
-    , hashable
-    , mtl
-    , prettyprinter
-    , quickcheck-with-counterexamples
-    , sbv
-    , text
-    , unordered-containers
+    , hashable >=1.3 && <1.5
+    , mtl >=2.2.2 && <2.4
+    , prettyprinter >=1.5 && <1.8
+    , quickcheck-with-counterexamples ==1.2.*
+    , sbv >=8.11 && <10.4
+    , text >=1.2.4.1 && <2.2
+    , unordered-containers >=0.2.11 && <0.3
   default-language: Haskell2010
 
 test-suite spec
@@ -60,19 +60,19 @@ test-suite spec
       test
   ghc-options: -Wextra -Wcompat -Widentities -Wincomplete-record-updates -Wmissing-export-lists -Wmissing-home-modules -Wmissing-import-lists -Wpartial-fields -Wunused-type-patterns
   build-depends:
-      HUnit
-    , QuickCheck
+      HUnit >=1.6
+    , QuickCheck ==2.14.*
     , base >=4.14 && <5
     , grisette >=0.4.1 && <0.5
     , grisette-synth-lib
-    , hashable
-    , mtl
-    , prettyprinter
-    , quickcheck-with-counterexamples
-    , sbv
-    , test-framework
-    , test-framework-hunit
-    , test-framework-quickcheck2
-    , text
-    , unordered-containers
+    , hashable >=1.3 && <1.5
+    , mtl >=2.2.2 && <2.4
+    , prettyprinter >=1.5 && <1.8
+    , quickcheck-with-counterexamples ==1.2.*
+    , sbv >=8.11 && <10.4
+    , test-framework >=0.8.2 && <0.9
+    , test-framework-hunit >=0.3.0.2 && <0.4
+    , test-framework-quickcheck2 >=0.3.0.5 && <0.4
+    , text >=1.2.4.1 && <2.2
+    , unordered-containers >=0.2.11 && <0.3
   default-language: Haskell2010
