@@ -29,6 +29,7 @@ library
   exposed-modules:
       Grisette.Lib.Synth.Context
       Grisette.Lib.Synth.Operator.OpPretty
+      Grisette.Lib.Synth.Program.Concrete
       Grisette.Lib.Synth.Util.Pretty
       Grisette.Lib.Synth.Util.Show
       Grisette.Lib.Synth.VarId
@@ -56,6 +57,9 @@ test-suite spec
   other-modules:
       Grisette.Lib.Synth.ContextTest
       Grisette.Lib.Synth.Operator.OpPrettyTest
+      Grisette.Lib.Synth.Program.Concrete.PrettyTest
+      Grisette.Lib.Synth.Program.ConcreteTest
+      Grisette.Lib.Synth.TestOperator.TestPrettyOperator
       Grisette.Lib.Synth.Util.PrettyTest
       Grisette.Lib.Synth.Util.ShowTest
       Paths_grisette_synth_lib

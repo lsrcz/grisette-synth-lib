@@ -20,7 +20,7 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (Default (Default), GPretty (gpretty), Mergeable)
-import Grisette.Lib.Synth.Util.Pretty (Doc, encloseList, encloseListIfNotSingle)
+import Grisette.Lib.Synth.Util.Pretty (Doc, parenCommaList, parenCommaListIfNotSingle)
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
@@ -91,7 +91,7 @@ prettyArguments sem op varIds map = do
       describe argName (Just argDesc) =
         gpretty argDesc <> "=" <> gpretty argName
   let argPretty = zipWith describe argNames argDescriptions
-  return $ encloseList "(" ")" "," argPretty
+  return $ parenCommaList argPretty
 
 prettyResults ::
   (ConcreteVarId varId, OpPretty sem op) =>
@@ -112,4 +112,4 @@ prettyResults sem op numOfArguments varIds map = do
           prefixes
           varIds
   let newMap = HM.union map $ HM.fromList $ zip varIds names
-  return (newMap, encloseListIfNotSingle "(" ")" "," $ gpretty <$> names)
+  return (newMap, parenCommaListIfNotSingle $ gpretty <$> names)

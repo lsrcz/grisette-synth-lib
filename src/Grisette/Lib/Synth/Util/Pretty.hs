@@ -6,6 +6,12 @@ module Grisette.Lib.Synth.Util.Pretty
     encloseList,
     renderDoc,
     Doc,
+    (<+>),
+    nest,
+    concatWith,
+    hardline,
+    parenCommaListIfNotSingle,
+    parenCommaList,
   )
 where
 
@@ -23,6 +29,9 @@ import Prettyprinter
     nest,
     unAnnotate,
     vcat,
+    (<+>),
+    concatWith,
+    hardline,
   )
 import Prettyprinter.Render.Text (renderStrict)
 #else
@@ -37,6 +46,9 @@ import Data.Text.Prettyprint.Doc
     nest,
     unAnnotate,
     vcat,
+    (<+>),
+    concatWith,
+    hardline,
   )
 import Data.Text.Prettyprint.Doc.Render.Text (renderStrict)
 #endif
@@ -55,6 +67,12 @@ encloseList l r s ds = case ds of
       vcat [nest 2 $ vcat [l, vcat $ map (<> sep) (init ds), last ds], r]
   where
     sep = flatAlt s (s <> " ")
+
+parenCommaListIfNotSingle :: [Doc ann] -> Doc ann
+parenCommaListIfNotSingle = encloseListIfNotSingle "(" ")" ","
+
+parenCommaList :: [Doc ann] -> Doc ann
+parenCommaList = encloseList "(" ")" ","
 
 renderDoc :: Int -> Doc ann -> T.Text
 renderDoc w doc = renderStrict $ layoutPretty layoutOptions (unAnnotate doc)

@@ -7,6 +7,8 @@ import qualified Data.Text as T
 import Grisette.Lib.Synth.Util.Pretty
   ( encloseList,
     encloseListIfNotSingle,
+    parenCommaList,
+    parenCommaListIfNotSingle,
     renderDoc,
   )
 import Test.Framework (Test, testGroup)
@@ -108,5 +110,14 @@ prettyTest =
               "  b,",
               "  c",
               "]y"
-            ]
+            ],
+      testCase "parenCommaListIfNotSingle" $ do
+        renderDoc 80 (parenCommaListIfNotSingle []) @?= "()"
+        renderDoc 80 (parenCommaListIfNotSingle ["a"]) @?= "a"
+        renderDoc 80 (parenCommaListIfNotSingle ["a", "b", "c"])
+          @?= "(a, b, c)",
+      testCase "parenCommaList" $ do
+        renderDoc 80 (parenCommaList []) @?= "()"
+        renderDoc 80 (parenCommaList ["a"]) @?= "(a)"
+        renderDoc 80 (parenCommaList ["a", "b", "c"]) @?= "(a, b, c)"
     ]
