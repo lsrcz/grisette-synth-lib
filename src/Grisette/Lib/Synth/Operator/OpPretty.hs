@@ -63,29 +63,28 @@ instance
       <> gpretty idx
       <> " is redefined."
 
-class OpPretty sem op where
+class OpPretty op where
   describeArguments ::
-    sem -> op -> Int -> Either (OpPrettyError op varId) [Maybe T.Text]
+    op -> Int -> Either (OpPrettyError op varId) [Maybe T.Text]
   prefixResults ::
-    sem -> op -> Int -> Int -> Either (OpPrettyError op varId) [T.Text]
+    op -> Int -> Int -> Either (OpPrettyError op varId) [T.Text]
 
 type VarIdMap varId = HM.HashMap varId T.Text
 
 prettyArguments ::
-  (ConcreteVarId varId, OpPretty sem op) =>
-  sem ->
+  (ConcreteVarId varId, OpPretty op) =>
   op ->
   [varId] ->
   VarIdMap varId ->
   Either (OpPrettyError op varId) (Doc ann)
-prettyArguments sem op varIds map = do
+prettyArguments op varIds map = do
   let lookupVarId (idx, varId) =
         maybe
           (throwError $ UndefinedArgument idx varId)
           return
           (HM.lookup varId map)
   argNames <- traverse lookupVarId $ zip [0 ..] varIds
-  argDescriptions <- describeArguments sem op (length varIds)
+  argDescriptions <- describeArguments op (length varIds)
 
   let describe argName Nothing = gpretty argName
       describe argName (Just argDesc) =
@@ -94,18 +93,17 @@ prettyArguments sem op varIds map = do
   return $ parenCommaList argPretty
 
 prettyResults ::
-  (ConcreteVarId varId, OpPretty sem op) =>
-  sem ->
+  (ConcreteVarId varId, OpPretty op) =>
   op ->
   Int ->
   [varId] ->
   VarIdMap varId ->
   Either (OpPrettyError op varId) (VarIdMap varId, Doc ann)
-prettyResults sem op numOfArguments varIds map = do
+prettyResults op numOfArguments varIds map = do
   let ensureNotRedefined (idx, varId) =
         when (HM.member varId map) $ throwError $ RedefinedResult idx varId
   traverse_ ensureNotRedefined $ zip [0 ..] varIds
-  prefixes <- prefixResults sem op numOfArguments (length varIds)
+  prefixes <- prefixResults op numOfArguments (length varIds)
   let names =
         zipWith
           (\prefix varId -> prefix <> showText (toInteger varId))

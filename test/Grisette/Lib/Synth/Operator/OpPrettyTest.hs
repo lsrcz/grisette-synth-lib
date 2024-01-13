@@ -18,7 +18,9 @@ import Grisette.Lib.Synth.Operator.OpPretty
     prettyArguments,
     prettyResults,
   )
-import Grisette.Lib.Synth.TestOperator.TestPrettyOperator (TestPrettyOp (PrettyOp1, PrettyOp2), TestPrettySem (PrettySem))
+import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
+  ( TestPrettyOp (PrettyOp1, PrettyOp2),
+  )
 import Grisette.Lib.Synth.Util.Pretty (renderDoc)
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
@@ -30,12 +32,12 @@ env = HM.fromList [(0, "x"), (1, "y")]
 looselyRenderArguments ::
   TestPrettyOp -> [Int] -> Either (OpPrettyError TestPrettyOp Int) T.Text
 looselyRenderArguments op args =
-  renderDoc 80 <$> prettyArguments PrettySem op args env
+  renderDoc 80 <$> prettyArguments op args env
 
 compactlyRenderArguments ::
   TestPrettyOp -> [Int] -> Either (OpPrettyError TestPrettyOp Int) T.Text
 compactlyRenderArguments op args =
-  renderDoc 1 <$> prettyArguments PrettySem op args env
+  renderDoc 1 <$> prettyArguments op args env
 
 looselyRenderResults ::
   TestPrettyOp ->
@@ -43,7 +45,7 @@ looselyRenderResults ::
   [Int] ->
   Either (OpPrettyError TestPrettyOp Int) (VarIdMap Int, T.Text)
 looselyRenderResults op numArgs res =
-  second (renderDoc 80) <$> prettyResults PrettySem op numArgs res env
+  second (renderDoc 80) <$> prettyResults op numArgs res env
 
 compactlyRenderResults ::
   TestPrettyOp ->
@@ -51,7 +53,7 @@ compactlyRenderResults ::
   [Int] ->
   Either (OpPrettyError TestPrettyOp Int) (VarIdMap Int, T.Text)
 compactlyRenderResults op numArgs res =
-  second (renderDoc 1) <$> prettyResults PrettySem op numArgs res env
+  second (renderDoc 1) <$> prettyResults op numArgs res env
 
 opPrettyTest :: Test
 opPrettyTest =

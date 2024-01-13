@@ -77,33 +77,31 @@ data ProgPrettyError op varId
   deriving (Mergeable) via (Default (ProgPrettyError op varId))
 
 prettyStmt ::
-  (ConcreteVarId varId, OpPretty sem op, GPretty op) =>
-  sem ->
+  (ConcreteVarId varId, OpPretty op, GPretty op) =>
   Int ->
   Stmt op varId ->
   StateT (VarIdMap varId) (Either (ProgPrettyError op varId)) (Doc ann)
-prettyStmt sem index stmt@(Stmt op argIds resIds) = do
+prettyStmt index stmt@(Stmt op argIds resIds) = do
   map <- get
-  argPretty <- case prettyArguments sem op argIds map of
+  argPretty <- case prettyArguments op argIds map of
     Left err -> throwError $ StmtPrettyError stmt index err
     Right argPretty -> pure argPretty
   let opPretty = gpretty op
-  (newMap, resPretty) <- case prettyResults sem op (length argIds) resIds map of
+  (newMap, resPretty) <- case prettyResults op (length argIds) resIds map of
     Left err -> throwError $ StmtPrettyError stmt index err
     Right resPretty -> pure resPretty
   put newMap
   return $ resPretty <> " = " <> opPretty <> argPretty
 
 prettyProg ::
-  (ConcreteVarId varId, OpPretty sem op, GPretty op, GPretty ty) =>
-  sem ->
+  (ConcreteVarId varId, OpPretty op, GPretty op, GPretty ty) =>
   Prog op varId ty ->
   Either (ProgPrettyError op varId) (Doc ann)
-prettyProg sem (Prog name argList stmtList resList) = do
+prettyProg (Prog name argList stmtList resList) = do
   let initMap =
         HM.fromList $ map (\arg -> (progArgId arg, progArgName arg)) argList
   flip evalStateT initMap $ do
-    stmtsPretty <- traverse (uncurry $ prettyStmt sem) (zip [0 ..] stmtList)
+    stmtsPretty <- traverse (uncurry prettyStmt) (zip [0 ..] stmtList)
     let firstLine =
           nest (-2) $
             "def "

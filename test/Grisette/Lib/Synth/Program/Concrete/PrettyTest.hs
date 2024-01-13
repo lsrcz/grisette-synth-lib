@@ -22,7 +22,6 @@ import Grisette.Lib.Synth.Program.Concrete
   )
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   ( TestPrettyOp (PrettyOp2),
-    TestPrettySem (PrettySem),
     TestPrettyType (PrettyType1, PrettyType2),
   )
 import Grisette.Lib.Synth.Util.Pretty (renderDoc)
@@ -124,7 +123,7 @@ prettyTest =
               }
             ]
         return $ testGroup groupName $ do
-          let doc = flip runStateT env $ prettyStmt PrettySem index stmt
+          let doc = flip runStateT env $ prettyStmt index stmt
           [ testCase "loose" $ do
               first (renderDoc 80) <$> doc @?= ((,newMap) <$> loose),
             testCase "compact" $
@@ -240,7 +239,7 @@ prettyTest =
               }
             ]
         return $ testGroup groupName $ do
-          let doc = prettyProg PrettySem prog
+          let doc = prettyProg prog
           [ testCase "loose" $ renderDoc 80 <$> doc @?= loose,
             testCase "compact" $ renderDoc 1 <$> doc @?= compact
             ]
