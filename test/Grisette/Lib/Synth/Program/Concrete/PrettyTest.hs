@@ -7,6 +7,7 @@ import Control.Arrow (Arrow (first))
 import Control.Monad.State (StateT (runStateT))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
+import Grisette (GPretty (gpretty))
 import Grisette.Lib.Synth.Operator.OpPretty
   ( OpPrettyError (RedefinedResult, UndefinedArgument),
     VarIdMap,
@@ -21,7 +22,8 @@ import Grisette.Lib.Synth.Program.Concrete
     prettyStmt,
   )
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
-  ( TestPrettyOp (PrettyOp2),
+  ( TestPrettyExtOp (TestPrettyExtOp),
+    TestPrettyOp (PrettyInvokeExtOp, PrettyInvokeOp, PrettyOp2),
     TestPrettyType (PrettyType1, PrettyType2),
   )
 import Grisette.Lib.Synth.Util.Pretty (renderDoc)
@@ -242,5 +244,45 @@ prettyTest =
           let doc = prettyProg prog
           [ testCase "loose" $ renderDoc 80 <$> doc @?= loose,
             testCase "compact" $ renderDoc 1 <$> doc @?= compact
-            ]
+            ],
+      testGroup "gpretty" $ do
+        let progExt =
+              Prog
+                "ext"
+                [ProgArg PrettyType1 "x" 0]
+                [Stmt TestPrettyExtOp [0] [1]]
+                [ProgRes PrettyType1 1]
+        let prog1 =
+              Prog
+                "prog1"
+                [ProgArg PrettyType1 "x" 0]
+                [Stmt (PrettyInvokeExtOp progExt) [0] [1]]
+                [ProgRes PrettyType1 1]
+        let prog2 =
+              Prog
+                "prog2"
+                [ProgArg PrettyType1 "x" (0 :: Int)]
+                [ Stmt (PrettyInvokeExtOp progExt) [0] [1],
+                  Stmt (PrettyInvokeOp prog1) [1] [2]
+                ]
+                [ProgRes PrettyType1 2]
+        let doc = gpretty prog2
+        [ testCase "loose" $ do
+            let actual = renderDoc 80 doc
+            let expected =
+                  T.intercalate
+                    "\n"
+                    [ "def ext(x: PrettyType1):",
+                      "  o1 = ext(x)",
+                      "  return o1",
+                      "def prog1(x: PrettyType1):",
+                      "  o1 = invoke_ext(ext)(x)",
+                      "  return o1",
+                      "def prog2(x: PrettyType1):",
+                      "  o1 = invoke_ext(ext)(x)",
+                      "  o2 = invoke(prog1)(o1)",
+                      "  return o2"
+                    ]
+            actual @?= expected
+          ]
     ]

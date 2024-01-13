@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Grisette.Lib.Synth.Program.Concrete
@@ -11,12 +13,17 @@ module Grisette.Lib.Synth.Program.Concrete
     ProgPrettyError (..),
     prettyStmt,
     prettyProg,
+    OpDirectSubProgs (..),
+    SomeConstrainedProg (..),
+    topologicalSortSubProg,
+    SomePrettyProg (..),
   )
 where
 
 import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.State (MonadState (get, put), StateT, evalStateT)
 import qualified Data.HashMap.Lazy as HM
+import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (Default (Default), GPretty (gpretty), Mergeable)
@@ -76,6 +83,34 @@ data ProgPrettyError op varId
   deriving (Show, Eq, Generic)
   deriving (Mergeable) via (Default (ProgPrettyError op varId))
 
+instance
+  (GPretty op, Show op, ConcreteVarId varId) =>
+  GPretty (ProgPrettyError op varId)
+  where
+  gpretty (StmtPrettyError stmt index err) =
+    nest
+      2
+      ( "Error in statement "
+          <> gpretty index
+          <> ": "
+          <> hardline
+          <> gpretty err
+          <> "."
+      )
+      <> hardline
+      <> nest
+        2
+        ( "Raw statement: "
+            <> hardline
+            <> gpretty (show stmt)
+        )
+  gpretty (ResultUndefined index varId) =
+    "Error in result "
+      <> gpretty index
+      <> ": the variable "
+      <> gpretty (toInteger varId)
+      <> " is undefined."
+
 prettyStmt ::
   (ConcreteVarId varId, OpPretty op, GPretty op) =>
   Int ->
@@ -124,3 +159,81 @@ prettyProg (Prog name argList stmtList resList) = do
     let ret = "return" <+> parenCommaListIfNotSingle (gpretty <$> retNames)
     return . nest 2 . concatWith (\x y -> x <> hardline <> y) $
       concat [[firstLine], stmtsPretty, [ret]]
+
+data SomePrettyProg where
+  SomePrettyProg ::
+    ( ConcreteVarId varId,
+      OpPretty op,
+      Show op,
+      GPretty op,
+      GPretty ty,
+      Show ty,
+      OpDirectSubProgs op SomePrettyProg
+    ) =>
+    Prog op varId ty ->
+    SomePrettyProg
+
+instance GPretty SomePrettyProg where
+  gpretty (SomePrettyProg prog) = do
+    let progDoc = prettyProg prog
+    case progDoc of
+      Left err ->
+        nest
+          2
+          ( "Error while pretty-printing program "
+              <> gpretty (progName prog)
+              <> hardline
+              <> gpretty err
+          )
+          <> hardline
+          <> nest 2 ("Raw program: " <> hardline <> gpretty (show prog))
+      Right doc -> doc
+
+class OpDirectSubProgs op someConstrainedProg where
+  opDirectSubProgs :: op -> [someConstrainedProg]
+
+class SomeConstrainedProg someConstrainedProg where
+  someProgName :: someConstrainedProg -> T.Text
+  someDirectSubProgs :: someConstrainedProg -> [someConstrainedProg]
+
+instance SomeConstrainedProg SomePrettyProg where
+  someProgName (SomePrettyProg prog) = progName prog
+  someDirectSubProgs (SomePrettyProg (Prog _ _ stmts _)) =
+    opDirectSubProgs . stmtOp =<< stmts
+
+topologicalSortSubProgStep ::
+  (SomeConstrainedProg someConstrainedProg) =>
+  OM.OMap T.Text someConstrainedProg ->
+  someConstrainedProg ->
+  OM.OMap T.Text someConstrainedProg
+topologicalSortSubProgStep map someConstrainedProg
+  | OM.member (someProgName someConstrainedProg) map = map
+topologicalSortSubProgStep map someConstrainedProg =
+  allSub OM.>| (someProgName someConstrainedProg, someConstrainedProg)
+  where
+    allSub =
+      foldl topologicalSortSubProgStep map $
+        someDirectSubProgs someConstrainedProg
+
+topologicalSortSubProg ::
+  (SomeConstrainedProg someConstrainedProg) =>
+  someConstrainedProg ->
+  [someConstrainedProg]
+topologicalSortSubProg prog =
+  snd <$> OM.assocs (topologicalSortSubProgStep OM.empty prog)
+
+instance
+  ( ConcreteVarId varId,
+    OpPretty op,
+    Show op,
+    GPretty op,
+    GPretty ty,
+    Show ty,
+    OpDirectSubProgs op SomePrettyProg
+  ) =>
+  GPretty (Prog op varId ty)
+  where
+  gpretty prog =
+    concatWith (\l r -> l <> hardline <> r) $ gpretty <$> allProgs
+    where
+      allProgs = topologicalSortSubProg (SomePrettyProg prog)
