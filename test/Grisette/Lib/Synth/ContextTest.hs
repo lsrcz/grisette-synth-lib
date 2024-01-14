@@ -5,7 +5,6 @@ module Grisette.Lib.Synth.ContextTest (contextTest) where
 import Control.Monad.State.Class (modify)
 import qualified Control.Monad.State.Lazy as Lazy
 import qualified Control.Monad.State.Strict as Strict
-import qualified Data.Text as T
 import Grisette
   ( GenSymSimple (simpleFresh),
     ITEOp (symIte),
@@ -32,23 +31,23 @@ contextTest =
     [ testGroup
         "ConcreteContext"
         [ testCase "result" $
-            result 1 @?= (Right 1 :: ConcreteContext T.Text Int),
+            result 1 @?= (Right 1 :: ConcreteContext Int),
           testCase "raiseError" $
-            raiseError "err" @?= (Left "err" :: ConcreteContext T.Text Int),
+            raiseError "err" @?= (Left "err" :: ConcreteContext Int),
           testCase "mergeIfNeeded" $
-            mergeIfNeeded (return 1) @?= (Right 1 :: ConcreteContext T.Text Int)
+            mergeIfNeeded (return 1) @?= (Right 1 :: ConcreteContext Int)
         ],
       testGroup
         "SymbolicContext"
         [ testCase "result" $
-            result 1 @?= (mrgReturn 1 :: SymbolicContext T.Text Int),
+            result 1 @?= (mrgReturn 1 :: SymbolicContext Int),
           testCase "raiseError" $ do
-            let actual = raiseError "err" :: SymbolicContext T.Text Int
+            let actual = raiseError "err" :: SymbolicContext Int
             let expected = mrgThrowError "err"
             actual @?= expected,
           testCase "mergeIfNeeded" $ do
             let actual = mergeIfNeeded (return 1)
-            let expected = mrgReturn 1 :: SymbolicContext T.Text Int
+            let expected = mrgReturn 1 :: SymbolicContext Int
             actual @?= expected
         ],
       testCase "default result" $ do
@@ -57,7 +56,7 @@ contextTest =
                 unionIf "a" (result "b") (result "c")
         let expected =
               mrgReturn (symIte "a" "b" "c", "st") ::
-                SymbolicContext T.Text (SymInteger, SymInteger)
+                SymbolicContext (SymInteger, SymInteger)
         actual @?= expected,
       testCase "default raiseError" $ do
         let actual =
@@ -65,20 +64,20 @@ contextTest =
                 unionIf "a" (raiseError "err") (raiseError "err")
         let expected =
               raiseError "err" ::
-                SymbolicContext T.Text (SymInteger, SymInteger)
+                SymbolicContext (SymInteger, SymInteger)
         actual @?= expected,
       testCase "mergeIfNeeded for FreshT" $ do
         let actual =
               flip runFreshT "x" $
                 unionIf "a" (simpleFresh ()) (result "b") ::
-                SymbolicContext T.Text SymInteger
+                SymbolicContext SymInteger
         let expected = return (symIte "a" (isym "x" 0) "b")
         actual @?= expected,
       testCase "mergeIfNeeded for strict StateT" $ do
         let actual =
               flip Strict.runStateT "x" $
                 unionIf "a" (modify (+ 1) >> result "b") (result "c") ::
-                SymbolicContext T.Text (SymInteger, SymInteger)
+                SymbolicContext (SymInteger, SymInteger)
         let expected = return (symIte "a" "b" "c", symIte "a" ("x" + 1) "x")
         actual @?= expected
     ]
