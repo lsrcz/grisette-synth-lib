@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -20,13 +21,21 @@ module Grisette.Lib.Synth.Program.Concrete
   )
 where
 
+import Control.Monad (when)
 import Control.Monad.Error.Class (MonadError (throwError))
-import Control.Monad.State (MonadState (get, put), StateT, evalStateT)
+import Control.Monad.State
+  ( MonadState (get, put),
+    MonadTrans (lift),
+    StateT,
+    evalStateT,
+  )
+import Data.Foldable (traverse_)
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (Default (Default), GPretty (gpretty), Mergeable)
+import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpPretty
   ( OpPretty,
     OpPrettyError,
@@ -34,6 +43,8 @@ import Grisette.Lib.Synth.Operator.OpPretty
     prettyArguments,
     prettyResults,
   )
+import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Util.Pretty
   ( Doc,
     concatWith,
@@ -43,6 +54,7 @@ import Grisette.Lib.Synth.Util.Pretty
     parenCommaListIfNotSingle,
     (<+>),
   )
+import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 data Stmt op varId = Stmt
@@ -237,3 +249,48 @@ instance
     concatWith (\l r -> l <> hardline <> r) $ gpretty <$> allProgs
     where
       allProgs = topologicalSortSubProg (SomePrettyProg prog)
+
+type Env varId val = HM.HashMap varId val
+
+addVal ::
+  (ConcreteVarId varId, MonadContext ctx) =>
+  varId ->
+  val ->
+  StateT (Env varId val) ctx ()
+addVal varId val = do
+  env <- get
+  when (HM.member varId env) . throwError $
+    "Variable " <> showText varId <> " is already defined."
+  put $ HM.insert varId val env
+
+lookupVal ::
+  (ConcreteVarId varId, MonadContext ctx) =>
+  varId ->
+  StateT (Env varId val) ctx val
+lookupVal varId = do
+  env <- get
+  case HM.lookup varId env of
+    Nothing -> throwError $ "Variable " <> showText varId <> " is undefined."
+    Just val -> return val
+
+instance
+  ( OpSemantics semObj op val ctx,
+    ConcreteVarId varId
+  ) =>
+  ProgSemantics semObj (Prog op varId ty) val ctx
+  where
+  runProg sem (Prog _ arg stmts ret) inputs = do
+    when (length inputs /= length arg) . throwError $
+      "Expected "
+        <> showText (length arg)
+        <> " arguments, but got "
+        <> showText (length inputs)
+        <> " arguments."
+    let initialEnv = HM.fromList $ zip (progArgId <$> arg) inputs
+    let runStmt (Stmt op argIds resIds) = do
+          args <- traverse lookupVal argIds
+          res <- lift $ applyOp sem op args
+          traverse_ (uncurry addVal) $ zip resIds res
+    flip evalStateT initialEnv $ do
+      traverse_ runStmt stmts
+      traverse (lookupVal . progResId) ret
