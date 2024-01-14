@@ -34,7 +34,12 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (Default (Default), GPretty (gpretty), Mergeable)
+import Grisette
+  ( Default (Default),
+    GPretty (gpretty),
+    Mergeable (rootStrategy),
+    MergingStrategy (NoStrategy),
+  )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpPretty
   ( OpPretty,
@@ -63,7 +68,9 @@ data Stmt op varId = Stmt
     stmtResIds :: [varId]
   }
   deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default (Stmt op varId))
+
+instance Mergeable (Stmt op varId) where
+  rootStrategy = NoStrategy
 
 data ProgArg varId ty = ProgArg
   { progArgType :: ty,
@@ -71,14 +78,12 @@ data ProgArg varId ty = ProgArg
     progArgId :: varId
   }
   deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default (ProgArg varId ty))
 
 data ProgRes varId ty = ProgRes
   { progResType :: ty,
     progResId :: varId
   }
   deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default (ProgRes varId ty))
 
 data Prog op varId ty = Prog
   { progName :: T.Text,
@@ -87,7 +92,9 @@ data Prog op varId ty = Prog
     progResList :: [ProgRes varId ty]
   }
   deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default (Prog op varId ty))
+
+instance Mergeable (Prog op varId ty) where
+  rootStrategy = NoStrategy
 
 data ProgPrettyError op varId
   = StmtPrettyError (Stmt op varId) Int (OpPrettyError op varId)
