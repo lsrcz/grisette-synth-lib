@@ -50,7 +50,7 @@ semanticsTest =
           { semanticsTestCaseName = "divByZero",
             semanticsTestCaseProg = goodProg,
             semanticsTestCaseArgs = [0, 20],
-            semanticsTestCaseExpected = Left "Division by zero"
+            semanticsTestCaseExpected = Left "ArithException: divide by zero"
           },
         SemanticsTestCase
           { semanticsTestCaseName = "incorrect number of arguments",

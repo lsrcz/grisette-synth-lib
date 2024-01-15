@@ -30,6 +30,7 @@ library
       Grisette.Lib.Synth.Context
       Grisette.Lib.Synth.Operator.OpPretty
       Grisette.Lib.Synth.Operator.OpSemantics
+      Grisette.Lib.Synth.Program.ByteCodeSketch
       Grisette.Lib.Synth.Program.Concrete
       Grisette.Lib.Synth.Program.ProgSemantics
       Grisette.Lib.Synth.Util.Pretty
@@ -60,6 +61,7 @@ test-suite spec
   other-modules:
       Grisette.Lib.Synth.ContextTest
       Grisette.Lib.Synth.Operator.OpPrettyTest
+      Grisette.Lib.Synth.Program.ByteCodeSketchTest
       Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest
       Grisette.Lib.Synth.Program.Concrete.PrettyTest
       Grisette.Lib.Synth.Program.Concrete.SemanticsTest
@@ -69,6 +71,7 @@ test-suite spec
       Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
       Grisette.Lib.Synth.Util.PrettyTest
       Grisette.Lib.Synth.Util.ShowTest
+      Test.SymbolicAssertion
       Paths_grisette_synth_lib
   hs-source-dirs:
       test
