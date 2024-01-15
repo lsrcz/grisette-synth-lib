@@ -2,11 +2,14 @@
 
 module Grisette.Lib.Synth.Program.Concrete.SemanticsTest (semanticsTest) where
 
+import Control.Monad.Error.Class (liftEither)
 import qualified Data.Text as T
-import Grisette.Lib.Synth.Context (ConcreteContext)
+import Grisette (SymInteger, ToSym (toSym))
+import Grisette.Lib.Synth.Context (ConcreteContext, SymbolicContext)
 import Grisette.Lib.Synth.Program.Concrete
   ( Prog (Prog),
     ProgArg (ProgArg),
+    ProgMayMultiPath (ProgMayMultiPath),
     ProgRes (ProgRes),
     Stmt (Stmt),
   )
@@ -22,9 +25,9 @@ import Test.HUnit ((@?=))
 
 data SemanticsTestCase = SemanticsTestCase
   { semanticsTestCaseName :: String,
-    semanticsTestCaseProg :: Prog TestSemanticsOp Int TestSemanticsType,
-    semanticsTestCaseArgs :: [Int],
-    semanticsTestCaseExpected :: Either T.Text [Int]
+    semanticsTestCaseProg :: Prog TestSemanticsOp Integer TestSemanticsType,
+    semanticsTestCaseArgs :: [Integer],
+    semanticsTestCaseExpected :: Either T.Text [Integer]
   }
 
 semanticsTest :: Test
@@ -38,7 +41,7 @@ semanticsTest =
               Stmt DivMod [3, 0] [4, 5]
             ]
             [ProgRes IntType 4, ProgRes IntType 5] ::
-            Prog TestSemanticsOp Int TestSemanticsType
+            Prog TestSemanticsOp Integer TestSemanticsType
     SemanticsTestCase name prog args expected <-
       [ SemanticsTestCase
           { semanticsTestCaseName = "runProg",
@@ -67,7 +70,7 @@ semanticsTest =
                 [ProgArg IntType "x" 0, ProgArg IntType "x" 1]
                 [Stmt Add [0, 1] [1]]
                 [ProgRes IntType 1] ::
-                Prog TestSemanticsOp Int TestSemanticsType,
+                Prog TestSemanticsOp Integer TestSemanticsType,
             semanticsTestCaseArgs = [1, 2],
             semanticsTestCaseExpected = Left "Variable 1 is already defined."
           },
@@ -79,7 +82,7 @@ semanticsTest =
                 [ProgArg IntType "x" 0]
                 [Stmt Add [0, 1] [2]]
                 [ProgRes IntType 2] ::
-                Prog TestSemanticsOp Int TestSemanticsType,
+                Prog TestSemanticsOp Integer TestSemanticsType,
             semanticsTestCaseArgs = [1],
             semanticsTestCaseExpected = Left "Variable 1 is undefined."
           },
@@ -91,13 +94,18 @@ semanticsTest =
                 [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
                 [Stmt Add [0, 1] [2]]
                 [ProgRes IntType 3] ::
-                Prog TestSemanticsOp Int TestSemanticsType,
+                Prog TestSemanticsOp Integer TestSemanticsType,
             semanticsTestCaseArgs = [1, 2],
             semanticsTestCaseExpected = Left "Variable 3 is undefined."
           }
         ]
-    return $ testCase name $ do
-      let actual =
-            runProg TestSemanticsObj prog args ::
-              ConcreteContext [Int]
-      actual @?= expected
+    [ testCase name $ do
+        let actual =
+              runProg TestSemanticsObj prog args :: ConcreteContext [Integer]
+        actual @?= expected,
+      testCase (name <> "-ProgMayMultiPath") $ do
+        let actual =
+              runProg TestSemanticsObj (ProgMayMultiPath prog) (toSym args) ::
+                SymbolicContext [SymInteger]
+        actual @?= toSym (liftEither expected :: SymbolicContext [Integer])
+      ]

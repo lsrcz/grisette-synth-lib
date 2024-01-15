@@ -38,7 +38,7 @@ data TestSemanticsType = IntType
 
 instance
   (MonadContext ctx) =>
-  OpSemantics TestSemanticsObj TestSemanticsOp Int ctx
+  OpSemantics TestSemanticsObj TestSemanticsOp Integer ctx
   where
   applyOp _ Add [x, y] = return [x + y]
   applyOp _ Add l =
