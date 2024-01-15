@@ -11,7 +11,6 @@ module Grisette.Lib.Synth.Program.ByteCodeSketch
     ProgArg (..),
     ProgRes (..),
     Prog (..),
-    takeNumArg,
   )
 where
 
