@@ -60,6 +60,7 @@ test-suite spec
   other-modules:
       Grisette.Lib.Synth.ContextTest
       Grisette.Lib.Synth.Operator.OpPrettyTest
+      Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest
       Grisette.Lib.Synth.Program.Concrete.PrettyTest
       Grisette.Lib.Synth.Program.Concrete.SemanticsTest
       Grisette.Lib.Synth.Program.Concrete.TopologicalSortTest

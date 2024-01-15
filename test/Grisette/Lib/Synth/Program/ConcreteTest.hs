@@ -1,5 +1,6 @@
 module Grisette.Lib.Synth.Program.ConcreteTest (concreteTest) where
 
+import Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest (mayMultiPathTest)
 import Grisette.Lib.Synth.Program.Concrete.PrettyTest (prettyTest)
 import Grisette.Lib.Synth.Program.Concrete.SemanticsTest (semanticsTest)
 import Grisette.Lib.Synth.Program.Concrete.TopologicalSortTest
@@ -13,5 +14,6 @@ concreteTest =
     "Grisette.Lib.Synth.Program.Concrete"
     [ prettyTest,
       topologicalSortTest,
-      semanticsTest
+      semanticsTest,
+      mayMultiPathTest
     ]

@@ -6,6 +6,22 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      :    Grisette.Lib.Synth.Program.Concrete
+-- Copyright   :    (c) Sirui Lu 2024
+-- License     :    BSD-3-Clause (see the LICENSE file)
+--
+-- Maintainer  :    siruilu@cs.washington.edu
+-- Stability   :    experimental
+-- Portability :    GHC only
+--
+-- Do not use plain concrete programs on operators that may generate multiple
+-- results that cannot be merged into a single result, or there can be
+-- significant performance issues.
+--
+-- Use the `ProgMayMultiPath` wrapper to allow multiple results. However, note
+-- that it is generally not a good idea to use non-simply-mergeable types as
+-- results, as it can lead to exponential blowup in the number of results.
 module Grisette.Lib.Synth.Program.Concrete
   ( Stmt (..),
     ProgArg (..),
@@ -18,6 +34,7 @@ module Grisette.Lib.Synth.Program.Concrete
     SomeConstrainedProg (..),
     topologicalSortSubProg,
     SomePrettyProg (..),
+    ProgMayMultiPath (..),
   )
 where
 
@@ -38,9 +55,20 @@ import Grisette
   ( Default (Default),
     GPretty (gpretty),
     Mergeable (rootStrategy),
-    MergingStrategy (NoStrategy),
+    MergingStrategy (NoStrategy, SimpleStrategy, SortedStrategy),
+    MonadUnion,
+    SimpleMergeable (mrgIte),
+    UnionM,
+    liftToMonadUnion,
+    merge,
+    mrgReturn,
   )
-import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Control.Monad.State.Class (mrgPut)
+import Grisette.Lib.Synth.Context
+  ( MonadContext (mergeIfNeeded, raiseError),
+    traverseC,
+    traverseC_,
+  )
 import Grisette.Lib.Synth.Operator.OpPretty
   ( OpPretty,
     OpPrettyError,
@@ -282,11 +310,12 @@ lookupVal varId = do
 
 instance
   ( OpSemantics semObj op val ctx,
-    ConcreteVarId varId
+    ConcreteVarId varId,
+    Mergeable val
   ) =>
   ProgSemantics semObj (Prog op varId ty) val ctx
   where
-  runProg sem (Prog _ arg stmts ret) inputs = do
+  runProg sem (Prog _ arg stmts ret) inputs = mergeIfNeeded $ do
     when (length inputs /= length arg) . throwError $
       "Expected "
         <> showText (length arg)
@@ -301,3 +330,70 @@ instance
     flip evalStateT initialEnv $ do
       traverse_ runStmt stmts
       traverse (lookupVal . progResId) ret
+
+newtype ProgMayMultiPath op varId ty = ProgMayMultiPath (Prog op varId ty)
+
+newtype MayMultiPathEnv varId val
+  = MayMultiPathEnv (HM.HashMap varId (UnionM val))
+
+instance
+  (ConcreteVarId conVarId, Mergeable val) =>
+  Mergeable (MayMultiPathEnv conVarId val)
+  where
+  rootStrategy =
+    SortedStrategy
+      (\(MayMultiPathEnv m) -> HM.keysSet m)
+      ( const $ SimpleStrategy $ \c (MayMultiPathEnv l) (MayMultiPathEnv r) ->
+          MayMultiPathEnv $
+            HM.mapWithKey
+              ( \k v -> mrgIte c v (r HM.! k)
+              )
+              l
+      )
+
+addValMayMultiPath ::
+  (ConcreteVarId varId, MonadContext ctx, MonadUnion ctx, Mergeable val) =>
+  varId ->
+  val ->
+  StateT (MayMultiPathEnv varId val) ctx ()
+addValMayMultiPath varId val = do
+  MayMultiPathEnv env <- get
+  when (HM.member varId env) . raiseError $
+    "Variable " <> showText varId <> " is already defined."
+  mrgPut $ MayMultiPathEnv $ HM.insert varId (mrgReturn val) env
+
+lookupValMayMultiPath ::
+  (ConcreteVarId varId, MonadContext ctx, MonadUnion ctx, Mergeable val) =>
+  varId ->
+  StateT (MayMultiPathEnv varId val) ctx val
+lookupValMayMultiPath varId = do
+  MayMultiPathEnv env <- get
+  case HM.lookup varId env of
+    Nothing -> raiseError $ "Variable " <> showText varId <> " is undefined."
+    Just val -> liftToMonadUnion val
+
+instance
+  ( OpSemantics semObj op val ctx,
+    ConcreteVarId varId,
+    MonadUnion ctx,
+    Mergeable val
+  ) =>
+  ProgSemantics semObj (ProgMayMultiPath op varId ty) val ctx
+  where
+  runProg sem (ProgMayMultiPath (Prog _ arg stmts ret)) inputs = merge $ do
+    when (length inputs /= length arg) . raiseError $
+      "Expected "
+        <> showText (length arg)
+        <> " arguments, but got "
+        <> showText (length inputs)
+        <> " arguments."
+    let initialEnv =
+          MayMultiPathEnv . HM.fromList . zip (progArgId <$> arg) $
+            mrgReturn <$> inputs
+    let runStmt (Stmt op argIds resIds) = do
+          args <- traverseC lookupValMayMultiPath argIds
+          res <- lift $ applyOp sem op args
+          traverseC_ (uncurry addValMayMultiPath) $ zip resIds res
+    flip evalStateT initialEnv $ do
+      traverseC_ runStmt stmts
+      traverseC (lookupValMayMultiPath . progResId) ret
