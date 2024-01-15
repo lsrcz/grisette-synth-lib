@@ -63,6 +63,18 @@ semanticsTest =
               Left "Expected 2 arguments, but got 1 arguments."
           },
         SemanticsTestCase
+          { semanticsTestCaseName = "incorrect number of statement results",
+            semanticsTestCaseProg =
+              Prog
+                "test"
+                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                [ Stmt Add [0, 1] [2, 3]
+                ]
+                [ProgRes IntType 2],
+            semanticsTestCaseArgs = [1, 2],
+            semanticsTestCaseExpected = Left "Incorrect number of results."
+          },
+        SemanticsTestCase
           { semanticsTestCaseName = "Redefinition of variable",
             semanticsTestCaseProg =
               Prog

@@ -168,6 +168,8 @@ instance
             singleOp <- liftToMonadUnion op
             keptArgs <- takeNumArg numArgs args
             applyOp sem singleOp keptArgs
+          when (length res /= length resIds) . raiseError $
+            "Incorrect number of results."
           traverseC_ (uncurry addVal) $ zip resIds res
     flip mrgEvalStateT initialEnv $ do
       traverseC_ runStmt stmts

@@ -326,6 +326,8 @@ instance
     let runStmt (Stmt op argIds resIds) = do
           args <- traverse lookupVal argIds
           res <- lift $ applyOp sem op args
+          when (length res /= length resIds) . throwError $
+            "Incorrect number of results."
           traverse_ (uncurry addVal) $ zip resIds res
     flip evalStateT initialEnv $ do
       traverse_ runStmt stmts
@@ -393,6 +395,8 @@ instance
     let runStmt (Stmt op argIds resIds) = do
           args <- traverseC lookupValMayMultiPath argIds
           res <- lift $ applyOp sem op args
+          when (length res /= length resIds) . throwError $
+            "Incorrect number of results."
           traverseC_ (uncurry addValMayMultiPath) $ zip resIds res
     flip evalStateT initialEnv $ do
       traverseC_ runStmt stmts
