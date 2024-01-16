@@ -24,6 +24,7 @@ import Grisette
     MonadUnion,
     SafeDivision (safeDivMod),
     SymInteger,
+    ToCon,
     liftToMonadUnion,
   )
 import Grisette.Lib.Synth.Context (MonadContext (raiseError, result))
@@ -36,12 +37,12 @@ import Grisette.Lib.Synth.Util.Show (showText)
 
 data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving (Show, Generic, Eq)
-  deriving (Mergeable) via (Default TestSemanticsOp)
+  deriving (Mergeable, ToCon TestSemanticsOp) via (Default TestSemanticsOp)
 
 data TestSemanticsObj = TestSemanticsObj
 
 data TestSemanticsType = IntType
-  deriving (Generic)
+  deriving (Show, Eq, Generic)
   deriving (Mergeable) via (Default TestSemanticsType)
 
 instance
