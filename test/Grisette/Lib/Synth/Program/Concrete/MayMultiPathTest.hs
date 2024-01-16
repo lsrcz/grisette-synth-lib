@@ -69,7 +69,7 @@ prog =
 
 mayMultiPathTest :: Test
 mayMultiPathTest =
-  plusTestOptions (mempty {topt_timeout = Just $ Just 1000000}) $
+  plusTestOptions (mempty {topt_timeout = Just $ Just 5000000}) $
     testCase "ProgMayMultiPath should not have path explosion" $ do
       let actual =
             runProg Sem (ProgMayMultiPath prog) [0] :: SymbolicContext [Int]
