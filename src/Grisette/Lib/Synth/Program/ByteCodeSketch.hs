@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Grisette.Lib.Synth.Program.ByteCodeSketch
   ( Stmt (..),
@@ -20,11 +21,14 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
-  ( Mergeable,
+  ( Default (Default),
+    EvaluateSym,
+    Mergeable,
     MergingStrategy (NoStrategy, SimpleStrategy, SortedStrategy),
     MonadUnion,
     SEq ((.==)),
     SimpleMergeable (mrgIte),
+    ToCon (toCon),
     ToSym (toSym),
     UnionLike,
     UnionM,
@@ -39,6 +43,7 @@ import Grisette.Lib.Synth.Context
     traverseC_,
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId, RelatedVarId, SymbolicVarId)
@@ -50,6 +55,17 @@ data Stmt op conVarId symVarId = Stmt
     stmtResIds :: [conVarId]
   }
   deriving (Show, Eq, Generic)
+  deriving (EvaluateSym) via (Default (Stmt op conVarId symVarId))
+
+instance
+  (ToCon conOp symOp, RelatedVarId conVarId symVarId) =>
+  ToCon (Stmt conOp conVarId symVarId) (Concrete.Stmt symOp conVarId)
+  where
+  toCon (Stmt op argIds numArgs resIds) = do
+    conOp <- toCon op
+    conNumArgs <- fromIntegral <$> (toCon numArgs :: Maybe conVarId)
+    conArgIds <- toCon (take conNumArgs argIds)
+    return $ Concrete.Stmt conOp conArgIds resIds
 
 instance Mergeable (Stmt op conVarId symVarId) where
   rootStrategy = NoStrategy
@@ -60,6 +76,10 @@ data ProgArg conVarId ty = ProgArg
     progArgId :: conVarId
   }
   deriving (Show, Eq, Generic)
+  deriving (EvaluateSym) via (Default (ProgArg conVarId ty))
+
+instance ToCon (ProgArg conVarId ty) (Concrete.ProgArg conVarId ty) where
+  toCon (ProgArg ty name varId) = Just $ Concrete.ProgArg ty name varId
 
 instance Mergeable (ProgArg conVarId ty) where
   rootStrategy = NoStrategy
@@ -69,6 +89,13 @@ data ProgRes symVarId ty = ProgRes
     progResId :: symVarId
   }
   deriving (Show, Eq, Generic)
+  deriving (EvaluateSym) via (Default (ProgRes symVarId ty))
+
+instance
+  (RelatedVarId conVarId symVarId) =>
+  ToCon (ProgRes symVarId ty) (Concrete.ProgRes conVarId ty)
+  where
+  toCon (ProgRes ty varId) = Concrete.ProgRes ty <$> toCon varId
 
 instance Mergeable (ProgRes symVarId ty) where
   rootStrategy = NoStrategy
@@ -80,6 +107,15 @@ data Prog op conVarId symVarId ty = Prog
     progResList :: [ProgRes symVarId ty]
   }
   deriving (Show, Eq, Generic)
+  deriving (EvaluateSym) via (Default (Prog op conVarId symVarId ty))
+
+deriving via
+  (Default (Concrete.Prog conOp conVarId ty))
+  instance
+    (ToCon symOp conOp, RelatedVarId conVarId symVarId) =>
+    ToCon
+      (Prog symOp conVarId symVarId ty)
+      (Concrete.Prog conOp conVarId ty)
 
 newtype Env conVarId val = Env (HM.HashMap conVarId val)
 

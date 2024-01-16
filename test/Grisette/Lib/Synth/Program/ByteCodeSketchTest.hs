@@ -11,6 +11,7 @@ import Grisette
     Solvable (con),
     SymBool,
     SymInteger,
+    ToCon (toCon),
     mrgIf,
     mrgReturn,
   )
@@ -24,6 +25,7 @@ import Grisette.Lib.Synth.Program.ByteCodeSketch
     ProgRes (ProgRes),
     Stmt (Stmt),
   )
+import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsObj (TestSemanticsObj),
@@ -32,6 +34,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
+import Test.HUnit ((@?=))
 import Test.SymbolicAssertion ((.@?=))
 
 data ExpectedResult
@@ -46,135 +49,157 @@ data SemanticsTestCase = SemanticsTestCase
     semanticsTestCaseExpected :: ExpectedResult
   }
 
+goodConcreteProg :: Prog TestSemanticsOp Integer SymInteger TestSemanticsType
+goodConcreteProg =
+  Prog
+    "test"
+    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+    [ Stmt (mrgReturn Add) [0, 1] 2 [3],
+      Stmt (mrgReturn DivMod) [3, 0] 2 [4, 5]
+    ]
+    [ProgRes IntType 4, ProgRes IntType 5]
+
 byteCodeSketchTest :: Test
 byteCodeSketchTest =
-  testGroup "Grisette.Lib.Synth.Program.ByteCodeSketch" $ do
-    let goodConcreteProg =
-          Prog
-            "test"
-            [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-            [ Stmt (mrgReturn Add) [0, 1] 2 [3],
-              Stmt (mrgReturn DivMod) [3, 0] 2 [4, 5]
-            ]
-            [ProgRes IntType 4, ProgRes IntType 5]
-    SemanticsTestCase name prog args expected <-
-      [ SemanticsTestCase
-          { semanticsTestCaseName = "concrete program",
-            semanticsTestCaseProg = goodConcreteProg,
-            semanticsTestCaseArgs = [13, 20],
-            semanticsTestCaseExpected = Result (con True) [2, 7]
-          },
-        SemanticsTestCase
-          { semanticsTestCaseName = "symbolic number of arguments",
-            semanticsTestCaseProg =
-              Prog
+  testGroup
+    "Grisette.Lib.Synth.Program.ByteCodeSketch"
+    [ testCase "ToCon" $ do
+        let actual =
+              toCon goodConcreteProg ::
+                Maybe (Concrete.Prog TestSemanticsOp Integer TestSemanticsType)
+        let expected =
+              Concrete.Prog
                 "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                [Stmt (mrgReturn Add) [0, 1] "a" [2]]
-                [ProgRes IntType 2],
-            semanticsTestCaseArgs = [13, 20],
-            semanticsTestCaseExpected = Result (("a" :: SymInteger) .== 2) [33]
-          },
-        SemanticsTestCase
-          { semanticsTestCaseName = "symbolic argument",
-            semanticsTestCaseProg =
-              Prog
-                "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                [Stmt (mrgReturn Add) ["a", 1] 2 [2]]
-                [ProgRes IntType 2],
-            semanticsTestCaseArgs = [13, 20],
-            semanticsTestCaseExpected =
-              let a = "a" :: SymInteger
-               in Result (a .== 0 .|| a .== 1) [symIte (a .== 0) 33 40]
-          },
-        SemanticsTestCase
-          { semanticsTestCaseName = "symbolic result",
-            semanticsTestCaseProg =
-              Prog
-                "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                [Stmt (mrgReturn Add) [0, 1] 2 [2]]
-                [ProgRes IntType "a"],
-            semanticsTestCaseArgs = [13, 20],
-            semanticsTestCaseExpected =
-              let a = "a" :: SymInteger
-               in Result
-                    (a .== 0 .|| a .== 1 .|| a .== 2)
-                    [symIte (a .== 0) 13 $ symIte (a .== 1) 20 33]
-          },
-        SemanticsTestCase
-          { semanticsTestCaseName = "divByZero",
-            semanticsTestCaseProg = goodConcreteProg,
-            semanticsTestCaseArgs = [0, 20],
-            semanticsTestCaseExpected =
-              ErrorResult "ArithException: divide by zero"
-          },
-        SemanticsTestCase
-          { semanticsTestCaseName = "incorrect number of arguments",
-            semanticsTestCaseProg = goodConcreteProg,
-            semanticsTestCaseArgs = [0],
-            semanticsTestCaseExpected =
-              ErrorResult "Expected 2 arguments, but got 1 arguments."
-          },
-        SemanticsTestCase
-          { semanticsTestCaseName = "incorrect number of statement results",
-            semanticsTestCaseProg =
-              Prog
-                "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3]
+                [ Concrete.ProgArg IntType "x" 0,
+                  Concrete.ProgArg IntType "y" 1
                 ]
-                [ProgRes IntType 2],
-            semanticsTestCaseArgs = [1, 2],
-            semanticsTestCaseExpected =
-              ErrorResult "Incorrect number of results."
-          },
-        SemanticsTestCase
-          { semanticsTestCaseName = "Redefinition of variable",
-            semanticsTestCaseProg =
-              Prog
-                "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "x" 1]
-                [Stmt (mrgReturn Add) [0, 1] 2 [1]]
-                [ProgRes IntType 1],
-            semanticsTestCaseArgs = [1, 2],
-            semanticsTestCaseExpected =
-              ErrorResult "Variable 1 is already defined."
-          },
-        SemanticsTestCase
-          { semanticsTestCaseName = "Undefined variable",
-            semanticsTestCaseProg =
-              Prog
-                "test"
-                [ProgArg IntType "x" 0]
-                [Stmt (mrgReturn Add) [0, 1] 2 [2]]
-                [ProgRes IntType 2],
-            semanticsTestCaseArgs = [1],
-            semanticsTestCaseExpected =
-              ErrorResult "Variable is undefined."
-          },
-        SemanticsTestCase
-          { semanticsTestCaseName = "Undefined result",
-            semanticsTestCaseProg =
-              Prog
-                "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                [Stmt (mrgReturn Add) [0, 1] 2 [2]]
-                [ProgRes IntType 3],
-            semanticsTestCaseArgs = [1, 2],
-            semanticsTestCaseExpected =
-              ErrorResult "Variable is undefined."
-          }
-        ]
-    return $ testCase name $ do
-      let actual =
-            runProg TestSemanticsObj prog args ::
-              SymbolicContext [SymInteger]
-      case expected of
-        ErrorResult expectedError -> actual .@?= raiseError expectedError
-        Result preCond expectedIntegers -> do
-          let processedActual = actual `catchError` const (raiseError "Error")
-          let expected =
-                mrgIf preCond (result expectedIntegers) (raiseError "Error")
-          processedActual .@?= expected
+                [ Concrete.Stmt Add [0, 1] [3],
+                  Concrete.Stmt DivMod [3, 0] [4, 5]
+                ]
+                [Concrete.ProgRes IntType 4, Concrete.ProgRes IntType 5]
+        actual @?= Just expected,
+      testGroup "Semantics" $ do
+        SemanticsTestCase name prog args expected <-
+          [ SemanticsTestCase
+              { semanticsTestCaseName = "concrete program",
+                semanticsTestCaseProg = goodConcreteProg,
+                semanticsTestCaseArgs = [13, 20],
+                semanticsTestCaseExpected = Result (con True) [2, 7]
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "symbolic number of arguments",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [Stmt (mrgReturn Add) [0, 1] "a" [2]]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [13, 20],
+                semanticsTestCaseExpected =
+                  Result (("a" :: SymInteger) .== 2) [33]
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "symbolic argument",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [Stmt (mrgReturn Add) ["a", 1] 2 [2]]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [13, 20],
+                semanticsTestCaseExpected =
+                  let a = "a" :: SymInteger
+                   in Result (a .== 0 .|| a .== 1) [symIte (a .== 0) 33 40]
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "symbolic result",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [2]]
+                    [ProgRes IntType "a"],
+                semanticsTestCaseArgs = [13, 20],
+                semanticsTestCaseExpected =
+                  let a = "a" :: SymInteger
+                   in Result
+                        (a .== 0 .|| a .== 1 .|| a .== 2)
+                        [symIte (a .== 0) 13 $ symIte (a .== 1) 20 33]
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "divByZero",
+                semanticsTestCaseProg = goodConcreteProg,
+                semanticsTestCaseArgs = [0, 20],
+                semanticsTestCaseExpected =
+                  ErrorResult "ArithException: divide by zero"
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "incorrect number of arguments",
+                semanticsTestCaseProg = goodConcreteProg,
+                semanticsTestCaseArgs = [0],
+                semanticsTestCaseExpected =
+                  ErrorResult "Expected 2 arguments, but got 1 arguments."
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "incorrect number of statement results",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3]
+                    ]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected =
+                  ErrorResult "Incorrect number of results."
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "Redefinition of variable",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "x" 1]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [1]]
+                    [ProgRes IntType 1],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected =
+                  ErrorResult "Variable 1 is already defined."
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "Undefined variable",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [2]]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [1],
+                semanticsTestCaseExpected =
+                  ErrorResult "Variable is undefined."
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "Undefined result",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [2]]
+                    [ProgRes IntType 3],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected =
+                  ErrorResult "Variable is undefined."
+              }
+            ]
+        return $ testCase name $ do
+          let actual =
+                runProg TestSemanticsObj prog args ::
+                  SymbolicContext [SymInteger]
+          case expected of
+            ErrorResult expectedError -> actual .@?= raiseError expectedError
+            Result preCond expectedIntegers -> do
+              let processedActual =
+                    actual `catchError` const (raiseError "Error")
+              let expected =
+                    mrgIf preCond (result expectedIntegers) (raiseError "Error")
+              processedActual .@?= expected
+    ]
