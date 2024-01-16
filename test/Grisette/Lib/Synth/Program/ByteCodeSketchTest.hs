@@ -188,6 +188,29 @@ byteCodeSketchTest =
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   ErrorResult "Variable is undefined."
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "Extra statement arg num",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [Stmt (mrgReturn Add) [0, 1, 1] 2 [2]]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected = Result (con True) [3]
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "Insufficient statement args",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [Stmt (mrgReturn Add) [0] 2 [2]]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected =
+                  ErrorResult "The specified argument number is too large."
               }
             ]
         return $ testCase name $ do

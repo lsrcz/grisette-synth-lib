@@ -177,7 +177,7 @@ takeNumArg ::
 takeNumArg n l =
   go $ (\i -> (fromIntegral i, take i l)) <$> [0 .. length l]
   where
-    go [] = raiseError "Incorrect number of arguments."
+    go [] = raiseError "The specified argument number is too large."
     go ((i, list) : rest) =
       mrgIf (n .== i) (result list) (go rest)
 
