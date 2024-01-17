@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch
   ( Stmt (..),
@@ -18,7 +19,8 @@ where
 import Control.Monad.State (MonadState (get), MonadTrans (lift), StateT)
 import Data.Data (Proxy (Proxy))
 import Data.Foldable (Foldable (foldl'))
-import Data.List (tails)
+import Data.List (sortOn, tails)
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
@@ -32,6 +34,7 @@ import Grisette
     SOrd ((.<), (.<=)),
     Solvable (con),
     SymBool,
+    ToCon (toCon),
     mrgSequence_,
     mrgTraverse_,
     symAssertWith,
@@ -46,9 +49,10 @@ import Grisette.Lib.Synth.Operator.OpTyping
     genIntermediates,
     genOpIntermediates,
   )
+import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Util.Show (showText)
-import Grisette.Lib.Synth.VarId (SymbolicVarId)
+import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
 
 data Stmt op symVarId = Stmt
   { stmtOp :: op,
@@ -56,6 +60,13 @@ data Stmt op symVarId = Stmt
     stmtResIds :: [symVarId]
   }
   deriving (Show, Eq, Generic)
+  deriving (EvaluateSym) via (Default (Stmt op symVarId))
+
+deriving via
+  (Default (Concrete.Stmt conOp conVarId))
+  instance
+    (ToCon symOp conOp, RelatedVarId conVarId symVarId) =>
+    ToCon (Stmt symOp symVarId) (Concrete.Stmt conOp conVarId)
 
 instance Mergeable (Stmt op symVarId) where
   rootStrategy = NoStrategy
@@ -65,6 +76,7 @@ data ProgArg ty = ProgArg
     progArgName :: T.Text
   }
   deriving (Show, Eq, Generic)
+  deriving (EvaluateSym) via (Default (ProgArg ty))
 
 instance Mergeable (ProgArg ty) where
   rootStrategy = NoStrategy
@@ -74,6 +86,7 @@ data ProgRes symVarId ty = ProgRes
     progResId :: symVarId
   }
   deriving (Show, Eq, Generic)
+  deriving (EvaluateSym) via (Default (ProgRes symVarId ty))
 
 instance Mergeable (ProgRes symVarId ty) where
   rootStrategy = NoStrategy
@@ -85,6 +98,29 @@ data Prog op symVarId ty = Prog
     progResList :: [ProgRes symVarId ty]
   }
   deriving (Show, Eq, Generic)
+  deriving (EvaluateSym) via (Default (Prog op symVarId ty))
+
+instance
+  (ToCon conOp symOp, RelatedVarId conVarId symVarId) =>
+  ToCon (Prog conOp symVarId ty) (Concrete.Prog symOp conVarId ty)
+  where
+  toCon (Prog name argList stmtList resList) = do
+    let conArgList =
+          zipWith
+            (\(ProgArg ty name) -> Concrete.ProgArg ty name)
+            argList
+            [0 ..]
+    conStmts <- toCon stmtList
+    conResList <-
+      traverse
+        (\(ProgRes ty resId) -> Concrete.ProgRes ty <$> toCon resId)
+        resList
+    return $
+      Concrete.Prog
+        name
+        conArgList
+        (sortOn (listToMaybe . Concrete.stmtResIds) conStmts)
+        conResList
 
 data IdValPair symVarId val = IdValPair symVarId val
   deriving (Show, Eq, Generic)
