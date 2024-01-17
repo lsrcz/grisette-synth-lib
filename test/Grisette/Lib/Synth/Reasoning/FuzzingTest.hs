@@ -54,8 +54,8 @@ symProg =
     [ ByteCodeSketch.ProgArg IntType "x" 0,
       ByteCodeSketch.ProgArg IntType "y" 1
     ]
-    [ ByteCodeSketch.Stmt (mrgReturn Add) [0, 1] 2 [3],
-      ByteCodeSketch.Stmt (mrgReturn DivMod) [3, "x"] 2 [4, 5]
+    [ ByteCodeSketch.Stmt (mrgReturn Add) [0, 1] 2 [3] 1,
+      ByteCodeSketch.Stmt (mrgReturn DivMod) [3, "x"] 2 [4, 5] 2
     ]
     [ByteCodeSketch.ProgRes IntType 4, ByteCodeSketch.ProgRes IntType 5]
 

@@ -27,6 +27,7 @@ import Grisette
     MergingStrategy (NoStrategy, SimpleStrategy, SortedStrategy),
     MonadUnion,
     SEq ((.==)),
+    SOrd ((.>=)),
     SimpleMergeable (mrgIte),
     ToCon (toCon),
     ToSym (toSym),
@@ -34,6 +35,7 @@ import Grisette
     UnionM,
     liftToMonadUnion,
     mrgIf,
+    symAssertWith,
   )
 import Grisette.Core (Mergeable (rootStrategy))
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT, mrgPut)
@@ -52,7 +54,8 @@ data Stmt op conVarId symVarId = Stmt
   { stmtOp :: UnionM op,
     stmtArgIds :: [symVarId],
     stmtArgNum :: symVarId,
-    stmtResIds :: [conVarId]
+    stmtResIds :: [conVarId],
+    stmtResNum :: symVarId
   }
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym) via (Default (Stmt op conVarId symVarId))
@@ -61,11 +64,12 @@ instance
   (ToCon conOp symOp, RelatedVarId conVarId symVarId) =>
   ToCon (Stmt conOp conVarId symVarId) (Concrete.Stmt symOp conVarId)
   where
-  toCon (Stmt op argIds numArgs resIds) = do
+  toCon (Stmt op argIds argNum resIds resNum) = do
     conOp <- toCon op
-    conNumArgs <- fromIntegral <$> (toCon numArgs :: Maybe conVarId)
-    conArgIds <- toCon (take conNumArgs argIds)
-    return $ Concrete.Stmt conOp conArgIds resIds
+    conArgNum <- fromIntegral <$> (toCon argNum :: Maybe conVarId)
+    conArgIds <- toCon (take conArgNum argIds)
+    conResNum <- fromIntegral <$> (toCon resNum :: Maybe conVarId)
+    return $ Concrete.Stmt conOp conArgIds (take conResNum resIds)
 
 instance Mergeable (Stmt op conVarId symVarId) where
   rootStrategy = NoStrategy
@@ -198,14 +202,16 @@ instance
         <> showText (length inputs)
         <> " arguments."
     let initialEnv = Env $ HM.fromList $ zip (progArgId <$> arg) inputs
-    let runStmt (Stmt op argIds numArgs resIds) = do
+    let runStmt (Stmt op argIds argNum resIds resNum) = do
           args <- traverseC lookupVal argIds
           res <- lift $ do
             singleOp <- liftToMonadUnion op
-            keptArgs <- takeNumArg numArgs args
+            keptArgs <- takeNumArg argNum args
             applyOp sem singleOp keptArgs
-          when (length res /= length resIds) . raiseError $
-            "Incorrect number of results."
+          symAssertWith "Incorrect number of results." $
+            resNum .== fromIntegral (length res)
+          symAssertWith "Insufficient result IDs." $
+            length resIds .>= length res
           traverseC_ (uncurry addVal) $ zip resIds res
     flip mrgEvalStateT initialEnv $ do
       traverseC_ runStmt stmts

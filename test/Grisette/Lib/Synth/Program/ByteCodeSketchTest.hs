@@ -29,13 +29,21 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsObj (TestSemanticsObj),
-    TestSemanticsOp (Add, DivMod),
+    TestSemanticsOp (Add, DivMod, Inc),
     TestSemanticsType (IntType),
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
 import Test.SymbolicAssertion ((.@?=))
+
+data ToConTestCase = ToConTestCase
+  { toConTestCaseName :: String,
+    toConTestCaseProg ::
+      Prog TestSemanticsOp Integer SymInteger TestSemanticsType,
+    toConTestCaseExpected ::
+      Maybe (Concrete.Prog TestSemanticsOp Integer TestSemanticsType)
+  }
 
 data ExpectedResult
   = ErrorResult T.Text
@@ -54,8 +62,8 @@ goodConcreteProg =
   Prog
     "test"
     [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-    [ Stmt (mrgReturn Add) [0, 1] 2 [3],
-      Stmt (mrgReturn DivMod) [3, 0] 2 [4, 5]
+    [ Stmt (mrgReturn Add) [0, 1] 2 [3] 1,
+      Stmt (mrgReturn DivMod) [3, 0] 2 [4, 5] 2
     ]
     [ProgRes IntType 4, ProgRes IntType 5]
 
@@ -63,21 +71,44 @@ byteCodeSketchTest :: Test
 byteCodeSketchTest =
   testGroup
     "Grisette.Lib.Synth.Program.ByteCodeSketch"
-    [ testCase "ToCon" $ do
-        let actual =
-              toCon goodConcreteProg ::
-                Maybe (Concrete.Prog TestSemanticsOp Integer TestSemanticsType)
-        let expected =
-              Concrete.Prog
-                "test"
-                [ Concrete.ProgArg IntType "x" 0,
-                  Concrete.ProgArg IntType "y" 1
-                ]
-                [ Concrete.Stmt Add [0, 1] [3],
-                  Concrete.Stmt DivMod [3, 0] [4, 5]
-                ]
-                [Concrete.ProgRes IntType 4, Concrete.ProgRes IntType 5]
-        actual @?= Just expected,
+    [ testGroup "ToCon" $ do
+        ToConTestCase name prog expected <-
+          [ ToConTestCase
+              { toConTestCaseName = "goodConcreteProg",
+                toConTestCaseProg = goodConcreteProg,
+                toConTestCaseExpected =
+                  Just $
+                    Concrete.Prog
+                      "test"
+                      [ Concrete.ProgArg IntType "x" 0,
+                        Concrete.ProgArg IntType "y" 1
+                      ]
+                      [ Concrete.Stmt Add [0, 1] [3],
+                        Concrete.Stmt DivMod [3, 0] [4, 5]
+                      ]
+                      [Concrete.ProgRes IntType 4, Concrete.ProgRes IntType 5]
+              },
+            ToConTestCase
+              { toConTestCaseName = "argNum is less than number of args",
+                toConTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ Stmt (mrgReturn Inc) [0, 1] 1 [2, 3] 1
+                    ]
+                    [ProgRes IntType 2],
+                toConTestCaseExpected =
+                  Just $
+                    Concrete.Prog
+                      "test"
+                      [ Concrete.ProgArg IntType "x" 0,
+                        Concrete.ProgArg IntType "y" 1
+                      ]
+                      [Concrete.Stmt Inc [0] [2]]
+                      [Concrete.ProgRes IntType 2]
+              }
+            ]
+        return $ testCase name $ toCon prog @?= expected,
       testGroup "Semantics" $ do
         SemanticsTestCase name prog args expected <-
           [ SemanticsTestCase
@@ -87,24 +118,25 @@ byteCodeSketchTest =
                 semanticsTestCaseExpected = Result (con True) [2, 7]
               },
             SemanticsTestCase
-              { semanticsTestCaseName = "symbolic number of arguments",
+              { semanticsTestCaseName =
+                  "symbolic number of statement arguments",
                 semanticsTestCaseProg =
                   Prog
                     "test"
                     [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                    [Stmt (mrgReturn Add) [0, 1] "a" [2]]
+                    [Stmt (mrgReturn Add) [0, 1] "a" [2] 1]
                     [ProgRes IntType 2],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
                   Result (("a" :: SymInteger) .== 2) [33]
               },
             SemanticsTestCase
-              { semanticsTestCaseName = "symbolic argument",
+              { semanticsTestCaseName = "symbolic statement argument",
                 semanticsTestCaseProg =
                   Prog
                     "test"
                     [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                    [Stmt (mrgReturn Add) ["a", 1] 2 [2]]
+                    [Stmt (mrgReturn Add) ["a", 1] 2 [2] 1]
                     [ProgRes IntType 2],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
@@ -112,12 +144,25 @@ byteCodeSketchTest =
                    in Result (a .== 0 .|| a .== 1) [symIte (a .== 0) 33 40]
               },
             SemanticsTestCase
+              { semanticsTestCaseName =
+                  "symbolic number of statement results",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [2] "a"]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [13, 20],
+                semanticsTestCaseExpected =
+                  Result (("a" :: SymInteger) .== 1) [33]
+              },
+            SemanticsTestCase
               { semanticsTestCaseName = "symbolic result",
                 semanticsTestCaseProg =
                   Prog
                     "test"
                     [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [2]]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [2] 1]
                     [ProgRes IntType "a"],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
@@ -146,12 +191,26 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                    [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3]
-                    ]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 2]
                     [ProgRes IntType 2],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   ErrorResult "Incorrect number of results."
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName =
+                  "incorrect number of statement arguments",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [Stmt (mrgReturn Add) [0] 1 [2] 1]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected =
+                  ErrorResult $
+                    "Incorrect number of arguments for add, expected 2 "
+                      <> "arguments, but got 1 arguments."
               },
             SemanticsTestCase
               { semanticsTestCaseName = "Redefinition of variable",
@@ -159,7 +218,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg IntType "x" 0, ProgArg IntType "x" 1]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [1]]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [1] 1]
                     [ProgRes IntType 1],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
@@ -171,7 +230,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg IntType "x" 0]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [2]]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [2] 1]
                     [ProgRes IntType 2],
                 semanticsTestCaseArgs = [1],
                 semanticsTestCaseExpected =
@@ -183,7 +242,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [2]]
+                    [Stmt (mrgReturn Add) [0, 1] 2 [2] 1]
                     [ProgRes IntType 3],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
@@ -195,7 +254,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                    [Stmt (mrgReturn Add) [0, 1, 1] 2 [2]]
+                    [Stmt (mrgReturn Add) [0, 1, 1] 2 [2] 1]
                     [ProgRes IntType 2],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected = Result (con True) [3]
@@ -206,11 +265,23 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
-                    [Stmt (mrgReturn Add) [0] 2 [2]]
+                    [Stmt (mrgReturn Add) [0] 2 [2] 1]
                     [ProgRes IntType 2],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   ErrorResult "The specified argument number is too large."
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "Insufficient result ids",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [Stmt (mrgReturn DivMod) [0, 1] 2 [2] 2]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected =
+                  ErrorResult "Insufficient result IDs."
               }
             ]
         return $ testCase name $ do
