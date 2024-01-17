@@ -10,10 +10,10 @@ import Grisette
   ( EvaluateSym (evaluateSym),
     FreshIdent,
     ITEOp (symIte),
-    LogicalOp (symImplies, (.&&), (.||)),
+    LogicalOp (symImplies, symNot, (.&&), (.||)),
     SEq ((./=), (.==)),
     SOrd ((.<), (.>=)),
-    Solvable (isym),
+    Solvable (con, isym),
     SymBool,
     SymInteger,
     ToCon (toCon),
@@ -67,8 +67,8 @@ goodConcreteProg =
   Prog
     "test"
     [ProgArg IntType "x", ProgArg IntType "y"]
-    [ Stmt Add [0, 1] [2],
-      Stmt DivMod [2, 0] [3, 4]
+    [ Stmt Add [0, 1] [2] $ con False,
+      Stmt DivMod [2, 0] [3, 4] $ con False
     ]
     [ProgRes IntType 3, ProgRes IntType 4]
 
@@ -99,8 +99,8 @@ componentSketchTest =
                   Prog
                     "test"
                     [ProgArg IntType "x", ProgArg IntType "y"]
-                    [ Stmt DivMod [2, 0] [3, 4],
-                      Stmt Add [0, 1] [2]
+                    [ Stmt DivMod [2, 0] [3, 4] $ con False,
+                      Stmt Add [0, 1] [2] $ con False
                     ]
                     [ProgRes IntType 3, ProgRes IntType 4],
                 toConTestCaseExpected =
@@ -148,12 +148,41 @@ componentSketchTest =
                 semanticsTestCaseFreshIdent = "x"
               },
             SemanticsTestCase
+              { semanticsTestCaseName = "symbolic disable",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ Stmt Add [0, 1] [2] "dis0",
+                      Stmt DivMod [0, 1] [3, 4] "dis1"
+                    ]
+                    [ProgRes IntType 1, ProgRes IntType 2],
+                semanticsTestCaseArgs = [1, 0],
+                semanticsTestCaseExpected =
+                  let addArg0Val = isym "x" 0 :: SymInteger
+                      addArg1Val = isym "x" 1 :: SymInteger
+                      addRes0Val = isym "x" 2 :: SymInteger
+                      progRes0Val = isym "x" 7 :: SymInteger
+                      progRes1Val = isym "x" 8 :: SymInteger
+                   in Result
+                        ( (addArg0Val .== 1)
+                            .&& (addArg1Val .== 0)
+                            .&& (addRes0Val .== 1)
+                            .&& (progRes0Val .== 0)
+                            .&& (progRes1Val .== 1)
+                            .&& "dis1"
+                            .&& symNot "dis0"
+                        )
+                        [0, 1],
+                semanticsTestCaseFreshIdent = "x"
+              },
+            SemanticsTestCase
               { semanticsTestCaseName = "symbolic result",
                 semanticsTestCaseProg =
                   Prog
                     "test"
                     [ProgArg IntType "x", ProgArg IntType "y"]
-                    [Stmt Add [0, 1] [2]]
+                    [Stmt Add [0, 1] [2] $ con False]
                     [ProgRes IntType "res"],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
@@ -191,8 +220,8 @@ componentSketchTest =
                       Prog
                         "test"
                         [ProgArg IntType "x"]
-                        [ Stmt Inc [argInc] [resInc],
-                          Stmt Double [argDouble] [resDouble]
+                        [ Stmt Inc [argInc] [resInc] $ con False,
+                          Stmt Double [argDouble] [resDouble] $ con False
                         ]
                         [ProgRes IntType 2],
                     semanticsTestCaseArgs = [13],
@@ -259,8 +288,8 @@ componentSketchTest =
                       Prog
                         "test"
                         [ProgArg IntType "x", ProgArg IntType "y"]
-                        [ Stmt DivMod [0, 1] [res00, res01],
-                          Stmt DivMod [0, 1] [res10, res11]
+                        [ Stmt DivMod [0, 1] [res00, res01] $ con False,
+                          Stmt DivMod [0, 1] [res10, res11] $ con False
                         ]
                         [ProgRes IntType 4, ProgRes IntType 5],
                     semanticsTestCaseArgs = [20, 13],
@@ -305,11 +334,55 @@ componentSketchTest =
                   Prog
                     "test"
                     [ProgArg IntType "x", ProgArg IntType "y"]
-                    [ Stmt Add [0, 1] [2, 3]
+                    [Stmt Add [0, 1] [2, 3] $ con False]
+                    [ProgRes IntType 2],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected = ErrorResult,
+                semanticsTestCaseFreshIdent = "x"
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "use disabled values",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ Stmt Add [0, 1] [2] $ con True,
+                      Stmt Add [0, 2] [3] $ con False
+                    ]
+                    [ProgRes IntType 0],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected = ErrorResult,
+                semanticsTestCaseFreshIdent = "x"
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName = "use disabled values in results",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ Stmt Add [0, 1] [2] $ con True,
+                      Stmt Add [0, 2] [3] $ con True
                     ]
                     [ProgRes IntType 2],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected = ErrorResult,
+                semanticsTestCaseFreshIdent = "x"
+              },
+            SemanticsTestCase
+              { semanticsTestCaseName =
+                  "disabled statement may use disabled values",
+                semanticsTestCaseProg =
+                  Prog
+                    "test"
+                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ Stmt Add [0, 1] [2] $ con True,
+                      Stmt Add [0, 2] [3] $ con True
+                    ]
+                    [ProgRes IntType 0],
+                semanticsTestCaseArgs = [1, 2],
+                semanticsTestCaseExpected =
+                  let progRes0Val = isym "x" 6 :: SymInteger
+                   in Result (progRes0Val .== 1) [1],
                 semanticsTestCaseFreshIdent = "x"
               }
             ]

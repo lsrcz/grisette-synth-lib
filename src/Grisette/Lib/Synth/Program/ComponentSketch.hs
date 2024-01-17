@@ -6,7 +6,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch
   ( Stmt (..),
@@ -16,6 +15,7 @@ module Grisette.Lib.Synth.Program.ComponentSketch
   )
 where
 
+import Control.Monad (join)
 import Control.Monad.State (MonadState (get), MonadTrans (lift), StateT)
 import Data.Data (Proxy (Proxy))
 import Data.Foldable (Foldable (foldl'))
@@ -26,7 +26,7 @@ import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
     EvaluateSym,
-    LogicalOp (symImplies, (.&&)),
+    LogicalOp (symImplies, (.&&), (.||)),
     Mergeable (rootStrategy),
     MergingStrategy (NoStrategy),
     MonadUnion,
@@ -35,6 +35,7 @@ import Grisette
     Solvable (con),
     SymBool,
     ToCon (toCon),
+    mrgIf,
     mrgSequence_,
     mrgTraverse_,
     symAssertWith,
@@ -57,16 +58,11 @@ import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
 data Stmt op symVarId = Stmt
   { stmtOp :: op,
     stmtArgIds :: [symVarId],
-    stmtResIds :: [symVarId]
+    stmtResIds :: [symVarId],
+    stmtDisabled :: SymBool
   }
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym) via (Default (Stmt op symVarId))
-
-deriving via
-  (Default (Concrete.Stmt conOp conVarId))
-  instance
-    (ToCon symOp conOp, RelatedVarId conVarId symVarId) =>
-    ToCon (Stmt symOp symVarId) (Concrete.Stmt conOp conVarId)
 
 instance Mergeable (Stmt op symVarId) where
   rootStrategy = NoStrategy
@@ -110,7 +106,16 @@ instance
             (\(ProgArg ty name) -> Concrete.ProgArg ty name)
             argList
             [0 ..]
-    conStmts <- toCon stmtList
+    let toConStmt (Stmt op argIds resIds disabled) = do
+          disabled <- toCon disabled
+          if disabled
+            then return []
+            else do
+              conOp <- toCon op
+              conArgIds <- toCon argIds
+              conResIds <- toCon resIds
+              return [Concrete.Stmt conOp conArgIds conResIds]
+    conStmts <- join <$> traverse toConStmt stmtList
     conResList <-
       traverse
         (\(ProgRes ty resId) -> Concrete.ProgRes ty <$> toCon resId)
@@ -122,7 +127,7 @@ instance
         (sortOn (listToMaybe . Concrete.stmtResIds) conStmts)
         conResList
 
-data IdValPair symVarId val = IdValPair symVarId val
+data IdValPair symVarId val = IdValPair SymBool symVarId val
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym, Mergeable) via Default (IdValPair symVarId val)
 
@@ -162,7 +167,7 @@ addProgArgs ::
   [val] ->
   ctx ()
 addProgArgs args =
-  addDefs (zipWith IdValPair (fromIntegral <$> [0 ..]) args)
+  addDefs (zipWith (IdValPair (con False)) (fromIntegral <$> [0 ..]) args)
 
 genProgResVals ::
   ( MonadUnion ctx,
@@ -175,7 +180,7 @@ genProgResVals ::
   StateT (CollectedDefUse symVarId val) ctx [val]
 genProgResVals sem resList = do
   resVals <- lift $ genIntermediates sem (progResType <$> resList)
-  addUses (zipWith IdValPair (progResId <$> resList) resVals)
+  addUses (zipWith (IdValPair (con False)) (progResId <$> resList) resVals)
   return resVals
 
 inBound :: (SymbolicVarId symVarId) => symVarId -> symVarId -> SymBool
@@ -199,7 +204,7 @@ constrainStmt ::
   Int ->
   Stmt op symVarId ->
   StateT (CollectedDefUse symVarId val) ctx ()
-constrainStmt p sem idBound (Stmt op argIds resIds) = do
+constrainStmt p sem idBound (Stmt op argIds resIds disabled) = do
   symAssertWith "Variable is undefined." $
     symAll (\resId -> symAll (inBound resId) argIds) resIds
   symAssertWith "Out-of-bound statement results." $
@@ -210,13 +215,14 @@ constrainStmt p sem idBound (Stmt op argIds resIds) = do
       zip resIds (tail resIds)
 
   (argVals, resVals) <- lift $ genOpIntermediates p sem op (length argIds)
-  addUses $ zipWith IdValPair argIds argVals
+  addUses $ zipWith (IdValPair disabled) argIds argVals
   symAssertWith "Incorrect number of results." $
     length resIds .== length resVals
-  addDefs $ zipWith IdValPair resIds resVals
+  addDefs $ zipWith (IdValPair disabled) resIds resVals
 
-  computedResVals <- lift $ applyOp sem op argVals
-  symAssertWith "Incorrect results." $ resVals .== computedResVals
+  mrgIf disabled (return ()) $ do
+    computedResVals <- lift $ applyOp sem op argVals
+    symAssertWith "Incorrect results." $ resVals .== computedResVals
 
 connected ::
   ( MonadUnion ctx,
@@ -229,10 +235,13 @@ connected ::
 connected = do
   CollectedDefUse def use <- get
   mrgSequence_ $
-    [ symAssertWith "Def/use with same ID does not have the same value." $
-        (defId .== useId) `symImplies` (defVal .== useVal)
-      | IdValPair defId defVal <- def,
-        IdValPair useId useVal <- use
+    [ do
+        symAssertWith "Using disabled values" $
+          symImplies (defDisabled .&& defId .== useId) useDisabled
+        symAssertWith "Def/use with same ID does not have the same value." $
+          useDisabled .|| symImplies (defId .== useId) (defVal .== useVal)
+      | IdValPair defDisabled defId defVal <- def,
+        IdValPair useDisabled useId useVal <- use
     ]
 
 defDistinct ::
@@ -248,7 +257,7 @@ defDistinct = do
   let pairs l = [(x, y) | (x : ys) <- tails l, y <- ys]
   mrgTraverse_ (symAssertWith "Variable is already defined." . uncurry (./=))
     . pairs
-    . fmap (\(IdValPair varId _) -> varId)
+    . fmap (\(IdValPair _ defId _) -> defId)
     $ def
 
 instance
