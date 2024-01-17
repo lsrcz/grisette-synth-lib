@@ -18,6 +18,7 @@ import Control.Monad.Except (runExceptT)
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
+    EvaluateSym,
     GenSymSimple (simpleFresh),
     Mergeable,
     MonadFresh,
@@ -37,13 +38,15 @@ import Grisette.Lib.Synth.Util.Show (showText)
 
 data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving (Show, Generic, Eq)
-  deriving (Mergeable, ToCon TestSemanticsOp) via (Default TestSemanticsOp)
+  deriving
+    (Mergeable, ToCon TestSemanticsOp, EvaluateSym)
+    via (Default TestSemanticsOp)
 
 data TestSemanticsObj = TestSemanticsObj
 
 data TestSemanticsType = IntType
   deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default TestSemanticsType)
+  deriving (Mergeable, EvaluateSym) via (Default TestSemanticsType)
 
 instance
   (MonadContext ctx) =>
