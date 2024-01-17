@@ -7,6 +7,7 @@ import Grisette.Lib.Synth.Program.ByteCodeSketchTest (byteCodeSketchTest)
 import Grisette.Lib.Synth.Program.ComponentSketchTest (componentSketchTest)
 import Grisette.Lib.Synth.Program.ConcreteTest (concreteTest)
 import Grisette.Lib.Synth.Reasoning.FuzzingTest (fuzzingTest)
+import Grisette.Lib.Synth.Reasoning.SynthesisTest (synthesisTest)
 import Grisette.Lib.Synth.Util.PrettyTest (prettyTest)
 import Grisette.Lib.Synth.Util.ShowTest (showTest)
 import Test.Framework (Test, defaultMain)
@@ -24,5 +25,6 @@ tests =
     concreteTest,
     byteCodeSketchTest,
     componentSketchTest,
-    fuzzingTest
+    fuzzingTest,
+    synthesisTest
   ]
