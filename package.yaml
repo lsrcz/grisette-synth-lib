@@ -40,11 +40,12 @@ ghc-options:
 
 library:
   source-dirs: src
-# executables:
-#   arith:
-#     source-dirs: arith
-#     main: Main.hs
-#     dependencies: grisette-synth-lib
+
+executables:
+  arith:
+    source-dirs: arith
+    main: Main.hs
+    dependencies: grisette-synth-lib
 
 tests:
   spec:

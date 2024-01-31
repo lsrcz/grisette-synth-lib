@@ -61,6 +61,30 @@ library
     , unordered-containers >=0.2.11 && <0.3
   default-language: Haskell2010
 
+executable arith
+  main-is: Main.hs
+  other-modules:
+      Arith
+      Paths_grisette_synth_lib
+  hs-source-dirs:
+      arith
+  ghc-options: -Wextra -Wcompat -Widentities -Wincomplete-record-updates -Wmissing-export-lists -Wmissing-home-modules -Wmissing-import-lists -Wpartial-fields -Wunused-type-patterns
+  build-depends:
+      QuickCheck ==2.14.*
+    , base >=4.14 && <5
+    , deepseq
+    , grisette >=0.4.1 && <0.5
+    , grisette-synth-lib
+    , hashable >=1.3 && <1.5
+    , mtl >=2.2.2 && <2.4
+    , ordered-containers >=0.1.1 && <0.3
+    , prettyprinter >=1.5 && <1.8
+    , quickcheck-with-counterexamples ==1.2.*
+    , sbv >=8.11 && <10.4
+    , text >=1.2.4.1 && <2.2
+    , unordered-containers >=0.2.11 && <0.3
+  default-language: Haskell2010
+
 test-suite spec
   type: exitcode-stdio-1.0
   main-is: Main.hs
