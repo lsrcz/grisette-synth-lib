@@ -48,9 +48,9 @@ sketch =
     -- The components of the program. Each component is a statement.
     --
     -- The synthesizer could
-    -- * reorder the components, and
-    -- * choose whether or now to disable a component, and
-    -- * choose the arguments of a component.
+    -- \* reorder the components, and
+    -- \* choose whether or now to disable a component, and
+    -- \* choose the arguments of a component.
     [ Component.Stmt
         Minus
         -- These are the symbolic constants controlling the arguments of the
