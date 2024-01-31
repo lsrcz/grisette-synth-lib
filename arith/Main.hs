@@ -70,7 +70,8 @@ gen = vectorOf 2 arbitrary
 
 main :: IO ()
 main = do
-  let task :: SynthesisWithFuzzerTask Integer SymInteger ConProg Sketch AngelicContext
+  let task ::
+        SynthesisWithFuzzerTask Integer SymInteger ConProg Sketch AngelicContext
       task =
         SynthesisWithFuzzerTask
           { synthesisWithFuzzerTaskSymProg = sketch,
@@ -83,6 +84,11 @@ main = do
   (_, r) <- synthesizeProgWithVerifier task
   case r of
     SynthesisSuccess prog -> do
+      -- def test(x: int, y: int):
+      --   r2 = plus(lhs=y, rhs=x)
+      --   r3 = mul(lhs=r2, rhs=x)
+      --   r4 = minus(lhs=r3, rhs=y)
+      --   return r4
       print $ gpretty prog
       let input = [5, 20]
       print $ spec input
