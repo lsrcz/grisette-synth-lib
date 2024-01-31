@@ -4,17 +4,34 @@ module Main (main) where
 
 import Arith (OpCode (Minus, Mul, Plus), OpType (IntegerType), Sem (Sem))
 import Grisette (GPretty (gpretty), SymInteger, precise, z3)
-import Grisette.Lib.Synth.Context (AngelicContext)
+import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Reasoning.Fuzzing (SynthesisWithFuzzerTask (SynthesisWithFuzzerTask, synthesisWithFuzzerTaskGenerators, synthesisWithFuzzerTaskMaxTests, synthesisWithFuzzerTaskSemantics, synthesisWithFuzzerTaskSolverConfig, synthesisWithFuzzerTaskSpec, synthesisWithFuzzerTaskSymProg))
-import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult (SynthesisSuccess), synthesizeProgWithVerifier)
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Reasoning.Fuzzing
+  ( SynthesisWithFuzzerTask
+      ( SynthesisWithFuzzerTask,
+        synthesisWithFuzzerTaskGenerators,
+        synthesisWithFuzzerTaskMaxTests,
+        synthesisWithFuzzerTaskSemantics,
+        synthesisWithFuzzerTaskSolverConfig,
+        synthesisWithFuzzerTaskSpec,
+        synthesisWithFuzzerTaskSymProg
+      ),
+  )
+import Grisette.Lib.Synth.Reasoning.Synthesis
+  ( SynthesisResult (SynthesisSuccess),
+    synthesizeProgWithVerifier,
+  )
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, vectorOf)
 
 type ConProg = Concrete.Prog OpCode Integer OpType
 
 type Sketch = Component.Prog OpCode SymInteger OpType
 
+-- The sketch is currently all manually constructed and the constants need to be
+-- assigned with unique names manually. A generator for this is under
+-- development.
 sketch :: Sketch
 sketch =
   Component.Prog
@@ -40,10 +57,14 @@ sketch =
     ]
     [Component.ProgRes IntegerType "r"]
 
+-- The specification specifies the expected behavior. Here, we want to synthesis
+-- a program that computes the expression a * (a + b) - b.
 spec :: [Integer] -> [Integer]
 spec [a, b] = [a * (a + b) - b]
 spec _ = undefined
 
+-- The generator generates concrete inputs to fuzz the synthesized program
+-- against the specification.
 gen :: Gen [Integer]
 gen = vectorOf 2 arbitrary
 
@@ -61,5 +82,9 @@ main = do
           }
   (_, r) <- synthesizeProgWithVerifier task
   case r of
-    SynthesisSuccess prog -> print $ gpretty prog
+    SynthesisSuccess prog -> do
+      print $ gpretty prog
+      let input = [5, 20]
+      print $ spec input
+      print (runProg Sem prog input :: ConcreteContext [Integer])
     _ -> print r
