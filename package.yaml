@@ -46,10 +46,10 @@ executables:
     source-dirs: arith
     main: Main.hs
     dependencies: grisette-synth-lib
-#  control:
-#    source-dirs: control
-#    main: Main.hs
-#    dependencies: grisette-synth-lib
+  control:
+    source-dirs: control
+    main: Main.hs
+    dependencies: grisette-synth-lib
 
 tests:
   spec:
