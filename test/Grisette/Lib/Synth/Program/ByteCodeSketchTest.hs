@@ -27,6 +27,7 @@ import Grisette.Lib.Synth.Program.ByteCodeSketch
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsObj (TestSemanticsObj),
     TestSemanticsOp (Add, DivMod, Inc),
@@ -295,5 +296,17 @@ byteCodeSketchTest =
                     actual `catchError` const (raiseError "Error")
               let expected =
                     mrgIf preCond (result expectedIntegers) (raiseError "Error")
-              processedActual .@?= expected
+              processedActual .@?= expected,
+      testCase "Typing" $ do
+        let prog =
+              Prog
+                "test"
+                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                [ Stmt (mrgReturn Add) [0, 1] 2 [3] 1,
+                  Stmt (mrgReturn DivMod) [3, 0] 2 [4, 5] 2
+                ]
+                [ProgRes IntType 4, ProgRes IntType 5] ::
+                Prog TestSemanticsOp Integer SymInteger TestSemanticsType
+        typeProg TestSemanticsObj prog
+          @?= Right ([IntType, IntType], [IntType, IntType])
     ]

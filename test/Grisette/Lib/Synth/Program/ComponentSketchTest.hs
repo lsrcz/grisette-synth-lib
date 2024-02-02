@@ -32,6 +32,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsObj (TestSemanticsObj),
     TestSemanticsOp (Add, DivMod, Double, Inc),
@@ -407,5 +408,17 @@ componentSketchTest =
                       <> show (evaluateSym False model preCond)
                       <> "\n-- (debug) expected integers --\n"
                       <> show (evaluateSym False model expectedIntegers)
-                )
+                ),
+      testCase "Typing" $ do
+        let prog =
+              Prog
+                "test"
+                [ProgArg IntType "x", ProgArg IntType "y"]
+                [ Stmt Add ["a", "b"] ["c"] "d",
+                  Stmt DivMod ["e", "f"] ["g", "h"] "i"
+                ]
+                [ProgRes IntType 4, ProgRes IntType 5] ::
+                Prog TestSemanticsOp SymInteger TestSemanticsType
+        typeProg TestSemanticsObj prog
+          @?= Right ([IntType, IntType], [IntType, IntType])
     ]

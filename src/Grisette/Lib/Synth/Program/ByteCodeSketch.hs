@@ -45,8 +45,11 @@ import Grisette.Lib.Synth.Context
     traverseC_,
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId, RelatedVarId, SymbolicVarId)
 
@@ -216,3 +219,15 @@ instance
     flip mrgEvalStateT initialEnv $ do
       traverseC_ runStmt stmts
       traverseC (lookupVal . progResId) ret
+
+instance
+  ( OpTyping semObj op ty ctx,
+    Mergeable ty
+  ) =>
+  ProgTyping semObj (Prog op conVarId symVarId ty) ty ctx
+  where
+  typeProg _ prog =
+    result (progArgType <$> progArgList prog, progResType <$> progResList prog)
+
+instance ProgNaming (Prog op conVarId symVarId ty) where
+  nameProg = progName

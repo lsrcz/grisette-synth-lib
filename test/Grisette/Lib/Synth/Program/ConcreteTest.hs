@@ -6,6 +6,7 @@ import Grisette.Lib.Synth.Program.Concrete.SemanticsTest (semanticsTest)
 import Grisette.Lib.Synth.Program.Concrete.TopologicalSortTest
   ( topologicalSortTest,
   )
+import Grisette.Lib.Synth.Program.Concrete.TypingTest (typingTest)
 import Test.Framework (Test, testGroup)
 
 concreteTest :: Test
@@ -15,5 +16,6 @@ concreteTest =
     [ prettyTest,
       topologicalSortTest,
       semanticsTest,
+      typingTest,
       mayMultiPathTest
     ]

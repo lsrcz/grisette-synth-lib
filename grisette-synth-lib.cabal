@@ -34,7 +34,9 @@ library
       Grisette.Lib.Synth.Program.ByteCodeSketch
       Grisette.Lib.Synth.Program.ComponentSketch
       Grisette.Lib.Synth.Program.Concrete
+      Grisette.Lib.Synth.Program.ProgNaming
       Grisette.Lib.Synth.Program.ProgSemantics
+      Grisette.Lib.Synth.Program.ProgTyping
       Grisette.Lib.Synth.Reasoning.Fuzzing
       Grisette.Lib.Synth.Reasoning.IOPair
       Grisette.Lib.Synth.Reasoning.Synthesis
@@ -98,6 +100,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.Concrete.PrettyTest
       Grisette.Lib.Synth.Program.Concrete.SemanticsTest
       Grisette.Lib.Synth.Program.Concrete.TopologicalSortTest
+      Grisette.Lib.Synth.Program.Concrete.TypingTest
       Grisette.Lib.Synth.Program.ConcreteTest
       Grisette.Lib.Synth.Reasoning.FuzzingTest
       Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest

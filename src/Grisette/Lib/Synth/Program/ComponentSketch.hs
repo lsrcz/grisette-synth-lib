@@ -51,7 +51,9 @@ import Grisette.Lib.Synth.Operator.OpTyping
     genOpIntermediates,
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
 
@@ -294,3 +296,15 @@ instance
       connected
       defDistinct
       result resVals
+
+instance
+  ( OpTyping semObj op ty ctx,
+    Mergeable ty
+  ) =>
+  ProgTyping semObj (Prog op varId ty) ty ctx
+  where
+  typeProg _ prog =
+    result (progArgType <$> progArgList prog, progResType <$> progResList prog)
+
+instance ProgNaming (Prog op varId ty) where
+  nameProg = progName
