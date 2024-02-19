@@ -28,7 +28,9 @@ import Grisette
     SymInteger,
     mrgIf,
   )
-import Grisette.Lib.Synth.Context (MonadContext (raiseError, result))
+import Grisette.Lib.Control.Monad (mrgReturn)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
+import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Util.Show (showText)
 import Value
@@ -47,9 +49,9 @@ intInt2IntOp ::
 intInt2IntOp _ f [a, b] = do
   aInt <- getInt a
   bInt <- getInt b
-  result [mkInt $ f aInt bInt]
+  mrgReturn [mkInt $ f aInt bInt]
 intInt2IntOp opName _ operands =
-  raiseError $
+  mrgThrowError $
     opName <> " cannot accept " <> showText (length operands) <> " values"
 
 intInt2BoolOp ::
@@ -65,9 +67,9 @@ intInt2BoolOp ::
 intInt2BoolOp _ f [a, b] = do
   aInt <- getInt a
   bInt <- getInt b
-  result [mkBool $ f aInt bInt]
+  mrgReturn [mkBool $ f aInt bInt]
 intInt2BoolOp opName _ operands =
-  raiseError $
+  mrgThrowError $
     opName <> " cannot accept " <> showText (length operands) <> " values"
 
 class IfContext bool ctx where
@@ -116,8 +118,8 @@ applyMinus :: (HasSemantics val ctx) => [val] -> ctx [val]
 applyMinus = intInt2IntOp "minus" (-)
 
 applyIntConst :: (HasSemantics val ctx, i ~ IntValType val) => i -> [val] -> ctx [val]
-applyIntConst i [] = result [mkInt i]
-applyIntConst _ _ = raiseError "const op should accept no operands"
+applyIntConst i [] = mrgReturn [mkInt i]
+applyIntConst _ _ = mrgThrowError "const op should accept no operands"
 
 applyIf ::
   ( HasSemantics val ctx,
@@ -132,4 +134,4 @@ applyIf sem progTrue progFalse (cond : operands) = do
   c <- getBool cond
   ifC c (runProg sem progTrue operands) (runProg sem progFalse operands)
 applyIf _ _ _ _ =
-  raiseError "the first operand to the if op must be a boolean value"
+  mrgThrowError "the first operand to the if op must be a boolean value"

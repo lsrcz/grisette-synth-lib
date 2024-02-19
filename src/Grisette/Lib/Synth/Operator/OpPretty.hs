@@ -20,7 +20,11 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (Default (Default), GPretty (gpretty), Mergeable)
-import Grisette.Lib.Synth.Util.Pretty (Doc, parenCommaList, parenCommaListIfNotSingle)
+import Grisette.Lib.Synth.Util.Pretty
+  ( Doc,
+    parenCommaList,
+    parenCommaListIfNotSingle,
+  )
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 

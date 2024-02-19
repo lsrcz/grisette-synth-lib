@@ -61,14 +61,14 @@ import Grisette
     UnionM,
     liftToMonadUnion,
     merge,
-    mrgReturn,
+    tryMerge,
   )
+import Grisette.Lib.Control.Monad (mrgReturn)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Control.Monad.State.Class (mrgPut)
-import Grisette.Lib.Synth.Context
-  ( MonadContext (mergeIfNeeded, raiseError, result),
-    traverseC,
-    traverseC_,
-  )
+import Grisette.Lib.Data.Foldable (mrgTraverse_)
+import Grisette.Lib.Data.Traversable (mrgTraverse)
+import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpPretty
   ( OpPretty,
     OpPrettyError,
@@ -318,7 +318,7 @@ instance
   ) =>
   ProgSemantics semObj (Prog op varId ty) val ctx
   where
-  runProg sem (Prog _ arg stmts ret) inputs = mergeIfNeeded $ do
+  runProg sem (Prog _ arg stmts ret) inputs = tryMerge $ do
     when (length inputs /= length arg) . throwError $
       "Expected "
         <> showText (length arg)
@@ -363,7 +363,7 @@ addValMayMultiPath ::
   StateT (MayMultiPathEnv varId val) ctx ()
 addValMayMultiPath varId val = do
   MayMultiPathEnv env <- get
-  when (HM.member varId env) . raiseError $
+  when (HM.member varId env) . mrgThrowError $
     "Variable " <> showText varId <> " is already defined."
   mrgPut $ MayMultiPathEnv $ HM.insert varId (mrgReturn val) env
 
@@ -374,7 +374,7 @@ lookupValMayMultiPath ::
 lookupValMayMultiPath varId = do
   MayMultiPathEnv env <- get
   case HM.lookup varId env of
-    Nothing -> raiseError $ "Variable " <> showText varId <> " is undefined."
+    Nothing -> mrgThrowError $ "Variable " <> showText varId <> " is undefined."
     Just val -> liftToMonadUnion val
 
 instance
@@ -386,7 +386,7 @@ instance
   ProgSemantics semObj (ProgMayMultiPath op varId ty) val ctx
   where
   runProg sem (ProgMayMultiPath (Prog _ arg stmts ret)) inputs = merge $ do
-    when (length inputs /= length arg) . raiseError $
+    when (length inputs /= length arg) . mrgThrowError $
       "Expected "
         <> showText (length arg)
         <> " arguments, but got "
@@ -396,14 +396,14 @@ instance
           MayMultiPathEnv . HM.fromList . zip (progArgId <$> arg) $
             mrgReturn <$> inputs
     let runStmt (Stmt op argIds resIds) = do
-          args <- traverseC lookupValMayMultiPath argIds
+          args <- mrgTraverse lookupValMayMultiPath argIds
           res <- lift $ applyOp sem op args
           when (length res /= length resIds) . throwError $
             "Incorrect number of results."
-          traverseC_ (uncurry addValMayMultiPath) $ zip resIds res
+          mrgTraverse_ (uncurry addValMayMultiPath) $ zip resIds res
     flip evalStateT initialEnv $ do
-      traverseC_ runStmt stmts
-      traverseC (lookupValMayMultiPath . progResId) ret
+      mrgTraverse_ runStmt stmts
+      mrgTraverse (lookupValMayMultiPath . progResId) ret
 
 instance
   ( OpTyping semObj op ty ctx,
@@ -412,7 +412,7 @@ instance
   ProgTyping semObj (Prog op varId ty) ty ctx
   where
   typeProg _ prog =
-    result (progArgType <$> progArgList prog, progResType <$> progResList prog)
+    mrgReturn (progArgType <$> progArgList prog, progResType <$> progResList prog)
 
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName

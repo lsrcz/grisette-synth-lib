@@ -1,6 +1,5 @@
 module Main (main) where
 
-import Grisette.Lib.Synth.ContextTest (contextTest)
 import Grisette.Lib.Synth.Operator.OpPrettyTest (opPrettyTest)
 import Grisette.Lib.Synth.Operator.OpTypingTest (opTypingTest)
 import Grisette.Lib.Synth.Program.ByteCodeSketchTest (byteCodeSketchTest)
@@ -17,8 +16,7 @@ main = defaultMain tests
 
 tests :: [Test]
 tests =
-  [ contextTest,
-    prettyTest,
+  [ prettyTest,
     showTest,
     opPrettyTest,
     opTypingTest,

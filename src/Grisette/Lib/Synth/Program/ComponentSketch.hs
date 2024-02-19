@@ -40,9 +40,10 @@ import Grisette
     mrgTraverse_,
     symAssertWith,
   )
+import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.State.Class (mrgModify)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT)
-import Grisette.Lib.Synth.Context (MonadContext (result))
+import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( GenIntermediate,
@@ -212,7 +213,7 @@ constrainStmt p sem idBound (Stmt op argIds resIds disabled) = do
   symAssertWith "Out-of-bound statement results." $
     symAll (inBound (fromIntegral idBound)) resIds
 
-  symAssertWith "Result not canonical." $
+  symAssertWith "result not canonical." $
     symAll (\(i, isucc) -> isucc .== i + 1) $
       zip resIds (tail resIds)
 
@@ -295,7 +296,7 @@ instance
           progResId <$> ret
       connected
       defDistinct
-      result resVals
+      mrgReturn resVals
 
 instance
   ( OpTyping semObj op ty ctx,
@@ -304,7 +305,8 @@ instance
   ProgTyping semObj (Prog op varId ty) ty ctx
   where
   typeProg _ prog =
-    result (progArgType <$> progArgList prog, progResType <$> progResList prog)
+    mrgReturn
+      (progArgType <$> progArgList prog, progResType <$> progResList prog)
 
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName

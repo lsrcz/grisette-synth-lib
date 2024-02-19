@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (..)) where

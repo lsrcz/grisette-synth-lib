@@ -20,10 +20,9 @@ import Grisette
     mrgIf,
     runFreshT,
   )
-import Grisette.Lib.Synth.Context
-  ( MonadContext (raiseError, result),
-    SymbolicContext,
-  )
+import Grisette.Lib.Control.Monad (mrgReturn)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
+import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -391,12 +390,12 @@ componentSketchTest =
           let actual =
                 flip runFreshT ident $ runProg TestSemanticsObj prog args ::
                   SymbolicContext [SymInteger]
-          let processedActual = actual `catchError` const (raiseError "Error")
+          let processedActual = actual `catchError` const (mrgThrowError "Error")
           case expected of
-            ErrorResult -> processedActual .@?= raiseError "Error"
+            ErrorResult -> processedActual .@?= mrgThrowError "Error"
             Result preCond expectedIntegers -> do
               let expected =
-                    mrgIf preCond (result expectedIntegers) (raiseError "Error")
+                    mrgIf preCond (mrgReturn expectedIntegers) (mrgThrowError "Error")
               symShouldEq
                 processedActual
                 expected

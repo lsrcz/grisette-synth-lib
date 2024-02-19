@@ -13,12 +13,10 @@ import Grisette
     SymInteger,
     ToCon (toCon),
     mrgIf,
-    mrgReturn,
   )
-import Grisette.Lib.Synth.Context
-  ( MonadContext (raiseError, result),
-    SymbolicContext,
-  )
+import Grisette.Lib.Control.Monad (mrgReturn)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
+import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.ByteCodeSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -290,12 +288,12 @@ byteCodeSketchTest =
                 runProg TestSemanticsObj prog args ::
                   SymbolicContext [SymInteger]
           case expected of
-            ErrorResult expectedError -> actual .@?= raiseError expectedError
+            ErrorResult expectedError -> actual .@?= mrgThrowError expectedError
             Result preCond expectedIntegers -> do
               let processedActual =
-                    actual `catchError` const (raiseError "Error")
+                    actual `catchError` const (mrgThrowError "Error")
               let expected =
-                    mrgIf preCond (result expectedIntegers) (raiseError "Error")
+                    mrgIf preCond (mrgReturn expectedIntegers) (mrgThrowError "Error")
               processedActual .@?= expected,
       testCase "Typing" $ do
         let prog =

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (..)) where

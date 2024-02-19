@@ -12,5 +12,26 @@ cradle:
     - path: "./arith/Paths_grisette_synth_lib.hs"
       component: "grisette-synth-lib:exe:arith"
 
+    - path: "./control/Main.hs"
+      component: "grisette-synth-lib:exe:control"
+
+    - path: "./control/ConProg.hs"
+      component: "grisette-synth-lib:exe:control"
+
+    - path: "./control/Semantics.hs"
+      component: "grisette-synth-lib:exe:control"
+
+    - path: "./control/Sketch.hs"
+      component: "grisette-synth-lib:exe:control"
+
+    - path: "./control/Typing.hs"
+      component: "grisette-synth-lib:exe:control"
+
+    - path: "./control/Value.hs"
+      component: "grisette-synth-lib:exe:control"
+
+    - path: "./control/Paths_grisette_synth_lib.hs"
+      component: "grisette-synth-lib:exe:control"
+
     - path: "./test"
       component: "grisette-synth-lib:test:spec"

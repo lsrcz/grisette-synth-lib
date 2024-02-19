@@ -13,6 +13,7 @@ module Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   )
 where
 
+import Control.Exception (ArithException)
 import Control.Monad (when)
 import Control.Monad.Except (runExceptT)
 import GHC.Generics (Generic)
@@ -28,7 +29,9 @@ import Grisette
     ToCon,
     liftToMonadUnion,
   )
-import Grisette.Lib.Synth.Context (MonadContext (raiseError, result))
+import Grisette.Lib.Control.Monad (mrgReturn)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
+import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( GenIntermediate (genIntermediate),
@@ -54,27 +57,27 @@ instance
   where
   applyOp _ Add [x, y] = return [x + y]
   applyOp _ Add l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText (length l)
         <> " arguments."
   applyOp _ DivMod [x, y] = do
-    when (y == 0) $ raiseError "ArithException: divide by zero"
+    when (y == 0) $ mrgThrowError "ArithException: divide by zero"
     return [x `div` y, x `mod` y]
   applyOp _ DivMod l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText (length l)
         <> " arguments."
   applyOp _ Inc [x] = return [x + 1]
   applyOp _ Inc l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for inc, expected 1 arguments, but got "
         <> showText (length l)
         <> " arguments."
   applyOp _ Double [x] = return [x + x]
   applyOp _ Double l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for dec, expected 1 arguments, but got "
         <> showText (length l)
         <> " arguments."
@@ -85,29 +88,29 @@ instance
   where
   applyOp _ Add [x, y] = return [x + y]
   applyOp _ Add l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText (length l)
         <> " arguments."
   applyOp _ DivMod [x, y] = do
     r <- liftToMonadUnion $ runExceptT $ safeDivMod x y
     case r of
-      Left e -> raiseError $ "ArithException: " <> showText e
-      Right (d, m) -> result [d, m]
+      Left (e :: ArithException) -> mrgThrowError $ "ArithException: " <> showText e
+      Right (d, m) -> mrgReturn [d, m]
   applyOp _ DivMod l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText (length l)
         <> " arguments."
   applyOp _ Inc [x] = return [x + 1]
   applyOp _ Inc l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for inc, expected 1 arguments, but got "
         <> showText (length l)
         <> " arguments."
   applyOp _ Double [x] = return [x + x]
   applyOp _ Double l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for dec, expected 1 arguments, but got "
         <> showText (length l)
         <> " arguments."
@@ -116,27 +119,27 @@ instance
   (MonadContext ctx) =>
   OpTyping TestSemanticsObj TestSemanticsOp TestSemanticsType ctx
   where
-  typeOp _ Add 2 = result ([IntType, IntType], [IntType])
+  typeOp _ Add 2 = mrgReturn ([IntType, IntType], [IntType])
   typeOp _ Add l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText l
         <> " arguments."
-  typeOp _ DivMod 2 = result ([IntType, IntType], [IntType, IntType])
+  typeOp _ DivMod 2 = mrgReturn ([IntType, IntType], [IntType, IntType])
   typeOp _ DivMod l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText l
         <> " arguments."
-  typeOp _ Inc 1 = result ([IntType], [IntType])
+  typeOp _ Inc 1 = mrgReturn ([IntType], [IntType])
   typeOp _ Inc l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for inc, expected 1 arguments, but got "
         <> showText l
         <> " arguments."
-  typeOp _ Double 1 = result ([IntType], [IntType])
+  typeOp _ Double 1 = mrgReturn ([IntType], [IntType])
   typeOp _ Double l =
-    raiseError $
+    mrgThrowError $
       "Incorrect number of arguments for dec, expected 1 arguments, but got "
         <> showText l
         <> " arguments."

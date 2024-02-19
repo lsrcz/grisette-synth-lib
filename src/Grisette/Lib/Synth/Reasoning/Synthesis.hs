@@ -24,6 +24,7 @@ import Grisette
     ConfigurableSolver,
     EvaluateSym,
     FreshIdent (FreshIdentWithInfo),
+    Mergeable,
     SEq ((.==)),
     Solvable (con),
     SolvingFailure,
@@ -42,7 +43,7 @@ import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 
 class SynthesisContext ctx where
   genSynthesisConstraint ::
-    (SEq val, Show val) => Int -> ctx [val] -> [val] -> SymBool
+    (SEq val, Show val, Mergeable val) => Int -> ctx [val] -> [val] -> SymBool
 
 instance SynthesisContext SymbolicContext where
   genSynthesisConstraint _ actual expected = actual .== return expected
@@ -57,7 +58,8 @@ synthesisConstraintFun ::
     SynthesisContext ctx,
     SEq symVal,
     ToSym conVal symVal,
-    Show symVal
+    Show symVal,
+    Mergeable symVal
   ) =>
   p ctx ->
   q symVal ->
@@ -148,7 +150,8 @@ synthesizeProgWithVerifier ::
   ( ToSynthesisTask task,
     conVal ~ ConValType task,
     conProg ~ ConProgType task,
-    exception ~ ExceptionType task
+    exception ~ ExceptionType task,
+    Mergeable (SymValType task)
   ) =>
   task ->
   IO ([IOPair conVal], SynthesisResult conProg exception)

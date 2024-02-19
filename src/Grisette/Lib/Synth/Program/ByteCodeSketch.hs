@@ -31,19 +31,18 @@ import Grisette
     SimpleMergeable (mrgIte),
     ToCon (toCon),
     ToSym (toSym),
-    UnionLike,
     UnionM,
     liftToMonadUnion,
     mrgIf,
     symAssertWith,
   )
 import Grisette.Core (Mergeable (rootStrategy))
+import Grisette.Lib.Control.Monad (mrgReturn)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT, mrgPut)
-import Grisette.Lib.Synth.Context
-  ( MonadContext (raiseError, result),
-    traverseC,
-    traverseC_,
-  )
+import Grisette.Lib.Data.Foldable (mrgTraverse_)
+import Grisette.Lib.Data.Traversable (mrgTraverse)
+import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
@@ -64,7 +63,7 @@ data Stmt op conVarId symVarId = Stmt
   deriving (EvaluateSym) via (Default (Stmt op conVarId symVarId))
 
 instance
-  (ToCon conOp symOp, RelatedVarId conVarId symVarId) =>
+  (ToCon conOp symOp, RelatedVarId conVarId symVarId, Mergeable conOp) =>
   ToCon (Stmt conOp conVarId symVarId) (Concrete.Stmt symOp conVarId)
   where
   toCon (Stmt op argIds argNum resIds resNum) = do
@@ -119,7 +118,7 @@ data Prog op conVarId symVarId ty = Prog
 deriving via
   (Default (Concrete.Prog conOp conVarId ty))
   instance
-    (ToCon symOp conOp, RelatedVarId conVarId symVarId) =>
+    (ToCon symOp conOp, RelatedVarId conVarId symVarId, Mergeable symOp) =>
     ToCon
       (Prog symOp conVarId symVarId ty)
       (Concrete.Prog conOp conVarId ty)
@@ -152,14 +151,14 @@ addVal ::
   StateT (Env conVarId val) ctx ()
 addVal varId val = do
   Env env <- get
-  when (HM.member varId env) . raiseError $
+  when (HM.member varId env) . mrgThrowError $
     "Variable " <> showText varId <> " is already defined."
   mrgPut $ Env $ HM.insert varId val env
 
 lookupVal ::
   ( RelatedVarId conVarId symVarId,
     MonadContext ctx,
-    UnionLike ctx,
+    MonadUnion ctx,
     SimpleMergeable val
   ) =>
   symVarId ->
@@ -167,8 +166,8 @@ lookupVal ::
 lookupVal varId = do
   Env env <- get
   HM.foldlWithKey
-    (\r conVarId val -> mrgIf (varId .== toSym conVarId) (result val) r)
-    (raiseError "Variable is undefined.")
+    (\r conVarId val -> mrgIf (varId .== toSym conVarId) (mrgReturn val) r)
+    (mrgThrowError "Variable is undefined.")
     env
 
 takeNumArg ::
@@ -184,21 +183,21 @@ takeNumArg ::
 takeNumArg n l =
   go $ (\i -> (fromIntegral i, take i l)) <$> [0 .. length l]
   where
-    go [] = raiseError "The specified argument number is too large."
+    go [] = mrgThrowError "The specified argument number is too large."
     go ((i, list) : rest) =
-      mrgIf (n .== i) (result list) (go rest)
+      mrgIf (n .== i) (mrgReturn list) (go rest)
 
 instance
   ( OpSemantics semObj op val ctx,
     RelatedVarId conVarId symVarId,
-    UnionLike ctx,
+    MonadUnion ctx,
     SimpleMergeable val,
     Mergeable op
   ) =>
   ProgSemantics semObj (Prog op conVarId symVarId ty) val ctx
   where
   runProg sem (Prog _ arg stmts ret) inputs = do
-    when (length inputs /= length arg) . raiseError $
+    when (length inputs /= length arg) . mrgThrowError $
       "Expected "
         <> showText (length arg)
         <> " arguments, but got "
@@ -206,7 +205,7 @@ instance
         <> " arguments."
     let initialEnv = Env $ HM.fromList $ zip (progArgId <$> arg) inputs
     let runStmt (Stmt op argIds argNum resIds resNum) = do
-          args <- traverseC lookupVal argIds
+          args <- mrgTraverse lookupVal argIds
           res <- lift $ do
             singleOp <- liftToMonadUnion op
             keptArgs <- takeNumArg argNum args
@@ -215,10 +214,10 @@ instance
             resNum .== fromIntegral (length res)
           symAssertWith "Insufficient result IDs." $
             length resIds .>= length res
-          traverseC_ (uncurry addVal) $ zip resIds res
+          mrgTraverse_ (uncurry addVal) $ zip resIds res
     flip mrgEvalStateT initialEnv $ do
-      traverseC_ runStmt stmts
-      traverseC (lookupVal . progResId) ret
+      mrgTraverse_ runStmt stmts
+      mrgTraverse (lookupVal . progResId) ret
 
 instance
   ( OpTyping semObj op ty ctx,
@@ -227,7 +226,8 @@ instance
   ProgTyping semObj (Prog op conVarId symVarId ty) ty ctx
   where
   typeProg _ prog =
-    result (progArgType <$> progArgList prog, progResType <$> progResList prog)
+    mrgReturn
+      (progArgType <$> progArgList prog, progResType <$> progResList prog)
 
 instance ProgNaming (Prog op conVarId symVarId ty) where
   nameProg = progName

@@ -222,19 +222,34 @@ packages:
   original:
     hackage: async-2.2.2
 - completed:
-    hackage: grisette-0.4.1.0@sha256:40d516031b2b4a915e9c887efd8c398271b654e56b3468ba571ae6398c7bbc3c,10752
-    pantry-tree:
-      sha256: 67e27b2cfa75bf8295ca9b842cfd1c7dd6421ea419693772962238f10106dcf1
-      size: 12335
-  original:
-    hackage: grisette-0.4.1.0
-- completed:
     hackage: quickcheck-with-counterexamples-1.2@sha256:d322d79008602df26f5eb4e1379e5b58bf1a92604df8601e71e200cfc3e847a3,1688
     pantry-tree:
       sha256: 0046517e3cc2adebfce19d4aad05a06dcf55ec9e572fa1c661ba9abe81386484
       size: 724
   original:
     hackage: quickcheck-with-counterexamples-1.2
+- completed:
+    commit: c59feba1e90a71c04a2664ea0a1a1023d8d3f0bb
+    git: https://github.com/lsrcz/grisette.git
+    name: grisette
+    pantry-tree:
+      sha256: 5d0a46b35b1e70ba33fb8c2ce072bb0b599c193edcddc058c80f424d5841219d
+      size: 14785
+    version: 0.5.0.0
+  original:
+    commit: c59feba1e90a71c04a2664ea0a1a1023d8d3f0bb
+    git: https://github.com/lsrcz/grisette.git
+- completed:
+    commit: 649bcf551ce1fe8cd7958ed1a1e93a28b4ac3e93
+    git: https://github.com/lsrcz/grisette-generics.git
+    name: grisette-generics
+    pantry-tree:
+      sha256: 2318e46795a6293f6f8c6c2ee6f859532c9bc17d1bfc1525d683bd8bb8434caa
+      size: 2144
+    version: 0.1.0.0
+  original:
+    commit: 649bcf551ce1fe8cd7958ed1a1e93a28b4ac3e93
+    git: https://github.com/lsrcz/grisette-generics.git
 snapshots:
 - completed:
     sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68

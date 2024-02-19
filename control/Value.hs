@@ -23,9 +23,10 @@ import Grisette
     ToSym,
     UnionM,
     liftToMonadUnion,
-    mrgReturn,
   )
-import Grisette.Lib.Synth.Context (MonadContext (raiseError, result))
+import Grisette.Lib.Control.Monad (mrgReturn)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
+import Grisette.Lib.Synth.Context (MonadContext)
 
 data Value intVal boolVal
   = IntValue intVal
@@ -49,10 +50,10 @@ instance
   (MonadContext ctx, Mergeable intVal, Mergeable boolVal) =>
   ValueExtractor (Value intVal boolVal) ctx
   where
-  getInt (IntValue i) = result i
-  getInt _ = raiseError "Not an integer"
-  getBool (BoolValue b) = result b
-  getBool _ = raiseError "Not a boolean"
+  getInt (IntValue i) = mrgReturn i
+  getInt _ = mrgThrowError "Not an integer"
+  getBool (BoolValue b) = mrgReturn b
+  getBool _ = mrgThrowError "Not a boolean"
 
 instance
   (Mergeable intVal, Mergeable boolVal) =>

@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -21,8 +22,10 @@ import Grisette
     MonadFresh,
     SymInteger,
     ToCon,
+    mrgReturn,
   )
-import Grisette.Lib.Synth.Context (MonadContext (raiseError, result))
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
+import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpPretty
   ( OpPretty (describeArguments, prefixResults),
     OpPrettyError (IncorrectNumberOfArguments, IncorrectNumberOfResults),
@@ -72,12 +75,12 @@ instance
   (MonadContext ctx, Num a, Mergeable a) =>
   OpSemantics Sem OpCode a ctx
   where
-  applyOp _ Plus [x, y] = result [x + y]
-  applyOp _ Mul [x, y] = result [x * y]
-  applyOp _ Minus [x, y] = result [x - y]
-  applyOp _ UMinus [x] = result [x]
+  applyOp _ Plus [x, y] = mrgReturn [x + y]
+  applyOp _ Mul [x, y] = mrgReturn [x * y]
+  applyOp _ Minus [x, y] = mrgReturn [x - y]
+  applyOp _ UMinus [x] = mrgReturn [x]
   applyOp _ op _ =
-    raiseError $ "Invalid number of arguments to operator " <> showText op
+    mrgThrowError $ "Invalid number of arguments to operator " <> showText op
 
 -- | Here we only have one type, the integer type. The component encoding
 -- (https://ieeexplore.ieee.org/abstract/document/6062089) needs to generate
@@ -88,11 +91,12 @@ data OpType = IntegerType
   deriving (Mergeable, EvaluateSym) via (Default OpType)
 
 instance (MonadContext ctx) => OpTyping Sem OpCode OpType ctx where
-  typeOp _ Plus 2 = result ([IntegerType, IntegerType], [IntegerType])
-  typeOp _ Mul 2 = result ([IntegerType, IntegerType], [IntegerType])
-  typeOp _ Minus 2 = result ([IntegerType, IntegerType], [IntegerType])
-  typeOp _ UMinus 1 = result ([IntegerType], [IntegerType])
-  typeOp _ op _ = raiseError $ "Invalid arguments to operator " <> showText op
+  typeOp _ Plus 2 = mrgReturn ([IntegerType, IntegerType], [IntegerType])
+  typeOp _ Mul 2 = mrgReturn ([IntegerType, IntegerType], [IntegerType])
+  typeOp _ Minus 2 = mrgReturn ([IntegerType, IntegerType], [IntegerType])
+  typeOp _ UMinus 1 = mrgReturn ([IntegerType], [IntegerType])
+  typeOp _ op _ =
+    mrgThrowError $ "Invalid arguments to operator " <> showText op
 
 -- | Here, for generating `SymInteger`, we just generate a fresh variable using
 -- `simpleFresh` provided by Grisette.

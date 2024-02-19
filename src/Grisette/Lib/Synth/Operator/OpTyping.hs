@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,7 +12,8 @@ module Grisette.Lib.Synth.Operator.OpTyping
 where
 
 import Grisette (Mergeable, MonadFresh)
-import Grisette.Lib.Synth.Context (MonadContext, traverseC)
+import Grisette.Lib.Data.Traversable (mrgTraverse)
+import Grisette.Lib.Synth.Context (MonadContext)
 
 class (MonadContext ctx) => OpTyping semObj op ty ctx where
   typeOp :: semObj -> op -> Int -> ctx ([ty], [ty])
@@ -24,7 +26,7 @@ class
 
 genIntermediates ::
   (GenIntermediate sem ty val ctx) => sem -> [ty] -> ctx [val]
-genIntermediates sem = traverseC (genIntermediate sem)
+genIntermediates sem = mrgTraverse (genIntermediate sem)
 
 genOpIntermediates ::
   forall semObj op ty val ctx p.

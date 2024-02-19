@@ -16,8 +16,8 @@ import Grisette
     EvaluateSym,
     GenSymSimple,
     MonadFresh,
+    MonadUnion,
     ToCon,
-    UnionLike,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
@@ -62,7 +62,7 @@ instance (MonadContext ctx) => OpTyping Sem (Op varId intVal) Type ctx where
 
 instance
   ( HasSemantics (SymValue intVal boolVal) ctx,
-    UnionLike ctx,
+    MonadUnion ctx,
     MonadFresh ctx,
     SymbolicVarId varId,
     GenSymSimple () intVal,
