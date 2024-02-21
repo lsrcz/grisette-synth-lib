@@ -1,11 +1,15 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
   ( byteCodeSketchTest,
   )
 where
 
-import Grisette (SymInteger, mrgIf, precise, z3)
+import Grisette (SymBool, SymInteger, mrgIf, precise, z3)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.ByteCodeSketch
   ( Prog (Prog),
@@ -15,23 +19,25 @@ import Grisette.Lib.Synth.Program.ByteCodeSketch
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Reasoning.Fuzzing
-  ( SynthesisWithFuzzerTask
-      ( SynthesisWithFuzzerTask,
-        synthesisWithFuzzerTaskGenerators,
-        synthesisWithFuzzerTaskMaxTests,
-        synthesisWithFuzzerTaskSemantics,
-        synthesisWithFuzzerTaskSolverConfig,
-        synthesisWithFuzzerTaskSpec,
-        synthesisWithFuzzerTaskSymProg
+  ( SynthesisWithFuzzerMatcherTask
+      ( SynthesisWithFuzzerMatcherTask,
+        synthesisWithFuzzerMatcherTaskGenerators,
+        synthesisWithFuzzerMatcherTaskMaxTests,
+        synthesisWithFuzzerMatcherTaskSemantics,
+        synthesisWithFuzzerMatcherTaskSolverConfig,
+        synthesisWithFuzzerMatcherTaskSpec,
+        synthesisWithFuzzerMatcherTaskSymProg
       ),
     fuzzingTestProg,
   )
+import Grisette.Lib.Synth.Reasoning.Matcher (Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
     synthesizeProgWithVerifier,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
   ( addThenDoubleGen,
+    addThenDoubleReverseSpec,
     addThenDoubleSpec,
     divModTwiceGen,
     divModTwiceSpec,
@@ -74,21 +80,35 @@ sharedSketch =
     ]
     [ProgRes IntType "res0", ProgRes IntType "res1"]
 
-data ByteCodeSynthesisTestCase = ByteCodeSynthesisTestCase
-  { byteCodeSynthesisTestCaseName :: String,
-    byteCodeSynthesisTestCaseSketch :: SymProg,
-    byteCodeSynthesisTestCaseSpec :: [Integer] -> [Integer],
-    byteCodeSynthesisTestCaseGen :: Gen [Integer]
-  }
+data ByteCodeSynthesisTestCase where
+  ByteCodeSynthesisTestCase ::
+    forall matcher.
+    (Matcher matcher Bool Integer, Matcher matcher SymBool SymInteger) =>
+    { byteCodeSynthesisTestCaseName :: String,
+      byteCodeSynthesisTestCaseSketch :: SymProg,
+      byteCodeSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
+      byteCodeSynthesisTestCaseGen :: Gen [Integer]
+    } ->
+    ByteCodeSynthesisTestCase
 
 byteCodeSketchTest :: Test
 byteCodeSketchTest =
   testGroup "ByteCodeSketch" $ do
-    ByteCodeSynthesisTestCase name sketch spec gen <-
+    ByteCodeSynthesisTestCase
+      name
+      sketch
+      (spec :: [Integer] -> ([Integer], matcher))
+      gen <-
       [ ByteCodeSynthesisTestCase
           { byteCodeSynthesisTestCaseName = "Add then double",
             byteCodeSynthesisTestCaseSketch = sharedSketch,
             byteCodeSynthesisTestCaseSpec = addThenDoubleSpec,
+            byteCodeSynthesisTestCaseGen = addThenDoubleGen
+          },
+        ByteCodeSynthesisTestCase
+          { byteCodeSynthesisTestCaseName = "Add then double/reverse",
+            byteCodeSynthesisTestCaseSketch = sharedSketch,
+            byteCodeSynthesisTestCaseSpec = addThenDoubleReverseSpec,
             byteCodeSynthesisTestCaseGen = addThenDoubleGen
           },
         ByteCodeSynthesisTestCase
@@ -99,22 +119,23 @@ byteCodeSketchTest =
           }
         ]
     let task ::
-          SynthesisWithFuzzerTask
+          SynthesisWithFuzzerMatcherTask
             ConVal
             SymVal
             ConProg
             SymProg
+            matcher
             SymbolicContext
         task =
-          SynthesisWithFuzzerTask
-            { synthesisWithFuzzerTaskSolverConfig = precise z3,
-              synthesisWithFuzzerTaskSpec = spec,
-              synthesisWithFuzzerTaskMaxTests = 100,
-              synthesisWithFuzzerTaskGenerators = [gen],
-              synthesisWithFuzzerTaskSemantics = TestSemanticsObj,
-              synthesisWithFuzzerTaskSymProg = sketch
+          SynthesisWithFuzzerMatcherTask
+            { synthesisWithFuzzerMatcherTaskSolverConfig = precise z3,
+              synthesisWithFuzzerMatcherTaskSpec = spec,
+              synthesisWithFuzzerMatcherTaskMaxTests = 100,
+              synthesisWithFuzzerMatcherTaskGenerators = [gen],
+              synthesisWithFuzzerMatcherTaskSemantics = TestSemanticsObj,
+              synthesisWithFuzzerMatcherTaskSymProg = sketch
             }
     return $ testCase name $ do
       (_, SynthesisSuccess prog) <- synthesizeProgWithVerifier task
       fuzzingResult <- fuzzingTestProg gen spec 100 TestSemanticsObj prog
-      fuzzingResult @?= Nothing
+      fst <$> fuzzingResult @?= Nothing

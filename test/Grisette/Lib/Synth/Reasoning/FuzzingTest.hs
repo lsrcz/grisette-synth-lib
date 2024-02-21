@@ -20,6 +20,10 @@ import Grisette.Lib.Synth.Reasoning.Fuzzing
     fuzzingTestSymProgWithModel,
   )
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
+import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher))
+import Grisette.Lib.Synth.Reasoning.ReverseMatcher
+  ( ReverseMatcher (ReverseMatcher),
+  )
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsObj (TestSemanticsObj),
     TestSemanticsOp (Add, DivMod),
@@ -68,13 +72,19 @@ gen = do
   y <- arbitrary
   return [x, y]
 
-spec :: [Integer] -> [Integer]
-spec [x, y] | x /= 0 = [(x + y) `div` x, (x + y) `mod` x]
+spec :: [Integer] -> ([Integer], EqMatcher)
+spec [x, y] | x /= 0 = ([(x + y) `div` x, (x + y) `mod` x], EqMatcher)
 spec _ = error "Error"
 
-badSpec :: [Integer] -> [Integer]
-badSpec [_, _] = [0, 0]
+badSpec :: [Integer] -> ([Integer], EqMatcher)
+badSpec [_, _] = ([0, 0], EqMatcher)
 badSpec _ = error "Error"
+
+reverseSpec :: [Integer] -> ([Integer], ReverseMatcher)
+reverseSpec [x, y]
+  | x /= 0 =
+      ([(x + y) `mod` x, (x + y) `div` x], ReverseMatcher)
+reverseSpec _ = error "Error"
 
 fuzzingTest :: Test
 fuzzingTest =
@@ -84,11 +94,15 @@ fuzzingTest =
         "fuzzingTestProg"
         [ testCase "goodSpec" $ do
             result <- fuzzingTestProg gen spec 100 TestSemanticsObj conProg
-            result @?= Nothing,
+            fst <$> result @?= Nothing,
+          testCase "reverseSpec" $ do
+            result <-
+              fuzzingTestProg gen reverseSpec 100 TestSemanticsObj conProg
+            fst <$> result @?= Nothing,
           testCase "badSpec" $ do
-            Just (IOPair i o) <-
+            Just (IOPair i o, _) <-
               fuzzingTestProg gen badSpec 100 TestSemanticsObj conProg
-            badSpec i @?= o
+            fst (badSpec i) @?= o
             (runProg TestSemanticsObj conProg i /= Right o)
               @? "Should fail the test."
         ],
@@ -104,9 +118,9 @@ fuzzingTest =
                 TestSemanticsObj
                 symProg
                 model
-            result @?= Nothing,
+            fst <$> result @?= Nothing,
           testCase "badSpec" $ do
-            Just (IOPair i o) <-
+            Just (IOPair i o, _) <-
               fuzzingTestSymProgWithModel
                 gen
                 badSpec
@@ -115,12 +129,12 @@ fuzzingTest =
                 TestSemanticsObj
                 symProg
                 model
-            badSpec i @?= o
+            fst (badSpec i) @?= o
             (runProg TestSemanticsObj conProg i /= Right o)
               @? "Should fail the test."
         ],
       testCase "fuzzingTestStatefulVerifierFun" $ do
-        (newState, CEGISVerifierFoundCex (IOPair i o)) <-
+        (newState, CEGISVerifierFoundCex (IOPair i o, _)) <-
           fuzzingTestStatefulVerifierFun
             badSpec
             100
@@ -130,7 +144,7 @@ fuzzingTest =
             [return [1, -1], gen]
             model
         length newState @?= 1
-        badSpec i @?= o
+        fst (badSpec i) @?= o
         (runProg TestSemanticsObj conProg i /= Right o)
           @? "Should fail the test."
     ]

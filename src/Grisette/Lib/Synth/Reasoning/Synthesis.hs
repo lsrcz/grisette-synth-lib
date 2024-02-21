@@ -17,6 +17,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
   )
 where
 
+import Control.Monad.Except (runExceptT)
 import Data.Data (Proxy (Proxy))
 import Data.Kind (Type)
 import Grisette
@@ -25,7 +26,6 @@ import Grisette
     EvaluateSym,
     FreshIdent (FreshIdentWithInfo),
     Mergeable,
-    SEq ((.==)),
     Solvable (con),
     SolvingFailure,
     StatefulVerifierFun,
@@ -36,27 +36,42 @@ import Grisette
     evaluateSymToCon,
     genericCEGIS,
     runFreshT,
+    simpleMerge,
   )
 import Grisette.Lib.Synth.Context (AngelicContext, SymbolicContext)
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
+import Grisette.Lib.Synth.Reasoning.Matcher (Matcher (match))
 
 class SynthesisContext ctx where
   genSynthesisConstraint ::
-    (SEq val, Show val, Mergeable val) => Int -> ctx [val] -> [val] -> SymBool
+    (Matcher matcher SymBool val, Show val, Mergeable val) =>
+    Int ->
+    matcher ->
+    ctx [val] ->
+    [val] ->
+    SymBool
 
 instance SynthesisContext SymbolicContext where
-  genSynthesisConstraint _ actual expected = actual .== return expected
+  genSynthesisConstraint _ matcher actual expectedOutputs = simpleMerge $ do
+    actualVal <- runExceptT actual
+    case actualVal of
+      Left _ -> return $ con False
+      Right actualOutputs ->
+        return $ match matcher actualOutputs expectedOutputs
 
 instance SynthesisContext AngelicContext where
-  genSynthesisConstraint i actual expected =
-    runFreshT actual (FreshIdentWithInfo "::synth::" i) .== return expected
+  genSynthesisConstraint i matcher actual =
+    genSynthesisConstraint
+      i
+      matcher
+      (runFreshT actual (FreshIdentWithInfo "::synth::" i))
 
 synthesisConstraintFun ::
-  forall semObj symProg conVal symVal ctx p q.
+  forall semObj symProg conVal symVal ctx matcher p q.
   ( ProgSemantics semObj symProg symVal ctx,
     SynthesisContext ctx,
-    SEq symVal,
+    Matcher matcher SymBool symVal,
     ToSym conVal symVal,
     Show symVal,
     Mergeable symVal
@@ -65,11 +80,12 @@ synthesisConstraintFun ::
   q symVal ->
   semObj ->
   symProg ->
-  SynthesisConstraintFun (IOPair conVal)
-synthesisConstraintFun _ _ sem prog i (IOPair inputs expectedOutputs) =
+  SynthesisConstraintFun (IOPair conVal, matcher)
+synthesisConstraintFun _ _ sem prog i (IOPair inputs expectedOutputs, matcher) =
   return $
     genSynthesisConstraint
       i
+      matcher
       (runProg sem prog (toSym inputs) :: ctx [symVal])
       (toSym expectedOutputs)
 
@@ -79,13 +95,24 @@ data SynthesisResult conProg exception
   | SynthesisSolverFailure SolvingFailure
   deriving (Show)
 
-data SynthesisTask conVal symVal conProg symProg ctx exception where
+data SynthesisTask conVal symVal conProg symProg matcher ctx exception where
   SynthesisTask ::
-    forall config h conVal symVal state exception ctx conProg symProg semObj.
+    forall
+      config
+      h
+      conVal
+      symVal
+      state
+      exception
+      ctx
+      conProg
+      symProg
+      matcher
+      semObj.
     ( ConfigurableSolver config h,
       ProgSemantics semObj symProg symVal ctx,
       SynthesisContext ctx,
-      SEq symVal,
+      Matcher matcher SymBool symVal,
       ToSym conVal symVal,
       EvaluateSym symProg,
       ToCon symProg conProg,
@@ -98,17 +125,18 @@ data SynthesisTask conVal symVal conProg symProg ctx exception where
         p conProg ->
         semObj ->
         symProg ->
-        StatefulVerifierFun state (IOPair conVal) exception,
+        StatefulVerifierFun state (IOPair conVal, matcher) exception,
       synthesisTaskSemantics :: semObj,
       synthesisTaskSymProg :: symProg
     } ->
-    SynthesisTask conVal symVal conProg symProg ctx exception
+    SynthesisTask conVal symVal conProg symProg matcher ctx exception
 
 class ToSynthesisTask task where
   type ConValType task
   type SymValType task
   type ConProgType task
   type SymProgType task
+  type MatcherType task
   type ContextType task :: Type -> Type
   type ExceptionType task
   toSynthesisTask ::
@@ -118,43 +146,55 @@ class ToSynthesisTask task where
       (SymValType task)
       (ConProgType task)
       (SymProgType task)
+      (MatcherType task)
       (ContextType task)
       (ExceptionType task)
 
 instance
   ToSynthesisTask
-    (SynthesisTask conVal symVal conProg symProg ctx exception)
+    (SynthesisTask conVal symVal conProg symProg matcher ctx exception)
   where
   type
-    ConValType (SynthesisTask conVal symVal conProg symProg ctx exception) =
+    ConValType
+      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
       conVal
   type
-    SymValType (SynthesisTask conVal symVal conProg symProg ctx exception) =
+    SymValType
+      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
       symVal
   type
-    ConProgType (SynthesisTask conVal symVal conProg symProg ctx exception) =
+    ConProgType
+      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
       conProg
   type
-    SymProgType (SynthesisTask conVal symVal conProg symProg ctx exception) =
+    SymProgType
+      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
       symProg
   type
-    ContextType (SynthesisTask conVal symVal conProg symProg ctx exception) =
+    MatcherType
+      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
+      matcher
+  type
+    ContextType
+      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
       ctx
   type
-    ExceptionType (SynthesisTask conVal symVal conProg symProg ctx exception) =
+    ExceptionType
+      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
       exception
   toSynthesisTask = id
 
 synthesizeProgWithVerifier ::
-  forall task conVal conProg exception.
+  forall task conVal conProg matcher exception.
   ( ToSynthesisTask task,
+    matcher ~ MatcherType task,
     conVal ~ ConValType task,
     conProg ~ ConProgType task,
     exception ~ ExceptionType task,
     Mergeable (SymValType task)
   ) =>
   task ->
-  IO ([IOPair conVal], SynthesisResult conProg exception)
+  IO ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
 synthesizeProgWithVerifier task =
   case toSynthesisTask task of
     SynthesisTask config initialState verifier sem prog -> do
