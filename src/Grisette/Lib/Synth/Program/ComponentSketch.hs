@@ -38,7 +38,6 @@ import Grisette
     MonadUnion,
     SEq ((./=), (.==)),
     SOrd ((.<), (.<=)),
-    SimpleListSpec (SimpleListSpec),
     Solvable (con),
     SymBool,
     ToCon (toCon),
@@ -322,7 +321,7 @@ class MkStmt stmt op symVarId bool | stmt -> op symVarId bool where
   mkStmt :: op -> [symVarId] -> [symVarId] -> bool -> stmt
 
 class MkFreshStmt stmt op | stmt -> op where
-  mkFreshStmt :: op -> Int -> Int -> Fresh stmt
+  mkFreshStmt :: Fresh op -> Int -> Int -> Fresh stmt
 
 instance MkStmt (Stmt op symVarId) op symVarId SymBool where
   mkStmt = Stmt
@@ -330,21 +329,27 @@ instance MkStmt (Stmt op symVarId) op symVarId SymBool where
 instance
   MkStmt
     (Fresh (Stmt op symVarId))
-    op
+    (Fresh op)
     (Fresh symVarId)
     (Fresh SymBool)
   where
   mkStmt op freshArgIds freshResIds freshDisabled =
-    Stmt op <$> sequence freshArgIds <*> sequence freshResIds <*> freshDisabled
+    Stmt
+      <$> op
+      <*> sequence freshArgIds
+      <*> sequence freshResIds
+      <*> freshDisabled
 
 instance
   (GenSymSimple () symVarId) =>
   MkFreshStmt (Stmt op symVarId) op
   where
   mkFreshStmt op argCount resCount = do
-    freshArgIds <- simpleFresh (SimpleListSpec argCount ())
-    freshResIds <- simpleFresh (SimpleListSpec resCount ())
-    mkStmt op freshArgIds freshResIds <$> simpleFresh ()
+    mkStmt
+      op
+      (replicate argCount $ simpleFresh ())
+      (replicate resCount $ simpleFresh ())
+      (simpleFresh ())
 
 class MkProg prog stmt op symVarId ty | prog -> stmt op symVarId ty where
   mkProg ::
@@ -362,7 +367,7 @@ instance
   MkProg
     (Fresh (Prog op symVarId ty))
     (Fresh (Stmt op symVarId))
-    op
+    (Fresh op)
     (Fresh symVarId)
     ty
   where

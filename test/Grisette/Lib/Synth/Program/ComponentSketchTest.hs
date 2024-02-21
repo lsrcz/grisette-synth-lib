@@ -446,7 +446,7 @@ componentSketchTest =
               testCase "fresh" $ do
                 let actual =
                       mkStmt
-                        Add
+                        (return Add)
                         [simpleFresh (), simpleFresh ()]
                         [simpleFresh ()]
                         (simpleFresh ()) ::
@@ -463,7 +463,7 @@ componentSketchTest =
           testCase "MkFreshStmt" $ do
             let actual =
                   mkFreshStmt
-                    Add
+                    (return Add)
                     2
                     1 ::
                     Fresh (Stmt TestSemanticsOp SymInteger)
@@ -502,12 +502,12 @@ componentSketchTest =
                         "test"
                         [(IntType, "x"), (IntType, "y")]
                         [ mkStmt
-                            Add
+                            (return Add)
                             [simpleFresh (), simpleFresh ()]
                             [simpleFresh ()]
                             (simpleFresh ()),
                           mkStmt
-                            DivMod
+                            (return DivMod)
                             [simpleFresh (), simpleFresh ()]
                             [simpleFresh (), simpleFresh ()]
                             (simpleFresh ())
@@ -542,7 +542,9 @@ componentSketchTest =
                   mkFreshProg
                     "test"
                     [IntType, IntType]
-                    [mkFreshStmt Add 2 1, mkFreshStmt DivMod 2 2]
+                    [ mkFreshStmt (return Add) 2 1,
+                      mkFreshStmt (return DivMod) 2 2
+                    ]
                     [IntType, IntType] ::
                     Fresh
                       (Prog TestSemanticsOp SymInteger TestSemanticsType)
