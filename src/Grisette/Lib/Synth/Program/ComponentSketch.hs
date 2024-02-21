@@ -2,7 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,6 +12,10 @@ module Grisette.Lib.Synth.Program.ComponentSketch
     ProgArg (..),
     ProgRes (..),
     Prog (..),
+    MkStmt (..),
+    MkFreshStmt (..),
+    MkProg (..),
+    MkFreshProg (..),
   )
 where
 
@@ -26,12 +30,15 @@ import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
     EvaluateSym,
+    Fresh,
+    GenSymSimple (simpleFresh),
     LogicalOp (symImplies, (.&&), (.||)),
     Mergeable (rootStrategy),
     MergingStrategy (NoStrategy),
     MonadUnion,
     SEq ((./=), (.==)),
     SOrd ((.<), (.<=)),
+    SimpleListSpec (SimpleListSpec),
     Solvable (con),
     SymBool,
     ToCon (toCon),
@@ -310,3 +317,70 @@ instance
 
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName
+
+class MkStmt stmt op symVarId bool | stmt -> op symVarId bool where
+  mkStmt :: op -> [symVarId] -> [symVarId] -> bool -> stmt
+
+class MkFreshStmt stmt op | stmt -> op where
+  mkFreshStmt :: op -> Int -> Int -> Fresh stmt
+
+instance MkStmt (Stmt op symVarId) op symVarId SymBool where
+  mkStmt = Stmt
+
+instance
+  MkStmt
+    (Fresh (Stmt op symVarId))
+    op
+    (Fresh symVarId)
+    (Fresh SymBool)
+  where
+  mkStmt op freshArgIds freshResIds freshDisabled =
+    Stmt op <$> sequence freshArgIds <*> sequence freshResIds <*> freshDisabled
+
+instance
+  (GenSymSimple () symVarId) =>
+  MkFreshStmt (Stmt op symVarId) op
+  where
+  mkFreshStmt op argCount resCount = do
+    freshArgIds <- simpleFresh (SimpleListSpec argCount ())
+    freshResIds <- simpleFresh (SimpleListSpec resCount ())
+    mkStmt op freshArgIds freshResIds <$> simpleFresh ()
+
+class MkProg prog stmt op symVarId ty | prog -> stmt op symVarId ty where
+  mkProg ::
+    T.Text ->
+    [(ty, T.Text)] ->
+    [stmt] ->
+    [(ty, symVarId)] ->
+    prog
+
+instance MkProg (Prog op symVarId ty) (Stmt op symVarId) op symVarId ty where
+  mkProg name args stmts rets =
+    Prog name (uncurry ProgArg <$> args) stmts (uncurry ProgRes <$> rets)
+
+instance
+  MkProg
+    (Fresh (Prog op symVarId ty))
+    (Fresh (Stmt op symVarId))
+    op
+    (Fresh symVarId)
+    ty
+  where
+  mkProg name args stmts rets =
+    Prog name (uncurry ProgArg <$> args)
+      <$> sequence stmts
+      <*> traverse (\(ty, freshVarId) -> ProgRes ty <$> freshVarId) rets
+
+class MkFreshProg prog stmt op ty | prog -> stmt op ty where
+  mkFreshProg :: T.Text -> [ty] -> [Fresh stmt] -> [ty] -> Fresh prog
+
+instance
+  (GenSymSimple () symVarId) =>
+  MkFreshProg (Prog op symVarId ty) (Stmt op symVarId) op ty
+  where
+  mkFreshProg name argTypes freshStmts retTypes =
+    Prog
+      name
+      [ProgArg ty ("arg" <> showText n) | (n, ty) <- zip [0 ..] argTypes]
+      <$> sequence freshStmts
+      <*> sequence [ProgRes ty <$> simpleFresh () | ty <- retTypes]

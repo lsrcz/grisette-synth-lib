@@ -8,7 +8,9 @@ where
 import Control.Monad.Error.Class (MonadError (catchError))
 import Grisette
   ( EvaluateSym (evaluateSym),
+    Fresh,
     FreshIdent,
+    GenSymSimple (simpleFresh),
     ITEOp (symIte),
     LogicalOp (symImplies, symNot, (.&&), (.||)),
     SEq ((./=), (.==)),
@@ -18,16 +20,21 @@ import Grisette
     SymInteger,
     ToCon (toCon),
     mrgIf,
+    runFresh,
     runFreshT,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.ComponentSketch
-  ( Prog (Prog),
+  ( MkFreshProg (mkFreshProg),
+    MkFreshStmt (mkFreshStmt),
+    MkProg (mkProg),
+    MkStmt (mkStmt),
+    Prog (Prog),
     ProgArg (ProgArg),
     ProgRes (ProgRes),
-    Stmt (Stmt),
+    Stmt (Stmt, stmtArgIds, stmtDisabled, stmtOp, stmtResIds),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
@@ -419,5 +426,144 @@ componentSketchTest =
                 [ProgRes IntType 4, ProgRes IntType 5] ::
                 Prog TestSemanticsOp SymInteger TestSemanticsType
         typeProg TestSemanticsObj prog
-          @?= Right ([IntType, IntType], [IntType, IntType])
+          @?= Right ([IntType, IntType], [IntType, IntType]),
+      testGroup
+        "Builder"
+        [ testGroup
+            "MkStmt"
+            [ testCase "Non-fresh" $ do
+                let actual =
+                      mkStmt Add ["a", "b"] ["c"] "d" ::
+                        Stmt TestSemanticsOp SymInteger
+                let expected =
+                      Stmt
+                        { stmtOp = Add,
+                          stmtArgIds = ["a", "b"],
+                          stmtResIds = ["c"],
+                          stmtDisabled = "d"
+                        }
+                actual @?= expected,
+              testCase "fresh" $ do
+                let actual =
+                      mkStmt
+                        Add
+                        [simpleFresh (), simpleFresh ()]
+                        [simpleFresh ()]
+                        (simpleFresh ()) ::
+                        Fresh (Stmt TestSemanticsOp SymInteger)
+                let expected =
+                      Stmt
+                        { stmtOp = Add,
+                          stmtArgIds = [isym "x" 0, isym "x" 1],
+                          stmtResIds = [isym "x" 2],
+                          stmtDisabled = isym "x" 3
+                        }
+                runFresh actual "x" @?= expected
+            ],
+          testCase "MkFreshStmt" $ do
+            let actual =
+                  mkFreshStmt
+                    Add
+                    2
+                    1 ::
+                    Fresh (Stmt TestSemanticsOp SymInteger)
+            let expected =
+                  Stmt
+                    { stmtOp = Add,
+                      stmtArgIds = [isym "x" 0, isym "x" 1],
+                      stmtResIds = [isym "x" 2],
+                      stmtDisabled = isym "x" 3
+                    }
+            runFresh actual "x" @?= expected,
+          testGroup
+            "MkProg"
+            [ testCase "Non-fresh" $ do
+                let actual =
+                      mkProg
+                        "test"
+                        [(IntType, "x"), (IntType, "y")]
+                        [ Stmt Add ["a", "b"] ["c"] "d",
+                          Stmt DivMod ["e", "f"] ["g", "h"] "i"
+                        ]
+                        [(IntType, "j"), (IntType, "k")] ::
+                        Prog TestSemanticsOp SymInteger TestSemanticsType
+                let expected =
+                      Prog
+                        "test"
+                        [ProgArg IntType "x", ProgArg IntType "y"]
+                        [ Stmt Add ["a", "b"] ["c"] "d",
+                          Stmt DivMod ["e", "f"] ["g", "h"] "i"
+                        ]
+                        [ProgRes IntType "j", ProgRes IntType "k"]
+                actual @?= expected,
+              testCase "fresh" $ do
+                let actual =
+                      mkProg
+                        "test"
+                        [(IntType, "x"), (IntType, "y")]
+                        [ mkStmt
+                            Add
+                            [simpleFresh (), simpleFresh ()]
+                            [simpleFresh ()]
+                            (simpleFresh ()),
+                          mkStmt
+                            DivMod
+                            [simpleFresh (), simpleFresh ()]
+                            [simpleFresh (), simpleFresh ()]
+                            (simpleFresh ())
+                        ]
+                        [ (IntType, simpleFresh ()),
+                          (IntType, simpleFresh ())
+                        ] ::
+                        Fresh
+                          (Prog TestSemanticsOp SymInteger TestSemanticsType)
+                let expected =
+                      Prog
+                        "test"
+                        [ProgArg IntType "x", ProgArg IntType "y"]
+                        [ Stmt
+                            Add
+                            [isym "x" 0, isym "x" 1]
+                            [isym "x" 2]
+                            (isym "x" 3),
+                          Stmt
+                            DivMod
+                            [isym "x" 4, isym "x" 5]
+                            [isym "x" 6, isym "x" 7]
+                            (isym "x" 8)
+                        ]
+                        [ ProgRes IntType $ isym "x" 9,
+                          ProgRes IntType $ isym "x" 10
+                        ]
+                runFresh actual "x" @?= expected
+            ],
+          testCase "MkFreshProg" $ do
+            let actual =
+                  mkFreshProg
+                    "test"
+                    [IntType, IntType]
+                    [mkFreshStmt Add 2 1, mkFreshStmt DivMod 2 2]
+                    [IntType, IntType] ::
+                    Fresh
+                      (Prog TestSemanticsOp SymInteger TestSemanticsType)
+            let expected =
+                  Prog
+                    "test"
+                    [ProgArg IntType "arg0", ProgArg IntType "arg1"]
+                    [ Stmt
+                        Add
+                        [isym "x" 0, isym "x" 1]
+                        [isym "x" 2]
+                        (isym "x" 3),
+                      Stmt
+                        DivMod
+                        [isym "x" 4, isym "x" 5]
+                        [isym "x" 6, isym "x" 7]
+                        (isym "x" 8)
+                    ]
+                    [ ProgRes IntType $ isym "x" 9,
+                      ProgRes IntType $ isym "x" 10
+                    ]
+            runFresh actual "x" @?= expected
+        ]
     ]
