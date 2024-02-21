@@ -3,7 +3,15 @@
 module Main (main) where
 
 import qualified ConProg as C
-import Grisette (GPretty (gpretty), SymBool, SymInteger, precise, z3)
+import Grisette
+  ( Fresh,
+    GPretty (gpretty),
+    SymBool,
+    SymInteger,
+    precise,
+    runFresh,
+    z3,
+  )
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
@@ -98,75 +106,41 @@ conProg =
     ]
     [Concrete.ProgRes IntType 3]
 
-trueBranchSketch :: Sketch
+trueBranchSketch :: Fresh Sketch
 trueBranchSketch =
-  Component.Prog
+  Component.mkFreshProg
     "trueBranch"
-    [ Component.ProgArg IntType "a",
-      Component.ProgArg IntType "b"
+    [IntType, IntType]
+    [ Component.mkFreshStmt S.Plus 2 1,
+      Component.mkFreshStmt S.Minus 2 1
     ]
-    [ Component.Stmt
-        S.Plus
-        ["true'stmt0'arg0", "true'stmt0'arg1"]
-        ["true'stmt0'ret0"]
-        "true'stmt0'dis",
-      Component.Stmt
-        S.Minus
-        ["true'stmt1'arg0", "true'stmt1'arg1"]
-        ["true'stmt1'ret0"]
-        "true'stmt1'dis"
-    ]
-    [Component.ProgRes IntType "true'ret0"]
+    [IntType]
 
-falseBranchSketch :: Sketch
+falseBranchSketch :: Fresh Sketch
 falseBranchSketch =
-  Component.Prog
+  Component.mkFreshProg
     "falseBranch"
-    [ Component.ProgArg IntType "a",
-      Component.ProgArg IntType "b"
+    [IntType, IntType]
+    [ Component.mkFreshStmt S.Plus 2 1,
+      Component.mkFreshStmt S.Minus 2 1
     ]
-    [ Component.Stmt
-        S.Plus
-        ["false'stmt0'arg0", "false'stmt0'arg1"]
-        ["false'stmt0'ret0"]
-        "false'stmt0'dis",
-      Component.Stmt
-        S.Minus
-        ["false'stmt1'arg0", "false'stmt1'arg1"]
-        ["false'stmt1'ret0"]
-        "false'stmt1'dis"
-    ]
-    [Component.ProgRes IntType "false'ret0"]
+    [IntType]
 
 sketch :: Sketch
 sketch =
-  Component.Prog
-    "prog"
-    [ Component.ProgArg IntType "a",
-      Component.ProgArg IntType "b"
-    ]
-    [ Component.Stmt
-        S.Plus
-        ["stmt0'arg0", "stmt0'arg1"]
-        ["stmt0'ret0"]
-        "stmt0'dis",
-      Component.Stmt
-        S.Plus
-        ["stmt1'arg0", "stmt1'arg1"]
-        ["stmt1'ret0"]
-        "stmt1'dis",
-      Component.Stmt
-        S.Equals
-        ["stmt2'arg0", "stmt2'arg1"]
-        ["stmt2'ret0"]
-        "stmt2'dis",
-      Component.Stmt
-        (S.If trueBranchSketch falseBranchSketch)
-        ["stmt3'arg0", "stmt3'arg1", "stmt3'arg2"]
-        ["stmt3'ret0"]
-        "stmt3'dis"
-    ]
-    [Component.ProgRes IntType "ret0"]
+  flip runFresh "x" $
+    Component.mkFreshProg
+      "prog"
+      [IntType, IntType]
+      [ Component.mkFreshStmt S.Plus 2 1,
+        Component.mkFreshStmt S.Plus 2 1,
+        Component.mkFreshStmt S.Equals 2 1,
+        do
+          t <- trueBranchSketch
+          f <- falseBranchSketch
+          Component.mkFreshStmt (S.If t f) 3 1
+      ]
+      [IntType]
 
 spec :: [ConVal] -> [ConVal]
 spec [IntValue a, IntValue b] = [IntValue $ if a == b then a + b else a - b]

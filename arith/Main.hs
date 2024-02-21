@@ -3,7 +3,7 @@
 module Main (main) where
 
 import Arith (OpCode (Minus, Mul, Plus), OpType (IntegerType), Sem (Sem))
-import Grisette (GPretty (gpretty), SymInteger, precise, z3)
+import Grisette (GPretty (gpretty), SymInteger, precise, runFresh, z3)
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
@@ -36,49 +36,25 @@ type Sketch = Component.Prog OpCode SymInteger OpType
 -- A generator for a sketch with components is under development.
 sketch :: Sketch
 sketch =
-  Component.Prog
-    -- The name of the program. If your program supports procedure calls, you
-    -- should make sure that the programs has a unique name.
-    "test"
-    -- The arguments to the program with types. "x" and "y" are names of the
-    -- arguments and is only used for pretty printing purpose for now.
-    [ Component.ProgArg IntegerType "x",
-      Component.ProgArg IntegerType "y"
-    ]
-    -- The components of the program. Each component is a statement.
-    --
-    -- The synthesizer could
-    -- \* reorder the components, and
-    -- \* choose whether or now to disable a component, and
-    -- \* choose the arguments of a component.
-    [ Component.Stmt
-        Minus
-        -- These are the symbolic constants controlling the arguments of the
-        -- statement.
-        ["stmt0'arg0", "stmt0'arg1"]
-        -- This is a symbolic constants controling the reordering of the
-        -- components.
-        --
-        -- The components would be sorted based on them. Each component can only
-        -- refer to the outputs of the components defined before.
-        ["stmt0'ret0"]
-        -- This is a symbolic boolean constant controlling whether a statement
-        -- is disabled.
-        "stmt0'dis",
-      Component.Stmt
-        Mul
-        ["stmt1'arg0", "stmt1'arg1"]
-        ["stmt1'ret0"]
-        "stmt1'dis",
-      Component.Stmt
-        Plus
-        ["stmt2'arg0", "stmt2'arg1"]
-        ["stmt2'ret0"]
-        "stmt2'dis"
-    ]
-    -- The program result. Use the symbolic constant @r@ to choose which
-    -- statement is used as the result.
-    [Component.ProgRes IntegerType "r"]
+  flip runFresh "x" $
+    Component.mkFreshProg
+      -- The name of the program. If your program supports procedure calls, you
+      -- should make sure that the programs has a unique name.
+      "test"
+      -- The types of the arguments to the program.
+      [IntegerType, IntegerType]
+      -- The components of the program. Each component is a statement.
+      --
+      -- The synthesizer could
+      -- \* reorder the components, and
+      -- \* choose whether or now to disable a component, and
+      -- \* choose the arguments of a component.
+      [ Component.mkFreshStmt Minus 2 1, -- 2 inputs, 1 output
+        Component.mkFreshStmt Mul 2 1,
+        Component.mkFreshStmt Plus 2 1
+      ]
+      -- The program result type.
+      [IntegerType]
 
 -- The specification specifies the expected behavior. Here, we want to synthesis
 -- a program that computes the expression a * (a + b) - b.
