@@ -54,6 +54,7 @@ import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( GenIntermediate,
     OpTyping,
+    TypeSignature (TypeSignature),
     genIntermediates,
     genOpIntermediates,
   )
@@ -311,8 +312,10 @@ instance
   ProgTyping semObj (Prog op varId ty) ty ctx
   where
   typeProg _ prog =
-    mrgReturn
-      (progArgType <$> progArgList prog, progResType <$> progResList prog)
+    mrgReturn $
+      TypeSignature
+        (progArgType <$> progArgList prog)
+        (progResType <$> progResList prog)
 
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName

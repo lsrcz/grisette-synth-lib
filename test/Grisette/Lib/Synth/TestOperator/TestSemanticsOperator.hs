@@ -36,6 +36,7 @@ import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( GenIntermediate (genIntermediate),
     OpTyping (typeOp),
+    TypeSignature (TypeSignature),
   )
 import Grisette.Lib.Synth.Util.Show (showText)
 
@@ -119,25 +120,26 @@ instance
   (MonadContext ctx) =>
   OpTyping TestSemanticsObj TestSemanticsOp TestSemanticsType ctx
   where
-  typeOp _ Add 2 = mrgReturn ([IntType, IntType], [IntType])
+  typeOp _ Add 2 = mrgReturn $ TypeSignature [IntType, IntType] [IntType]
   typeOp _ Add l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText l
         <> " arguments."
-  typeOp _ DivMod 2 = mrgReturn ([IntType, IntType], [IntType, IntType])
+  typeOp _ DivMod 2 =
+    mrgReturn $ TypeSignature [IntType, IntType] [IntType, IntType]
   typeOp _ DivMod l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText l
         <> " arguments."
-  typeOp _ Inc 1 = mrgReturn ([IntType], [IntType])
+  typeOp _ Inc 1 = mrgReturn $ TypeSignature [IntType] [IntType]
   typeOp _ Inc l =
     mrgThrowError $
       "Incorrect number of arguments for inc, expected 1 arguments, but got "
         <> showText l
         <> " arguments."
-  typeOp _ Double 1 = mrgReturn ([IntType], [IntType])
+  typeOp _ Double 1 = mrgReturn $ TypeSignature [IntType] [IntType]
   typeOp _ Double l =
     mrgThrowError $
       "Incorrect number of arguments for dec, expected 1 arguments, but got "

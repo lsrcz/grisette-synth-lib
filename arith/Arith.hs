@@ -34,6 +34,7 @@ import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( GenIntermediate (genIntermediate),
     OpTyping (typeOp),
+    TypeSignature (TypeSignature),
   )
 import Grisette.Lib.Synth.Program.Concrete
   ( OpDirectSubProgs (opDirectSubProgs),
@@ -91,10 +92,14 @@ data OpType = IntegerType
   deriving (Mergeable, EvaluateSym) via (Default OpType)
 
 instance (MonadContext ctx) => OpTyping Sem OpCode OpType ctx where
-  typeOp _ Plus 2 = mrgReturn ([IntegerType, IntegerType], [IntegerType])
-  typeOp _ Mul 2 = mrgReturn ([IntegerType, IntegerType], [IntegerType])
-  typeOp _ Minus 2 = mrgReturn ([IntegerType, IntegerType], [IntegerType])
-  typeOp _ UMinus 1 = mrgReturn ([IntegerType], [IntegerType])
+  typeOp _ Plus 2 =
+    mrgReturn $ TypeSignature [IntegerType, IntegerType] [IntegerType]
+  typeOp _ Mul 2 =
+    mrgReturn $ TypeSignature [IntegerType, IntegerType] [IntegerType]
+  typeOp _ Minus 2 =
+    mrgReturn $ TypeSignature [IntegerType, IntegerType] [IntegerType]
+  typeOp _ UMinus 1 =
+    mrgReturn $ TypeSignature [IntegerType] [IntegerType]
   typeOp _ op _ =
     mrgThrowError $ "Invalid arguments to operator " <> showText op
 

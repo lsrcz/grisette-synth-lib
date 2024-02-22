@@ -26,6 +26,7 @@ import Grisette
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (SymbolicContext)
+import Grisette.Lib.Synth.Operator.OpTyping (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( MkFreshProg (mkFreshProg),
     MkFreshStmt (mkFreshStmt),
@@ -426,7 +427,7 @@ componentSketchTest =
                 [ProgRes IntType 4, ProgRes IntType 5] ::
                 Prog TestSemanticsOp SymInteger TestSemanticsType
         typeProg TestSemanticsObj prog
-          @?= Right ([IntType, IntType], [IntType, IntType]),
+          @?= Right (TypeSignature [IntType, IntType] [IntType, IntType]),
       testGroup
         "Builder"
         [ testGroup

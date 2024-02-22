@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
@@ -6,17 +8,23 @@
 module Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (..),
     GenIntermediate (..),
+    TypeSignature (..),
     genIntermediates,
     genOpIntermediates,
   )
 where
 
-import Grisette (Mergeable, MonadFresh)
+import GHC.Generics (Generic)
+import Grisette (Default (Default), Mergeable, MonadFresh)
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
 
+data TypeSignature ty = TypeSignature {argTypes :: [ty], resTypes :: [ty]}
+  deriving (Show, Eq, Generic)
+  deriving (Mergeable) via (Default (TypeSignature ty))
+
 class (MonadContext ctx) => OpTyping semObj op ty ctx where
-  typeOp :: semObj -> op -> Int -> ctx ([ty], [ty])
+  typeOp :: semObj -> op -> Int -> ctx (TypeSignature ty)
 
 class
   (MonadFresh ctx, MonadContext ctx, Mergeable val) =>
@@ -37,7 +45,7 @@ genOpIntermediates ::
   Int ->
   ctx ([val], [val])
 genOpIntermediates _ sem op argNum = do
-  (argTypes :: [ty], resTypes) <- typeOp sem op argNum
-  arg <- genIntermediates sem argTypes
-  res <- genIntermediates sem resTypes
+  signature :: TypeSignature ty <- typeOp sem op argNum
+  arg <- genIntermediates sem $ argTypes signature
+  res <- genIntermediates sem $ resTypes signature
   return (arg, res)

@@ -44,7 +44,10 @@ import Grisette.Lib.Data.Foldable (mrgTraverse_)
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( OpTyping,
+    TypeSignature (TypeSignature),
+  )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
@@ -226,8 +229,10 @@ instance
   ProgTyping semObj (Prog op conVarId symVarId ty) ty ctx
   where
   typeProg _ prog =
-    mrgReturn
-      (progArgType <$> progArgList prog, progResType <$> progResList prog)
+    mrgReturn $
+      TypeSignature
+        (progArgType <$> progArgList prog)
+        (progResType <$> progResList prog)
 
 instance ProgNaming (Prog op conVarId symVarId ty) where
   nameProg = progName

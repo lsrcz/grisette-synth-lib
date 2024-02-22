@@ -77,7 +77,10 @@ import Grisette.Lib.Synth.Operator.OpPretty
     prettyResults,
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( OpTyping,
+    TypeSignature (TypeSignature),
+  )
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
@@ -412,7 +415,10 @@ instance
   ProgTyping semObj (Prog op varId ty) ty ctx
   where
   typeProg _ prog =
-    mrgReturn (progArgType <$> progArgList prog, progResType <$> progResList prog)
+    mrgReturn $
+      TypeSignature
+        (progArgType <$> progArgList prog)
+        (progResType <$> progResList prog)
 
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName

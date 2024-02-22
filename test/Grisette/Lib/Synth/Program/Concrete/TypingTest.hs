@@ -2,6 +2,7 @@
 
 module Grisette.Lib.Synth.Program.Concrete.TypingTest (typingTest) where
 
+import Grisette.Lib.Synth.Operator.OpTyping (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Program.Concrete
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -30,4 +31,4 @@ typingTest = testCase "typing" $ do
           [ProgRes IntType 4, ProgRes IntType 5] ::
           Prog TestSemanticsOp Integer TestSemanticsType
   typeProg TestSemanticsObj prog
-    @?= Right ([IntType, IntType], [IntType, IntType])
+    @?= Right (TypeSignature [IntType, IntType] [IntType, IntType])
