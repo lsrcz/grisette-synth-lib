@@ -5,7 +5,11 @@ module Grisette.Lib.Synth.Operator.OpTypingTest (opTypingTest) where
 import Data.Data (Proxy (Proxy))
 import Grisette (Solvable (isym), SymInteger, mrgReturn, runFreshT)
 import Grisette.Lib.Synth.Context (SymbolicContext)
-import Grisette.Lib.Synth.Operator.OpTyping (genIntermediates, genOpIntermediates)
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( Intermediates (Intermediates),
+    genIntermediates,
+    genOpIntermediates,
+  )
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsObj (TestSemanticsObj),
     TestSemanticsOp (DivMod),
@@ -34,8 +38,9 @@ opTypingTest =
                   TestSemanticsObj
                   DivMod
                   2 ::
-                SymbolicContext ([SymInteger], [SymInteger])
+                SymbolicContext (Intermediates SymInteger)
         let expected =
-              mrgReturn ([isym "x" 0, isym "x" 1], [isym "x" 2, isym "x" 3])
+              mrgReturn $
+                Intermediates [isym "x" 0, isym "x" 1] [isym "x" 2, isym "x" 3]
         actual @?= expected
     ]

@@ -9,6 +9,7 @@ module Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (..),
     GenIntermediate (..),
     TypeSignature (..),
+    Intermediates (..),
     genIntermediates,
     genOpIntermediates,
   )
@@ -36,6 +37,13 @@ genIntermediates ::
   (GenIntermediate sem ty val ctx) => sem -> [ty] -> ctx [val]
 genIntermediates sem = mrgTraverse (genIntermediate sem)
 
+data Intermediates val = Intermediates
+  { argIntermediates :: [val],
+    resIntermediates :: [val]
+  }
+  deriving (Show, Eq, Generic)
+  deriving (Mergeable) via (Default (Intermediates val))
+
 genOpIntermediates ::
   forall semObj op ty val ctx p.
   (OpTyping semObj op ty ctx, GenIntermediate semObj ty val ctx) =>
@@ -43,9 +51,9 @@ genOpIntermediates ::
   semObj ->
   op ->
   Int ->
-  ctx ([val], [val])
+  ctx (Intermediates val)
 genOpIntermediates _ sem op argNum = do
   signature :: TypeSignature ty <- typeOp sem op argNum
   arg <- genIntermediates sem $ argTypes signature
   res <- genIntermediates sem $ resTypes signature
-  return (arg, res)
+  return $ Intermediates arg res

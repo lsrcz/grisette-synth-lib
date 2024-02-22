@@ -53,6 +53,7 @@ import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( GenIntermediate,
+    Intermediates (Intermediates),
     OpTyping,
     TypeSignature (TypeSignature),
     genIntermediates,
@@ -224,7 +225,7 @@ constrainStmt p sem idBound (Stmt op argIds resIds disabled) = do
     symAll (\(i, isucc) -> isucc .== i + 1) $
       zip resIds (tail resIds)
 
-  (argVals, resVals) <- lift $ genOpIntermediates p sem op (length argIds)
+  Intermediates argVals resVals <- lift $ genOpIntermediates p sem op (length argIds)
   addUses $ zipWith (IdValPair disabled) argIds argVals
   symAssertWith "Incorrect number of results." $
     length resIds .== length resVals
