@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,6 +17,7 @@ module Typing
 where
 
 import Control.Monad (when)
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
@@ -39,6 +41,7 @@ import Value (SymValue, ValueBuilder (mkBool, mkInt))
 
 data Type = IntType | BoolType
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable)
   deriving (Mergeable, EvaluateSym, ToCon Type) via (Default Type)
 
 instance GPretty Type where

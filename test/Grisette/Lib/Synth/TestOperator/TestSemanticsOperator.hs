@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,6 +17,7 @@ where
 import Control.Exception (ArithException)
 import Control.Monad (when)
 import Control.Monad.Except (runExceptT)
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
@@ -42,6 +44,7 @@ import Grisette.Lib.Synth.Util.Show (showText)
 
 data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving (Show, Generic, Eq)
+  deriving anyclass (Hashable)
   deriving
     (Mergeable, ToCon TestSemanticsOp, EvaluateSym)
     via (Default TestSemanticsOp)
@@ -50,6 +53,7 @@ data TestSemanticsObj = TestSemanticsObj
 
 data TestSemanticsType = IntType
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable)
   deriving (Mergeable, EvaluateSym) via (Default TestSemanticsType)
 
 instance

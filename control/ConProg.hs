@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -9,6 +10,7 @@
 
 module ConProg (Op (..), Prog) where
 
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Grisette
   ( GPretty (gpretty),
@@ -42,7 +44,8 @@ data Op varId intVal
   | Minus
   | IntConst intVal
   | If (Prog varId intVal) (Prog varId intVal)
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable)
 
 type Prog varId intVal = Concrete.Prog (Op varId intVal) varId Type
 

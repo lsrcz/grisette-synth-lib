@@ -48,26 +48,16 @@ type SymVal = SymValue SymInteger SymBool
 type Sketch = S.Prog SymInteger SymInteger
 
 trueBranch :: ConProg
-trueBranch =
-  Concrete.Prog
-    "trueBranch"
-    [ Concrete.ProgArg IntType "a" 0,
-      Concrete.ProgArg IntType "b" 1
-    ]
-    [ Concrete.Stmt C.Plus [0, 1] [2]
-    ]
-    [Concrete.ProgRes IntType 2]
+trueBranch = Concrete.buildProg "trueBranch" [(IntType, "a"), (IntType, "b")] $
+  \[a, b] ->
+    let [plus] = Concrete.node C.Plus 1 [a, b]
+     in [(plus, IntType)]
 
 falseBranch :: ConProg
-falseBranch =
-  Concrete.Prog
-    "falseBranch"
-    [ Concrete.ProgArg IntType "a" 0,
-      Concrete.ProgArg IntType "b" 1
-    ]
-    [ Concrete.Stmt C.Minus [0, 1] [2]
-    ]
-    [Concrete.ProgRes IntType 2]
+falseBranch = Concrete.buildProg "trueBranch" [(IntType, "a"), (IntType, "b")] $
+  \[a, b] ->
+    let [minus] = Concrete.node C.Minus 1 [a, b]
+     in [(minus, IntType)]
 
 -- We can use the following encoding:
 --
@@ -92,19 +82,11 @@ falseBranch =
 --     r3 = Minus(a, b)
 --   return r3
 conProg :: ConProg
-conProg =
-  Concrete.Prog
-    "prog"
-    [ Concrete.ProgArg IntType "a" 0,
-      Concrete.ProgArg IntType "b" 1
-    ]
-    [ Concrete.Stmt C.Equals [0, 1] [2],
-      Concrete.Stmt
-        (C.If trueBranch falseBranch)
-        [2, 0, 1]
-        [3]
-    ]
-    [Concrete.ProgRes IntType 3]
+conProg = Concrete.buildProg "trueBranch" [(IntType, "a"), (IntType, "b")] $
+  \[a, b] ->
+    let [equals] = Concrete.node C.Equals 1 [a, b]
+        [res] = Concrete.node (C.If trueBranch falseBranch) 1 [equals, a, b]
+     in [(res, IntType)]
 
 trueBranchSketch :: Fresh Sketch
 trueBranchSketch =

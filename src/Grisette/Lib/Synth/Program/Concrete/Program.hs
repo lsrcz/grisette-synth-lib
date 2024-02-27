@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -47,6 +48,7 @@ import Control.Monad.State
   )
 import Data.Foldable (traverse_)
 import qualified Data.HashMap.Lazy as HM
+import Data.Hashable (Hashable)
 import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -92,6 +94,7 @@ data Stmt op varId = Stmt
     stmtResIds :: [varId]
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable)
 
 instance Mergeable (Stmt op varId) where
   rootStrategy = NoStrategy
@@ -102,12 +105,14 @@ data ProgArg varId ty = ProgArg
     progArgId :: varId
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable)
 
 data ProgRes varId ty = ProgRes
   { progResType :: ty,
     progResId :: varId
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable)
 
 data Prog op varId ty = Prog
   { progName :: T.Text,
@@ -116,6 +121,7 @@ data Prog op varId ty = Prog
     progResList :: [ProgRes varId ty]
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable)
 
 instance Mergeable (Prog op varId ty) where
   rootStrategy = NoStrategy
