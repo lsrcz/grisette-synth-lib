@@ -48,13 +48,13 @@ type SymVal = SymValue SymInteger SymBool
 type Sketch = S.Prog SymInteger SymInteger
 
 trueBranch :: ConProg
-trueBranch = Concrete.buildProg "trueBranch" [(IntType, "a"), (IntType, "b")] $
+trueBranch = Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
   \[a, b] ->
     let [plus] = Concrete.node C.Plus 1 [a, b]
      in [(plus, IntType)]
 
 falseBranch :: ConProg
-falseBranch = Concrete.buildProg "trueBranch" [(IntType, "a"), (IntType, "b")] $
+falseBranch = Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
   \[a, b] ->
     let [minus] = Concrete.node C.Minus 1 [a, b]
      in [(minus, IntType)]
@@ -82,7 +82,7 @@ falseBranch = Concrete.buildProg "trueBranch" [(IntType, "a"), (IntType, "b")] $
 --     r3 = Minus(a, b)
 --   return r3
 conProg :: ConProg
-conProg = Concrete.buildProg "trueBranch" [(IntType, "a"), (IntType, "b")] $
+conProg = Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
   \[a, b] ->
     let [equals] = Concrete.node C.Equals 1 [a, b]
         [res] = Concrete.node (C.If trueBranch falseBranch) 1 [equals, a, b]

@@ -64,7 +64,7 @@ sharedSketch :: SymProg
 sharedSketch =
   Prog
     "test"
-    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
     [ Stmt
         (mrgIf "stmt0'op" (return Add) (return DivMod))
         ["stmt0'arg1", "stmt0'arg2"]
@@ -78,7 +78,7 @@ sharedSketch =
         [4, 5]
         "stmt1'numRes"
     ]
-    [ProgRes IntType "res0", ProgRes IntType "res1"]
+    [ProgRes "res0" IntType, ProgRes "res1" IntType]
 
 data ByteCodeSynthesisTestCase where
   ByteCodeSynthesisTestCase ::

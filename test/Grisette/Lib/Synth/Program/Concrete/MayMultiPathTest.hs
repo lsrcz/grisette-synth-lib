@@ -61,12 +61,12 @@ prog :: Prog MayAddOneOp Int IntType
 prog =
   Prog
     "prog"
-    [ProgArg IntType "x" 0]
+    [ProgArg "x" 0 IntType]
     ( fmap
         (\i -> Stmt (MayAddOneOp $ ssym $ "s" <> showText i) [i] [i + 1])
         [0 .. 99]
     )
-    [ProgRes IntType 100]
+    [ProgRes 100 IntType]
 
 mayMultiPathTest :: Test
 mayMultiPathTest =

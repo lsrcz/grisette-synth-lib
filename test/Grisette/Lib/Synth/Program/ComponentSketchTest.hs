@@ -74,11 +74,11 @@ goodConcreteProg :: Prog TestSemanticsOp SymInteger TestSemanticsType
 goodConcreteProg =
   Prog
     "test"
-    [ProgArg IntType "x", ProgArg IntType "y"]
+    [ProgArg "x" IntType, ProgArg "y" IntType]
     [ Stmt Add [0, 1] [2] $ con False,
       Stmt DivMod [2, 0] [3, 4] $ con False
     ]
-    [ProgRes IntType 3, ProgRes IntType 4]
+    [ProgRes 3 IntType, ProgRes 4 IntType]
 
 componentSketchTest :: Test
 componentSketchTest =
@@ -93,35 +93,35 @@ componentSketchTest =
                   Just $
                     Concrete.Prog
                       "test"
-                      [ Concrete.ProgArg IntType "x" 0,
-                        Concrete.ProgArg IntType "y" 1
+                      [ Concrete.ProgArg "x" 0 IntType,
+                        Concrete.ProgArg "y" 1 IntType
                       ]
                       [ Concrete.Stmt Add [0, 1] [2],
                         Concrete.Stmt DivMod [2, 0] [3, 4]
                       ]
-                      [Concrete.ProgRes IntType 3, Concrete.ProgRes IntType 4]
+                      [Concrete.ProgRes 3 IntType, Concrete.ProgRes 4 IntType]
               },
             ToConTestCase
               { toConTestCaseName = "reorder",
                 toConTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ProgArg "x" IntType, ProgArg "y" IntType]
                     [ Stmt DivMod [2, 0] [3, 4] $ con False,
                       Stmt Add [0, 1] [2] $ con False
                     ]
-                    [ProgRes IntType 3, ProgRes IntType 4],
+                    [ProgRes 3 IntType, ProgRes 4 IntType],
                 toConTestCaseExpected =
                   Just $
                     Concrete.Prog
                       "test"
-                      [ Concrete.ProgArg IntType "x" 0,
-                        Concrete.ProgArg IntType "y" 1
+                      [ Concrete.ProgArg "x" 0 IntType,
+                        Concrete.ProgArg "y" 1 IntType
                       ]
                       [ Concrete.Stmt Add [0, 1] [2],
                         Concrete.Stmt DivMod [2, 0] [3, 4]
                       ]
-                      [Concrete.ProgRes IntType 3, Concrete.ProgRes IntType 4]
+                      [Concrete.ProgRes 3 IntType, Concrete.ProgRes 4 IntType]
               }
             ]
         return $ testCase name $ toCon prog @?= expected,
@@ -160,11 +160,11 @@ componentSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ProgArg "x" IntType, ProgArg "y" IntType]
                     [ Stmt Add [0, 1] [2] "dis0",
                       Stmt DivMod [0, 1] [3, 4] "dis1"
                     ]
-                    [ProgRes IntType 1, ProgRes IntType 2],
+                    [ProgRes 1 IntType, ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 0],
                 semanticsTestCaseExpected =
                   let addArg0Val = isym "x" 0 :: SymInteger
@@ -189,9 +189,9 @@ componentSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ProgArg "x" IntType, ProgArg "y" IntType]
                     [Stmt Add [0, 1] [2] $ con False]
-                    [ProgRes IntType "res"],
+                    [ProgRes "res" IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
                   let addArg0Val = isym "x" 0 :: SymInteger
@@ -227,11 +227,11 @@ componentSketchTest =
                     semanticsTestCaseProg =
                       Prog
                         "test"
-                        [ProgArg IntType "x"]
+                        [ProgArg "x" IntType]
                         [ Stmt Inc [argInc] [resInc] $ con False,
                           Stmt Double [argDouble] [resDouble] $ con False
                         ]
-                        [ProgRes IntType 2],
+                        [ProgRes 2 IntType],
                     semanticsTestCaseArgs = [13],
                     semanticsTestCaseExpected =
                       Result
@@ -295,11 +295,11 @@ componentSketchTest =
                     semanticsTestCaseProg =
                       Prog
                         "test"
-                        [ProgArg IntType "x", ProgArg IntType "y"]
+                        [ProgArg "x" IntType, ProgArg "y" IntType]
                         [ Stmt DivMod [0, 1] [res00, res01] $ con False,
                           Stmt DivMod [0, 1] [res10, res11] $ con False
                         ]
-                        [ProgRes IntType 4, ProgRes IntType 5],
+                        [ProgRes 4 IntType, ProgRes 5 IntType],
                     semanticsTestCaseArgs = [20, 13],
                     semanticsTestCaseExpected =
                       Result
@@ -341,9 +341,9 @@ componentSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ProgArg "x" IntType, ProgArg "y" IntType]
                     [Stmt Add [0, 1] [2, 3] $ con False]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected = ErrorResult,
                 semanticsTestCaseFreshIdent = "x"
@@ -353,11 +353,11 @@ componentSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ProgArg "x" IntType, ProgArg "y" IntType]
                     [ Stmt Add [0, 1] [2] $ con True,
                       Stmt Add [0, 2] [3] $ con False
                     ]
-                    [ProgRes IntType 0],
+                    [ProgRes 0 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected = ErrorResult,
                 semanticsTestCaseFreshIdent = "x"
@@ -367,11 +367,11 @@ componentSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ProgArg "x" IntType, ProgArg "y" IntType]
                     [ Stmt Add [0, 1] [2] $ con True,
                       Stmt Add [0, 2] [3] $ con True
                     ]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected = ErrorResult,
                 semanticsTestCaseFreshIdent = "x"
@@ -382,11 +382,11 @@ componentSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x", ProgArg IntType "y"]
+                    [ProgArg "x" IntType, ProgArg "y" IntType]
                     [ Stmt Add [0, 1] [2] $ con True,
                       Stmt Add [0, 2] [3] $ con True
                     ]
-                    [ProgRes IntType 0],
+                    [ProgRes 0 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   let progRes0Val = isym "x" 6 :: SymInteger
@@ -420,11 +420,11 @@ componentSketchTest =
         let prog =
               Prog
                 "test"
-                [ProgArg IntType "x", ProgArg IntType "y"]
+                [ProgArg "x" IntType, ProgArg "y" IntType]
                 [ Stmt Add ["a", "b"] ["c"] "d",
                   Stmt DivMod ["e", "f"] ["g", "h"] "i"
                 ]
-                [ProgRes IntType 4, ProgRes IntType 5] ::
+                [ProgRes 4 IntType, ProgRes 5 IntType] ::
                 Prog TestSemanticsOp SymInteger TestSemanticsType
         typeProg TestSemanticsObj prog
           @?= Right (TypeSignature [IntType, IntType] [IntType, IntType]),
@@ -482,26 +482,26 @@ componentSketchTest =
                 let actual =
                       mkProg
                         "test"
-                        [(IntType, "x"), (IntType, "y")]
+                        [("x", IntType), ("y", IntType)]
                         [ Stmt Add ["a", "b"] ["c"] "d",
                           Stmt DivMod ["e", "f"] ["g", "h"] "i"
                         ]
-                        [(IntType, "j"), (IntType, "k")] ::
+                        [("j", IntType), ("k", IntType)] ::
                         Prog TestSemanticsOp SymInteger TestSemanticsType
                 let expected =
                       Prog
                         "test"
-                        [ProgArg IntType "x", ProgArg IntType "y"]
+                        [ProgArg "x" IntType, ProgArg "y" IntType]
                         [ Stmt Add ["a", "b"] ["c"] "d",
                           Stmt DivMod ["e", "f"] ["g", "h"] "i"
                         ]
-                        [ProgRes IntType "j", ProgRes IntType "k"]
+                        [ProgRes "j" IntType, ProgRes "k" IntType]
                 actual @?= expected,
               testCase "fresh" $ do
                 let actual =
                       mkProg
                         "test"
-                        [(IntType, "x"), (IntType, "y")]
+                        [("x", IntType), ("y", IntType)]
                         [ mkStmt
                             (return Add)
                             [simpleFresh (), simpleFresh ()]
@@ -513,15 +513,15 @@ componentSketchTest =
                             [simpleFresh (), simpleFresh ()]
                             (simpleFresh ())
                         ]
-                        [ (IntType, simpleFresh ()),
-                          (IntType, simpleFresh ())
+                        [ (simpleFresh (), IntType),
+                          (simpleFresh (), IntType)
                         ] ::
                         Fresh
                           (Prog TestSemanticsOp SymInteger TestSemanticsType)
                 let expected =
                       Prog
                         "test"
-                        [ProgArg IntType "x", ProgArg IntType "y"]
+                        [ProgArg "x" IntType, ProgArg "y" IntType]
                         [ Stmt
                             Add
                             [isym "x" 0, isym "x" 1]
@@ -533,8 +533,8 @@ componentSketchTest =
                             [isym "x" 6, isym "x" 7]
                             (isym "x" 8)
                         ]
-                        [ ProgRes IntType $ isym "x" 9,
-                          ProgRes IntType $ isym "x" 10
+                        [ ProgRes (isym "x" 9) IntType,
+                          ProgRes (isym "x" 10) IntType
                         ]
                 runFresh actual "x" @?= expected
             ],
@@ -552,7 +552,7 @@ componentSketchTest =
             let expected =
                   Prog
                     "test"
-                    [ProgArg IntType "arg0", ProgArg IntType "arg1"]
+                    [ProgArg "arg0" IntType, ProgArg "arg1" IntType]
                     [ Stmt
                         Add
                         [isym "x" 0, isym "x" 1]
@@ -564,8 +564,8 @@ componentSketchTest =
                         [isym "x" 6, isym "x" 7]
                         (isym "x" 8)
                     ]
-                    [ ProgRes IntType $ isym "x" 9,
-                      ProgRes IntType $ isym "x" 10
+                    [ ProgRes (isym "x" 9) IntType,
+                      ProgRes (isym "x" 10) IntType
                     ]
             runFresh actual "x" @?= expected
         ]

@@ -61,11 +61,11 @@ goodConcreteProg :: Prog TestSemanticsOp Integer SymInteger TestSemanticsType
 goodConcreteProg =
   Prog
     "test"
-    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
     [ Stmt (mrgReturn Add) [0, 1] 2 [3] 1,
       Stmt (mrgReturn DivMod) [3, 0] 2 [4, 5] 2
     ]
-    [ProgRes IntType 4, ProgRes IntType 5]
+    [ProgRes 4 IntType, ProgRes 5 IntType]
 
 byteCodeSketchTest :: Test
 byteCodeSketchTest =
@@ -80,32 +80,32 @@ byteCodeSketchTest =
                   Just $
                     Concrete.Prog
                       "test"
-                      [ Concrete.ProgArg IntType "x" 0,
-                        Concrete.ProgArg IntType "y" 1
+                      [ Concrete.ProgArg "x" 0 IntType,
+                        Concrete.ProgArg "y" 1 IntType
                       ]
                       [ Concrete.Stmt Add [0, 1] [3],
                         Concrete.Stmt DivMod [3, 0] [4, 5]
                       ]
-                      [Concrete.ProgRes IntType 4, Concrete.ProgRes IntType 5]
+                      [Concrete.ProgRes 4 IntType, Concrete.ProgRes 5 IntType]
               },
             ToConTestCase
               { toConTestCaseName = "argNum is less than number of args",
                 toConTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [ Stmt (mrgReturn Inc) [0, 1] 1 [2, 3] 1
                     ]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 toConTestCaseExpected =
                   Just $
                     Concrete.Prog
                       "test"
-                      [ Concrete.ProgArg IntType "x" 0,
-                        Concrete.ProgArg IntType "y" 1
+                      [ Concrete.ProgArg "x" 0 IntType,
+                        Concrete.ProgArg "y" 1 IntType
                       ]
                       [Concrete.Stmt Inc [0] [2]]
-                      [Concrete.ProgRes IntType 2]
+                      [Concrete.ProgRes 2 IntType]
               }
             ]
         return $ testCase name $ toCon prog @?= expected,
@@ -123,9 +123,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn Add) [0, 1] "a" [2] 1]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
                   Result (("a" :: SymInteger) .== 2) [33]
@@ -135,9 +135,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn Add) ["a", 1] 2 [2] 1]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
                   let a = "a" :: SymInteger
@@ -149,9 +149,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn Add) [0, 1] 2 [2] "a"]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
                   Result (("a" :: SymInteger) .== 1) [33]
@@ -161,9 +161,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn Add) [0, 1] 2 [2] 1]
-                    [ProgRes IntType "a"],
+                    [ProgRes "a" IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
                   let a = "a" :: SymInteger
@@ -190,9 +190,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 2]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   ErrorResult "Incorrect number of results."
@@ -203,9 +203,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn Add) [0] 1 [2] 1]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   ErrorResult $
@@ -217,9 +217,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "x" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "x" 1 IntType]
                     [Stmt (mrgReturn Add) [0, 1] 2 [1] 1]
-                    [ProgRes IntType 1],
+                    [ProgRes 1 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   ErrorResult "Variable 1 is already defined."
@@ -229,9 +229,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0]
+                    [ProgArg "x" 0 IntType]
                     [Stmt (mrgReturn Add) [0, 1] 2 [2] 1]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1],
                 semanticsTestCaseExpected =
                   ErrorResult "Variable is undefined."
@@ -241,9 +241,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn Add) [0, 1] 2 [2] 1]
-                    [ProgRes IntType 3],
+                    [ProgRes 3 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   ErrorResult "Variable is undefined."
@@ -253,9 +253,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn Add) [0, 1, 1] 2 [2] 1]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected = Result (con True) [3]
               },
@@ -264,9 +264,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn Add) [0] 2 [2] 1]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   ErrorResult "The specified argument number is too large."
@@ -276,9 +276,9 @@ byteCodeSketchTest =
                 semanticsTestCaseProg =
                   Prog
                     "test"
-                    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt (mrgReturn DivMod) [0, 1] 2 [2] 2]
-                    [ProgRes IntType 2],
+                    [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
                   ErrorResult "Insufficient result IDs."
@@ -300,11 +300,11 @@ byteCodeSketchTest =
         let prog =
               Prog
                 "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                 [ Stmt (mrgReturn Add) [0, 1] 2 [3] 1,
                   Stmt (mrgReturn DivMod) [3, 0] 2 [4, 5] 2
                 ]
-                [ProgRes IntType 4, ProgRes IntType 5] ::
+                [ProgRes 4 IntType, ProgRes 5 IntType] ::
                 Prog TestSemanticsOp Integer SymInteger TestSemanticsType
         typeProg TestSemanticsObj prog
           @?= Right (TypeSignature [IntType, IntType] [IntType, IntType])

@@ -36,11 +36,11 @@ semanticsTest =
     let goodProg =
           Prog
             "test"
-            [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+            [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
             [ Stmt Add [0, 1] [3],
               Stmt DivMod [3, 0] [4, 5]
             ]
-            [ProgRes IntType 4, ProgRes IntType 5] ::
+            [ProgRes 4 IntType, ProgRes 5 IntType] ::
             Prog TestSemanticsOp Integer TestSemanticsType
     SemanticsTestCase name prog args expected <-
       [ SemanticsTestCase
@@ -67,10 +67,10 @@ semanticsTest =
             semanticsTestCaseProg =
               Prog
                 "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                 [ Stmt Add [0, 1] [2, 3]
                 ]
-                [ProgRes IntType 2],
+                [ProgRes 2 IntType],
             semanticsTestCaseArgs = [1, 2],
             semanticsTestCaseExpected = Left "Incorrect number of results."
           },
@@ -79,9 +79,9 @@ semanticsTest =
             semanticsTestCaseProg =
               Prog
                 "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "x" 1]
+                [ProgArg "x" 0 IntType, ProgArg "x" 1 IntType]
                 [Stmt Add [0, 1] [1]]
-                [ProgRes IntType 1] ::
+                [ProgRes 1 IntType] ::
                 Prog TestSemanticsOp Integer TestSemanticsType,
             semanticsTestCaseArgs = [1, 2],
             semanticsTestCaseExpected = Left "Variable 1 is already defined."
@@ -91,9 +91,9 @@ semanticsTest =
             semanticsTestCaseProg =
               Prog
                 "test"
-                [ProgArg IntType "x" 0]
+                [ProgArg "x" 0 IntType]
                 [Stmt Add [0, 1] [2]]
-                [ProgRes IntType 2] ::
+                [ProgRes 2 IntType] ::
                 Prog TestSemanticsOp Integer TestSemanticsType,
             semanticsTestCaseArgs = [1],
             semanticsTestCaseExpected = Left "Variable 1 is undefined."
@@ -103,9 +103,9 @@ semanticsTest =
             semanticsTestCaseProg =
               Prog
                 "test"
-                [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+                [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                 [Stmt Add [0, 1] [2]]
-                [ProgRes IntType 3] ::
+                [ProgRes 3 IntType] ::
                 Prog TestSemanticsOp Integer TestSemanticsType,
             semanticsTestCaseArgs = [1, 2],
             semanticsTestCaseExpected = Left "Variable 3 is undefined."

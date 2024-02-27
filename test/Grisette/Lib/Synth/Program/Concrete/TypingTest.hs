@@ -24,11 +24,11 @@ typingTest = testCase "typing" $ do
   let prog =
         Prog
           "test"
-          [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+          [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
           [ Stmt Add [0, 1] [3],
             Stmt DivMod [3, 0] [4, 5]
           ]
-          [ProgRes IntType 4, ProgRes IntType 5] ::
+          [ProgRes 4 IntType, ProgRes 5 IntType] ::
           Prog TestSemanticsOp Integer TestSemanticsType
   typeProg TestSemanticsObj prog
     @?= Right (TypeSignature [IntType, IntType] [IntType, IntType])

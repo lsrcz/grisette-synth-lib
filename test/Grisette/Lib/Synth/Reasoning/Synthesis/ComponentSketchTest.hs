@@ -64,7 +64,7 @@ sharedSketch :: SymProg
 sharedSketch =
   Prog
     "test"
-    [ProgArg IntType "x", ProgArg IntType "y"]
+    [ProgArg "x" IntType, ProgArg "y" IntType]
     [ Stmt
         Add
         ["stmt0'arg0", "stmt0'arg1"]
@@ -86,7 +86,7 @@ sharedSketch =
         ["stmt3'ret0", "stmt3'ret1"]
         "stmt3'dis"
     ]
-    [ProgRes IntType "res0", ProgRes IntType "res1"]
+    [ProgRes "res0" IntType, ProgRes "res1" IntType]
 
 data ComponentSynthesisTestCase where
   ComponentSynthesisTestCase ::

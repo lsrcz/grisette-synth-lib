@@ -100,16 +100,16 @@ instance Mergeable (Stmt op varId) where
   rootStrategy = NoStrategy
 
 data ProgArg varId ty = ProgArg
-  { progArgType :: ty,
-    progArgName :: T.Text,
-    progArgId :: varId
+  { progArgName :: T.Text,
+    progArgId :: varId,
+    progArgType :: ty
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable)
 
 data ProgRes varId ty = ProgRes
-  { progResType :: ty,
-    progResId :: varId
+  { progResId :: varId,
+    progResType :: ty
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable)

@@ -40,13 +40,13 @@ conProg :: ConProgType
 conProg =
   Concrete.Prog
     "test"
-    [ Concrete.ProgArg IntType "x" 0,
-      Concrete.ProgArg IntType "y" 1
+    [ Concrete.ProgArg "x" 0 IntType,
+      Concrete.ProgArg "y" 1 IntType
     ]
     [ Concrete.Stmt Add [0, 1] [3],
       Concrete.Stmt DivMod [3, 0] [4, 5]
     ]
-    [Concrete.ProgRes IntType 4, Concrete.ProgRes IntType 5]
+    [Concrete.ProgRes 4 IntType, Concrete.ProgRes 5 IntType]
 
 type SymProgType =
   ByteCodeSketch.Prog TestSemanticsOp Integer SymInteger TestSemanticsType
@@ -55,13 +55,13 @@ symProg :: SymProgType
 symProg =
   ByteCodeSketch.Prog
     "test"
-    [ ByteCodeSketch.ProgArg IntType "x" 0,
-      ByteCodeSketch.ProgArg IntType "y" 1
+    [ ByteCodeSketch.ProgArg "x" 0 IntType,
+      ByteCodeSketch.ProgArg "y" 1 IntType
     ]
     [ ByteCodeSketch.Stmt (mrgReturn Add) [0, 1] 2 [3] 1,
       ByteCodeSketch.Stmt (mrgReturn DivMod) [3, "x"] 2 [4, 5] 2
     ]
-    [ByteCodeSketch.ProgRes IntType 4, ByteCodeSketch.ProgRes IntType 5]
+    [ByteCodeSketch.ProgRes 4 IntType, ByteCodeSketch.ProgRes 5 IntType]
 
 model :: Model
 model = buildModel ("x" ::= (0 :: Integer))

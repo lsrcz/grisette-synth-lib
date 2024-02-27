@@ -80,22 +80,22 @@ instance Mergeable (Stmt op conVarId symVarId) where
   rootStrategy = NoStrategy
 
 data ProgArg conVarId ty = ProgArg
-  { progArgType :: ty,
-    progArgName :: T.Text,
-    progArgId :: conVarId
+  { progArgName :: T.Text,
+    progArgId :: conVarId,
+    progArgType :: ty
   }
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym) via (Default (ProgArg conVarId ty))
 
 instance ToCon (ProgArg conVarId ty) (Concrete.ProgArg conVarId ty) where
-  toCon (ProgArg ty name varId) = Just $ Concrete.ProgArg ty name varId
+  toCon (ProgArg name varId ty) = Just $ Concrete.ProgArg name varId ty
 
 instance Mergeable (ProgArg conVarId ty) where
   rootStrategy = NoStrategy
 
 data ProgRes symVarId ty = ProgRes
-  { progResType :: ty,
-    progResId :: symVarId
+  { progResId :: symVarId,
+    progResType :: ty
   }
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym) via (Default (ProgRes symVarId ty))
@@ -104,7 +104,13 @@ instance
   (RelatedVarId conVarId symVarId) =>
   ToCon (ProgRes symVarId ty) (Concrete.ProgRes conVarId ty)
   where
-  toCon (ProgRes ty varId) = Concrete.ProgRes ty <$> toCon varId
+  toCon (ProgRes varId ty) = do
+    conProgResId <- toCon varId
+    return $
+      Concrete.ProgRes
+        { Concrete.progResId = conProgResId,
+          Concrete.progResType = ty
+        }
 
 instance Mergeable (ProgRes symVarId ty) where
   rootStrategy = NoStrategy

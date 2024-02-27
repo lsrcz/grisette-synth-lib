@@ -65,9 +65,9 @@ instance
 class MkProg prog stmt op symVarId ty | prog -> stmt op symVarId ty where
   mkProg ::
     T.Text ->
-    [(ty, T.Text)] ->
+    [(T.Text, ty)] ->
     [stmt] ->
-    [(ty, symVarId)] ->
+    [(symVarId, ty)] ->
     prog
 
 instance MkProg (Prog op symVarId ty) (Stmt op symVarId) op symVarId ty where
@@ -85,7 +85,9 @@ instance
   mkProg name args stmts rets =
     Prog name (uncurry ProgArg <$> args)
       <$> sequence stmts
-      <*> traverse (\(ty, freshVarId) -> ProgRes ty <$> freshVarId) rets
+      <*> traverse
+        (\(freshVarId, ty) -> ProgRes <$> freshVarId <*> return ty)
+        rets
 
 class MkFreshProg prog stmt op ty | prog -> stmt op ty where
   mkFreshProg :: T.Text -> [ty] -> [Fresh stmt] -> [ty] -> Fresh prog
@@ -97,6 +99,6 @@ instance
   mkFreshProg name argTypes freshStmts retTypes =
     Prog
       name
-      [ProgArg ty ("arg" <> showText n) | (n, ty) <- zip [0 ..] argTypes]
+      [ProgArg ("arg" <> showText n) ty | (n, ty) <- zip [0 ..] argTypes]
       <$> sequence freshStmts
-      <*> sequence [ProgRes ty <$> simpleFresh () | ty <- retTypes]
+      <*> sequence [ProgRes <$> simpleFresh () <*> return ty | ty <- retTypes]

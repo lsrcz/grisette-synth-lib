@@ -145,9 +145,9 @@ prettyTest =
                 testProg =
                   Prog
                     "prog2"
-                    [ProgArg PrettyType1 "x" 0]
+                    [ProgArg "x" 0 PrettyType1]
                     [Stmt PrettyOp2 [0] [1]]
-                    [ProgRes PrettyType2 1],
+                    [ProgRes 1 PrettyType2],
                 testProgLooseExpectedResult =
                   Right $
                     T.intercalate
@@ -174,11 +174,11 @@ prettyTest =
                 testProg =
                   Prog
                     "prog3"
-                    [ProgArg PrettyType1 "x" 0, ProgArg PrettyType2 "y" 1]
+                    [ProgArg "x" 0 PrettyType1, ProgArg "y" 1 PrettyType2]
                     [ Stmt PrettyOp2 [0, 1] [2, 3],
                       Stmt PrettyOp2 [2] [4]
                     ]
-                    [ProgRes PrettyType1 4, ProgRes PrettyType2 3],
+                    [ProgRes 4 PrettyType1, ProgRes 3 PrettyType2],
                 testProgLooseExpectedResult =
                   Right $
                     T.intercalate
@@ -218,9 +218,9 @@ prettyTest =
                 testProg =
                   Prog
                     "prog4"
-                    [ProgArg PrettyType1 "x" 0, ProgArg PrettyType1 "y" 1]
+                    [ProgArg "x" 0 PrettyType1, ProgArg "y" 1 PrettyType1]
                     [Stmt PrettyOp2 [0] [1]]
-                    [ProgRes PrettyType1 1],
+                    [ProgRes 1 PrettyType1],
                 testProgLooseExpectedResult =
                   Left . StmtPrettyError (Stmt PrettyOp2 [0] [1]) 0 $
                     RedefinedResult 0 1,
@@ -233,9 +233,9 @@ prettyTest =
                 testProg =
                   Prog
                     "prog5"
-                    [ProgArg PrettyType1 "x" 0]
+                    [ProgArg "x" 0 PrettyType1]
                     [Stmt PrettyOp2 [0] [1]]
-                    [ProgRes PrettyType1 2],
+                    [ProgRes 2 PrettyType1],
                 testProgLooseExpectedResult = Left $ ResultUndefined 0 2,
                 testProgCompactExpectedResult = Left $ ResultUndefined 0 2
               }
@@ -249,23 +249,23 @@ prettyTest =
         let progExt =
               Prog
                 "ext"
-                [ProgArg PrettyType1 "x" 0]
+                [ProgArg "x" 0 PrettyType1]
                 [Stmt TestPrettyExtOp [0] [1]]
-                [ProgRes PrettyType1 1]
+                [ProgRes 1 PrettyType1]
         let prog1 =
               Prog
                 "prog1"
-                [ProgArg PrettyType1 "x" 0]
+                [ProgArg "x" 0 PrettyType1]
                 [Stmt (PrettyInvokeExtOp progExt) [0] [1]]
-                [ProgRes PrettyType1 1]
+                [ProgRes 1 PrettyType1]
         let prog2 =
               Prog
                 "prog2"
-                [ProgArg PrettyType1 "x" (0 :: Int)]
+                [ProgArg "x" (0 :: Int) PrettyType1]
                 [ Stmt (PrettyInvokeExtOp progExt) [0] [1],
                   Stmt (PrettyInvokeOp prog1) [1] [2]
                 ]
-                [ProgRes PrettyType1 2]
+                [ProgRes 2 PrettyType1]
         let doc = gpretty prog2
         [ testCase "loose" $ do
             let actual = renderDoc 80 doc

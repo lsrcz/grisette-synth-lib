@@ -73,8 +73,8 @@ instance Mergeable (Stmt op symVarId) where
   rootStrategy = NoStrategy
 
 data ProgArg ty = ProgArg
-  { progArgType :: ty,
-    progArgName :: T.Text
+  { progArgName :: T.Text,
+    progArgType :: ty
   }
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym) via (Default (ProgArg ty))
@@ -83,8 +83,8 @@ instance Mergeable (ProgArg ty) where
   rootStrategy = NoStrategy
 
 data ProgRes symVarId ty = ProgRes
-  { progResType :: ty,
-    progResId :: symVarId
+  { progResId :: symVarId,
+    progResType :: ty
   }
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym) via (Default (ProgRes symVarId ty))
@@ -108,7 +108,7 @@ instance
   toCon (Prog name argList stmtList resList) = do
     let conArgList =
           zipWith
-            (\(ProgArg ty name) -> Concrete.ProgArg ty name)
+            (\(ProgArg name ty) varId -> Concrete.ProgArg name varId ty)
             argList
             [0 ..]
     let toConStmt (Stmt op argIds resIds disabled) = do
@@ -123,7 +123,14 @@ instance
     conStmts <- join <$> traverse toConStmt stmtList
     conResList <-
       traverse
-        (\(ProgRes ty resId) -> Concrete.ProgRes ty <$> toCon resId)
+        ( \(ProgRes resId ty) -> do
+            conResId <- toCon resId
+            return $
+              Concrete.ProgRes
+                { Concrete.progResId = conResId,
+                  Concrete.progResType = ty
+                }
+        )
         resList
     return $
       Concrete.Prog

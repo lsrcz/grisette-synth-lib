@@ -22,13 +22,13 @@ concreteProg :: Prog TestSemanticsOp Integer TestSemanticsType
 concreteProg =
   Prog
     "test"
-    [ProgArg IntType "x" 0, ProgArg IntType "y" 1]
+    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
     [ Stmt Add [0, 1] [2],
       Stmt DivMod [2, 0] [3, 4]
     ]
-    [ ProgRes IntType 3,
-      ProgRes IntType 4,
-      ProgRes IntType 2
+    [ ProgRes 3 IntType,
+      ProgRes 4 IntType,
+      ProgRes 2 IntType
     ]
 
 builderTest :: Test
@@ -37,7 +37,7 @@ builderTest =
     "Builder"
     [ testCase "buildProg" $ do
         let actual =
-              buildProg "test" [(IntType, "x"), (IntType, "y")] $
+              buildProg "test" [("x", IntType), ("y", IntType)] $
                 \[argxRef, argyRef] ->
                   let [addRef] = node Add 1 [argxRef, argyRef]
                       [divRef, modRef] = node DivMod 2 [addRef, argxRef]

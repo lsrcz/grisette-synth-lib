@@ -75,9 +75,10 @@ toConcreteProg (Prog name argList resList) =
     ( fmap
         ( \a@(ProgArg name ty) ->
             Concrete.ProgArg
-              ty
-              name
-              (nodeRefToVarId $ NodeRef (ArgNode a) 0)
+              { Concrete.progArgName = name,
+                Concrete.progArgId = nodeRefToVarId $ NodeRef (ArgNode a) 0,
+                Concrete.progArgType = ty
+              }
         )
         argList
     )
@@ -86,11 +87,23 @@ toConcreteProg (Prog name argList resList) =
             case node of
               ArgNode {} -> error "Impossible"
               InteriorNode nodeOp _ refs ->
-                Concrete.Stmt nodeOp (nodeRefToVarId <$> refs) varIds
+                Concrete.Stmt
+                  { Concrete.stmtOp = nodeOp,
+                    Concrete.stmtArgIds = nodeRefToVarId <$> refs,
+                    Concrete.stmtResIds = varIds
+                  }
         )
         allInteriorNodesList
     )
-    (fmap (\(ProgRes node ty) -> Concrete.ProgRes ty (nodeRefToVarId node)) resList)
+    ( fmap
+        ( \(ProgRes node ty) ->
+            Concrete.ProgRes
+              { Concrete.progResId = nodeRefToVarId node,
+                Concrete.progResType = ty
+              }
+        )
+        resList
+    )
   where
     accessArgs :: State (M.HashMap (Node op ty) [varId]) ()
     accessArgs = mapM_ (accessNode . ArgNode) argList
@@ -138,13 +151,13 @@ toConcreteProg (Prog name argList resList) =
 buildProg ::
   (Hashable op, Eq op, Hashable ty, ConcreteVarId varId) =>
   T.Text ->
-  [(ty, T.Text)] ->
+  [(T.Text, ty)] ->
   ([NodeRef op ty] -> [(NodeRef op ty, ty)]) ->
   Concrete.Prog op varId ty
 buildProg name argPairs f =
   toConcreteProg $ Prog name args (uncurry ProgRes <$> f argRefs)
   where
-    args = uncurry (flip ProgArg) <$> argPairs
+    args = uncurry ProgArg <$> argPairs
     argRefs = fmap (flip NodeRef 0 . ArgNode) args
 
 node :: op -> Int -> [NodeRef op ty] -> [NodeRef op ty]
