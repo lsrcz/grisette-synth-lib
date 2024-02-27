@@ -33,6 +33,8 @@ library
       Grisette.Lib.Synth.Operator.OpTyping
       Grisette.Lib.Synth.Program.ByteCodeSketch
       Grisette.Lib.Synth.Program.ComponentSketch
+      Grisette.Lib.Synth.Program.ComponentSketch.Builder
+      Grisette.Lib.Synth.Program.ComponentSketch.Program
       Grisette.Lib.Synth.Program.Concrete
       Grisette.Lib.Synth.Program.ProgNaming
       Grisette.Lib.Synth.Program.ProgSemantics
