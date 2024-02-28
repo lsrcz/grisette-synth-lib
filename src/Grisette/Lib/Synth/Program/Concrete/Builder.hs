@@ -66,7 +66,7 @@ instance Mergeable (Prog op ty) where
 
 toConcreteProg ::
   forall varId op ty.
-  (Hashable op, Eq op, Hashable ty, ConcreteVarId varId) =>
+  (Hashable op, Eq op, Hashable ty, Eq ty, ConcreteVarId varId) =>
   Prog op ty ->
   Concrete.Prog op varId ty
 toConcreteProg (Prog name argList resList) =
@@ -149,7 +149,7 @@ toConcreteProg (Prog name argList resList) =
           M.toList allNodes
 
 buildProg ::
-  (Hashable op, Eq op, Hashable ty, ConcreteVarId varId) =>
+  (Hashable op, Eq op, Hashable ty, Eq ty, ConcreteVarId varId) =>
   T.Text ->
   [(T.Text, ty)] ->
   ([NodeRef op ty] -> [(NodeRef op ty, ty)]) ->
