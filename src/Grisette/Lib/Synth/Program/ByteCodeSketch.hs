@@ -229,9 +229,9 @@ instance
 
 instance
   (Mergeable ty) =>
-  ProgTyping semObj (Prog op conVarId symVarId ty) ty
+  ProgTyping (Prog op conVarId symVarId ty) ty
   where
-  typeProg _ prog =
+  typeProg prog =
     mrgReturn $
       TypeSignature
         (progArgType <$> progArgList prog)

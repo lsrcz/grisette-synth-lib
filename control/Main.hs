@@ -93,8 +93,8 @@ trueBranchSketch =
   Component.mkFreshProg
     "trueBranch"
     [IntType, IntType]
-    [ Component.freshStmtSimple Sem (return S.Plus),
-      Component.freshStmtSimple Sem (return S.Minus)
+    [ Component.freshStmtSimple (return S.Plus),
+      Component.freshStmtSimple (return S.Minus)
     ]
     [IntType]
 
@@ -103,8 +103,8 @@ falseBranchSketch =
   Component.mkFreshProg
     "falseBranch"
     [IntType, IntType]
-    [ Component.freshStmtSimple Sem (return S.Plus),
-      Component.freshStmtSimple Sem (return S.Minus)
+    [ Component.freshStmtSimple (return S.Plus),
+      Component.freshStmtSimple (return S.Minus)
     ]
     [IntType]
 
@@ -114,10 +114,10 @@ sketch =
     Component.mkFreshProg
       "prog"
       [IntType, IntType]
-      [ Component.freshStmtSimple Sem (return S.Plus),
-        Component.freshStmtSimple Sem (return S.Plus),
-        Component.freshStmtSimple Sem (return S.Equals),
-        Component.freshStmtSimple Sem $
+      [ Component.freshStmtSimple (return S.Plus),
+        Component.freshStmtSimple (return S.Plus),
+        Component.freshStmtSimple (return S.Equals),
+        Component.freshStmtSimple $
           S.If <$> trueBranchSketch <*> falseBranchSketch
       ]
       [IntType]

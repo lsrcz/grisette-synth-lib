@@ -306,6 +306,6 @@ byteCodeSketchTest =
                 ]
                 [ProgRes 4 IntType, ProgRes 5 IntType] ::
                 Prog TestSemanticsOp Integer SymInteger TestSemanticsType
-        typeProg TestSemanticsObj prog
+        typeProg prog
           @?= Right (TypeSignature [IntType, IntType] [IntType, IntType])
     ]

@@ -334,8 +334,8 @@ instance
       traverse_ runStmt stmts
       traverse (lookupVal . progResId) ret
 
-instance (Mergeable ty) => ProgTyping semObj (Prog op varId ty) ty where
-  typeProg _ prog =
+instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
+  typeProg prog =
     mrgReturn $
       TypeSignature
         (progArgType <$> progArgList prog)

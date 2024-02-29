@@ -80,12 +80,12 @@ instance
     [Concrete.SomePrettyProg true, Concrete.SomePrettyProg false]
   opDirectSubProgs _ = []
 
-instance OpTypingSimple Sem (Op varId intVal) Type where
-  typeOpSimple _ Plus = typePlus
-  typeOpSimple _ Equals = typeEquals
-  typeOpSimple _ Minus = typeMinus
-  typeOpSimple _ IntConst {} = typeIntConst
-  typeOpSimple sem (If true false) = typeIf sem true false
+instance OpTypingSimple  (Op varId intVal) Type where
+  typeOpSimple Plus = typePlus
+  typeOpSimple Equals = typeEquals
+  typeOpSimple Minus = typeMinus
+  typeOpSimple IntConst {} = typeIntConst
+  typeOpSimple (If true false) = typeIf true false
 
 instance
   ( HasSemantics (Value intVal boolVal) ctx,

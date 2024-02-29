@@ -34,7 +34,7 @@ opTypingTest =
       testCase "genOpIntermediates" $ do
         let actual =
               flip runFreshT "x" $
-                typeOpSimple TestSemanticsObj DivMod
+                typeOpSimple DivMod
                   >>= genOpIntermediates
                     (Proxy :: Proxy TestSemanticsType)
                     TestSemanticsObj ::

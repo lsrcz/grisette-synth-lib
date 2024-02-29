@@ -38,7 +38,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch
     ProgRes (ProgRes),
     Stmt (Stmt, stmtArgIds, stmtDisabled, stmtOp, stmtResIds),
     TypedOp (TypedOp),
-    freshStmtByInputTypes,
+    freshStmt,
     freshStmtByNumInputs,
     freshStmtSimple,
   )
@@ -78,24 +78,18 @@ data SemanticsTestCase = SemanticsTestCase
     semanticsTestCaseFreshIdent :: FreshIdent
   }
 
-mkOp ::
-  (MkTypedOpSimple typedOp TestSemanticsObj op TestSemanticsType) =>
-  op ->
-  typedOp
-mkOp = mkTypedOpSimple TestSemanticsObj
-
 goodConcreteProg :: Prog TestSemanticsOp SymInteger TestSemanticsType
 goodConcreteProg =
   Prog
     "test"
     [ProgArg "x" IntType, ProgArg "y" IntType]
     [ Stmt
-        (mkOp Add)
+        (mkTypedOpSimple Add)
         [0, 1]
         [2]
         $ con False,
       Stmt
-        (mkOp DivMod)
+        (mkTypedOpSimple DivMod)
         [2, 0]
         [3, 4]
         $ con False
@@ -129,8 +123,8 @@ componentSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [ Stmt (mkOp DivMod) [2, 0] [3, 4] $ con False,
-                      Stmt (mkOp Add) [0, 1] [2] $ con False
+                    [ Stmt (mkTypedOpSimple DivMod) [2, 0] [3, 4] $ con False,
+                      Stmt (mkTypedOpSimple Add) [0, 1] [2] $ con False
                     ]
                     [ProgRes 3 IntType, ProgRes 4 IntType],
                 toConTestCaseExpected =
@@ -183,8 +177,8 @@ componentSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [ Stmt (mkOp Add) [0, 1] [2] "dis0",
-                      Stmt (mkOp DivMod) [0, 1] [3, 4] "dis1"
+                    [ Stmt (mkTypedOpSimple Add) [0, 1] [2] "dis0",
+                      Stmt (mkTypedOpSimple DivMod) [0, 1] [3, 4] "dis1"
                     ]
                     [ProgRes 1 IntType, ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 0],
@@ -212,7 +206,7 @@ componentSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [Stmt (mkOp Add) [0, 1] [2] $ con False]
+                    [Stmt (mkTypedOpSimple Add) [0, 1] [2] $ con False]
                     [ProgRes "res" IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
@@ -250,8 +244,8 @@ componentSketchTest =
                       Prog
                         "test"
                         [ProgArg "x" IntType]
-                        [ Stmt (mkOp Inc) [argInc] [resInc] $ con False,
-                          Stmt (mkOp Double) [argDouble] [resDouble] $ con False
+                        [ Stmt (mkTypedOpSimple Inc) [argInc] [resInc] $ con False,
+                          Stmt (mkTypedOpSimple Double) [argDouble] [resDouble] $ con False
                         ]
                         [ProgRes 2 IntType],
                     semanticsTestCaseArgs = [13],
@@ -318,8 +312,8 @@ componentSketchTest =
                       Prog
                         "test"
                         [ProgArg "x" IntType, ProgArg "y" IntType]
-                        [ Stmt (mkOp DivMod) [0, 1] [res00, res01] $ con False,
-                          Stmt (mkOp DivMod) [0, 1] [res10, res11] $ con False
+                        [ Stmt (mkTypedOpSimple DivMod) [0, 1] [res00, res01] $ con False,
+                          Stmt (mkTypedOpSimple DivMod) [0, 1] [res10, res11] $ con False
                         ]
                         [ProgRes 4 IntType, ProgRes 5 IntType],
                     semanticsTestCaseArgs = [20, 13],
@@ -364,7 +358,7 @@ componentSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [Stmt (mkOp Add) [0, 1] [2, 3] $ con False]
+                    [Stmt (mkTypedOpSimple Add) [0, 1] [2, 3] $ con False]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected = ErrorResult,
@@ -376,8 +370,8 @@ componentSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [ Stmt (mkOp Add) [0, 1] [2] $ con True,
-                      Stmt (mkOp Add) [0, 2] [3] $ con False
+                    [ Stmt (mkTypedOpSimple Add) [0, 1] [2] $ con True,
+                      Stmt (mkTypedOpSimple Add) [0, 2] [3] $ con False
                     ]
                     [ProgRes 0 IntType],
                 semanticsTestCaseArgs = [1, 2],
@@ -390,8 +384,8 @@ componentSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [ Stmt (mkOp Add) [0, 1] [2] $ con True,
-                      Stmt (mkOp Add) [0, 2] [3] $ con True
+                    [ Stmt (mkTypedOpSimple Add) [0, 1] [2] $ con True,
+                      Stmt (mkTypedOpSimple Add) [0, 2] [3] $ con True
                     ]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
@@ -405,8 +399,8 @@ componentSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [ Stmt (mkOp Add) [0, 1] [2] $ con True,
-                      Stmt (mkOp Add) [0, 2] [3] $ con True
+                    [ Stmt (mkTypedOpSimple Add) [0, 1] [2] $ con True,
+                      Stmt (mkTypedOpSimple Add) [0, 2] [3] $ con True
                     ]
                     [ProgRes 0 IntType],
                 semanticsTestCaseArgs = [1, 2],
@@ -447,12 +441,12 @@ componentSketchTest =
               Prog
                 "test"
                 [ProgArg "x" IntType, ProgArg "y" IntType]
-                [ Stmt (mkOp Add) ["a", "b"] ["c"] "d",
-                  Stmt (mkOp DivMod) ["e", "f"] ["g", "h"] "i"
+                [ Stmt (mkTypedOpSimple Add) ["a", "b"] ["c"] "d",
+                  Stmt (mkTypedOpSimple DivMod) ["e", "f"] ["g", "h"] "i"
                 ]
                 [ProgRes 4 IntType, ProgRes 5 IntType] ::
                 Prog TestSemanticsOp SymInteger TestSemanticsType
-        typeProg TestSemanticsObj prog
+        typeProg prog
           @?= Right (TypeSignature [IntType, IntType] [IntType, IntType]),
       testGroup
         "Builder"
@@ -461,23 +455,22 @@ componentSketchTest =
             [ testCase "Non-fresh" $ do
                 let expected =
                       TypedOp Add (TypeSignature [IntType, IntType] [IntType])
-                mkOp Add @?= expected,
+                mkTypedOpSimple Add @?= expected,
               testCase "Fresh" $ do
                 let expected =
                       TypedOp Add (TypeSignature [IntType, IntType] [IntType])
-                runFresh (mkOp (return Add)) "x" @?= expected
+                runFresh (mkTypedOpSimple (return Add)) "x" @?= expected
             ],
           testGroup
             "MkTypedOpByNumInput"
             [ testCase "Non-fresh" $ do
                 let expected =
                       TypedOp Add (TypeSignature [IntType, IntType] [IntType])
-                mkTypedOpByNumInputs TestSemanticsObj Add 2 @?= expected,
+                mkTypedOpByNumInputs Add 2 @?= expected,
               testCase "Fresh" $ do
                 let expected =
                       TypedOp Add (TypeSignature [IntType, IntType] [IntType])
-                let actual =
-                      mkTypedOpByNumInputs TestSemanticsObj (return Add) 2
+                let actual = mkTypedOpByNumInputs (return Add) 2
                 runFresh actual "x" @?= expected
             ],
           testGroup
@@ -485,14 +478,14 @@ componentSketchTest =
             [ testCase "Non-fresh" $ do
                 let actual =
                       mkStmt
-                        (mkOp Add)
+                        (mkTypedOpSimple Add)
                         ["a", "b"]
                         ["c"]
                         "d" ::
                         Stmt TestSemanticsOp SymInteger TestSemanticsType
                 let expected =
                       Stmt
-                        { stmtOp = mkOp Add,
+                        { stmtOp = mkTypedOpSimple Add,
                           stmtArgIds = ["a", "b"],
                           stmtResIds = ["c"],
                           stmtDisabled = "d"
@@ -501,7 +494,7 @@ componentSketchTest =
               testCase "fresh" $ do
                 let actual =
                       mkStmt
-                        (mkOp $ return Add)
+                        (mkTypedOpSimple $ return Add)
                         [simpleFresh (), simpleFresh ()]
                         [simpleFresh ()]
                         (simpleFresh ()) ::
@@ -509,7 +502,7 @@ componentSketchTest =
                           (Stmt TestSemanticsOp SymInteger TestSemanticsType)
                 let expected =
                       Stmt
-                        { stmtOp = mkOp Add,
+                        { stmtOp = mkTypedOpSimple Add,
                           stmtArgIds = [isym "x" 0, isym "x" 1],
                           stmtResIds = [isym "x" 2],
                           stmtDisabled = isym "x" 3
@@ -518,7 +511,7 @@ componentSketchTest =
             ],
           testCase "freshStmtSimple" $ do
             let actual =
-                  freshStmtSimple TestSemanticsObj (return Add) ::
+                  freshStmtSimple (return Add) ::
                     Fresh (Stmt TestSemanticsOp SymInteger TestSemanticsType)
             let expected =
                   Stmt
@@ -533,7 +526,7 @@ componentSketchTest =
             runFresh actual "x" @?= expected,
           testCase "freshStmtByNumInputs" $ do
             let actual =
-                  freshStmtByNumInputs TestSemanticsObj (return Add) 2 ::
+                  freshStmtByNumInputs (return Add) 2 ::
                     Fresh (Stmt TestSemanticsOp SymInteger TestSemanticsType)
             let expected =
                   Stmt
@@ -546,12 +539,9 @@ componentSketchTest =
                       stmtDisabled = isym "x" 3
                     }
             runFresh actual "x" @?= expected,
-          testCase "freshStmtByInputTypes" $ do
+          testCase "freshStmt" $ do
             let actual =
-                  freshStmtByInputTypes
-                    TestSemanticsObj
-                    (return Add)
-                    [IntType, IntType] ::
+                  freshStmt (return Add) [IntType, IntType] ::
                     Fresh (Stmt TestSemanticsOp SymInteger TestSemanticsType)
             let expected =
                   Stmt
@@ -571,8 +561,8 @@ componentSketchTest =
                       mkProg
                         "test"
                         [("x", IntType), ("y", IntType)]
-                        [ Stmt (mkOp Add) ["a", "b"] ["c"] "d",
-                          Stmt (mkOp DivMod) ["e", "f"] ["g", "h"] "i"
+                        [ Stmt (mkTypedOpSimple Add) ["a", "b"] ["c"] "d",
+                          Stmt (mkTypedOpSimple DivMod) ["e", "f"] ["g", "h"] "i"
                         ]
                         [("j", IntType), ("k", IntType)] ::
                         Prog TestSemanticsOp SymInteger TestSemanticsType
@@ -580,8 +570,8 @@ componentSketchTest =
                       Prog
                         "test"
                         [ProgArg "x" IntType, ProgArg "y" IntType]
-                        [ Stmt (mkOp Add) ["a", "b"] ["c"] "d",
-                          Stmt (mkOp DivMod) ["e", "f"] ["g", "h"] "i"
+                        [ Stmt (mkTypedOpSimple Add) ["a", "b"] ["c"] "d",
+                          Stmt (mkTypedOpSimple DivMod) ["e", "f"] ["g", "h"] "i"
                         ]
                         [ProgRes "j" IntType, ProgRes "k" IntType]
                 actual @?= expected,
@@ -591,12 +581,12 @@ componentSketchTest =
                         "test"
                         [("x", IntType), ("y", IntType)]
                         [ mkStmt
-                            (mkOp $ return Add)
+                            (mkTypedOpSimple $ return Add)
                             [simpleFresh (), simpleFresh ()]
                             [simpleFresh ()]
                             (simpleFresh ()),
                           mkStmt
-                            (mkOp $ return DivMod)
+                            (mkTypedOpSimple $ return DivMod)
                             [simpleFresh (), simpleFresh ()]
                             [simpleFresh (), simpleFresh ()]
                             (simpleFresh ())
@@ -611,12 +601,12 @@ componentSketchTest =
                         "test"
                         [ProgArg "x" IntType, ProgArg "y" IntType]
                         [ Stmt
-                            (mkOp Add)
+                            (mkTypedOpSimple Add)
                             [isym "x" 0, isym "x" 1]
                             [isym "x" 2]
                             (isym "x" 3),
                           Stmt
-                            (mkOp DivMod)
+                            (mkTypedOpSimple DivMod)
                             [isym "x" 4, isym "x" 5]
                             [isym "x" 6, isym "x" 7]
                             (isym "x" 8)
@@ -631,8 +621,8 @@ componentSketchTest =
                   mkFreshProg
                     "test"
                     [IntType, IntType]
-                    [ freshStmtSimple TestSemanticsObj (return Add),
-                      freshStmtSimple TestSemanticsObj (return DivMod)
+                    [ freshStmtSimple (return Add),
+                      freshStmtSimple (return DivMod)
                     ]
                     [IntType, IntType] ::
                     Fresh
@@ -642,12 +632,12 @@ componentSketchTest =
                     "test"
                     [ProgArg "arg0" IntType, ProgArg "arg1" IntType]
                     [ Stmt
-                        (mkOp Add)
+                        (mkTypedOpSimple Add)
                         [isym "x" 0, isym "x" 1]
                         [isym "x" 2]
                         (isym "x" 3),
                       Stmt
-                        (mkOp DivMod)
+                        (mkTypedOpSimple DivMod)
                         [isym "x" 4, isym "x" 5]
                         [isym "x" 6, isym "x" 7]
                         (isym "x" 8)

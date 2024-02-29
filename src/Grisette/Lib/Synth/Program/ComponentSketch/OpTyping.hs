@@ -1,26 +1,25 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch.OpTyping
   ( OpTypingSimple (..),
     OpTypingByNumInputs (..),
-    OpTypingByInputTypes (..),
+    OpTyping (..),
   )
 where
 
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.TypeSignature (TypeSignature)
 
-class OpTypingSimple semObj op ty | semObj op -> ty where
-  typeOpSimple :: (MonadContext ctx) => semObj -> op -> ctx (TypeSignature ty)
+class OpTypingSimple op ty where
+  typeOpSimple :: (MonadContext ctx) => op -> ctx (TypeSignature ty)
 
-class OpTypingByNumInputs semObj op ty | semObj op -> ty where
+class OpTypingByNumInputs op ty where
   typeOpByNumInputs ::
-    (MonadContext ctx) => semObj -> op -> Int -> ctx (TypeSignature ty)
+    (MonadContext ctx) => op -> Int -> ctx (TypeSignature ty)
 
-class OpTypingByInputTypes semObj op ty | semObj op -> ty where
-  typeOpByInputTypes ::
-    (MonadContext ctx) => semObj -> op -> [ty] -> ctx (TypeSignature ty)
+class OpTyping op ty where
+  typeOp :: (MonadContext ctx) => op -> [ty] -> ctx (TypeSignature ty)

@@ -93,14 +93,14 @@ data OpType = IntegerType
   deriving (Show, Generic)
   deriving (Mergeable, EvaluateSym) via (Default OpType)
 
-instance OpTypingSimple Sem OpCode OpType where
-  typeOpSimple _ Plus =
+instance OpTypingSimple OpCode OpType where
+  typeOpSimple Plus =
     mrgReturn $ TypeSignature [IntegerType, IntegerType] [IntegerType]
-  typeOpSimple _ Mul =
+  typeOpSimple Mul =
     mrgReturn $ TypeSignature [IntegerType, IntegerType] [IntegerType]
-  typeOpSimple _ Minus =
+  typeOpSimple Minus =
     mrgReturn $ TypeSignature [IntegerType, IntegerType] [IntegerType]
-  typeOpSimple _ UMinus =
+  typeOpSimple UMinus =
     mrgReturn $ TypeSignature [IntegerType] [IntegerType]
 
 -- | Here, for generating `SymInteger`, we just generate a fresh variable using

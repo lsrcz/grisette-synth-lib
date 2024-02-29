@@ -11,10 +11,10 @@ module Grisette.Lib.Synth.Program.ComponentSketch.Builder
   ( MkStmt (..),
     MkTypedOpSimple (..),
     MkTypedOpByNumInputs (..),
-    MkTypedOpByInputTypes (..),
+    MkTypedOp (..),
     freshStmtSimple,
     freshStmtByNumInputs,
-    freshStmtByInputTypes,
+    freshStmt,
     MkProg (..),
     MkFreshProg (..),
   )
@@ -27,7 +27,7 @@ import Grisette
     SymBool,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch.OpTyping
-  ( OpTypingByInputTypes (typeOpByInputTypes),
+  ( OpTyping (typeOp),
     OpTypingByNumInputs (typeOpByNumInputs),
     OpTypingSimple (typeOpSimple),
   )
@@ -43,62 +43,62 @@ import Grisette.Lib.Synth.TypeSignature
   )
 import Grisette.Lib.Synth.Util.Show (showText)
 
-class MkTypedOpSimple typedOp semObj op ty | typedOp -> op ty where
-  mkTypedOpSimple :: semObj -> op -> typedOp
+class MkTypedOpSimple typedOp op ty | typedOp -> op ty where
+  mkTypedOpSimple :: op -> typedOp
 
 instance
-  (OpTypingSimple semObj op ty) =>
-  MkTypedOpSimple (TypedOp op ty) semObj op ty
+  (OpTypingSimple op ty) =>
+  MkTypedOpSimple (TypedOp op ty) op ty
   where
-  mkTypedOpSimple semObj op =
-    case typeOpSimple semObj op of
+  mkTypedOpSimple op =
+    case typeOpSimple op of
       Left err -> error $ "mkTypedOpSimple: " <> T.unpack err
       Right signature -> TypedOp op signature
 
 instance
-  (OpTypingSimple semObj op ty) =>
-  MkTypedOpSimple (Fresh (TypedOp op ty)) semObj (Fresh op) ty
+  (OpTypingSimple op ty) =>
+  MkTypedOpSimple (Fresh (TypedOp op ty)) (Fresh op) ty
   where
-  mkTypedOpSimple semObj freshOp = do
-    mkTypedOpSimple semObj <$> freshOp
+  mkTypedOpSimple freshOp = do
+    mkTypedOpSimple <$> freshOp
 
-class MkTypedOpByNumInputs typedOp semObj op ty | typedOp -> op ty where
-  mkTypedOpByNumInputs :: semObj -> op -> Int -> typedOp
+class MkTypedOpByNumInputs typedOp op ty | typedOp -> op ty where
+  mkTypedOpByNumInputs :: op -> Int -> typedOp
 
 instance
-  (OpTypingByNumInputs semObj op ty) =>
-  MkTypedOpByNumInputs (TypedOp op ty) semObj op ty
+  (OpTypingByNumInputs op ty) =>
+  MkTypedOpByNumInputs (TypedOp op ty) op ty
   where
-  mkTypedOpByNumInputs semObj op numInput =
-    case typeOpByNumInputs semObj op numInput of
+  mkTypedOpByNumInputs op numInput =
+    case typeOpByNumInputs op numInput of
       Left err -> error $ "mkTypedOpByNumInput: " <> T.unpack err
       Right signature -> TypedOp op signature
 
 instance
-  (OpTypingByNumInputs semObj op ty) =>
-  MkTypedOpByNumInputs (Fresh (TypedOp op ty)) semObj (Fresh op) ty
+  (OpTypingByNumInputs op ty) =>
+  MkTypedOpByNumInputs (Fresh (TypedOp op ty)) (Fresh op) ty
   where
-  mkTypedOpByNumInputs semObj op numInput =
-    mkTypedOpByNumInputs semObj <$> op <*> return numInput
+  mkTypedOpByNumInputs op numInput =
+    mkTypedOpByNumInputs <$> op <*> return numInput
 
-class MkTypedOpByInputTypes typedOp semObj op ty | typedOp -> op ty where
-  mkTypedOpByInputTypes :: semObj -> op -> [ty] -> typedOp
+class MkTypedOp typedOp op ty | typedOp -> op ty where
+  mkTypedOp :: op -> [ty] -> typedOp
 
 instance
-  (OpTypingByInputTypes semObj op ty) =>
-  MkTypedOpByInputTypes (TypedOp op ty) semObj op ty
+  (OpTyping op ty) =>
+  MkTypedOp (TypedOp op ty) op ty
   where
-  mkTypedOpByInputTypes semObj op inputTypes =
-    case typeOpByInputTypes semObj op inputTypes of
+  mkTypedOp op inputTypes =
+    case typeOp op inputTypes of
       Left err -> error $ "mkTypedOpByNumInput: " <> T.unpack err
       Right signature -> TypedOp op signature
 
 instance
-  (OpTypingByInputTypes semObj op ty) =>
-  MkTypedOpByInputTypes (Fresh (TypedOp op ty)) semObj (Fresh op) ty
+  (OpTyping op ty) =>
+  MkTypedOp (Fresh (TypedOp op ty)) (Fresh op) ty
   where
-  mkTypedOpByInputTypes semObj op inputTypes =
-    mkTypedOpByInputTypes semObj <$> op <*> return inputTypes
+  mkTypedOp op inputTypes =
+    mkTypedOp <$> op <*> return inputTypes
 
 class MkStmt stmt typedOp symVarId bool | stmt -> typedOp symVarId bool where
   mkStmt :: typedOp -> [symVarId] -> [symVarId] -> bool -> stmt
@@ -121,12 +121,11 @@ instance
       <*> freshDisabled
 
 freshStmtSimple ::
-  (OpTypingSimple semObj op ty, GenSymSimple () symVarId) =>
-  semObj ->
+  (OpTypingSimple op ty, GenSymSimple () symVarId) =>
   Fresh op ->
   Fresh (Stmt op symVarId ty)
-freshStmtSimple semObj freshOp = do
-  typedOp@(TypedOp _ TypeSignature {..}) <- mkTypedOpSimple semObj freshOp
+freshStmtSimple freshOp = do
+  typedOp@(TypedOp _ TypeSignature {..}) <- mkTypedOpSimple freshOp
   mkStmt
     (return typedOp)
     (simpleFresh () <$ argTypes)
@@ -134,29 +133,27 @@ freshStmtSimple semObj freshOp = do
     (simpleFresh ())
 
 freshStmtByNumInputs ::
-  (OpTypingByNumInputs semObj op ty, GenSymSimple () symVarId) =>
-  semObj ->
+  (OpTypingByNumInputs op ty, GenSymSimple () symVarId) =>
   Fresh op ->
   Int ->
   Fresh (Stmt op symVarId ty)
-freshStmtByNumInputs semObj freshOp numInput = do
+freshStmtByNumInputs freshOp numInput = do
   typedOp@(TypedOp _ TypeSignature {..}) <-
-    mkTypedOpByNumInputs semObj freshOp numInput
+    mkTypedOpByNumInputs freshOp numInput
   mkStmt
     (return typedOp)
     (simpleFresh () <$ argTypes)
     (simpleFresh () <$ resTypes)
     (simpleFresh ())
 
-freshStmtByInputTypes ::
-  (OpTypingByInputTypes semObj op ty, GenSymSimple () symVarId) =>
-  semObj ->
+freshStmt ::
+  (OpTyping op ty, GenSymSimple () symVarId) =>
   Fresh op ->
   [ty] ->
   Fresh (Stmt op symVarId ty)
-freshStmtByInputTypes semObj freshOp inputTypes = do
+freshStmt freshOp inputTypes = do
   typedOp@(TypedOp _ TypeSignature {..}) <-
-    mkTypedOpByInputTypes semObj freshOp inputTypes
+    mkTypedOp freshOp inputTypes
   mkStmt
     (return typedOp)
     (simpleFresh () <$ argTypes)

@@ -67,22 +67,22 @@ sharedSketch =
     "test"
     [ProgArg "x" IntType, ProgArg "y" IntType]
     [ Stmt
-        (mkTypedOpSimple TestSemanticsObj Add)
+        (mkTypedOpSimple Add)
         ["stmt0'arg0", "stmt0'arg1"]
         ["stmt0'ret0"]
         "stmt0'dis",
       Stmt
-        (mkTypedOpSimple TestSemanticsObj Add)
+        (mkTypedOpSimple Add)
         ["stmt1'arg0", "stmt1'arg1"]
         ["stmt1'ret0"]
         "stmt1'dis",
       Stmt
-        (mkTypedOpSimple TestSemanticsObj DivMod)
+        (mkTypedOpSimple DivMod)
         ["stmt2'arg0", "stmt2'arg1"]
         ["stmt2'ret0", "stmt2'ret1"]
         "stmt2'dis",
       Stmt
-        (mkTypedOpSimple TestSemanticsObj DivMod)
+        (mkTypedOpSimple DivMod)
         ["stmt3'arg0", "stmt3'arg1"]
         ["stmt3'ret0", "stmt3'ret1"]
         "stmt3'dis"

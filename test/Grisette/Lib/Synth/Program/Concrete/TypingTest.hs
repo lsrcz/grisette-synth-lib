@@ -10,8 +10,7 @@ import Grisette.Lib.Synth.Program.Concrete
   )
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
-  ( TestSemanticsObj (TestSemanticsObj),
-    TestSemanticsOp (Add, DivMod),
+  ( TestSemanticsOp (Add, DivMod),
     TestSemanticsType (IntType),
   )
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
@@ -30,5 +29,5 @@ typingTest = testCase "typing" $ do
           ]
           [ProgRes 4 IntType, ProgRes 5 IntType] ::
           Prog TestSemanticsOp Integer TestSemanticsType
-  typeProg TestSemanticsObj prog
+  typeProg prog
     @?= Right (TypeSignature [IntType, IntType] [IntType, IntType])

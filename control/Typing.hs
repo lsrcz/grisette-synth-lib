@@ -63,14 +63,13 @@ typeIntConst :: (MonadContext ctx) => ctx (TypeSignature Type)
 typeIntConst = mrgReturn $ TypeSignature [] [IntType]
 
 typeIf ::
-  (MonadContext ctx, ProgTyping sem prog Type) =>
-  sem ->
+  (MonadContext ctx, ProgTyping prog Type) =>
   prog ->
   prog ->
   ctx (TypeSignature Type)
-typeIf sem true false = do
-  trueType@(TypeSignature trueArgType trueResType) <- typeProg sem true
-  falseType <- typeProg sem false
+typeIf true false = do
+  trueType@(TypeSignature trueArgType trueResType) <- typeProg true
+  falseType <- typeProg false
   when (trueType /= falseType) $ mrgThrowError "Unmatched branch types"
   mrgReturn $ TypeSignature (BoolType : trueArgType) trueResType
 
