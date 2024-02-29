@@ -30,11 +30,11 @@ library
       Grisette.Lib.Synth.Context
       Grisette.Lib.Synth.Operator.OpPretty
       Grisette.Lib.Synth.Operator.OpSemantics
+      Grisette.Lib.Synth.Operator.OpTyping
       Grisette.Lib.Synth.Program.ByteCodeSketch
       Grisette.Lib.Synth.Program.ComponentSketch
       Grisette.Lib.Synth.Program.ComponentSketch.Builder
       Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
-      Grisette.Lib.Synth.Program.ComponentSketch.OpTyping
       Grisette.Lib.Synth.Program.ComponentSketch.Program
       Grisette.Lib.Synth.Program.Concrete
       Grisette.Lib.Synth.Program.Concrete.Builder

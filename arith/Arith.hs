@@ -31,9 +31,13 @@ import Grisette.Lib.Synth.Operator.OpPretty
     OpPrettyError (IncorrectNumberOfArguments, IncorrectNumberOfResults),
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( OpTyping (typeOp),
+    OpTypingSimple (typeOpSimple),
+    UseOpTypingSimple (UseOpTypingSimple),
+  )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
-    OpTypingSimple (typeOpSimple),
   )
 import Grisette.Lib.Synth.Program.Concrete
   ( OpDirectSubProgs (opDirectSubProgs),
@@ -90,8 +94,11 @@ instance
 -- intermediate values for the inputs and outputs of the operators. We use this
 -- type info for that generation.
 data OpType = IntegerType
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
   deriving (Mergeable, EvaluateSym) via (Default OpType)
+
+instance OpTyping OpCode OpType where
+  typeOp = typeOp . UseOpTypingSimple
 
 instance OpTypingSimple OpCode OpType where
   typeOpSimple Plus =

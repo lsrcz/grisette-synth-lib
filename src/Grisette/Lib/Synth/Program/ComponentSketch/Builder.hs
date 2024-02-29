@@ -26,7 +26,7 @@ import Grisette
     GenSymSimple (simpleFresh),
     SymBool,
   )
-import Grisette.Lib.Synth.Program.ComponentSketch.OpTyping
+import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
     OpTypingByNumInputs (typeOpByNumInputs),
     OpTypingSimple (typeOpSimple),

@@ -5,9 +5,11 @@ module Grisette.Lib.Synth.Operator.OpTypingTest (opTypingTest) where
 import Data.Data (Proxy (Proxy))
 import Grisette (Solvable (isym), SymInteger, mrgReturn, runFreshT)
 import Grisette.Lib.Synth.Context (SymbolicContext)
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( OpTypingSimple (typeOpSimple),
+  )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Intermediates (Intermediates),
-    OpTypingSimple (typeOpSimple),
     genIntermediates,
     genOpIntermediates,
   )

@@ -20,7 +20,7 @@ import Grisette.Lib.Synth.Operator.OpPretty
     OpPrettyError (IncorrectNumberOfArguments),
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Program.ComponentSketch
+import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTypingSimple (typeOpSimple),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
@@ -80,7 +80,7 @@ instance
     [Concrete.SomePrettyProg true, Concrete.SomePrettyProg false]
   opDirectSubProgs _ = []
 
-instance OpTypingSimple  (Op varId intVal) Type where
+instance OpTypingSimple (Op varId intVal) Type where
   typeOpSimple Plus = typePlus
   typeOpSimple Equals = typeEquals
   typeOpSimple Minus = typeMinus

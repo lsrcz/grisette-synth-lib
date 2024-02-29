@@ -20,7 +20,7 @@ import Grisette
     ToCon,
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Program.ComponentSketch
+import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTypingSimple (typeOpSimple),
   )
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component

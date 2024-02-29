@@ -35,13 +35,15 @@ import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Program.ComponentSketch
-  ( GenIntermediate (genIntermediate),
-    OpTyping,
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( OpTyping (typeOp),
     OpTypingByNumInputs (typeOpByNumInputs),
     OpTypingSimple (typeOpSimple),
+    UseOpTypingSimple (UseOpTypingSimple),
   )
-import Grisette.Lib.Synth.Program.ComponentSketch.OpTyping (OpTyping (typeOp))
+import Grisette.Lib.Synth.Program.ComponentSketch
+  ( GenIntermediate (genIntermediate),
+  )
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -125,11 +127,7 @@ instance
         <> showText (length l)
         <> " arguments."
 
-instance
-  OpTypingSimple
-    TestSemanticsOp
-    TestSemanticsType
-  where
+instance OpTypingSimple TestSemanticsOp TestSemanticsType where
   typeOpSimple Add =
     mrgReturn $ TypeSignature [IntType, IntType] [IntType]
   typeOpSimple DivMod =
@@ -137,71 +135,11 @@ instance
   typeOpSimple Inc = mrgReturn $ TypeSignature [IntType] [IntType]
   typeOpSimple Double = mrgReturn $ TypeSignature [IntType] [IntType]
 
-instance
-  OpTypingByNumInputs
-    TestSemanticsOp
-    TestSemanticsType
-  where
-  typeOpByNumInputs Add 2 =
-    mrgReturn $ TypeSignature [IntType, IntType] [IntType]
-  typeOpByNumInputs Add l =
-    mrgThrowError $
-      "Incorrect number of arguments for add, expected 2 arguments, but got "
-        <> showText l
-        <> " arguments."
-  typeOpByNumInputs DivMod 2 =
-    mrgReturn $ TypeSignature [IntType, IntType] [IntType, IntType]
-  typeOpByNumInputs DivMod l =
-    mrgThrowError $
-      "Incorrect number of arguments for divmod, expected 2 arguments, but got "
-        <> showText l
-        <> " arguments."
-  typeOpByNumInputs Inc 1 = mrgReturn $ TypeSignature [IntType] [IntType]
-  typeOpByNumInputs Inc l =
-    mrgThrowError $
-      "Incorrect number of arguments for inc, expected 1 arguments, but got "
-        <> showText l
-        <> " arguments."
-  typeOpByNumInputs Double 1 = mrgReturn $ TypeSignature [IntType] [IntType]
-  typeOpByNumInputs Double l =
-    mrgThrowError $
-      "Incorrect number of arguments for dec, expected 1 arguments, but got "
-        <> showText l
-        <> " arguments."
+instance OpTypingByNumInputs TestSemanticsOp TestSemanticsType where
+  typeOpByNumInputs = typeOpByNumInputs . UseOpTypingSimple
 
-instance
-  OpTyping
-    TestSemanticsOp
-    TestSemanticsType
-  where
-  typeOp Add [IntType, IntType] =
-    mrgReturn $ TypeSignature [IntType, IntType] [IntType]
-  typeOp Add ty =
-    mrgThrowError $
-      "The operator add cannot be applied to types "
-        <> showText ty
-        <> ", expected [IntType, IntType]."
-  typeOp DivMod [IntType, IntType] =
-    mrgReturn $ TypeSignature [IntType, IntType] [IntType, IntType]
-  typeOp DivMod ty =
-    mrgThrowError $
-      "The operator divmod cannot be applied to types "
-        <> showText ty
-        <> ", expected [IntType, IntType]."
-  typeOp Inc [IntType] =
-    mrgReturn $ TypeSignature [IntType] [IntType]
-  typeOp Inc ty =
-    mrgThrowError $
-      "The operator inc cannot be applied to types "
-        <> showText ty
-        <> ", expected [IntType]."
-  typeOp Double [IntType] =
-    mrgReturn $ TypeSignature [IntType] [IntType]
-  typeOp Double ty =
-    mrgThrowError $
-      "The operator double cannot be applied to types "
-        <> showText ty
-        <> ", expected [IntType]."
+instance OpTyping TestSemanticsOp TestSemanticsType where
+  typeOp = typeOp . UseOpTypingSimple
 
 instance
   (MonadContext ctx, MonadFresh ctx) =>
