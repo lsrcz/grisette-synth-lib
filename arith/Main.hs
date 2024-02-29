@@ -49,9 +49,9 @@ sketch =
       -- \* reorder the components, and
       -- \* choose whether or now to disable a component, and
       -- \* choose the arguments of a component.
-      [ Component.mkFreshStmt (return Minus) 2 1, -- 2 inputs, 1 output
-        Component.mkFreshStmt (return Mul) 2 1,
-        Component.mkFreshStmt (return Plus) 2 1
+      [ Component.freshStmtSimple Sem (return Minus),
+        Component.freshStmtSimple Sem (return Mul),
+        Component.freshStmtSimple Sem (return Plus)
       ]
       -- The program result type.
       [IntegerType]

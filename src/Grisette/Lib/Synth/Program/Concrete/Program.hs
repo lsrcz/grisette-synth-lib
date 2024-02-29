@@ -69,13 +69,12 @@ import Grisette.Lib.Synth.Operator.OpPretty
     prettyResults,
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTyping,
-    TypeSignature (TypeSignature),
-  )
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.TypeSignature
+  ( TypeSignature (TypeSignature),
+  )
 import Grisette.Lib.Synth.Util.Pretty
   ( Doc,
     concatWith,
@@ -335,12 +334,7 @@ instance
       traverse_ runStmt stmts
       traverse (lookupVal . progResId) ret
 
-instance
-  ( OpTyping semObj op ty ctx,
-    Mergeable ty
-  ) =>
-  ProgTyping semObj (Prog op varId ty) ty ctx
-  where
+instance (Mergeable ty) => ProgTyping semObj (Prog op varId ty) ty where
   typeProg _ prog =
     mrgReturn $
       TypeSignature

@@ -31,11 +31,13 @@ import Grisette
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpTyping
+import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
-    TypeSignature (TypeSignature),
   )
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.TypeSignature
+  ( TypeSignature (TypeSignature),
+  )
 import Semantics (Sem)
 import Value (SymValue, ValueBuilder (mkBool, mkInt))
 
@@ -48,35 +50,28 @@ instance GPretty Type where
   gpretty IntType = "int"
   gpretty BoolType = "bool"
 
-typePlus :: (MonadContext ctx) => Int -> ctx (TypeSignature Type)
-typePlus 2 = mrgReturn $ TypeSignature [IntType, IntType] [IntType]
-typePlus _ = mrgThrowError "Incorrect number of arguments"
+typePlus :: (MonadContext ctx) => ctx (TypeSignature Type)
+typePlus = mrgReturn $ TypeSignature [IntType, IntType] [IntType]
 
-typeEquals :: (MonadContext ctx) => Int -> ctx (TypeSignature Type)
-typeEquals 2 = mrgReturn $ TypeSignature [IntType, IntType] [BoolType]
-typeEquals _ = mrgThrowError "Incorrect number of arguments"
+typeEquals :: (MonadContext ctx) => ctx (TypeSignature Type)
+typeEquals = mrgReturn $ TypeSignature [IntType, IntType] [BoolType]
 
-typeMinus :: (MonadContext ctx) => Int -> ctx (TypeSignature Type)
-typeMinus 2 = mrgReturn $ TypeSignature [IntType, IntType] [IntType]
-typeMinus _ = mrgThrowError "Incorrect number of arguments"
+typeMinus :: (MonadContext ctx) => ctx (TypeSignature Type)
+typeMinus = mrgReturn $ TypeSignature [IntType, IntType] [IntType]
 
-typeIntConst :: (MonadContext ctx) => Int -> ctx (TypeSignature Type)
-typeIntConst 0 = mrgReturn $ TypeSignature [] [IntType]
-typeIntConst _ = mrgThrowError "Incorrect number of arguments"
+typeIntConst :: (MonadContext ctx) => ctx (TypeSignature Type)
+typeIntConst = mrgReturn $ TypeSignature [] [IntType]
 
 typeIf ::
-  (MonadContext ctx, ProgTyping sem prog Type ctx) =>
+  (MonadContext ctx, ProgTyping sem prog Type) =>
   sem ->
   prog ->
   prog ->
-  Int ->
   ctx (TypeSignature Type)
-typeIf sem true false n = do
+typeIf sem true false = do
   trueType@(TypeSignature trueArgType trueResType) <- typeProg sem true
-  falseType@(TypeSignature falseArgType _) <- typeProg sem false
-  when (length trueArgType /= n - 1 || length falseArgType /= n - 1) $
-    mrgThrowError "Incorrect number of arguments"
-  when (trueType /= falseType) $ mrgThrowError "Unmatch branch types"
+  falseType <- typeProg sem false
+  when (trueType /= falseType) $ mrgThrowError "Unmatched branch types"
   mrgReturn $ TypeSignature (BoolType : trueArgType) trueResType
 
 instance

@@ -31,14 +31,16 @@ import Grisette.Lib.Synth.Operator.OpPretty
     OpPrettyError (IncorrectNumberOfArguments, IncorrectNumberOfResults),
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping
+import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
-    OpTyping (typeOp),
-    TypeSignature (TypeSignature),
+    OpTypingSimple (typeOpSimple),
   )
 import Grisette.Lib.Synth.Program.Concrete
   ( OpDirectSubProgs (opDirectSubProgs),
     SomePrettyProg,
+  )
+import Grisette.Lib.Synth.TypeSignature
+  ( TypeSignature (TypeSignature),
   )
 import Grisette.Lib.Synth.Util.Show (showText)
 
@@ -91,17 +93,15 @@ data OpType = IntegerType
   deriving (Show, Generic)
   deriving (Mergeable, EvaluateSym) via (Default OpType)
 
-instance (MonadContext ctx) => OpTyping Sem OpCode OpType ctx where
-  typeOp _ Plus 2 =
+instance OpTypingSimple Sem OpCode OpType where
+  typeOpSimple _ Plus =
     mrgReturn $ TypeSignature [IntegerType, IntegerType] [IntegerType]
-  typeOp _ Mul 2 =
+  typeOpSimple _ Mul =
     mrgReturn $ TypeSignature [IntegerType, IntegerType] [IntegerType]
-  typeOp _ Minus 2 =
+  typeOpSimple _ Minus =
     mrgReturn $ TypeSignature [IntegerType, IntegerType] [IntegerType]
-  typeOp _ UMinus 1 =
+  typeOpSimple _ UMinus =
     mrgReturn $ TypeSignature [IntegerType] [IntegerType]
-  typeOp _ op _ =
-    mrgThrowError $ "Invalid arguments to operator " <> showText op
 
 -- | Here, for generating `SymInteger`, we just generate a fresh variable using
 -- `simpleFresh` provided by Grisette.

@@ -4,7 +4,7 @@
 module Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (..)) where
 
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpTyping (TypeSignature)
+import Grisette.Lib.Synth.TypeSignature (TypeSignature)
 
-class (MonadContext ctx) => ProgTyping semObj prog ty ctx where
-  typeProg :: semObj -> prog -> ctx (TypeSignature ty)
+class ProgTyping semObj prog ty where
+  typeProg :: (MonadContext ctx) => semObj -> prog -> ctx (TypeSignature ty)

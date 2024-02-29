@@ -35,10 +35,15 @@ import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping
+import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
-    OpTyping (typeOp),
-    TypeSignature (TypeSignature),
+    OpTypingByInputTypes,
+    OpTypingByNumInputs (typeOpByNumInputs),
+    OpTypingSimple (typeOpSimple),
+  )
+import Grisette.Lib.Synth.Program.ComponentSketch.OpTyping (OpTypingByInputTypes (typeOpByInputTypes))
+import Grisette.Lib.Synth.TypeSignature
+  ( TypeSignature (TypeSignature),
   )
 import Grisette.Lib.Synth.Util.Show (showText)
 
@@ -121,34 +126,85 @@ instance
         <> " arguments."
 
 instance
-  (MonadContext ctx) =>
-  OpTyping TestSemanticsObj TestSemanticsOp TestSemanticsType ctx
+  OpTypingSimple
+    TestSemanticsObj
+    TestSemanticsOp
+    TestSemanticsType
   where
-  typeOp _ Add 2 = mrgReturn $ TypeSignature [IntType, IntType] [IntType]
-  typeOp _ Add l =
-    mrgThrowError $
-      "Incorrect number of arguments for add, expected 2 arguments, but got "
-        <> showText l
-        <> " arguments."
-  typeOp _ DivMod 2 =
+  typeOpSimple _ Add =
+    mrgReturn $ TypeSignature [IntType, IntType] [IntType]
+  typeOpSimple _ DivMod =
     mrgReturn $ TypeSignature [IntType, IntType] [IntType, IntType]
-  typeOp _ DivMod l =
+  typeOpSimple _ Inc = mrgReturn $ TypeSignature [IntType] [IntType]
+  typeOpSimple _ Double = mrgReturn $ TypeSignature [IntType] [IntType]
+
+instance
+  OpTypingByNumInputs
+    TestSemanticsObj
+    TestSemanticsOp
+    TestSemanticsType
+  where
+  typeOpByNumInputs _ Add 2 =
+    mrgReturn $ TypeSignature [IntType, IntType] [IntType]
+  typeOpByNumInputs _ Add l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText l
         <> " arguments."
-  typeOp _ Inc 1 = mrgReturn $ TypeSignature [IntType] [IntType]
-  typeOp _ Inc l =
+  typeOpByNumInputs _ DivMod 2 =
+    mrgReturn $ TypeSignature [IntType, IntType] [IntType, IntType]
+  typeOpByNumInputs _ DivMod l =
+    mrgThrowError $
+      "Incorrect number of arguments for divmod, expected 2 arguments, but got "
+        <> showText l
+        <> " arguments."
+  typeOpByNumInputs _ Inc 1 = mrgReturn $ TypeSignature [IntType] [IntType]
+  typeOpByNumInputs _ Inc l =
     mrgThrowError $
       "Incorrect number of arguments for inc, expected 1 arguments, but got "
         <> showText l
         <> " arguments."
-  typeOp _ Double 1 = mrgReturn $ TypeSignature [IntType] [IntType]
-  typeOp _ Double l =
+  typeOpByNumInputs _ Double 1 = mrgReturn $ TypeSignature [IntType] [IntType]
+  typeOpByNumInputs _ Double l =
     mrgThrowError $
       "Incorrect number of arguments for dec, expected 1 arguments, but got "
         <> showText l
         <> " arguments."
+
+instance
+  OpTypingByInputTypes
+    TestSemanticsObj
+    TestSemanticsOp
+    TestSemanticsType
+  where
+  typeOpByInputTypes _ Add [IntType, IntType] =
+    mrgReturn $ TypeSignature [IntType, IntType] [IntType]
+  typeOpByInputTypes _ Add ty =
+    mrgThrowError $
+      "The operator add cannot be applied to types "
+        <> showText ty
+        <> ", expected [IntType, IntType]."
+  typeOpByInputTypes _ DivMod [IntType, IntType] =
+    mrgReturn $ TypeSignature [IntType, IntType] [IntType, IntType]
+  typeOpByInputTypes _ DivMod ty =
+    mrgThrowError $
+      "The operator divmod cannot be applied to types "
+        <> showText ty
+        <> ", expected [IntType, IntType]."
+  typeOpByInputTypes _ Inc [IntType] =
+    mrgReturn $ TypeSignature [IntType] [IntType]
+  typeOpByInputTypes _ Inc ty =
+    mrgThrowError $
+      "The operator inc cannot be applied to types "
+        <> showText ty
+        <> ", expected [IntType]."
+  typeOpByInputTypes _ Double [IntType] =
+    mrgReturn $ TypeSignature [IntType] [IntType]
+  typeOpByInputTypes _ Double ty =
+    mrgThrowError $
+      "The operator double cannot be applied to types "
+        <> showText ty
+        <> ", expected [IntType]."
 
 instance
   (MonadContext ctx, MonadFresh ctx) =>

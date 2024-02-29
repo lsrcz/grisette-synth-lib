@@ -5,10 +5,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTyping (..),
-    GenIntermediate (..),
-    TypeSignature (..),
+module Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
+  ( GenIntermediate (..),
     Intermediates (..),
     genIntermediates,
     genOpIntermediates,
@@ -19,13 +17,7 @@ import GHC.Generics (Generic)
 import Grisette (Default (Default), Mergeable, MonadFresh)
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
-
-data TypeSignature ty = TypeSignature {argTypes :: [ty], resTypes :: [ty]}
-  deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default (TypeSignature ty))
-
-class (MonadContext ctx) => OpTyping semObj op ty ctx where
-  typeOp :: semObj -> op -> Int -> ctx (TypeSignature ty)
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (argTypes, resTypes))
 
 class
   (MonadFresh ctx, MonadContext ctx, Mergeable val) =>
@@ -45,15 +37,13 @@ data Intermediates val = Intermediates
   deriving (Mergeable) via (Default (Intermediates val))
 
 genOpIntermediates ::
-  forall semObj op ty val ctx p.
-  (OpTyping semObj op ty ctx, GenIntermediate semObj ty val ctx) =>
+  forall semObj ty val ctx p.
+  (GenIntermediate semObj ty val ctx) =>
   p ty ->
   semObj ->
-  op ->
-  Int ->
+  TypeSignature ty ->
   ctx (Intermediates val)
-genOpIntermediates _ sem op argNum = do
-  signature :: TypeSignature ty <- typeOp sem op argNum
+genOpIntermediates _ sem signature = do
   arg <- genIntermediates sem $ argTypes signature
   res <- genIntermediates sem $ resTypes signature
   return $ Intermediates arg res

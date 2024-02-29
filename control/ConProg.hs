@@ -15,13 +15,14 @@ import GHC.Generics (Generic)
 import Grisette
   ( GPretty (gpretty),
   )
-import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpPretty
   ( OpPretty (describeArguments, prefixResults),
     OpPrettyError (IncorrectNumberOfArguments),
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
+import Grisette.Lib.Synth.Program.ComponentSketch
+  ( OpTypingSimple (typeOpSimple),
+  )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Util.Pretty (parenCommaList)
@@ -79,12 +80,12 @@ instance
     [Concrete.SomePrettyProg true, Concrete.SomePrettyProg false]
   opDirectSubProgs _ = []
 
-instance (MonadContext ctx) => OpTyping Sem (Op varId intVal) Type ctx where
-  typeOp _ Plus = typePlus
-  typeOp _ Equals = typeEquals
-  typeOp _ Minus = typeMinus
-  typeOp _ IntConst {} = typeIntConst
-  typeOp sem (If true false) = typeIf sem true false
+instance OpTypingSimple Sem (Op varId intVal) Type where
+  typeOpSimple _ Plus = typePlus
+  typeOpSimple _ Equals = typeEquals
+  typeOpSimple _ Minus = typeMinus
+  typeOpSimple _ IntConst {} = typeIntConst
+  typeOpSimple sem (If true false) = typeIf sem true false
 
 instance
   ( HasSemantics (Value intVal boolVal) ctx,

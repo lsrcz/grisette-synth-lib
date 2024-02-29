@@ -19,9 +19,10 @@ import Grisette
     MonadUnion,
     ToCon,
   )
-import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
+import Grisette.Lib.Synth.Program.ComponentSketch
+  ( OpTypingSimple (typeOpSimple),
+  )
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
 import Semantics
@@ -53,12 +54,12 @@ deriving via
 
 type Prog varId intVal = Component.Prog (Op varId intVal) varId Type
 
-instance (MonadContext ctx) => OpTyping Sem (Op varId intVal) Type ctx where
-  typeOp _ Plus = typePlus
-  typeOp _ Equals = typeEquals
-  typeOp _ Minus = typeMinus
-  typeOp _ IntConst {} = typeIntConst
-  typeOp sem (If true false) = typeIf sem true false
+instance OpTypingSimple Sem (Op varId intVal) Type where
+  typeOpSimple _ Plus = typePlus
+  typeOpSimple _ Equals = typeEquals
+  typeOpSimple _ Minus = typeMinus
+  typeOpSimple _ IntConst {} = typeIntConst
+  typeOpSimple sem (If true false) = typeIf sem true false
 
 instance
   ( HasSemantics (SymValue intVal boolVal) ctx,

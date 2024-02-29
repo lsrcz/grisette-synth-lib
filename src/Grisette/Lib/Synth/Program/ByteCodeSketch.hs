@@ -44,14 +44,13 @@ import Grisette.Lib.Data.Foldable (mrgTraverse_)
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTyping,
-    TypeSignature (TypeSignature),
-  )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.TypeSignature
+  ( TypeSignature (TypeSignature),
+  )
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId, RelatedVarId, SymbolicVarId)
 
@@ -229,10 +228,8 @@ instance
       mrgTraverse (lookupVal . progResId) ret
 
 instance
-  ( OpTyping semObj op ty ctx,
-    Mergeable ty
-  ) =>
-  ProgTyping semObj (Prog op conVarId symVarId ty) ty ctx
+  (Mergeable ty) =>
+  ProgTyping semObj (Prog op conVarId symVarId ty) ty
   where
   typeProg _ prog =
     mrgReturn $

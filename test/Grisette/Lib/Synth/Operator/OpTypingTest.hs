@@ -5,8 +5,9 @@ module Grisette.Lib.Synth.Operator.OpTypingTest (opTypingTest) where
 import Data.Data (Proxy (Proxy))
 import Grisette (Solvable (isym), SymInteger, mrgReturn, runFreshT)
 import Grisette.Lib.Synth.Context (SymbolicContext)
-import Grisette.Lib.Synth.Operator.OpTyping
+import Grisette.Lib.Synth.Program.ComponentSketch
   ( Intermediates (Intermediates),
+    OpTypingSimple (typeOpSimple),
     genIntermediates,
     genOpIntermediates,
   )
@@ -33,11 +34,10 @@ opTypingTest =
       testCase "genOpIntermediates" $ do
         let actual =
               flip runFreshT "x" $
-                genOpIntermediates
-                  (Proxy :: Proxy TestSemanticsType)
-                  TestSemanticsObj
-                  DivMod
-                  2 ::
+                typeOpSimple TestSemanticsObj DivMod
+                  >>= genOpIntermediates
+                    (Proxy :: Proxy TestSemanticsType)
+                    TestSemanticsObj ::
                 SymbolicContext (Intermediates SymInteger)
         let expected =
               mrgReturn $

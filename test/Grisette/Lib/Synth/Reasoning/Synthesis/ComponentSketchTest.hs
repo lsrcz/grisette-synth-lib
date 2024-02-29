@@ -12,7 +12,8 @@ where
 import Grisette (SymBool, SymInteger, precise, z3)
 import Grisette.Lib.Synth.Context (AngelicContext)
 import Grisette.Lib.Synth.Program.ComponentSketch
-  ( Prog (Prog),
+  ( MkTypedOpSimple (mkTypedOpSimple),
+    Prog (Prog),
     ProgArg (ProgArg),
     ProgRes (ProgRes),
     Stmt (Stmt),
@@ -66,22 +67,22 @@ sharedSketch =
     "test"
     [ProgArg "x" IntType, ProgArg "y" IntType]
     [ Stmt
-        Add
+        (mkTypedOpSimple TestSemanticsObj Add)
         ["stmt0'arg0", "stmt0'arg1"]
         ["stmt0'ret0"]
         "stmt0'dis",
       Stmt
-        Add
+        (mkTypedOpSimple TestSemanticsObj Add)
         ["stmt1'arg0", "stmt1'arg1"]
         ["stmt1'ret0"]
         "stmt1'dis",
       Stmt
-        DivMod
+        (mkTypedOpSimple TestSemanticsObj DivMod)
         ["stmt2'arg0", "stmt2'arg1"]
         ["stmt2'ret0", "stmt2'ret1"]
         "stmt2'dis",
       Stmt
-        DivMod
+        (mkTypedOpSimple TestSemanticsObj DivMod)
         ["stmt3'arg0", "stmt3'arg1"]
         ["stmt3'ret0", "stmt3'ret1"]
         "stmt3'dis"

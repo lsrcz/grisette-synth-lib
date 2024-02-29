@@ -17,7 +17,6 @@ import Grisette
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (SymbolicContext)
-import Grisette.Lib.Synth.Operator.OpTyping (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Program.ByteCodeSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -32,6 +31,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
     TestSemanticsOp (Add, DivMod, Inc),
     TestSemanticsType (IntType),
   )
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))

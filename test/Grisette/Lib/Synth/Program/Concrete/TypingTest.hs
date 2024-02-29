@@ -2,7 +2,6 @@
 
 module Grisette.Lib.Synth.Program.Concrete.TypingTest (typingTest) where
 
-import Grisette.Lib.Synth.Operator.OpTyping (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Program.Concrete
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -15,6 +14,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
     TestSemanticsOp (Add, DivMod),
     TestSemanticsType (IntType),
   )
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
