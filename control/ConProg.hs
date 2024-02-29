@@ -15,13 +15,13 @@ import GHC.Generics (Generic)
 import Grisette
   ( GPretty (gpretty),
   )
-import Grisette.Lib.Synth.Operator.OpPretty
-  ( OpPretty (describeArguments, prefixResults),
-    OpPrettyError (IncorrectNumberOfArguments),
-  )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTypingSimple (typeOpSimple),
+  )
+import Grisette.Lib.Synth.Program.Concrete
+  ( OpPretty (describeArguments, prefixResults),
+    OpPrettyError (IncorrectNumberOfArguments),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))

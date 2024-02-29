@@ -13,12 +13,10 @@ where
 import GHC.Generics (Generic)
 import Grisette (Default (Default), GPretty, Mergeable)
 import Grisette.Core.Data.Class.GPretty (GPretty (gpretty))
-import Grisette.Lib.Synth.Operator.OpPretty
-  ( OpPretty (describeArguments, prefixResults),
-    OpPrettyError (IncorrectNumberOfArguments, IncorrectNumberOfResults),
-  )
 import Grisette.Lib.Synth.Program.Concrete
   ( OpDirectSubProgs (opDirectSubProgs),
+    OpPretty (describeArguments, prefixResults),
+    OpPrettyError (IncorrectNumberOfArguments, IncorrectNumberOfResults),
     Prog (progArgList, progName, progResList),
     SomePrettyProg (SomePrettyProg),
   )

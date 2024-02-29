@@ -28,7 +28,6 @@ source-repository head
 library
   exposed-modules:
       Grisette.Lib.Synth.Context
-      Grisette.Lib.Synth.Operator.OpPretty
       Grisette.Lib.Synth.Operator.OpSemantics
       Grisette.Lib.Synth.Operator.OpTyping
       Grisette.Lib.Synth.Program.ByteCodeSketch
@@ -38,6 +37,7 @@ library
       Grisette.Lib.Synth.Program.ComponentSketch.Program
       Grisette.Lib.Synth.Program.Concrete
       Grisette.Lib.Synth.Program.Concrete.Builder
+      Grisette.Lib.Synth.Program.Concrete.OpPretty
       Grisette.Lib.Synth.Program.Concrete.Program
       Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath
       Grisette.Lib.Synth.Program.ProgNaming

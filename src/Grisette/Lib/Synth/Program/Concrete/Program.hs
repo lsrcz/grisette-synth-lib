@@ -61,14 +61,14 @@ import Grisette
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpPretty
+import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import Grisette.Lib.Synth.Program.Concrete.OpPretty
   ( OpPretty,
     OpPrettyError,
     VarIdMap,
     prettyArguments,
     prettyResults,
   )
-import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))

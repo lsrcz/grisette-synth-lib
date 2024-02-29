@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Grisette.Lib.Synth.Operator.OpPretty
+module Grisette.Lib.Synth.Program.Concrete.OpPretty
   ( VarIdMap,
     OpPrettyError (..),
     OpPretty (..),

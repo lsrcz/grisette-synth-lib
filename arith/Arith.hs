@@ -26,10 +26,6 @@ import Grisette
   )
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpPretty
-  ( OpPretty (describeArguments, prefixResults),
-    OpPrettyError (IncorrectNumberOfArguments, IncorrectNumberOfResults),
-  )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
@@ -41,6 +37,8 @@ import Grisette.Lib.Synth.Program.ComponentSketch
   )
 import Grisette.Lib.Synth.Program.Concrete
   ( OpDirectSubProgs (opDirectSubProgs),
+    OpPretty (describeArguments, prefixResults),
+    OpPrettyError (IncorrectNumberOfArguments, IncorrectNumberOfResults),
     SomePrettyProg,
   )
 import Grisette.Lib.Synth.TypeSignature

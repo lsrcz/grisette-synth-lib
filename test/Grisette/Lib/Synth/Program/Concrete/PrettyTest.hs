@@ -8,16 +8,14 @@ import Control.Monad.State (StateT (runStateT))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import Grisette (GPretty (gpretty))
-import Grisette.Lib.Synth.Operator.OpPretty
-  ( OpPrettyError (RedefinedResult, UndefinedArgument),
-    VarIdMap,
-  )
 import Grisette.Lib.Synth.Program.Concrete
-  ( Prog (Prog),
+  ( OpPrettyError (RedefinedResult, UndefinedArgument),
+    Prog (Prog),
     ProgArg (ProgArg),
     ProgPrettyError (ResultUndefined, StmtPrettyError),
     ProgRes (ProgRes),
     Stmt (Stmt),
+    VarIdMap,
     prettyProg,
     prettyStmt,
   )

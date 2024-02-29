@@ -7,7 +7,7 @@ module Grisette.Lib.Synth.Operator.OpPrettyTest (opPrettyTest) where
 import Control.Arrow (Arrow (second))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
-import Grisette.Lib.Synth.Operator.OpPretty
+import Grisette.Lib.Synth.Program.Concrete
   ( OpPrettyError
       ( IncorrectNumberOfArguments,
         IncorrectNumberOfResults,
