@@ -5,7 +5,7 @@ module Grisette.Lib.Synth.Program.ComponentSketch.TestProgram
   )
 where
 
-import Grisette (Solvable (con), SymInteger)
+import Grisette (Solvable (con), SymInteger, mrgReturn)
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -22,7 +22,7 @@ goodConcreteProg =
   Prog
     "test"
     [ProgArg "x" IntType, ProgArg "y" IntType]
-    [ Stmt Add [0, 1] 2 [2] 1 $ con False,
-      Stmt DivMod [2, 0] 2 [3, 4] 2 $ con False
+    [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con False,
+      Stmt (mrgReturn DivMod) [2, 0] 2 [3, 4] 2 $ con False
     ]
     [ProgRes 3 IntType, ProgRes 4 IntType]

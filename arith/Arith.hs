@@ -56,7 +56,7 @@ data OpCode
   | Minus
   | UMinus
   deriving (Show, Generic)
-  deriving (EvaluateSym, ToCon OpCode) via (Default OpCode)
+  deriving (EvaluateSym, Mergeable, ToCon OpCode) via (Default OpCode)
 
 -- * Semantics and typing.
 

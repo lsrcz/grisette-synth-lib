@@ -10,6 +10,8 @@ import Grisette
     GenSymSimple (simpleFresh),
     Solvable (isym),
     SymInteger,
+    mrgIf,
+    mrgReturn,
     runFresh,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
@@ -29,6 +31,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch
       ),
     freshStmt,
   )
+import Grisette.Lib.Synth.Program.ComponentSketch.Builder (simpleFreshStmt)
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (Add, DivMod),
     TestSemanticsType (IntType),
@@ -41,18 +44,32 @@ builderTest :: Test
 builderTest =
   testGroup
     "Builder"
-    [ testCase "freshStmt" $ do
+    [ testCase "simpleFreshStmt" $ do
         let actual =
-              freshStmt (return Add) ::
+              simpleFreshStmt Add ::
                 Fresh (Stmt TestSemanticsOp SymInteger TestSemanticsType)
         let expected =
               Stmt
-                { stmtOp = Add,
+                { stmtOp = mrgReturn Add,
                   stmtArgIds = [isym "x" 0, isym "x" 1],
                   stmtArgNum = isym "x" 2,
                   stmtResIds = [isym "x" 3],
                   stmtResNum = isym "x" 4,
                   stmtDisabled = isym "x" 5
+                }
+        runFresh actual "x" @?= expected,
+      testCase "freshStmt" $ do
+        let actual =
+              freshStmt (return [Add, DivMod]) ::
+                Fresh (Stmt TestSemanticsOp SymInteger TestSemanticsType)
+        let expected =
+              Stmt
+                { stmtOp = mrgIf (isym "x" 0) (return Add) (return DivMod),
+                  stmtArgIds = [isym "x" 1, isym "x" 2],
+                  stmtArgNum = isym "x" 3,
+                  stmtResIds = [isym "x" 4, isym "x" 5],
+                  stmtResNum = isym "x" 6,
+                  stmtDisabled = isym "x" 7
                 }
         runFresh actual "x" @?= expected,
       testGroup
@@ -62,8 +79,8 @@ builderTest =
                   mkProg
                     "test"
                     [("x", IntType), ("y", IntType)]
-                    [ Stmt Add ["a", "b"] "c" ["d"] "e" "f",
-                      Stmt DivMod ["g", "h"] "i" ["j", "k"] "l" "m"
+                    [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f",
+                      Stmt (mrgReturn DivMod) ["g", "h"] "i" ["j", "k"] "l" "m"
                     ]
                     [("n", IntType), ("o", IntType)] ::
                     Prog TestSemanticsOp SymInteger TestSemanticsType
@@ -71,8 +88,8 @@ builderTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [ Stmt Add ["a", "b"] "c" ["d"] "e" "f",
-                      Stmt DivMod ["g", "h"] "i" ["j", "k"] "l" "m"
+                    [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f",
+                      Stmt (mrgReturn DivMod) ["g", "h"] "i" ["j", "k"] "l" "m"
                     ]
                     [ProgRes "n" IntType, ProgRes "o" IntType]
             actual @?= expected,
@@ -81,9 +98,7 @@ builderTest =
                   mkProg
                     "test"
                     [("x", IntType), ("y", IntType)]
-                    [ freshStmt (return Add),
-                      freshStmt (return DivMod)
-                    ]
+                    [simpleFreshStmt Add, simpleFreshStmt DivMod]
                     [ (simpleFresh (), IntType),
                       (simpleFresh (), IntType)
                     ] ::
@@ -94,14 +109,14 @@ builderTest =
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
                     [ Stmt
-                        Add
+                        (mrgReturn Add)
                         [isym "x" 0, isym "x" 1]
                         (isym "x" 2)
                         [isym "x" 3]
                         (isym "x" 4)
                         (isym "x" 5),
                       Stmt
-                        DivMod
+                        (mrgReturn DivMod)
                         [isym "x" 6, isym "x" 7]
                         (isym "x" 8)
                         [isym "x" 9, isym "x" 10]
@@ -118,7 +133,7 @@ builderTest =
               mkFreshProg
                 "test"
                 [IntType, IntType]
-                [freshStmt (return Add), freshStmt (return DivMod)]
+                [simpleFreshStmt Add, simpleFreshStmt DivMod]
                 [IntType, IntType] ::
                 Fresh (Prog TestSemanticsOp SymInteger TestSemanticsType)
         let expected =
@@ -126,14 +141,14 @@ builderTest =
                 "test"
                 [ProgArg "arg0" IntType, ProgArg "arg1" IntType]
                 [ Stmt
-                    Add
+                    (mrgReturn Add)
                     [isym "x" 0, isym "x" 1]
                     (isym "x" 2)
                     [isym "x" 3]
                     (isym "x" 4)
                     (isym "x" 5),
                   Stmt
-                    DivMod
+                    (mrgReturn DivMod)
                     [isym "x" 6, isym "x" 7]
                     (isym "x" 8)
                     [isym "x" 9, isym "x" 10]

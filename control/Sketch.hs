@@ -15,6 +15,7 @@ import Grisette
   ( Default (Default),
     EvaluateSym,
     GenSymSimple,
+    Mergeable,
     MonadFresh,
     MonadUnion,
     ToCon,
@@ -46,12 +47,15 @@ data Op varId intVal
   | IntConst intVal
   | If (Prog varId intVal) (Prog varId intVal)
   deriving (Show, Generic)
-  deriving (EvaluateSym) via (Default (Op varId intVal))
+  deriving (EvaluateSym, Mergeable) via (Default (Op varId intVal))
 
 deriving via
   (Default (Concrete.Op conVarId conIntVal))
   instance
-    (RelatedVarId conVarId symVarId, ToCon symIntVal conIntVal) =>
+    ( RelatedVarId conVarId symVarId,
+      ToCon symIntVal conIntVal,
+      Mergeable symIntVal
+    ) =>
     ToCon (Op symVarId symIntVal) (Concrete.Op conVarId conIntVal)
 
 type Prog varId intVal = Component.Prog (Op varId intVal) varId Type

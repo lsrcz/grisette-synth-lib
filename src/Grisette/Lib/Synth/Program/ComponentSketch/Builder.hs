@@ -7,7 +7,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch.Builder
-  ( freshStmt,
+  ( simpleFreshStmt,
+    freshStmt,
     MkProg (..),
     MkFreshProg (..),
   )
@@ -18,6 +19,8 @@ import qualified Data.Text as T
 import Grisette
   ( Fresh,
     GenSymSimple (simpleFresh),
+    Mergeable,
+    chooseFresh,
   )
 import Grisette.Lib.Synth.Operator.OpTyping
   ( SymOpLimits (symOpMaximumArgNum, symOpMaximumResNum),
@@ -30,18 +33,27 @@ import Grisette.Lib.Synth.Program.ComponentSketch.Program
   )
 import Grisette.Lib.Synth.Util.Show (showText)
 
-freshStmt ::
-  (SymOpLimits op, GenSymSimple () symVarId) =>
-  Fresh op ->
+simpleFreshStmt ::
+  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  op ->
   Fresh (Stmt op symVarId ty)
-freshStmt freshOp = do
-  op <- freshOp
-  argIds <- replicateM (symOpMaximumArgNum op) (simpleFresh ())
+simpleFreshStmt op = freshStmt (return [op])
+
+freshStmt ::
+  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  Fresh [op] ->
+  Fresh (Stmt op symVarId ty)
+freshStmt freshOps = do
+  ops <- freshOps
+  chosenOps <- chooseFresh ops
+  let maxArgNum = maximum $ symOpMaximumArgNum <$> ops
+  argIds <- replicateM maxArgNum (simpleFresh ())
   argNum <- simpleFresh ()
-  resIds <- replicateM (symOpMaximumResNum op) (simpleFresh ())
+  let maxResNum = maximum $ symOpMaximumResNum <$> ops
+  resIds <- replicateM maxResNum (simpleFresh ())
   resNum <- simpleFresh ()
   disabled <- simpleFresh ()
-  return $ Stmt op argIds argNum resIds resNum disabled
+  return $ Stmt chosenOps argIds argNum resIds resNum disabled
 
 class MkProg prog stmt op symVarId ty | prog -> stmt op symVarId ty where
   mkProg ::

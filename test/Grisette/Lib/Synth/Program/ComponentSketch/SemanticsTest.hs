@@ -89,8 +89,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1, 5] 2 [2] 1 $ con False
-              ]
+              [Stmt (mrgReturn Add) [0, 1, 5] 2 [2] 1 $ con False]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
           semanticsTestCaseExpected =
@@ -113,7 +112,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1] 2 [2, 3] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 $ con False
               ]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -138,7 +137,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1] 2 [2, 4] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 4] 1 $ con False
               ]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -152,7 +151,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1] 2 [2, 2] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 2] 1 $ con False
               ]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -166,8 +165,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1] 2 [2, 5] 1 $ con False,
-                Stmt Add [0, 2] 2 [4, 3] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 5] 1 $ con False,
+                Stmt (mrgReturn Add) [0, 2] 2 [4, 3] 1 $ con False
               ]
               [ProgRes 4 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -181,8 +180,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1] 2 [2, 3] 1 $ con False,
-                Stmt Add [2, 3] 2 [4, 5] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 $ con False,
+                Stmt (mrgReturn Add) [2, 3] 2 [4, 5] 1 $ con False
               ]
               [ProgRes 4 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -195,8 +194,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1] 2 [2] 1 "dis0",
-                Stmt DivMod [0, 1] 2 [3, 4] 2 "dis1"
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 "dis0",
+                Stmt (mrgReturn DivMod) [0, 1] 2 [3, 4] 2 "dis1"
               ]
               [ProgRes 1 IntType, ProgRes 2 IntType],
           semanticsTestCaseArgs = [1, 0],
@@ -219,12 +218,82 @@ semanticsTest = testGroup "Semantics" $ do
           semanticsTestCaseFreshIdent = "x"
         },
       SemanticsTestCase
+        { semanticsTestCaseName = "symbolic operator and arg/res num",
+          semanticsTestCaseProg =
+            Prog
+              "test"
+              [ProgArg "x" IntType, ProgArg "y" IntType]
+              [ Stmt
+                  ( mrgIf
+                      "add"
+                      (return Add)
+                      (mrgIf "divmod" (return DivMod) (return Inc))
+                  )
+                  [0, 1]
+                  "argNum"
+                  [2, 3]
+                  "resNum"
+                  "dis0"
+              ]
+              [ProgRes 1 IntType, ProgRes 2 IntType],
+          semanticsTestCaseArgs = [10, 4],
+          semanticsTestCaseExpected =
+            let addArg0Val = isym "x" 0 :: SymInteger
+                addArg1Val = isym "x" 1 :: SymInteger
+                addRes0Val = isym "x" 2 :: SymInteger
+                divModArg0Val = isym "x" 0 :: SymInteger
+                divModArg1Val = isym "x" 1 :: SymInteger
+                divModRes0Val = isym "x" 2 :: SymInteger
+                divModRes1Val = isym "x" 3 :: SymInteger
+                incArg0Val = isym "x" 0 :: SymInteger
+                incRes0Val = isym "x" 1 :: SymInteger
+                res0Val = isym "x" 4 :: SymInteger
+                res1Val = isym "x" 5 :: SymInteger
+                argNum = "argNum" :: SymInteger
+                resNum = "resNum" :: SymInteger
+             in Result
+                  ( symIte
+                      "add"
+                      ( (addArg0Val .== 10)
+                          .&& (addArg1Val .== 4)
+                          .&& (addRes0Val .== 14)
+                          .&& (res0Val .== 4)
+                          .&& (res1Val .== 14)
+                          .&& symNot "dis0"
+                          .&& (argNum .== 2)
+                          .&& (resNum .== 1)
+                      )
+                      $ symIte
+                        "divmod"
+                        ( (divModArg0Val .== 10)
+                            .&& (divModArg1Val .== 4)
+                            .&& (divModRes0Val .== 2)
+                            .&& (divModRes1Val .== 2)
+                            .&& (res0Val .== 4)
+                            .&& (res1Val .== 2)
+                            .&& symNot "dis0"
+                            .&& (argNum .== 2)
+                            .&& (resNum .== 2)
+                        )
+                        ( (incArg0Val .== 10)
+                            .&& (incRes0Val .== 11)
+                            .&& (res0Val .== 4)
+                            .&& (res1Val .== 11)
+                            .&& symNot "dis0"
+                            .&& (argNum .== 1)
+                            .&& (resNum .== 1)
+                        )
+                  )
+                  [4, symIte "add" 14 (symIte "divmod" 2 11)],
+          semanticsTestCaseFreshIdent = "x"
+        },
+      SemanticsTestCase
         { semanticsTestCaseName = "symbolic result",
           semanticsTestCaseProg =
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [Stmt Add [0, 1] 2 [2] 1 $ con False]
+              [Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con False]
               [ProgRes "res" IntType],
           semanticsTestCaseArgs = [13, 20],
           semanticsTestCaseExpected =
@@ -262,8 +331,9 @@ semanticsTest = testGroup "Semantics" $ do
                 Prog
                   "test"
                   [ProgArg "x" IntType]
-                  [ Stmt Inc [argInc] 1 [resInc] 1 $ con False,
-                    Stmt Double [argDouble] 1 [resDouble] 1 $ con False
+                  [ Stmt (mrgReturn Inc) [argInc] 1 [resInc] 1 $ con False,
+                    Stmt (mrgReturn Double) [argDouble] 1 [resDouble] 1 $
+                      con False
                   ]
                   [ProgRes 2 IntType],
               semanticsTestCaseArgs = [13],
@@ -330,8 +400,10 @@ semanticsTest = testGroup "Semantics" $ do
                 Prog
                   "test"
                   [ProgArg "x" IntType, ProgArg "y" IntType]
-                  [ Stmt DivMod [0, 1] 2 [res00, res01] 2 $ con False,
-                    Stmt DivMod [0, 1] 2 [res10, res11] 2 $ con False
+                  [ Stmt (mrgReturn DivMod) [0, 1] 2 [res00, res01] 2 $
+                      con False,
+                    Stmt (mrgReturn DivMod) [0, 1] 2 [res10, res11] 2 $
+                      con False
                   ]
                   [ProgRes 4 IntType, ProgRes 5 IntType],
               semanticsTestCaseArgs = [20, 13],
@@ -376,7 +448,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [Stmt Add [0, 1] 2 [2, 3] 2 $ con False]
+              [Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 2 $ con False]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [1, 2],
           semanticsTestCaseExpected = ErrorResult,
@@ -388,8 +460,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1] 2 [2] 1 $ con True,
-                Stmt Add [0, 2] 2 [3] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con True,
+                Stmt (mrgReturn Add) [0, 2] 2 [3] 1 $ con False
               ]
               [ProgRes 0 IntType],
           semanticsTestCaseArgs = [1, 2],
@@ -402,8 +474,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1] 2 [2] 1 $ con True,
-                Stmt Add [0, 2] 2 [3] 1 $ con True
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con True,
+                Stmt (mrgReturn Add) [0, 2] 2 [3] 1 $ con True
               ]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [1, 2],
@@ -417,8 +489,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt Add [0, 1] 2 [2] 1 $ con True,
-                Stmt Add [0, 2] 2 [3] 1 $ con True
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con True,
+                Stmt (mrgReturn Add) [0, 2] 2 [3] 1 $ con True
               ]
               [ProgRes 0 IntType],
           semanticsTestCaseArgs = [1, 2],
@@ -447,6 +519,8 @@ semanticsTest = testGroup "Semantics" $ do
           expected
           ( \model ->
               "Can be not equal, debug info:\n"
+                <> "-- (debug) model --\n"
+                <> show model
                 <> "-- (debug) actual value --\n"
                 <> show (evaluateSym False model actual)
                 <> "\n-- (debug) pre condition --\n"

@@ -9,7 +9,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   )
 where
 
-import Grisette (SymBool, SymInteger, precise, z3)
+import Grisette (SymBool, SymInteger, mrgIf, mrgReturn, precise, z3)
 import Grisette.Lib.Synth.Context (AngelicContext)
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
@@ -66,28 +66,28 @@ sharedSketch =
     "test"
     [ProgArg "x" IntType, ProgArg "y" IntType]
     [ Stmt
-        Add
+        (mrgReturn Add)
         ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
         "stmt0'arg_num"
         ["stmt0'ret0", "stmt0'ret1"]
         "stmt0'ret_num"
         "stmt0'dis",
       Stmt
-        Add
+        (mrgReturn Add)
         ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
         "stmt1'arg_num"
         ["stmt1'ret0"]
         "stmt1'ret_num"
         "stmt1'dis",
       Stmt
-        DivMod
+        (mrgReturn DivMod)
         ["stmt2'arg0", "stmt2'arg1"]
         "stmt2'arg_num"
         ["stmt2'ret0", "stmt2'ret1", "stmt2'ret2"]
         "stmt2'ret_num"
         "stmt2'dis",
       Stmt
-        DivMod
+        (mrgReturn DivMod)
         ["stmt3'arg0", "stmt3'arg1"]
         "stmt3'arg_num"
         ["stmt3'ret0", "stmt3'ret1"]
@@ -96,12 +96,33 @@ sharedSketch =
     ]
     [ProgRes "res0" IntType, ProgRes "res1" IntType]
 
+sharedSketchUnion :: SymProg
+sharedSketchUnion =
+  Prog
+    "test"
+    [ProgArg "x" IntType, ProgArg "y" IntType]
+    [ Stmt
+        (mrgIf "stmt0'sel" (return Add) (return DivMod))
+        ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
+        "stmt0'arg_num"
+        ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
+        "stmt0'ret_num"
+        "stmt0'dis",
+      Stmt
+        (mrgIf "stmt1'sel" (return Add) (return DivMod))
+        ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
+        "stmt1'arg_num"
+        ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"]
+        "stmt1'ret_num"
+        "stmt1'dis"
+    ]
+    [ProgRes "res0" IntType, ProgRes "res1" IntType]
+
 data ComponentSynthesisTestCase where
   ComponentSynthesisTestCase ::
     forall matcher.
     (Matcher matcher Bool Integer, Matcher matcher SymBool SymInteger) =>
     { componentSynthesisTestCaseName :: String,
-      componentSynthesisTestCaseSketch :: SymProg,
       componentSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
       componentSynthesisTestCaseGen :: Gen [Integer]
     } ->
@@ -110,26 +131,23 @@ data ComponentSynthesisTestCase where
 componentSketchTest :: Test
 componentSketchTest =
   testGroup "ComponentSketch" $ do
+    (sketch, namePostFix) <- [(sharedSketch, ""), (sharedSketchUnion, "/union")]
     ComponentSynthesisTestCase
       name
-      sketch
       (spec :: [Integer] -> ([Integer], matcher))
       gen <-
       [ ComponentSynthesisTestCase
           { componentSynthesisTestCaseName = "Add then double",
-            componentSynthesisTestCaseSketch = sharedSketch,
             componentSynthesisTestCaseSpec = addThenDoubleSpec,
             componentSynthesisTestCaseGen = addThenDoubleGen
           },
         ComponentSynthesisTestCase
           { componentSynthesisTestCaseName = "Add then double/reverse",
-            componentSynthesisTestCaseSketch = sharedSketch,
             componentSynthesisTestCaseSpec = addThenDoubleReverseSpec,
             componentSynthesisTestCaseGen = addThenDoubleGen
           },
         ComponentSynthesisTestCase
           { componentSynthesisTestCaseName = "DivMod twice",
-            componentSynthesisTestCaseSketch = sharedSketch,
             componentSynthesisTestCaseSpec = divModTwiceSpec,
             componentSynthesisTestCaseGen = divModTwiceGen
           }
@@ -151,7 +169,7 @@ componentSketchTest =
               synthesisWithFuzzerMatcherTaskSemantics = TestSemanticsObj,
               synthesisWithFuzzerMatcherTaskSymProg = sketch
             }
-    return $ testCase name $ do
+    return $ testCase (name <> namePostFix) $ do
       (_, SynthesisSuccess prog) <- synthesizeProgWithVerifier task
       fuzzingResult <- fuzzingTestProg gen spec 100 TestSemanticsObj prog
       fst <$> fuzzingResult @?= Nothing

@@ -4,6 +4,7 @@ module Grisette.Lib.Synth.Program.ComponentSketch.TypingTest (typingTest) where
 
 import Grisette
   ( SymInteger,
+    mrgReturn,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
@@ -29,8 +30,8 @@ typingTest = testCase "Typing" $ do
         Prog
           "test"
           [ProgArg "x" IntType, ProgArg "y" IntType]
-          [ Stmt Add ["a", "b"] "c" ["d"] "e" "f",
-            Stmt DivMod ["g", "h"] "i" ["j", "k"] "l" "m"
+          [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f",
+            Stmt (mrgReturn DivMod) ["g", "h"] "i" ["j", "k"] "l" "m"
           ]
           [ProgRes 4 IntType, ProgRes 5 IntType] ::
           Prog TestSemanticsOp SymInteger TestSemanticsType

@@ -36,6 +36,7 @@ import Grisette
     SymBool,
     ToCon (toCon),
     UnionM,
+    liftUnionM,
     mrgFmap,
     mrgIf,
     mrgSequence_,
@@ -48,10 +49,6 @@ import Grisette.Lib.Control.Monad.State.Class (mrgModify)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
--- import Grisette.Lib.Synth.Operator.OpTyping
---   ( SymOpTyping (typeSymOp),
---   )
-
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
 import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
   ( GenIntermediate,
@@ -70,7 +67,7 @@ import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
 
 data Stmt op symVarId ty = Stmt
-  { stmtOp :: op,
+  { stmtOp :: UnionM op,
     stmtArgIds :: [symVarId],
     stmtArgNum :: symVarId,
     stmtResIds :: [symVarId],
@@ -112,8 +109,11 @@ data Prog op symVarId ty = Prog
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym) via (Default (Prog op symVarId ty))
 
+instance Mergeable (Prog op symVarId ty) where
+  rootStrategy = NoStrategy
+
 instance
-  (ToCon symOp conOp, RelatedVarId conVarId symVarId) =>
+  (Mergeable symOp, ToCon symOp conOp, RelatedVarId conVarId symVarId) =>
   ToCon (Prog symOp symVarId ty) (Concrete.Prog conOp conVarId ty)
   where
   toCon (Prog name argList stmtList resList) = do
@@ -235,6 +235,7 @@ constrainStmt ::
     GenIntermediate sem ty val ctx,
     OpSemantics sem op val ctx,
     OpTyping op ty ctx,
+    Mergeable op,
     SEq val
   ) =>
   p ty ->
@@ -246,7 +247,7 @@ constrainStmt
   p
   sem
   idBound
-  (Stmt op argIds argNum resIds resNum disabled) = do
+  (Stmt opUnion argIds argNum resIds resNum disabled) = do
     symAssertWith "Out-of-bound statement results." $
       symAll (inBound (fromIntegral idBound)) resIds
 
@@ -254,6 +255,7 @@ constrainStmt
       symAll (\(i, isucc) -> isucc .== i + 1) $
         zip resIds (tail resIds)
 
+    op <- liftUnionM opUnion
     signature <- lift $ typeOp op
     Intermediates argVals resVals <- lift $ genOpIntermediates p sem signature
 
@@ -327,6 +329,7 @@ instance
     GenIntermediate sem ty val ctx,
     OpSemantics sem op val ctx,
     OpTyping op ty ctx,
+    Mergeable op,
     SEq val
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx
