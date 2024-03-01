@@ -19,11 +19,15 @@ import Grisette
     MonadUnion,
     ToCon,
   )
+import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTypingSimple (typeOpSimple),
+  ( OpTyping (typeOp),
+    SymOpLimits (symOpMaximumArgNum, symOpMaximumResNum),
+    SymOpTyping,
   )
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
 import Semantics
   ( HasSemantics,
@@ -54,12 +58,27 @@ deriving via
 
 type Prog varId intVal = Component.Prog (Op varId intVal) varId Type
 
-instance OpTypingSimple (Op varId intVal) Type where
-  typeOpSimple Plus = typePlus
-  typeOpSimple Equals = typeEquals
-  typeOpSimple Minus = typeMinus
-  typeOpSimple IntConst {} = typeIntConst
-  typeOpSimple (If true false) = typeIf true false
+instance
+  (MonadContext ctx) =>
+  OpTyping (Op varId intVal) Type ctx
+  where
+  typeOp Plus = typePlus
+  typeOp Equals = typeEquals
+  typeOp Minus = typeMinus
+  typeOp IntConst {} = typeIntConst
+  typeOp (If true false) = typeIf true false
+
+instance
+  (MonadContext ctx, MonadUnion ctx) =>
+  SymOpTyping (Op varId intVal) Type ctx
+
+instance SymOpLimits (Op varId intVal) where
+  symOpMaximumArgNum op = case typeOp op of
+    Left err -> error $ "symOpMaximumArgNum: " ++ show err
+    Right (TypeSignature argTypes _) -> length argTypes
+  symOpMaximumResNum op = case typeOp op of
+    Left err -> error $ "symOpMaximumResNum: " ++ show err
+    Right (TypeSignature _ resTypes) -> length resTypes
 
 instance
   ( HasSemantics (SymValue intVal boolVal) ctx,

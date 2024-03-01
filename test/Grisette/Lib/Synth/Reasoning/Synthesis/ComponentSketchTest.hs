@@ -12,8 +12,7 @@ where
 import Grisette (SymBool, SymInteger, precise, z3)
 import Grisette.Lib.Synth.Context (AngelicContext)
 import Grisette.Lib.Synth.Program.ComponentSketch
-  ( MkTypedOpSimple (mkTypedOpSimple),
-    Prog (Prog),
+  ( Prog (Prog),
     ProgArg (ProgArg),
     ProgRes (ProgRes),
     Stmt (Stmt),
@@ -67,24 +66,32 @@ sharedSketch =
     "test"
     [ProgArg "x" IntType, ProgArg "y" IntType]
     [ Stmt
-        (mkTypedOpSimple Add)
-        ["stmt0'arg0", "stmt0'arg1"]
-        ["stmt0'ret0"]
+        Add
+        ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
+        "stmt0'arg_num"
+        ["stmt0'ret0", "stmt0'ret1"]
+        "stmt0'ret_num"
         "stmt0'dis",
       Stmt
-        (mkTypedOpSimple Add)
-        ["stmt1'arg0", "stmt1'arg1"]
+        Add
+        ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
+        "stmt1'arg_num"
         ["stmt1'ret0"]
+        "stmt1'ret_num"
         "stmt1'dis",
       Stmt
-        (mkTypedOpSimple DivMod)
+        DivMod
         ["stmt2'arg0", "stmt2'arg1"]
-        ["stmt2'ret0", "stmt2'ret1"]
+        "stmt2'arg_num"
+        ["stmt2'ret0", "stmt2'ret1", "stmt2'ret2"]
+        "stmt2'ret_num"
         "stmt2'dis",
       Stmt
-        (mkTypedOpSimple DivMod)
+        DivMod
         ["stmt3'arg0", "stmt3'arg1"]
+        "stmt3'arg_num"
         ["stmt3'ret0", "stmt3'ret1"]
+        "stmt3'ret_num"
         "stmt3'dis"
     ]
     [ProgRes "res0" IntType, ProgRes "res1" IntType]

@@ -8,8 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch.Program
-  ( TypedOp (..),
-    Stmt (..),
+  ( Stmt (..),
     ProgArg (..),
     ProgRes (..),
     Prog (..),
@@ -36,16 +35,23 @@ import Grisette
     Solvable (con),
     SymBool,
     ToCon (toCon),
+    UnionM,
+    liftUnionM,
+    mrgFmap,
     mrgIf,
     mrgSequence_,
     mrgTraverse_,
     symAssertWith,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Control.Monad.State.Class (mrgModify)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( SymOpTyping (typeSymOp),
+  )
 import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
   ( GenIntermediate,
     Intermediates (Intermediates),
@@ -62,14 +68,12 @@ import Grisette.Lib.Synth.TypeSignature
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
 
-data TypedOp op ty = TypedOp op (TypeSignature ty)
-  deriving (Show, Eq, Generic)
-  deriving (EvaluateSym) via (Default (TypedOp op ty))
-
 data Stmt op symVarId ty = Stmt
-  { stmtOp :: TypedOp op ty,
+  { stmtOp :: op,
     stmtArgIds :: [symVarId],
+    stmtArgNum :: symVarId,
     stmtResIds :: [symVarId],
+    stmtResNum :: symVarId,
     stmtDisabled :: SymBool
   }
   deriving (Show, Eq, Generic)
@@ -108,8 +112,8 @@ data Prog op symVarId ty = Prog
   deriving (EvaluateSym) via (Default (Prog op symVarId ty))
 
 instance
-  (ToCon conOp symOp, RelatedVarId conVarId symVarId) =>
-  ToCon (Prog conOp symVarId ty) (Concrete.Prog symOp conVarId ty)
+  (ToCon symOp conOp, RelatedVarId conVarId symVarId) =>
+  ToCon (Prog symOp symVarId ty) (Concrete.Prog conOp conVarId ty)
   where
   toCon (Prog name argList stmtList resList) = do
     let conArgList =
@@ -117,15 +121,22 @@ instance
             (\(ProgArg name ty) varId -> Concrete.ProgArg name varId ty)
             argList
             [0 ..]
-    let toConStmt (Stmt (TypedOp op _) argIds resIds disabled) = do
+    let toConStmt (Stmt op argIds argNum resIds resNum disabled) = do
           disabled <- toCon disabled
           if disabled
             then return []
             else do
               conOp <- toCon op
               conArgIds <- toCon argIds
+              conArgNum :: conVarId <- toCon argNum
               conResIds <- toCon resIds
-              return [Concrete.Stmt conOp conArgIds conResIds]
+              conResNum :: conVarId <- toCon resNum
+              return
+                [ Concrete.Stmt
+                    conOp
+                    (take (fromIntegral conArgNum) conArgIds)
+                    (take (fromIntegral conResNum) conResIds)
+                ]
     conStmts <- join <$> traverse toConStmt stmtList
     conResList <-
       traverse
@@ -145,7 +156,7 @@ instance
         (sortOn (listToMaybe . Concrete.stmtResIds) conStmts)
         conResList
 
-data IdValPair symVarId val = IdValPair SymBool symVarId val
+data IdValPair symVarId val = IdValPair SymBool symVarId (UnionM (Maybe val))
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym, Mergeable) via Default (IdValPair symVarId val)
 
@@ -185,12 +196,17 @@ addProgArgs ::
   [val] ->
   ctx ()
 addProgArgs args =
-  addDefs (zipWith (IdValPair (con False)) (fromIntegral <$> [0 ..]) args)
+  addDefs
+    ( zipWith
+        (\argId val -> IdValPair (con False) argId (mrgReturn $ Just val))
+        (fromIntegral <$> [0 ..])
+        args
+    )
 
 genProgResVals ::
-  ( MonadUnion ctx,
-    SymbolicVarId symVarId,
+  ( SymbolicVarId symVarId,
     Mergeable val,
+    Mergeable ty,
     GenIntermediate sem ty val ctx
   ) =>
   sem ->
@@ -198,7 +214,12 @@ genProgResVals ::
   StateT (CollectedDefUse symVarId val) ctx [val]
 genProgResVals sem resList = do
   resVals <- lift $ genIntermediates sem (progResType <$> resList)
-  addUses (zipWith (IdValPair (con False)) (progResId <$> resList) resVals)
+  addUses
+    ( zipWith
+        (IdValPair (con False))
+        (progResId <$> resList)
+        (mrgReturn . Just <$> resVals)
+    )
   return resVals
 
 inBound :: (SymbolicVarId symVarId) => symVarId -> symVarId -> SymBool
@@ -209,11 +230,10 @@ symAll f = foldl' (\acc v -> acc .&& f v) (con True)
 
 constrainStmt ::
   forall sem op ty val ctx p symVarId.
-  ( MonadContext ctx,
-    MonadUnion ctx,
-    SymbolicVarId symVarId,
+  ( SymbolicVarId symVarId,
     GenIntermediate sem ty val ctx,
     OpSemantics sem op val ctx,
+    SymOpTyping op ty ctx,
     SEq val
   ) =>
   p ty ->
@@ -225,9 +245,7 @@ constrainStmt
   p
   sem
   idBound
-  (Stmt (TypedOp op signature) argIds resIds disabled) = do
-    symAssertWith "Variable is undefined." $
-      symAll (\resId -> symAll (inBound resId) argIds) resIds
+  (Stmt op argIds argNum resIds resNum disabled) = do
     symAssertWith "Out-of-bound statement results." $
       symAll (inBound (fromIntegral idBound)) resIds
 
@@ -235,15 +253,37 @@ constrainStmt
       symAll (\(i, isucc) -> isucc .== i + 1) $
         zip resIds (tail resIds)
 
+    signature <- lift $ typeSymOp op >>= liftUnionM
     Intermediates argVals resVals <- lift $ genOpIntermediates p sem signature
-    addUses $ zipWith (IdValPair disabled) argIds argVals
-    symAssertWith "Incorrect number of results." $
-      length resIds .== length resVals
-    addDefs $ zipWith (IdValPair disabled) resIds resVals
 
+    let getIdValPairs _ [] [] = mrgReturn []
+        getIdValPairs disabled (i : is) [] =
+          mrgFmap (IdValPair (con True) i (mrgReturn Nothing) :) $
+            getIdValPairs disabled is []
+        getIdValPairs _ [] _ =
+          mrgThrowError $
+            "The limit for is smaller than the actual number. "
+              <> "Check your SymOpLimits."
+        getIdValPairs disabled (i : is) (v : vs) =
+          mrgFmap (IdValPair disabled i (mrgReturn . Just $ v) :) $
+            getIdValPairs disabled is vs
+
+    symAssertWith "Incorrect number of arguments." $
+      argNum .== fromIntegral (length argVals)
+    addUses =<< getIdValPairs disabled argIds argVals
+    symAssertWith "Incorrect number of results." $
+      resNum .== fromIntegral (length resVals)
+    addDefs =<< getIdValPairs disabled resIds resVals
+
+    let usedArgIds = take (length argVals) argIds
+    let usedResIds = take (length resVals) resIds
+
+    symAssertWith "Variable is undefined." $
+      symAll (\resId -> symAll (inBound resId) usedArgIds) usedResIds
     mrgIf disabled (return ()) $ do
       computedResVals <- lift $ applyOp sem op argVals
-      symAssertWith "Incorrect results." $ resVals .== computedResVals
+      symAssertWith "Incorrect results." $ do
+        resVals .== computedResVals
 
 connected ::
   ( MonadUnion ctx,
@@ -282,14 +322,11 @@ defDistinct = do
     $ def
 
 instance
-  ( MonadContext ctx,
-    MonadUnion ctx,
-    Mergeable val,
-    SymbolicVarId symVarId,
+  ( SymbolicVarId symVarId,
     GenIntermediate sem ty val ctx,
     OpSemantics sem op val ctx,
-    SEq val,
-    Show val
+    SymOpTyping op ty ctx,
+    SEq val
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx
   where

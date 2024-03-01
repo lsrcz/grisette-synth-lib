@@ -130,6 +130,7 @@ test-suite spec
       Grisette.Lib.Synth.Operator.OpPrettyTest
       Grisette.Lib.Synth.Operator.OpTypingTest
       Grisette.Lib.Synth.Program.ByteCodeSketchTest
+      Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediateTest
       Grisette.Lib.Synth.Program.ComponentSketchTest
       Grisette.Lib.Synth.Program.Concrete.BuilderTest
       Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest

@@ -26,6 +26,7 @@ import Grisette
     GenSymSimple (simpleFresh),
     Mergeable,
     MonadFresh,
+    MonadUnion,
     ToCon,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -77,6 +78,7 @@ instance
   ( MonadFresh ctx,
     MonadContext ctx,
     Mergeable intVal,
+    MonadUnion ctx,
     Mergeable boolVal,
     GenSymSimple () intVal,
     GenSymSimple () boolVal

@@ -36,10 +36,10 @@ import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTyping (typeOp),
-    OpTypingByNumInputs (typeOpByNumInputs),
+  ( OpTyping,
     OpTypingSimple (typeOpSimple),
-    UseOpTypingSimple (UseOpTypingSimple),
+    SymOpLimits,
+    SymOpTyping,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
@@ -128,21 +128,21 @@ instance
         <> " arguments."
 
 instance OpTypingSimple TestSemanticsOp TestSemanticsType where
-  typeOpSimple Add =
-    mrgReturn $ TypeSignature [IntType, IntType] [IntType]
-  typeOpSimple DivMod =
-    mrgReturn $ TypeSignature [IntType, IntType] [IntType, IntType]
-  typeOpSimple Inc = mrgReturn $ TypeSignature [IntType] [IntType]
-  typeOpSimple Double = mrgReturn $ TypeSignature [IntType] [IntType]
+  typeOpSimple Add = TypeSignature [IntType, IntType] [IntType]
+  typeOpSimple DivMod = TypeSignature [IntType, IntType] [IntType, IntType]
+  typeOpSimple Inc = TypeSignature [IntType] [IntType]
+  typeOpSimple Double = TypeSignature [IntType] [IntType]
 
-instance OpTypingByNumInputs TestSemanticsOp TestSemanticsType where
-  typeOpByNumInputs = typeOpByNumInputs . UseOpTypingSimple
+instance (MonadContext ctx) => OpTyping TestSemanticsOp TestSemanticsType ctx
 
-instance OpTyping TestSemanticsOp TestSemanticsType where
-  typeOp = typeOp . UseOpTypingSimple
+instance SymOpLimits TestSemanticsOp
 
 instance
-  (MonadContext ctx, MonadFresh ctx) =>
+  (MonadContext ctx, MonadUnion ctx) =>
+  SymOpTyping TestSemanticsOp TestSemanticsType ctx
+
+instance
+  (MonadUnion ctx, MonadContext ctx, MonadFresh ctx) =>
   GenIntermediate TestSemanticsObj TestSemanticsType SymInteger ctx
   where
-  genIntermediate _ IntType = simpleFresh ()
+  genIntermediate _ _ = simpleFresh ()

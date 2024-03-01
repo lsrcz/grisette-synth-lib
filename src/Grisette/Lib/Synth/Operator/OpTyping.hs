@@ -1,90 +1,54 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTypingSimple (..),
-    OpTypingByNumInputs (..),
-    OpTyping (..),
-    UseOpTypingSimple (..),
-    UseOpTypingByNumInputs (..),
+  ( OpTyping (..),
+    OpTypingSimple (..),
+    SymOpLimits (..),
+    SymOpTyping (..),
   )
 where
 
-import Grisette (Mergeable)
-import Grisette.Lib.Control.Monad.Except (mrgThrowError)
+import Grisette (Mergeable, MonadUnion, UnionM, mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.TypeSignature
+  ( TypeSignature (argTypes, resTypes),
+  )
 
-class OpTypingSimple op ty where
-  typeOpSimple :: (MonadContext ctx) => op -> ctx (TypeSignature ty)
+class OpTypingSimple op ty | op -> ty where
+  typeOpSimple :: op -> TypeSignature ty
 
-class OpTypingByNumInputs op ty where
-  typeOpByNumInputs ::
-    (MonadContext ctx) => op -> Int -> ctx (TypeSignature ty)
+class (MonadContext ctx) => OpTyping op ty ctx | op -> ty where
+  typeOp :: op -> ctx (TypeSignature ty)
+  default typeOp ::
+    (OpTypingSimple op ty, MonadContext ctx, Mergeable ty) =>
+    op ->
+    ctx (TypeSignature ty)
+  typeOp = mrgReturn . typeOpSimple
 
-class OpTyping op ty where
-  typeOp :: (MonadContext ctx) => op -> [ty] -> ctx (TypeSignature ty)
+class SymOpLimits op where
+  symOpMaximumArgNum :: op -> Int
+  default symOpMaximumArgNum :: (OpTypingSimple op ty) => op -> Int
+  symOpMaximumArgNum = length . argTypes . typeOpSimple
+  symOpMaximumResNum :: op -> Int
+  default symOpMaximumResNum :: (OpTypingSimple op ty) => op -> Int
+  symOpMaximumResNum = length . resTypes . typeOpSimple
 
-newtype UseOpTypingSimple op = UseOpTypingSimple op
-
-instance
-  (OpTypingSimple op ty, Show op, Mergeable ty) =>
-  OpTypingByNumInputs (UseOpTypingSimple op) ty
+class
+  (Mergeable ty, MonadContext ctx, MonadUnion ctx) =>
+  SymOpTyping op ty ctx
+    | op -> ty
   where
-  typeOpByNumInputs (UseOpTypingSimple op) numInputs = do
-    signature@(TypeSignature argTypes _) <- typeOpSimple op
-    if length argTypes /= numInputs
-      then
-        mrgThrowError $
-          "typeOpByNumInputs: the operator "
-            <> showText op
-            <> " cannot accept "
-            <> showText numInputs
-            <> " arguments, expected "
-            <> showText (length argTypes)
-            <> " arguments."
-      else return signature
-
-instance
-  (OpTypingSimple op ty, Show op, Eq ty, Mergeable ty, Show ty) =>
-  OpTyping (UseOpTypingSimple op) ty
-  where
-  typeOp (UseOpTypingSimple op) ty = do
-    signature@(TypeSignature argTypes _) <- typeOpSimple op
-    if argTypes /= ty
-      then
-        mrgThrowError $
-          "typeOp: the operator "
-            <> showText op
-            <> " cannot accept the arguments of type "
-            <> showText ty
-            <> ", expected "
-            <> showText argTypes
-            <> "."
-      else return signature
-
-newtype UseOpTypingByNumInputs op = UseOpTypingByNumInputs op
-
-instance
-  (OpTypingByNumInputs op ty, Show op, Eq ty, Mergeable ty, Show ty) =>
-  OpTyping (UseOpTypingByNumInputs op) ty
-  where
-  typeOp (UseOpTypingByNumInputs op) ty = do
-    signature@(TypeSignature argTypes _) <- typeOpByNumInputs op (length ty)
-    if argTypes /= ty
-      then
-        mrgThrowError $
-          "typeOp: the operator "
-            <> showText op
-            <> " cannot accept the arguments of type "
-            <> showText ty
-            <> ", expected "
-            <> showText argTypes
-            <> "."
-      else return signature
+  typeSymOp :: op -> ctx (UnionM (TypeSignature ty))
+  default typeSymOp ::
+    (OpTyping op ty ctx, Mergeable ty) =>
+    op ->
+    ctx (UnionM (TypeSignature ty))
+  typeSymOp op = do
+    tys <- typeOp op
+    mrgReturn $ mrgReturn tys

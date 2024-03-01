@@ -49,9 +49,9 @@ sketch =
       -- \* reorder the components, and
       -- \* choose whether or now to disable a component, and
       -- \* choose the arguments of a component.
-      [ Component.freshStmtSimple (return Minus),
-        Component.freshStmtSimple (return Mul),
-        Component.freshStmtSimple (return Plus)
+      [ Component.freshStmt (return Minus),
+        Component.freshStmt (return Mul),
+        Component.freshStmt (return Plus)
       ]
       -- The program result type.
       [IntegerType]
@@ -81,6 +81,7 @@ main = do
             synthesisWithFuzzerTaskMaxTests = 100,
             synthesisWithFuzzerTaskGenerators = [gen]
           }
+  print sketch
   (_, r) <- synthesizeProgWithVerifier task
   case r of
     SynthesisSuccess prog -> do
