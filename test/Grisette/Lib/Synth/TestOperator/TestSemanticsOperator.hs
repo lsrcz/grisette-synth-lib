@@ -39,7 +39,6 @@ import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping,
     OpTypingSimple (typeOpSimple),
     SymOpLimits,
-    SymOpTyping,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
@@ -136,10 +135,6 @@ instance OpTypingSimple TestSemanticsOp TestSemanticsType where
 instance (MonadContext ctx) => OpTyping TestSemanticsOp TestSemanticsType ctx
 
 instance SymOpLimits TestSemanticsOp
-
-instance
-  (MonadContext ctx, MonadUnion ctx) =>
-  SymOpTyping TestSemanticsOp TestSemanticsType ctx
 
 instance
   (MonadUnion ctx, MonadContext ctx, MonadFresh ctx) =>

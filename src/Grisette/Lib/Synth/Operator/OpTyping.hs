@@ -10,14 +10,13 @@ module Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (..),
     OpTypingSimple (..),
     SymOpLimits (..),
-    SymOpTyping (..),
   )
 where
 
-import Grisette (Mergeable, MonadUnion, UnionM, mrgReturn)
-import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette (Mergeable, mrgReturn)
+import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.TypeSignature
-  ( TypeSignature (argTypes, resTypes),
+  ( TypeSignature (TypeSignature),
   )
 
 class OpTypingSimple op ty | op -> ty where
@@ -33,22 +32,14 @@ class (MonadContext ctx) => OpTyping op ty ctx | op -> ty where
 
 class SymOpLimits op where
   symOpMaximumArgNum :: op -> Int
-  default symOpMaximumArgNum :: (OpTypingSimple op ty) => op -> Int
-  symOpMaximumArgNum = length . argTypes . typeOpSimple
+  default symOpMaximumArgNum :: (OpTyping op ty ConcreteContext) => op -> Int
+  symOpMaximumArgNum op =
+    case typeOp op of
+      Right (TypeSignature argTypes _) -> length argTypes
+      Left err -> error $ "symOpMaximumArgNum: " ++ show err
   symOpMaximumResNum :: op -> Int
-  default symOpMaximumResNum :: (OpTypingSimple op ty) => op -> Int
-  symOpMaximumResNum = length . resTypes . typeOpSimple
-
-class
-  (Mergeable ty, MonadContext ctx, MonadUnion ctx) =>
-  SymOpTyping op ty ctx
-    | op -> ty
-  where
-  typeSymOp :: op -> ctx (UnionM (TypeSignature ty))
-  default typeSymOp ::
-    (OpTyping op ty ctx, Mergeable ty) =>
-    op ->
-    ctx (UnionM (TypeSignature ty))
-  typeSymOp op = do
-    tys <- typeOp op
-    mrgReturn $ mrgReturn tys
+  default symOpMaximumResNum :: (OpTyping op ty ConcreteContext) => op -> Int
+  symOpMaximumResNum op =
+    case typeOp op of
+      Right (TypeSignature _ resTypes) -> length resTypes
+      Left err -> error $ "symOpMaximumArgNum: " ++ show err

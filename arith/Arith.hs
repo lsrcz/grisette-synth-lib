@@ -32,7 +32,6 @@ import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping,
     OpTypingSimple (typeOpSimple),
     SymOpLimits,
-    SymOpTyping,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
@@ -105,8 +104,6 @@ instance OpTypingSimple OpCode OpType where
   typeOpSimple UMinus = TypeSignature [IntegerType] [IntegerType]
 
 instance (MonadContext ctx) => OpTyping OpCode OpType ctx
-
-instance (MonadContext ctx, MonadUnion ctx) => SymOpTyping OpCode OpType ctx
 
 instance SymOpLimits OpCode
 

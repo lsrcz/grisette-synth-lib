@@ -36,7 +36,6 @@ import Grisette
     SymBool,
     ToCon (toCon),
     UnionM,
-    liftUnionM,
     mrgFmap,
     mrgIf,
     mrgSequence_,
@@ -49,9 +48,11 @@ import Grisette.Lib.Control.Monad.State.Class (mrgModify)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping
-  ( SymOpTyping (typeSymOp),
-  )
+-- import Grisette.Lib.Synth.Operator.OpTyping
+--   ( SymOpTyping (typeSymOp),
+--   )
+
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
 import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
   ( GenIntermediate,
     Intermediates (Intermediates),
@@ -233,7 +234,7 @@ constrainStmt ::
   ( SymbolicVarId symVarId,
     GenIntermediate sem ty val ctx,
     OpSemantics sem op val ctx,
-    SymOpTyping op ty ctx,
+    OpTyping op ty ctx,
     SEq val
   ) =>
   p ty ->
@@ -253,7 +254,7 @@ constrainStmt
       symAll (\(i, isucc) -> isucc .== i + 1) $
         zip resIds (tail resIds)
 
-    signature <- lift $ typeSymOp op >>= liftUnionM
+    signature <- lift $ typeOp op
     Intermediates argVals resVals <- lift $ genOpIntermediates p sem signature
 
     let getIdValPairs _ [] [] = mrgReturn []
@@ -325,7 +326,7 @@ instance
   ( SymbolicVarId symVarId,
     GenIntermediate sem ty val ctx,
     OpSemantics sem op val ctx,
-    SymOpTyping op ty ctx,
+    OpTyping op ty ctx,
     SEq val
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx

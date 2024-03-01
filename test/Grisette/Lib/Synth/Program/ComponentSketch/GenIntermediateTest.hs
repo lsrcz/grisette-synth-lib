@@ -9,14 +9,11 @@ import Data.Proxy (Proxy (Proxy))
 import Grisette
   ( Solvable (isym),
     SymInteger,
-    liftUnionM,
     mrgReturn,
     runFreshT,
   )
 import Grisette.Lib.Synth.Context (SymbolicContext)
-import Grisette.Lib.Synth.Operator.OpTyping
-  ( SymOpTyping (typeSymOp),
-  )
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Intermediates (Intermediates),
     genIntermediates,
@@ -45,8 +42,7 @@ genIntermediateTest =
       testCase "genOpIntermediates" $ do
         let actual =
               flip runFreshT "x" $
-                typeSymOp DivMod
-                  >>= liftUnionM
+                typeOp DivMod
                   >>= genOpIntermediates
                     (Proxy :: Proxy TestSemanticsType)
                     TestSemanticsObj ::
