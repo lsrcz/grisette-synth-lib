@@ -38,6 +38,7 @@ module Grisette.Lib.Synth.Program.Concrete.Program
   )
 where
 
+import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.State
@@ -93,7 +94,7 @@ data Stmt op varId = Stmt
     stmtResIds :: [varId]
   }
   deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
+  deriving anyclass (Hashable, NFData)
 
 instance Mergeable (Stmt op varId) where
   rootStrategy = NoStrategy
@@ -104,14 +105,14 @@ data ProgArg varId ty = ProgArg
     progArgType :: ty
   }
   deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
+  deriving anyclass (Hashable, NFData)
 
 data ProgRes varId ty = ProgRes
   { progResId :: varId,
     progResType :: ty
   }
   deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
+  deriving anyclass (Hashable, NFData)
 
 data Prog op varId ty = Prog
   { progName :: T.Text,
@@ -120,7 +121,7 @@ data Prog op varId ty = Prog
     progResList :: [ProgRes varId ty]
   }
   deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
+  deriving anyclass (Hashable, NFData)
 
 instance Mergeable (Prog op varId ty) where
   rootStrategy = NoStrategy
