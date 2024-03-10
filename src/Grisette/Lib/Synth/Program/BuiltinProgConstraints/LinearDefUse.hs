@@ -22,6 +22,10 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.LinearDefUse
     LinearDefUseName (..),
     LinearDefUseTypePredicate (..),
     LinearDefUseConstraint,
+    componentStmtDefs,
+    componentStmtUses,
+    componentProgDefs,
+    componentProgUses,
   )
 where
 
@@ -95,7 +99,7 @@ class
 type LinearDefUseConstraint defUseObj op ty =
   (LinearDefUseExtract defUseObj op, LinearDefUseTypePredicate defUseObj ty)
 
-stmtDefs ::
+componentStmtDefs ::
   ( SymbolicVarId symVarId,
     MonadUnion ctx,
     Mergeable op,
@@ -104,11 +108,11 @@ stmtDefs ::
   defUseObj ->
   Component.Stmt op symVarId ty ->
   ctx [DefUnion symVarId]
-stmtDefs defUseObj (Component.Stmt opUnion _ _ resIds _ disabled) = do
+componentStmtDefs defUseObj (Component.Stmt opUnion _ _ resIds _ disabled) = do
   op <- liftUnionM opUnion
   mrgReturn [mrgReturn $ linearDefUseExtractDefs defUseObj op resIds disabled]
 
-stmtUses ::
+componentStmtUses ::
   ( SymbolicVarId symVarId,
     MonadUnion ctx,
     Mergeable op,
@@ -117,12 +121,14 @@ stmtUses ::
   defUseObj ->
   Component.Stmt op symVarId ty ->
   ctx [UseUnion symVarId]
-stmtUses defUseObj (Component.Stmt opUnion argIds _ resIds _ disabled) = do
-  op <- liftUnionM opUnion
-  mrgReturn
-    [mrgReturn $ linearDefUseExtractUses defUseObj op argIds resIds disabled]
+componentStmtUses
+  defUseObj
+  (Component.Stmt opUnion argIds _ resIds _ disabled) = do
+    op <- liftUnionM opUnion
+    mrgReturn
+      [mrgReturn $ linearDefUseExtractUses defUseObj op argIds resIds disabled]
 
-extractDefs ::
+componentProgDefs ::
   ( SymbolicVarId symVarId,
     MonadContext ctx,
     MonadUnion ctx,
@@ -132,10 +138,10 @@ extractDefs ::
   defUseObj ->
   Component.Prog op symVarId ty ->
   ctx [DefUnion symVarId]
-extractDefs
+componentProgDefs
   defUseObj
   (Component.Prog _ argList stmtList _) = do
-    stmtDefs <- mrgTraverse (stmtDefs defUseObj) stmtList
+    stmtDefs <- mrgTraverse (componentStmtDefs defUseObj) stmtList
     mrgReturn $ concat (argDefs : stmtDefs)
     where
       argDefs =
@@ -144,7 +150,7 @@ extractDefs
             (linearDefUseTypePredicate defUseObj . Component.progArgType . snd)
           $ zip [0 ..] argList
 
-extractUses ::
+componentProgUses ::
   ( SymbolicVarId symVarId,
     MonadContext ctx,
     MonadUnion ctx,
@@ -154,10 +160,10 @@ extractUses ::
   defUseObj ->
   Component.Prog op symVarId ty ->
   ctx [UseUnion symVarId]
-extractUses
+componentProgUses
   defUseObj
   (Component.Prog _ argList stmtList resList) = do
-    stmtUses <- mrgTraverse (stmtUses defUseObj) stmtList
+    stmtUses <- mrgTraverse (componentStmtUses defUseObj) stmtList
     mrgReturn $ concat (resUses : stmtUses)
     where
       resEffectiveDefId = fromIntegral $ length argList + length stmtList
@@ -171,7 +177,7 @@ extractUses
             (linearDefUseTypePredicate defUseObj . Component.progResType)
             resList
 
-onlyUseNewestDef ::
+componentProgOnlyUseNewestDef ::
   forall defUseObj op symVarId ty ctx.
   ( MonadContext ctx,
     MonadUnion ctx,
@@ -182,7 +188,7 @@ onlyUseNewestDef ::
   defUseObj ->
   Component.Prog op symVarId ty ->
   ctx ()
-onlyUseNewestDef defUseObj sketch =
+componentProgOnlyUseNewestDef defUseObj sketch =
   mrgTraverse_
     ( \useUnion -> extractUnionMaybe useUnion $
         \use -> mrgTraverse_ (defUseConstraint use) =<< singleDefs
@@ -196,8 +202,8 @@ onlyUseNewestDef defUseObj sketch =
       case maybeValue of
         Nothing -> mrgReturn ()
         Just a -> f a
-    uses = extractUses defUseObj sketch
-    defs = extractDefs defUseObj sketch
+    uses = componentProgUses defUseObj sketch
+    defs = componentProgDefs defUseObj sketch
     getSingleDefs _ [] = []
     getSingleDefs acc (x : xs) = (x, acc ++ xs) : getSingleDefs (x : acc) xs
     singleDefs ::
@@ -228,32 +234,34 @@ onlyUseNewestDef defUseObj sketch =
             )
             otherDefIds
 
-atMostOneInputAndOutput ::
+componentProgAtMostOneInputAndOutput ::
   (MonadContext ctx, LinearDefUseTypePredicate defUseObj ty) =>
   defUseObj ->
   Component.Prog op symVarId ty ->
   ctx ()
-atMostOneInputAndOutput defUseObj (Component.Prog _ argList _ resList) = do
-  let argCount =
-        length $
-          filter
-            (linearDefUseTypePredicate defUseObj . Component.progArgType)
-            argList
-  let resCount =
-        length $
-          filter
-            (linearDefUseTypePredicate defUseObj . Component.progResType)
-            resList
-  when (argCount > 1) $
-    mrgThrowError $
-      "At most one argument with the type "
-        <> linearDefUseName defUseObj
-        <> " to a program"
-  when (resCount > 1) $
-    mrgThrowError $
-      "At most one result with the type "
-        <> linearDefUseName defUseObj
-        <> " to a program"
+componentProgAtMostOneInputAndOutput
+  defUseObj
+  (Component.Prog _ argList _ resList) = do
+    let argCount =
+          length $
+            filter
+              (linearDefUseTypePredicate defUseObj . Component.progArgType)
+              argList
+    let resCount =
+          length $
+            filter
+              (linearDefUseTypePredicate defUseObj . Component.progResType)
+              resList
+    when (argCount > 1) $
+      mrgThrowError $
+        "At most one argument with the type "
+          <> linearDefUseName defUseObj
+          <> " to a program"
+    when (resCount > 1) $
+      mrgThrowError $
+        "At most one result with the type "
+          <> linearDefUseName defUseObj
+          <> " to a program"
 
 instance
   ( MonadContext ctx,
@@ -268,5 +276,5 @@ instance
     ctx
   where
   constrainProg (LinearDefUse defUseObj) prog = do
-    atMostOneInputAndOutput defUseObj prog
-    onlyUseNewestDef defUseObj prog
+    componentProgAtMostOneInputAndOutput defUseObj prog
+    componentProgOnlyUseNewestDef defUseObj prog
