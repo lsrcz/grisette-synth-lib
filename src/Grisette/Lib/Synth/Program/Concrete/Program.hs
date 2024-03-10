@@ -55,6 +55,7 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
+    EvaluateSym,
     GPretty (gpretty),
     Mergeable (rootStrategy),
     MergingStrategy (NoStrategy),
@@ -95,6 +96,7 @@ data Stmt op varId = Stmt
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
+  deriving (EvaluateSym) via (Default (Stmt op varId))
 
 instance Mergeable (Stmt op varId) where
   rootStrategy = NoStrategy
@@ -106,6 +108,7 @@ data ProgArg varId ty = ProgArg
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
+  deriving (EvaluateSym) via (Default (ProgArg varId ty))
 
 data ProgRes varId ty = ProgRes
   { progResId :: varId,
@@ -113,6 +116,7 @@ data ProgRes varId ty = ProgRes
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
+  deriving (EvaluateSym) via (Default (ProgRes varId ty))
 
 data Prog op varId ty = Prog
   { progName :: T.Text,
@@ -122,6 +126,7 @@ data Prog op varId ty = Prog
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
+  deriving (EvaluateSym) via (Default (Prog op varId ty))
 
 instance Mergeable (Prog op varId ty) where
   rootStrategy = NoStrategy
