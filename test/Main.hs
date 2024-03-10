@@ -2,6 +2,9 @@ module Main (main) where
 
 import Grisette.Lib.Synth.Operator.OpPrettyTest (opPrettyTest)
 import Grisette.Lib.Synth.Operator.OpTypingTest (opTypingTest)
+import Grisette.Lib.Synth.Program.BuiltinProgConstraintsTest
+  ( builtinProgConstraintsTest,
+  )
 import Grisette.Lib.Synth.Program.ByteCodeSketchTest (byteCodeSketchTest)
 import Grisette.Lib.Synth.Program.ComponentSketchTest (componentSketchTest)
 import Grisette.Lib.Synth.Program.ConcreteTest (concreteTest)
@@ -24,5 +27,6 @@ tests =
     byteCodeSketchTest,
     componentSketchTest,
     fuzzingTest,
-    synthesisTest
+    synthesisTest,
+    builtinProgConstraintsTest
   ]
