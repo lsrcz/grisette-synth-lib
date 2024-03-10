@@ -22,6 +22,7 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( SynthesisWithFuzzerMatcherTask
       ( SynthesisWithFuzzerMatcherTask,
+        synthesisWithFuzzerMatcherTaskConstraints,
         synthesisWithFuzzerMatcherTaskContextType,
         synthesisWithFuzzerMatcherTaskGenerators,
         synthesisWithFuzzerMatcherTaskMaxTests,
@@ -133,6 +134,7 @@ byteCodeSketchTest =
               synthesisWithFuzzerMatcherTaskMaxTests = 100,
               synthesisWithFuzzerMatcherTaskGenerators = [gen],
               synthesisWithFuzzerMatcherTaskSemantics = TestSemanticsObj,
+              synthesisWithFuzzerMatcherTaskConstraints = (),
               synthesisWithFuzzerMatcherTaskSymProg = sketch
             }
     return $ testCase name $ do

@@ -13,6 +13,7 @@ import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( SynthesisWithFuzzerTask
       ( SynthesisWithFuzzerTask,
+        synthesisWithFuzzerTaskConstraints,
         synthesisWithFuzzerTaskContextType,
         synthesisWithFuzzerTaskGenerators,
         synthesisWithFuzzerTaskMaxTests,
@@ -82,6 +83,7 @@ main = do
             -- You need a working z3 installation available in your PATH.
             synthesisWithFuzzerTaskSolverConfig = precise z3,
             synthesisWithFuzzerTaskSemantics = Sem,
+            synthesisWithFuzzerTaskConstraints = (),
             synthesisWithFuzzerTaskMaxTests = 100,
             synthesisWithFuzzerTaskGenerators = [gen]
           }

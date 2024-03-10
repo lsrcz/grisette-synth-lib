@@ -8,11 +8,15 @@ module Grisette.Lib.Synth.Program.ProgConstraints
   )
 where
 
+import Grisette (mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 
 class (MonadContext ctx) => ProgConstraints constObj prog ctx where
   constrainProg :: constObj -> prog -> ctx ()
+
+instance (MonadContext ctx) => ProgConstraints () prog ctx where
+  constrainProg _ _ = mrgReturn ()
 
 instance
   ( ProgConstraints constObj1 prog ctx,

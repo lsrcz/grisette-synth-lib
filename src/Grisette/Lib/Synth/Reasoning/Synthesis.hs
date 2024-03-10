@@ -38,7 +38,11 @@ import Grisette
     simpleMerge,
   )
 import Grisette.Lib.Synth.Context (AngelicContext, SymbolicContext)
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgConstraints
+  ( ProgConstraints,
+    runProgWithConstraints,
+  )
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics)
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher (match))
 
@@ -67,8 +71,9 @@ instance SynthesisContext AngelicContext where
       (runFreshT actual (FreshIdentWithInfo "::synth::" i))
 
 synthesisConstraintFun ::
-  forall semObj symProg conVal symVal ctx matcher p q.
+  forall semObj constrObj symProg conVal symVal ctx matcher p q.
   ( ProgSemantics semObj symProg symVal ctx,
+    ProgConstraints constrObj symProg ctx,
     SynthesisContext ctx,
     Matcher matcher SymBool symVal,
     ToSym conVal symVal,
@@ -78,15 +83,23 @@ synthesisConstraintFun ::
   p ctx ->
   q symVal ->
   semObj ->
+  constrObj ->
   symProg ->
   SynthesisConstraintFun (IOPair conVal, matcher)
-synthesisConstraintFun _ _ sem prog i (IOPair inputs expectedOutputs, matcher) =
-  return $
-    genSynthesisConstraint
-      i
-      matcher
-      (runProg sem prog (toSym inputs) :: ctx [symVal])
-      (toSym expectedOutputs)
+synthesisConstraintFun
+  _
+  _
+  sem
+  constr
+  prog
+  i
+  (IOPair inputs expectedOutputs, matcher) =
+    return $
+      genSynthesisConstraint
+        i
+        matcher
+        (runProgWithConstraints sem constr prog (toSym inputs) :: ctx [symVal])
+        (toSym expectedOutputs)
 
 data SynthesisResult conProg exception
   = SynthesisSuccess conProg
@@ -107,9 +120,11 @@ data SynthesisTask conVal conProg matcher exception where
       conProg
       symProg
       matcher
-      semObj.
+      semObj
+      constrObj.
     ( ConfigurableSolver config h,
       ProgSemantics semObj symProg symVal ctx,
+      ProgConstraints constrObj symProg ctx,
       SynthesisContext ctx,
       Matcher matcher SymBool symVal,
       ToSym conVal symVal,
@@ -129,6 +144,7 @@ data SynthesisTask conVal conProg matcher exception where
         symProg ->
         StatefulVerifierFun state (IOPair conVal, matcher) exception,
       synthesisTaskSemantics :: semObj,
+      synthesisTaskConstraints :: constrObj,
       synthesisTaskSymProg :: symProg
     } ->
     SynthesisTask conVal conProg matcher exception
@@ -165,7 +181,7 @@ synthesizeProgWithVerifier ::
   IO ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
 synthesizeProgWithVerifier task =
   case toSynthesisTask task of
-    SynthesisTask pctx psymVal config initialState verifier sem prog -> do
+    SynthesisTask pctx psymVal config initialState verifier sem constr prog -> do
       (ioPairs, r) <-
         genericCEGIS
           config
@@ -174,6 +190,7 @@ synthesizeProgWithVerifier task =
               pctx
               psymVal
               sem
+              constr
               prog
           )
           initialState
