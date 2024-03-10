@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main (main) where
 
 import Arith (OpCode (Minus, Mul, Plus), OpType (IntegerType), Sem (Sem))
+import Data.Proxy (Proxy (Proxy))
 import Grisette (GPretty (gpretty), SymInteger, precise, runFresh, z3)
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
@@ -11,12 +13,14 @@ import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( SynthesisWithFuzzerTask
       ( SynthesisWithFuzzerTask,
+        synthesisWithFuzzerTaskContextType,
         synthesisWithFuzzerTaskGenerators,
         synthesisWithFuzzerTaskMaxTests,
         synthesisWithFuzzerTaskSemantics,
         synthesisWithFuzzerTaskSolverConfig,
         synthesisWithFuzzerTaskSpec,
-        synthesisWithFuzzerTaskSymProg
+        synthesisWithFuzzerTaskSymProg,
+        synthesisWithFuzzerTaskSymValType
       ),
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis
@@ -69,11 +73,11 @@ gen = vectorOf 2 arbitrary
 
 main :: IO ()
 main = do
-  let task ::
-        SynthesisWithFuzzerTask Integer SymInteger ConProg Sketch AngelicContext
-      task =
+  let task =
         SynthesisWithFuzzerTask
-          { synthesisWithFuzzerTaskSymProg = sketch,
+          { synthesisWithFuzzerTaskContextType = Proxy :: Proxy AngelicContext,
+            synthesisWithFuzzerTaskSymValType = Proxy :: Proxy SymInteger,
+            synthesisWithFuzzerTaskSymProg = sketch,
             synthesisWithFuzzerTaskSpec = spec,
             -- You need a working z3 installation available in your PATH.
             synthesisWithFuzzerTaskSolverConfig = precise z3,
@@ -84,7 +88,7 @@ main = do
   print sketch
   (_, r) <- synthesizeProgWithVerifier task
   case r of
-    SynthesisSuccess prog -> do
+    SynthesisSuccess (prog :: ConProg) -> do
       -- def test(x: int, y: int):
       --   r2 = plus(lhs=y, rhs=x)
       --   r3 = mul(lhs=r2, rhs=x)

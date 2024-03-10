@@ -19,7 +19,6 @@ where
 
 import Control.Monad.Except (runExceptT)
 import Data.Data (Proxy (Proxy))
-import Data.Kind (Type)
 import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
@@ -95,7 +94,7 @@ data SynthesisResult conProg exception
   | SynthesisSolverFailure SolvingFailure
   deriving (Show)
 
-data SynthesisTask conVal symVal conProg symProg matcher ctx exception where
+data SynthesisTask conVal conProg matcher exception where
   SynthesisTask ::
     forall
       config
@@ -116,9 +115,12 @@ data SynthesisTask conVal symVal conProg symProg matcher ctx exception where
       ToSym conVal symVal,
       EvaluateSym symProg,
       ToCon symProg conProg,
-      Show symVal
+      Show symVal,
+      Mergeable symVal
     ) =>
-    { synthesisTaskSolverConfig :: config,
+    { synthesisTaskContextType :: Proxy ctx,
+      synthesisTaskSymValType :: Proxy symVal,
+      synthesisTaskSolverConfig :: config,
       synthesisTaskInitialVerifierState :: state,
       synthesisTaskVerifier ::
         forall p.
@@ -129,59 +131,26 @@ data SynthesisTask conVal symVal conProg symProg matcher ctx exception where
       synthesisTaskSemantics :: semObj,
       synthesisTaskSymProg :: symProg
     } ->
-    SynthesisTask conVal symVal conProg symProg matcher ctx exception
+    SynthesisTask conVal conProg matcher exception
 
 class ToSynthesisTask task where
   type ConValType task
-  type SymValType task
   type ConProgType task
-  type SymProgType task
   type MatcherType task
-  type ContextType task :: Type -> Type
   type ExceptionType task
   toSynthesisTask ::
     task ->
     SynthesisTask
       (ConValType task)
-      (SymValType task)
       (ConProgType task)
-      (SymProgType task)
       (MatcherType task)
-      (ContextType task)
       (ExceptionType task)
 
-instance
-  ToSynthesisTask
-    (SynthesisTask conVal symVal conProg symProg matcher ctx exception)
-  where
-  type
-    ConValType
-      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
-      conVal
-  type
-    SymValType
-      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
-      symVal
-  type
-    ConProgType
-      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
-      conProg
-  type
-    SymProgType
-      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
-      symProg
-  type
-    MatcherType
-      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
-      matcher
-  type
-    ContextType
-      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
-      ctx
-  type
-    ExceptionType
-      (SynthesisTask conVal symVal conProg symProg matcher ctx exception) =
-      exception
+instance ToSynthesisTask (SynthesisTask conVal conProg matcher exception) where
+  type ConValType (SynthesisTask conVal conProg matcher exception) = conVal
+  type ConProgType (SynthesisTask conVal conProg matcher exception) = conProg
+  type MatcherType (SynthesisTask conVal conProg matcher exception) = matcher
+  type ExceptionType (SynthesisTask conVal conProg matcher exception) = exception
   toSynthesisTask = id
 
 synthesizeProgWithVerifier ::
@@ -190,21 +159,20 @@ synthesizeProgWithVerifier ::
     matcher ~ MatcherType task,
     conVal ~ ConValType task,
     conProg ~ ConProgType task,
-    exception ~ ExceptionType task,
-    Mergeable (SymValType task)
+    exception ~ ExceptionType task
   ) =>
   task ->
   IO ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
 synthesizeProgWithVerifier task =
   case toSynthesisTask task of
-    SynthesisTask config initialState verifier sem prog -> do
+    SynthesisTask pctx psymVal config initialState verifier sem prog -> do
       (ioPairs, r) <-
         genericCEGIS
           config
           (con True)
           ( synthesisConstraintFun
-              (Proxy :: Proxy (ContextType task))
-              (Proxy :: Proxy (SymValType task))
+              pctx
+              psymVal
               sem
               prog
           )

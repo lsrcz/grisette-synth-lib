@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main (main) where
 
 import qualified ConProg as C
+import Data.Proxy (Proxy (Proxy))
 import Grisette
   ( Fresh,
     GPretty (gpretty),
@@ -19,12 +21,14 @@ import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( SynthesisWithFuzzerTask
       ( SynthesisWithFuzzerTask,
+        synthesisWithFuzzerTaskContextType,
         synthesisWithFuzzerTaskGenerators,
         synthesisWithFuzzerTaskMaxTests,
         synthesisWithFuzzerTaskSemantics,
         synthesisWithFuzzerTaskSolverConfig,
         synthesisWithFuzzerTaskSpec,
-        synthesisWithFuzzerTaskSymProg
+        synthesisWithFuzzerTaskSymProg,
+        synthesisWithFuzzerTaskSymValType
       ),
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis
@@ -139,11 +143,11 @@ main = do
   let b = runProg Sem conProg [IntValue 1, IntValue 2] :: ConResult
   print b
 
-  let task ::
-        SynthesisWithFuzzerTask ConVal SymVal ConProg Sketch AngelicContext
-      task =
+  let task =
         SynthesisWithFuzzerTask
-          { synthesisWithFuzzerTaskSymProg = sketch,
+          { synthesisWithFuzzerTaskContextType = Proxy :: Proxy AngelicContext,
+            synthesisWithFuzzerTaskSymValType = Proxy :: Proxy SymVal,
+            synthesisWithFuzzerTaskSymProg = sketch,
             synthesisWithFuzzerTaskSpec = spec,
             -- You need a working z3 installation available in your PATH.
             synthesisWithFuzzerTaskSolverConfig = precise z3,
@@ -153,7 +157,7 @@ main = do
           }
   (_, r) <- synthesizeProgWithVerifier task
   case r of
-    SynthesisSuccess prog -> do
+    SynthesisSuccess (prog :: ConProg) -> do
       print $ gpretty prog
       print $ spec [IntValue 5, IntValue 5]
       print (runProg Sem prog [IntValue 5, IntValue 5] :: ConResult)

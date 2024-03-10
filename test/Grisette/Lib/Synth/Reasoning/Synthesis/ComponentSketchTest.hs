@@ -9,6 +9,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   )
 where
 
+import Data.Proxy (Proxy (Proxy))
 import Grisette (SymBool, SymInteger, mrgIf, mrgReturn, precise, z3)
 import Grisette.Lib.Synth.Context (AngelicContext)
 import Grisette.Lib.Synth.Program.ComponentSketch
@@ -21,12 +22,14 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( SynthesisWithFuzzerMatcherTask
       ( SynthesisWithFuzzerMatcherTask,
+        synthesisWithFuzzerMatcherTaskContextType,
         synthesisWithFuzzerMatcherTaskGenerators,
         synthesisWithFuzzerMatcherTaskMaxTests,
         synthesisWithFuzzerMatcherTaskSemantics,
         synthesisWithFuzzerMatcherTaskSolverConfig,
         synthesisWithFuzzerMatcherTaskSpec,
-        synthesisWithFuzzerMatcherTaskSymProg
+        synthesisWithFuzzerMatcherTaskSymProg,
+        synthesisWithFuzzerMatcherTaskSymValType
       ),
     fuzzingTestProg,
   )
@@ -152,17 +155,13 @@ componentSketchTest =
             componentSynthesisTestCaseGen = divModTwiceGen
           }
         ]
-    let task ::
-          SynthesisWithFuzzerMatcherTask
-            ConVal
-            SymVal
-            ConProg
-            SymProg
-            matcher
-            AngelicContext
+    let task :: SynthesisWithFuzzerMatcherTask ConVal ConProg matcher
         task =
           SynthesisWithFuzzerMatcherTask
-            { synthesisWithFuzzerMatcherTaskSolverConfig = precise z3,
+            { synthesisWithFuzzerMatcherTaskContextType =
+                Proxy :: Proxy AngelicContext,
+              synthesisWithFuzzerMatcherTaskSymValType = Proxy :: Proxy SymVal,
+              synthesisWithFuzzerMatcherTaskSolverConfig = precise z3,
               synthesisWithFuzzerMatcherTaskSpec = spec,
               synthesisWithFuzzerMatcherTaskMaxTests = 100,
               synthesisWithFuzzerMatcherTaskGenerators = [gen],
