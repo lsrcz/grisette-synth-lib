@@ -146,15 +146,15 @@ instance
 instance Mergeable (Prog op varId ty) where
   rootStrategy = NoStrategy
 
-data ProgPrettyError op varId
-  = StmtPrettyError (Stmt op varId) Int (OpPrettyError op varId)
+data ProgPrettyError varId op
+  = StmtPrettyError (Stmt op varId) Int (OpPrettyError varId op)
   | ResultUndefined Int varId
   deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default (ProgPrettyError op varId))
+  deriving (Mergeable) via (Default (ProgPrettyError varId op))
 
 instance
   (GPretty op, Show op, ConcreteVarId varId) =>
-  GPretty (ProgPrettyError op varId)
+  GPretty (ProgPrettyError varId op)
   where
   gpretty (StmtPrettyError stmt index err) =
     nest
@@ -184,7 +184,7 @@ prettyStmt ::
   (ConcreteVarId varId, OpPretty op, GPretty op) =>
   Int ->
   Stmt op varId ->
-  StateT (VarIdMap varId) (Either (ProgPrettyError op varId)) (Doc ann)
+  StateT (VarIdMap varId) (Either (ProgPrettyError varId op)) (Doc ann)
 prettyStmt index stmt@(Stmt op argIds resIds) = do
   map <- get
   argPretty <- case prettyArguments op argIds map of
@@ -200,7 +200,7 @@ prettyStmt index stmt@(Stmt op argIds resIds) = do
 prettyProg ::
   (ConcreteVarId varId, OpPretty op, GPretty op, GPretty ty) =>
   Prog op varId ty ->
-  Either (ProgPrettyError op varId) (Doc ann)
+  Either (ProgPrettyError varId op) (Doc ann)
 prettyProg (Prog name argList stmtList resList) = do
   let initMap =
         HM.fromList $ map (\arg -> (progArgId arg, progArgName arg)) argList

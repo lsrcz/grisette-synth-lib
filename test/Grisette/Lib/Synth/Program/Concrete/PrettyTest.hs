@@ -37,9 +37,9 @@ data PrettyStmtTestCase = PrettyStmtTestCase
     testStmt :: Stmt TestPrettyOp Int,
     testStmtIndex :: Int,
     testStmtLooseExpectedResult ::
-      Either (ProgPrettyError TestPrettyOp Int) T.Text,
+      Either (ProgPrettyError Int TestPrettyOp) T.Text,
     testStmtCompactExpectedResult ::
-      Either (ProgPrettyError TestPrettyOp Int) T.Text,
+      Either (ProgPrettyError Int TestPrettyOp) T.Text,
     testStmtNewMap :: VarIdMap Int
   }
 
@@ -47,9 +47,9 @@ data PrettyProgTestCase = PrettyProgTestCase
   { testProgGroupName :: String,
     testProg :: Prog TestPrettyOp Int TestPrettyType,
     testProgLooseExpectedResult ::
-      Either (ProgPrettyError TestPrettyOp Int) T.Text,
+      Either (ProgPrettyError Int TestPrettyOp) T.Text,
     testProgCompactExpectedResult ::
-      Either (ProgPrettyError TestPrettyOp Int) T.Text
+      Either (ProgPrettyError Int TestPrettyOp) T.Text
   }
 
 prettyTest :: Test

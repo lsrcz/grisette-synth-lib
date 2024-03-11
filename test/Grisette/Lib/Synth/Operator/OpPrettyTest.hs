@@ -30,12 +30,12 @@ env :: VarIdMap Int
 env = HM.fromList [(0, "x"), (1, "y")]
 
 looselyRenderArguments ::
-  TestPrettyOp -> [Int] -> Either (OpPrettyError TestPrettyOp Int) T.Text
+  TestPrettyOp -> [Int] -> Either (OpPrettyError Int TestPrettyOp) T.Text
 looselyRenderArguments op args =
   renderDoc 80 <$> prettyArguments op args env
 
 compactlyRenderArguments ::
-  TestPrettyOp -> [Int] -> Either (OpPrettyError TestPrettyOp Int) T.Text
+  TestPrettyOp -> [Int] -> Either (OpPrettyError Int TestPrettyOp) T.Text
 compactlyRenderArguments op args =
   renderDoc 1 <$> prettyArguments op args env
 
@@ -43,7 +43,7 @@ looselyRenderResults ::
   TestPrettyOp ->
   Int ->
   [Int] ->
-  Either (OpPrettyError TestPrettyOp Int) (VarIdMap Int, T.Text)
+  Either (OpPrettyError Int TestPrettyOp) (VarIdMap Int, T.Text)
 looselyRenderResults op numArgs res =
   second (renderDoc 80) <$> prettyResults op numArgs res env
 
@@ -51,7 +51,7 @@ compactlyRenderResults ::
   TestPrettyOp ->
   Int ->
   [Int] ->
-  Either (OpPrettyError TestPrettyOp Int) (VarIdMap Int, T.Text)
+  Either (OpPrettyError Int TestPrettyOp) (VarIdMap Int, T.Text)
 compactlyRenderResults op numArgs res =
   second (renderDoc 1) <$> prettyResults op numArgs res env
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -28,17 +29,17 @@ import Grisette.Lib.Synth.Util.Pretty
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
-data OpPrettyError op varId
+data OpPrettyError varId op
   = IncorrectNumberOfArguments op Int
   | UndefinedArgument Int varId
   | IncorrectNumberOfResults op Int Int
   | RedefinedResult Int varId
-  deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default (OpPrettyError op varId))
+  deriving (Show, Eq, Generic, Functor)
+  deriving (Mergeable) via (Default (OpPrettyError varId op))
 
 instance
   (GPretty op, ConcreteVarId varId) =>
-  GPretty (OpPrettyError op varId)
+  GPretty (OpPrettyError varId op)
   where
   gpretty (IncorrectNumberOfArguments op numOfArguments) =
     "Incorrect number of arguments for "
@@ -69,9 +70,9 @@ instance
 
 class OpPretty op where
   describeArguments ::
-    op -> Int -> Either (OpPrettyError op varId) [Maybe T.Text]
+    op -> Int -> Either (OpPrettyError varId op) [Maybe T.Text]
   prefixResults ::
-    op -> Int -> Int -> Either (OpPrettyError op varId) [T.Text]
+    op -> Int -> Int -> Either (OpPrettyError varId op) [T.Text]
 
 type VarIdMap varId = HM.HashMap varId T.Text
 
@@ -80,7 +81,7 @@ prettyArguments ::
   op ->
   [varId] ->
   VarIdMap varId ->
-  Either (OpPrettyError op varId) (Doc ann)
+  Either (OpPrettyError varId op) (Doc ann)
 prettyArguments op varIds map = do
   let lookupVarId (idx, varId) =
         maybe
@@ -102,7 +103,7 @@ prettyResults ::
   Int ->
   [varId] ->
   VarIdMap varId ->
-  Either (OpPrettyError op varId) (VarIdMap varId, Doc ann)
+  Either (OpPrettyError varId op) (VarIdMap varId, Doc ann)
 prettyResults op numOfArguments varIds map = do
   let ensureNotRedefined (idx, varId) =
         when (HM.member varId map) $ throwError $ RedefinedResult idx varId
