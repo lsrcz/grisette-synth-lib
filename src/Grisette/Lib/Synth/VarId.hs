@@ -17,7 +17,8 @@ type ConcreteVarId varId =
     Eq varId,
     Hashable varId,
     Integral varId,
-    Typeable varId
+    Typeable varId,
+    Mergeable varId
   )
 
 type SymbolicVarId varId =
