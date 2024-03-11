@@ -59,6 +59,7 @@ import Grisette
     GPretty (gpretty),
     Mergeable (rootStrategy),
     MergingStrategy (NoStrategy),
+    ToCon (toCon),
     tryMerge,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -98,6 +99,13 @@ data Stmt op varId = Stmt
   deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (Stmt op varId))
 
+instance
+  (ToCon symOp conOp) =>
+  ToCon (Stmt symOp varId) (Stmt conOp varId)
+  where
+  toCon (Stmt op argIds resIds) =
+    Stmt <$> toCon op <*> return argIds <*> return resIds
+
 instance Mergeable (Stmt op varId) where
   rootStrategy = NoStrategy
 
@@ -127,6 +135,13 @@ data Prog op varId ty = Prog
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (Prog op varId ty))
+
+instance
+  (ToCon symOp conOp) =>
+  ToCon (Prog symOp varId ty) (Prog conOp varId ty)
+  where
+  toCon (Prog name arg stmt res) =
+    Prog name arg <$> traverse toCon stmt <*> return res
 
 instance Mergeable (Prog op varId ty) where
   rootStrategy = NoStrategy
