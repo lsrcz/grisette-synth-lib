@@ -31,9 +31,8 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.LinearDefUse
   )
 where
 
-import Control.Monad (when)
+import Control.Applicative (Alternative ((<|>)))
 import Control.Monad.Except (MonadError (throwError))
-import Data.Data (Proxy (Proxy))
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -44,18 +43,16 @@ import Grisette
     Mergeable,
     MonadUnion,
     SEq ((.==)),
-    SOrd ((.<)),
     Solvable (con),
     SymBool,
     UnionM,
     liftUnionM,
-    mrgFmap,
     mrgIf,
     mrgReturn,
     mrgTraverse,
     mrgTraverse_,
   )
-import Grisette.Core.Data.Class.SOrd (SOrd ((.>=)))
+import Grisette.Core.Data.Class.SOrd (SOrd ((.<=), (.>=)))
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch.Program as Component
@@ -63,8 +60,6 @@ import qualified Grisette.Lib.Synth.Program.Concrete.Program as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( ProgConstraints (constrainProg),
   )
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
-import Grisette.Lib.Synth.TypeSignature (TypeSignature (argTypes, resTypes))
 import Grisette.Lib.Synth.VarId (ConcreteVarId, SymbolicVarId)
 
 data Def varId bool = Def
@@ -94,6 +89,10 @@ class LinearDefUseName defUseObj where
 class (LinearDefUseName defUseObj) => LinearDefUseExtract defUseObj op where
   linearDefUseExtractDefs ::
     defUseObj -> op -> [varId] -> bool -> Maybe (Def varId bool)
+  linearDefUseExtractDefs = linearDefUseExtractInvalidatingDefs
+  linearDefUseExtractInvalidatingDefs ::
+    defUseObj -> op -> [varId] -> bool -> Maybe (Def varId bool)
+  linearDefUseExtractInvalidatingDefs = linearDefUseExtractDefs
   linearDefUseExtractUses ::
     defUseObj -> op -> [varId] -> [varId] -> bool -> Maybe (Use varId bool)
 
@@ -115,6 +114,16 @@ concreteStmtDef ::
   Maybe conVarId
 concreteStmtDef defUseObj (Concrete.Stmt op _ resIds) =
   defId <$> linearDefUseExtractDefs defUseObj op resIds False
+
+concreteStmtInvalidatingDef ::
+  ( ConcreteVarId conVarId,
+    LinearDefUseExtract defUseObj op
+  ) =>
+  defUseObj ->
+  Concrete.Stmt op conVarId ->
+  Maybe conVarId
+concreteStmtInvalidatingDef defUseObj (Concrete.Stmt op _ resIds) =
+  defId <$> linearDefUseExtractInvalidatingDefs defUseObj op resIds False
 
 concreteStmtUse ::
   ( ConcreteVarId conVarId,
@@ -148,46 +157,48 @@ concreteProgOnlyUseNewestDef
             <$> filter
               (linearDefUseTypePredicate defUseObj . Concrete.progResType)
               resList
-    if length argIds >= 2
+    (finalInvalidatedId, finalIds) <- goStmts Nothing argIds stmtList
+    if not (null finalIds) && isJust finalInvalidatedId
       then
-        mrgThrowError $
-          "At most one argument with the type "
-            <> linearDefUseName defUseObj
-            <> " to a program"
-      else mrgReturn ()
-    if length resIds >= 2
-      then
-        mrgThrowError $
-          "At most one result with the type "
-            <> linearDefUseName defUseObj
-            <> " to a program"
-      else mrgReturn ()
-    finalIds <- goStmts argIds stmtList
-    if not (null resIds)
-      && head resIds `elem` finalIds
-      && head resIds /= head finalIds
-      then
-        mrgThrowError $
-          "Must use the newest definition of "
-            <> linearDefUseName defUseObj
+        mrgTraverse_
+          ( \resId ->
+              if resId `elem` finalIds
+                && resId < fromJust finalInvalidatedId
+                then
+                  mrgThrowError $
+                    "Must use the newest definition of "
+                      <> linearDefUseName defUseObj
+                else mrgReturn ()
+          )
+          resIds
       else mrgReturn ()
     where
-      goStmts :: [conVarId] -> [Concrete.Stmt op conVarId] -> ctx [conVarId]
-      goStmts usedIds [] = mrgReturn usedIds
-      goStmts usedIds (Concrete.Stmt op argIds resIds : rest) = do
-        let def = concreteStmtDef defUseObj (Concrete.Stmt op argIds resIds)
-        let use = concreteStmtUse defUseObj (Concrete.Stmt op argIds resIds)
+      goStmts ::
+        Maybe conVarId ->
+        [conVarId] ->
+        [Concrete.Stmt op conVarId] ->
+        ctx (Maybe conVarId, [conVarId])
+      goStmts invalidatedId usedIds [] = mrgReturn (invalidatedId, usedIds)
+      goStmts invalidatedId usedIds (stmt : rest) = do
+        let def = concreteStmtDef defUseObj stmt
+        let invalidatingDef = concreteStmtInvalidatingDef defUseObj stmt
+        let use = concreteStmtUse defUseObj stmt
         if isJust use
+          && isJust invalidatedId
           && fromJust use `elem` usedIds
-          && use /= Just (head usedIds)
+          && fromJust use < fromJust invalidatedId
           then
             mrgThrowError $
               "Must use the newest definition of "
                 <> linearDefUseName defUseObj
           else mrgReturn ()
         case def of
-          Nothing -> goStmts usedIds rest
-          Just defId -> goStmts (defId : usedIds) rest
+          Nothing -> goStmts (invalidatingDef <|> invalidatedId) usedIds rest
+          Just defId ->
+            goStmts
+              (invalidatingDef <|> invalidatedId)
+              (defId : usedIds)
+              rest
 
 instance
   ( MonadContext ctx,
@@ -204,38 +215,6 @@ instance
   constrainProg (LinearDefUse defUseObj) =
     concreteProgOnlyUseNewestDef defUseObj
 
-progAtMostOneInputAndOutput ::
-  forall defUseObj prog ctx proxy ty.
-  ( MonadContext ctx,
-    LinearDefUseTypePredicate defUseObj ty,
-    ProgTyping prog ty
-  ) =>
-  proxy ty ->
-  defUseObj ->
-  prog ->
-  ctx ()
-progAtMostOneInputAndOutput _ defUseObj prog = do
-  progType <- typeProg prog
-  let argCount =
-        length $
-          filter
-            (linearDefUseTypePredicate defUseObj)
-            (argTypes progType :: [ty])
-  let resCount =
-        length $
-          filter (linearDefUseTypePredicate defUseObj) $
-            resTypes progType
-  when (argCount > 1) $
-    mrgThrowError $
-      "At most one argument with the type "
-        <> linearDefUseName defUseObj
-        <> " to a program"
-  when (resCount > 1) $
-    mrgThrowError $
-      "At most one result with the type "
-        <> linearDefUseName defUseObj
-        <> " to a program"
-
 componentStmtDefs ::
   ( SymbolicVarId symVarId,
     MonadUnion ctx,
@@ -248,6 +227,24 @@ componentStmtDefs ::
 componentStmtDefs defUseObj (Component.Stmt opUnion _ _ resIds _ disabled) = do
   op <- liftUnionM opUnion
   mrgReturn [mrgReturn $ linearDefUseExtractDefs defUseObj op resIds disabled]
+
+componentStmtInvalidatingDefs ::
+  ( SymbolicVarId symVarId,
+    MonadUnion ctx,
+    Mergeable op,
+    LinearDefUseExtract defUseObj op
+  ) =>
+  defUseObj ->
+  Component.Stmt op symVarId ty ->
+  ctx [DefUnion symVarId]
+componentStmtInvalidatingDefs
+  defUseObj
+  (Component.Stmt opUnion _ _ resIds _ disabled) = do
+    op <- liftUnionM opUnion
+    mrgReturn
+      [ mrgReturn $
+          linearDefUseExtractInvalidatingDefs defUseObj op resIds disabled
+      ]
 
 componentStmtUses ::
   ( SymbolicVarId symVarId,
@@ -286,6 +283,22 @@ componentProgDefs
           $ filter
             (linearDefUseTypePredicate defUseObj . Component.progArgType . snd)
           $ zip [0 ..] argList
+
+componentProgInvalidatingDefs ::
+  ( SymbolicVarId symVarId,
+    MonadContext ctx,
+    MonadUnion ctx,
+    Mergeable op,
+    LinearDefUseConstraint defUseObj op ty
+  ) =>
+  defUseObj ->
+  Component.Prog op symVarId ty ->
+  ctx [DefUnion symVarId]
+componentProgInvalidatingDefs
+  defUseObj
+  (Component.Prog _ _ stmtList _) = do
+    stmtDefs <- mrgTraverse (componentStmtInvalidatingDefs defUseObj) stmtList
+    mrgReturn $ concat stmtDefs
 
 componentProgUses ::
   ( SymbolicVarId symVarId,
@@ -328,7 +341,11 @@ componentProgOnlyUseNewestDef ::
 componentProgOnlyUseNewestDef defUseObj sketch =
   mrgTraverse_
     ( \useUnion -> extractUnionMaybe useUnion $
-        \use -> mrgTraverse_ (defUseConstraint use) =<< singleDefs
+        \use -> do
+          invalidatingDefIds <- invalidatingDefs
+          mrgTraverse_
+            (\d -> defUseConstraint use d invalidatingDefIds)
+            =<< defs
     )
     =<< uses
   where
@@ -339,29 +356,28 @@ componentProgOnlyUseNewestDef defUseObj sketch =
       case maybeValue of
         Nothing -> mrgReturn ()
         Just a -> f a
+    invalidatingDefs = componentProgInvalidatingDefs defUseObj sketch
     uses = componentProgUses defUseObj sketch
     defs = componentProgDefs defUseObj sketch
-    getSingleDefs _ [] = []
-    getSingleDefs acc (x : xs) = (x, acc ++ xs) : getSingleDefs (x : acc) xs
-    singleDefs ::
-      ctx [(DefUnion symVarId, [DefUnion symVarId])]
-    singleDefs = mrgFmap (getSingleDefs []) defs
     defUseConstraint ::
-      Use symVarId SymBool -> (DefUnion symVarId, [DefUnion symVarId]) -> ctx ()
+      Use symVarId SymBool -> DefUnion symVarId -> [DefUnion symVarId] -> ctx ()
     defUseConstraint
       (Use eDefId useId disabled)
-      (defUnion, otherDefIds) = extractUnionMaybe defUnion $
+      defUnion
+      invalidatingDefIds = extractUnionMaybe defUnion $
         \(Def defId _disabled) ->
           mrgTraverse_
-            ( \otherDefUnion -> extractUnionMaybe otherDefUnion $
-                \(Def otherDefId otherDisabled) ->
+            ( \invalidatingDefUnion -> extractUnionMaybe invalidatingDefUnion $
+                \(Def invalidateDefId invalidateDisabled) ->
                   mrgIf
                     ( symImplies
                         ( symNot disabled
                             .&& (useId .== defId)
-                            .&& symNot otherDisabled
+                            .&& symNot invalidateDisabled
                         )
-                        ((otherDefId .< defId) .|| (otherDefId .>= eDefId))
+                        ( (invalidateDefId .<= useId)
+                            .|| (invalidateDefId .>= eDefId)
+                        )
                     )
                     (return ())
                     ( throwError $
@@ -369,7 +385,7 @@ componentProgOnlyUseNewestDef defUseObj sketch =
                           <> linearDefUseName defUseObj
                     )
             )
-            otherDefIds
+            invalidatingDefIds
 
 instance
   ( MonadContext ctx,
@@ -384,6 +400,5 @@ instance
     (Component.Prog op symVarId ty)
     ctx
   where
-  constrainProg (LinearDefUse defUseObj) prog = do
-    progAtMostOneInputAndOutput (Proxy :: Proxy ty) defUseObj prog
-    componentProgOnlyUseNewestDef defUseObj prog
+  constrainProg (LinearDefUse defUseObj) =
+    componentProgOnlyUseNewestDef defUseObj

@@ -39,7 +39,7 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.LinearDefUse
   ( Def (Def),
     DefUnion,
     LinearDefUse (LinearDefUse),
-    LinearDefUseExtract (linearDefUseExtractDefs, linearDefUseExtractUses),
+    LinearDefUseExtract (linearDefUseExtractDefs, linearDefUseExtractInvalidatingDefs, linearDefUseExtractUses),
     LinearDefUseName (linearDefUseName),
     LinearDefUseTypePredicate (linearDefUseTypePredicate),
     Use (Use),
@@ -61,7 +61,13 @@ import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
 import Test.SymbolicAssertion ((.@?=))
 
-data Op = OpUse | OpDef | OpNone | OpUseDef | OpDefNoInvalidate
+data Op
+  = OpUse
+  | OpDef
+  | OpNone
+  | OpUseDef
+  | OpDefNoInvalidate
+  | OpDefShareScope
   deriving (Generic)
   deriving (Mergeable, ToCon Op) via (Default Op)
 
@@ -75,13 +81,19 @@ instance LinearDefUseName LinearDefUseOp where
   linearDefUseName LinearDefUseOp = "ConstrainedType"
 
 instance LinearDefUseExtract LinearDefUseOp Op where
-  linearDefUseExtractDefs LinearDefUseOp OpUse _ _ = Nothing
-  linearDefUseExtractDefs LinearDefUseOp OpDef ids disabled =
-    Just $ Def (ids !! 1) disabled
-  linearDefUseExtractDefs LinearDefUseOp OpNone _ _ = Nothing
-  linearDefUseExtractDefs LinearDefUseOp OpUseDef ids disabled =
+  linearDefUseExtractDefs LinearDefUseOp OpDefShareScope ids disabled =
     Just $ Def (head ids) disabled
-  linearDefUseExtractDefs LinearDefUseOp OpDefNoInvalidate _ _ =
+  linearDefUseExtractDefs LinearDefUseOp op ids disabled =
+    linearDefUseExtractInvalidatingDefs LinearDefUseOp op ids disabled
+  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpUse _ _ = Nothing
+  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpDef ids disabled =
+    Just $ Def (ids !! 1) disabled
+  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpNone _ _ = Nothing
+  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpUseDef ids disabled =
+    Just $ Def (head ids) disabled
+  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpDefNoInvalidate _ _ =
+    Nothing
+  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpDefShareScope _ _ =
     Nothing
   linearDefUseExtractUses LinearDefUseOp OpUse argIds resIds disabled =
     Just $ Use (head resIds) (argIds !! 1) disabled
@@ -91,6 +103,13 @@ instance LinearDefUseExtract LinearDefUseOp Op where
     Just $ Use (head resIds) (head argIds) disabled
   linearDefUseExtractUses LinearDefUseOp OpDefNoInvalidate _ _ _ =
     Nothing
+  linearDefUseExtractUses
+    LinearDefUseOp
+    OpDefShareScope
+    argIds
+    resIds
+    disabled =
+      Just $ Use (head resIds) (head argIds) disabled
 
 instance LinearDefUseTypePredicate LinearDefUseOp Type where
   linearDefUseTypePredicate LinearDefUseOp ConstrainedType = True
@@ -123,6 +142,9 @@ opUseDef = mrgReturn OpUseDef
 
 opDefNoInvalidate :: UnionM Op
 opDefNoInvalidate = mrgReturn OpDefNoInvalidate
+
+opDefShareScope :: UnionM Op
+opDefShareScope = mrgReturn OpDefShareScope
 
 concreteDefStmt :: Concrete.Stmt Op (WordN 8)
 concreteDefStmt = Concrete.Stmt OpDef [0] [2, 3]
@@ -436,17 +458,14 @@ linearDefUseTest =
                         Component.ProgArg "arg2" ConstrainedType
                       ]
                       []
-                      [Component.ProgRes (2 :: SymWordN 8) ConstrainedType]
-                  err :: (MonadContext m) => m ()
-                  err =
-                    mrgThrowError $
-                      "At most one argument with the type ConstrainedType to a "
-                        <> "program"
+                      [ Component.ProgRes (2 :: SymWordN 8) ConstrainedType,
+                        Component.ProgRes (1 :: SymWordN 8) ConstrainedType
+                      ]
                in [ LinearDefUseTest
                       { linearDefUseTestName = "Component/multiple arguments",
                         linearDefUseTestProg = prog,
                         linearDefUseTestExpectedAssertion =
-                          err :: SymbolicContext ()
+                          mrgReturn () :: SymbolicContext ()
                       },
                     LinearDefUseTest
                       { linearDefUseTestName = "Concrete/multiple arguments",
@@ -454,37 +473,7 @@ linearDefUseTest =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
                         linearDefUseTestExpectedAssertion =
-                          err :: ConcreteContext ()
-                      }
-                  ],
-              let prog =
-                    Component.Prog @Op
-                      "test"
-                      [ Component.ProgArg "arg0" OtherType,
-                        Component.ProgArg "arg1" ConstrainedType
-                      ]
-                      []
-                      [ Component.ProgRes (1 :: SymWordN 8) ConstrainedType,
-                        Component.ProgRes (1 :: SymWordN 8) ConstrainedType
-                      ]
-                  err :: (MonadContext m) => m ()
-                  err =
-                    mrgThrowError $
-                      "At most one result with the type ConstrainedType to a "
-                        <> "program"
-               in [ LinearDefUseTest
-                      { linearDefUseTestName = "Component/multiple results",
-                        linearDefUseTestProg = prog,
-                        linearDefUseTestExpectedAssertion =
-                          err :: SymbolicContext ()
-                      },
-                    LinearDefUseTest
-                      { linearDefUseTestName = "Concrete/multiple results",
-                        linearDefUseTestProg =
-                          fromJust $ toCon prog ::
-                            Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          err :: ConcreteContext ()
+                          return () :: ConcreteContext ()
                       }
                   ],
               let prog =
@@ -580,6 +569,43 @@ linearDefUseTest =
                     LinearDefUseTest
                       { linearDefUseTestName =
                           "Concrete/use old no invalidate ok",
+                        linearDefUseTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        linearDefUseTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      }
+                  ],
+              let prog =
+                    Component.Prog
+                      "test"
+                      [ Component.ProgArg "arg0" OtherType,
+                        Component.ProgArg "arg1" ConstrainedType
+                      ]
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
+                        Component.Stmt
+                          opDefShareScope
+                          [3]
+                          1
+                          [4]
+                          1
+                          (con False),
+                        Component.Stmt opUse [2, 3] 2 [5] 1 (con False),
+                        Component.Stmt opUse [2, 4] 2 [6] 1 (con False)
+                      ]
+                      [ Component.ProgRes (3 :: SymWordN 8) ConstrainedType,
+                        Component.ProgRes (4 :: SymWordN 8) ConstrainedType
+                      ]
+               in [ LinearDefUseTest
+                      { linearDefUseTestName =
+                          "Component/no invalidate should not invalidate",
+                        linearDefUseTestProg = prog,
+                        linearDefUseTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LinearDefUseTest
+                      { linearDefUseTestName =
+                          "Concrete/no invalidate should not invalidate",
                         linearDefUseTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
