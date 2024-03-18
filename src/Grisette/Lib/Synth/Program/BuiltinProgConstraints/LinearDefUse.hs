@@ -31,11 +31,10 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.LinearDefUse
   )
 where
 
-import Control.Applicative (Alternative ((<|>)))
 import Control.Monad (when)
 import Control.Monad.Except (MonadError (throwError))
 import Data.Data (Proxy (Proxy))
-import Data.Maybe (isJust, listToMaybe)
+import Data.Maybe (fromJust, isJust)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
@@ -163,27 +162,32 @@ concreteProgOnlyUseNewestDef
             <> linearDefUseName defUseObj
             <> " to a program"
       else mrgReturn ()
-    finalId <- goStmts (listToMaybe argIds) stmtList
-    if not (null resIds) && finalId /= listToMaybe resIds
+    finalIds <- goStmts argIds stmtList
+    if not (null resIds)
+      && head resIds `elem` finalIds
+      && head resIds /= head finalIds
       then
         mrgThrowError $
           "Must use the newest definition of "
             <> linearDefUseName defUseObj
       else mrgReturn ()
     where
-      goStmts ::
-        Maybe conVarId -> [Concrete.Stmt op conVarId] -> ctx (Maybe conVarId)
-      goStmts lastId [] = mrgReturn lastId
-      goStmts lastId (Concrete.Stmt op argIds resIds : rest) = do
+      goStmts :: [conVarId] -> [Concrete.Stmt op conVarId] -> ctx [conVarId]
+      goStmts usedIds [] = mrgReturn usedIds
+      goStmts usedIds (Concrete.Stmt op argIds resIds : rest) = do
         let def = concreteStmtDef defUseObj (Concrete.Stmt op argIds resIds)
         let use = concreteStmtUse defUseObj (Concrete.Stmt op argIds resIds)
-        if isJust use && use /= lastId
+        if isJust use
+          && fromJust use `elem` usedIds
+          && use /= Just (head usedIds)
           then
             mrgThrowError $
               "Must use the newest definition of "
                 <> linearDefUseName defUseObj
           else mrgReturn ()
-        goStmts (def <|> lastId) rest
+        case def of
+          Nothing -> goStmts usedIds rest
+          Just defId -> goStmts (defId : usedIds) rest
 
 instance
   ( MonadContext ctx,

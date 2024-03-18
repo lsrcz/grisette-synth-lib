@@ -30,7 +30,11 @@ import Grisette
     mrgReturn,
   )
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
-import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext, SymbolicContext)
+import Grisette.Lib.Synth.Context
+  ( ConcreteContext,
+    MonadContext,
+    SymbolicContext,
+  )
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.LinearDefUse
   ( Def (Def),
     DefUnion,
@@ -57,7 +61,7 @@ import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
 import Test.SymbolicAssertion ((.@?=))
 
-data Op = OpUse | OpDef | OpNone | OpUseDef
+data Op = OpUse | OpDef | OpNone | OpUseDef | OpDefNoInvalidate
   deriving (Generic)
   deriving (Mergeable, ToCon Op) via (Default Op)
 
@@ -77,12 +81,16 @@ instance LinearDefUseExtract LinearDefUseOp Op where
   linearDefUseExtractDefs LinearDefUseOp OpNone _ _ = Nothing
   linearDefUseExtractDefs LinearDefUseOp OpUseDef ids disabled =
     Just $ Def (head ids) disabled
+  linearDefUseExtractDefs LinearDefUseOp OpDefNoInvalidate _ _ =
+    Nothing
   linearDefUseExtractUses LinearDefUseOp OpUse argIds resIds disabled =
     Just $ Use (head resIds) (argIds !! 1) disabled
   linearDefUseExtractUses LinearDefUseOp OpDef _ _ _ = Nothing
   linearDefUseExtractUses LinearDefUseOp OpNone _ _ _ = Nothing
   linearDefUseExtractUses LinearDefUseOp OpUseDef argIds resIds disabled =
     Just $ Use (head resIds) (head argIds) disabled
+  linearDefUseExtractUses LinearDefUseOp OpDefNoInvalidate _ _ _ =
+    Nothing
 
 instance LinearDefUseTypePredicate LinearDefUseOp Type where
   linearDefUseTypePredicate LinearDefUseOp ConstrainedType = True
@@ -112,6 +120,9 @@ opNone = mrgReturn OpNone
 
 opUseDef :: UnionM Op
 opUseDef = mrgReturn OpUseDef
+
+opDefNoInvalidate :: UnionM Op
+opDefNoInvalidate = mrgReturn OpDefNoInvalidate
 
 concreteDefStmt :: Concrete.Stmt Op (WordN 8)
 concreteDefStmt = Concrete.Stmt OpDef [0] [2, 3]
@@ -474,6 +485,106 @@ linearDefUseTest =
                             Concrete.Prog Op (WordN 8) Type,
                         linearDefUseTestExpectedAssertion =
                           err :: ConcreteContext ()
+                      }
+                  ],
+              let prog =
+                    Component.Prog
+                      "test"
+                      [ Component.ProgArg "arg0" OtherType,
+                        Component.ProgArg "arg1" ConstrainedType
+                      ]
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
+                        Component.Stmt
+                          opDefNoInvalidate
+                          [1]
+                          1
+                          [4]
+                          1
+                          (con False),
+                        Component.Stmt opUse [2, 3] 2 [5] 1 (con False)
+                      ]
+                      [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
+               in [ LinearDefUseTest
+                      { linearDefUseTestName =
+                          "Component/no invalidate should not invalidate",
+                        linearDefUseTestProg = prog,
+                        linearDefUseTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LinearDefUseTest
+                      { linearDefUseTestName =
+                          "Concrete/no invalidate should not invalidate",
+                        linearDefUseTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        linearDefUseTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      }
+                  ],
+              let prog =
+                    Component.Prog
+                      "test"
+                      [ Component.ProgArg "arg0" OtherType,
+                        Component.ProgArg "arg1" ConstrainedType
+                      ]
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
+                        Component.Stmt
+                          opDefNoInvalidate
+                          [1]
+                          1
+                          [4]
+                          1
+                          (con False)
+                      ]
+                      [Component.ProgRes (4 :: SymWordN 8) ConstrainedType]
+               in [ LinearDefUseTest
+                      { linearDefUseTestName =
+                          "Component/use no invalidate ok",
+                        linearDefUseTestProg = prog,
+                        linearDefUseTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LinearDefUseTest
+                      { linearDefUseTestName =
+                          "Concrete/use no invalidate ok",
+                        linearDefUseTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        linearDefUseTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      }
+                  ],
+              let prog =
+                    Component.Prog
+                      "test"
+                      [ Component.ProgArg "arg0" OtherType,
+                        Component.ProgArg "arg1" ConstrainedType
+                      ]
+                      [ Component.Stmt
+                          opDefNoInvalidate
+                          [1]
+                          1
+                          [2]
+                          1
+                          (con False),
+                        Component.Stmt opDef [0] 1 [3, 4] 2 (con False)
+                      ]
+                      [Component.ProgRes (2 :: SymWordN 8) ConstrainedType]
+               in [ LinearDefUseTest
+                      { linearDefUseTestName =
+                          "Component/use old no invalidate ok",
+                        linearDefUseTestProg = prog,
+                        linearDefUseTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LinearDefUseTest
+                      { linearDefUseTestName =
+                          "Concrete/use old no invalidate ok",
+                        linearDefUseTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        linearDefUseTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
                       }
                   ]
             ]
