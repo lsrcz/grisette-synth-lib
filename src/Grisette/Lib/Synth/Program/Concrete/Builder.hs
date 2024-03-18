@@ -6,6 +6,7 @@
 module Grisette.Lib.Synth.Program.Concrete.Builder
   ( buildProg,
     node,
+    node',
   )
 where
 
@@ -35,7 +36,12 @@ data ProgArg ty = ProgArg
 
 data Node op ty
   = ArgNode (ProgArg ty)
-  | InteriorNode op Int [NodeRef op ty]
+  | InteriorNode
+      { _op :: op,
+        _num :: Int,
+        _args :: [NodeRef op ty],
+        _pseudoDeps :: [NodeRef op ty]
+      }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable)
 
@@ -86,7 +92,7 @@ toConcreteProg (Prog name argList resList) =
         ( \(node, varIds) ->
             case node of
               ArgNode {} -> error "Impossible"
-              InteriorNode nodeOp _ refs ->
+              InteriorNode nodeOp _ refs _ ->
                 Concrete.Stmt
                   { Concrete.stmtOp = nodeOp,
                     Concrete.stmtArgIds = nodeRefToVarId <$> refs,
@@ -117,19 +123,21 @@ toConcreteProg (Prog name argList resList) =
             ArgNode {} -> do
               put $ M.insert node [fromIntegral $ M.size map] map
               return [fromIntegral $ M.size map]
-            InteriorNode _ num _ -> do
+            InteriorNode _ num _ _ -> do
               let varIds =
-                    fromIntegral . (M.size map +) <$> [0 .. num - 1]
+                    fromIntegral . (sum (length <$> M.elems map) +)
+                      <$> [0 .. num - 1]
               put $ M.insert node varIds map
               return varIds
     walkNodes :: Node op ty -> State (M.HashMap (Node op ty) [varId]) [varId]
     walkNodes a@ArgNode {} = accessNode a
-    walkNodes i@(InteriorNode _ _ nodeRefs) = do
+    walkNodes i@(InteriorNode _ _ nodeRefs pseudoDeps) = do
       currVarIds <- gets (M.lookup i)
       case currVarIds of
         Just varIds -> return varIds
         Nothing -> do
           mapM_ (walkNodes . nodeRef) nodeRefs
+          mapM_ (walkNodes . nodeRef) pseudoDeps
           accessNode i
     allNodes :: M.HashMap (Node op ty) [varId]
     allNodes = flip execState M.empty $ do
@@ -161,4 +169,8 @@ buildProg name argPairs f =
     argRefs = fmap (flip NodeRef 0 . ArgNode) args
 
 node :: op -> Int -> [NodeRef op ty] -> [NodeRef op ty]
-node op num refs = [NodeRef (InteriorNode op num refs) i | i <- [0 .. num - 1]]
+node op num refs = node' op num refs []
+
+node' :: op -> Int -> [NodeRef op ty] -> [NodeRef op ty] -> [NodeRef op ty]
+node' op num refs pseudoDeps =
+  [NodeRef (InteriorNode op num refs pseudoDeps) i | i <- [0 .. num - 1]]

@@ -9,6 +9,7 @@ import Grisette.Lib.Synth.Program.Concrete
     Stmt (Stmt),
     buildProg,
     node,
+    node',
   )
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (Add, DivMod),
@@ -35,15 +36,53 @@ builderTest :: Test
 builderTest =
   testGroup
     "Builder"
-    [ testCase "buildProg" $ do
-        let actual =
-              buildProg "test" [("x", IntType), ("y", IntType)] $
-                \[argxRef, argyRef] ->
-                  let [addRef] = node Add 1 [argxRef, argyRef]
-                      [divRef, modRef] = node DivMod 2 [addRef, argxRef]
-                   in [ (divRef, IntType),
-                        (modRef, IntType),
-                        (addRef, IntType)
-                      ]
-        actual @?= concreteProg
+    [ testGroup
+        "buildProg"
+        [ testCase "simple" $ do
+            let actual =
+                  buildProg "test" [("x", IntType), ("y", IntType)] $
+                    \[argxRef, argyRef] ->
+                      let [addRef] = node Add 1 [argxRef, argyRef]
+                          [divRef, modRef] = node DivMod 2 [addRef, argxRef]
+                       in [ (divRef, IntType),
+                            (modRef, IntType),
+                            (addRef, IntType)
+                          ]
+            actual @?= concreteProg,
+          testCase "pseudo dep 1" $ do
+            let actual = buildProg "test" [("x", IntType), ("y", IntType)] $
+                  \[argxRef, argyRef] ->
+                    let [addRef] = node Add 1 [argxRef, argyRef]
+                        [divRef, modRef] =
+                          node' DivMod 2 [argxRef, argyRef] [addRef]
+                     in [ (divRef, IntType),
+                          (modRef, IntType),
+                          (addRef, IntType)
+                        ]
+            let expected =
+                  Prog
+                    "test"
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
+                    [Stmt Add [0, 1] [2], Stmt DivMod [0, 1] [3, 4]]
+                    [ProgRes 3 IntType, ProgRes 4 IntType, ProgRes 2 IntType] ::
+                    Prog TestSemanticsOp Integer TestSemanticsType
+            actual @?= expected,
+          testCase "pseudo dep 2" $ do
+            let actual = buildProg "test" [("x", IntType), ("y", IntType)] $
+                  \[argxRef, argyRef] ->
+                    let [divRef, modRef] = node DivMod 2 [argxRef, argyRef]
+                        [addRef] = node' Add 1 [argxRef, argyRef] [divRef]
+                     in [ (divRef, IntType),
+                          (modRef, IntType),
+                          (addRef, IntType)
+                        ]
+            let expected =
+                  Prog
+                    "test"
+                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
+                    [Stmt DivMod [0, 1] [2, 3], Stmt Add [0, 1] [4]]
+                    [ProgRes 2 IntType, ProgRes 3 IntType, ProgRes 4 IntType] ::
+                    Prog TestSemanticsOp Integer TestSemanticsType
+            actual @?= expected
+        ]
     ]
