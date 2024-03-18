@@ -86,8 +86,11 @@ data ProgArg conVarId ty = ProgArg
   deriving (Show, Eq, Generic)
   deriving (EvaluateSym) via (Default (ProgArg conVarId ty))
 
-instance ToCon (ProgArg conVarId ty) (Concrete.ProgArg conVarId ty) where
-  toCon (ProgArg name varId ty) = Just $ Concrete.ProgArg name varId ty
+instance
+  (ToCon symTy conTy) =>
+  ToCon (ProgArg conVarId symTy) (Concrete.ProgArg conVarId conTy)
+  where
+  toCon (ProgArg name varId ty) = Concrete.ProgArg name varId <$> toCon ty
 
 instance Mergeable (ProgArg conVarId ty) where
   rootStrategy = NoStrategy
@@ -100,15 +103,16 @@ data ProgRes symVarId ty = ProgRes
   deriving (EvaluateSym) via (Default (ProgRes symVarId ty))
 
 instance
-  (RelatedVarId conVarId symVarId) =>
-  ToCon (ProgRes symVarId ty) (Concrete.ProgRes conVarId ty)
+  (RelatedVarId conVarId symVarId, ToCon symTy conTy) =>
+  ToCon (ProgRes symVarId symTy) (Concrete.ProgRes conVarId conTy)
   where
   toCon (ProgRes varId ty) = do
     conProgResId <- toCon varId
+    conTy <- toCon ty
     return $
       Concrete.ProgRes
         { Concrete.progResId = conProgResId,
-          Concrete.progResType = ty
+          Concrete.progResType = conTy
         }
 
 instance Mergeable (ProgRes symVarId ty) where
@@ -124,12 +128,16 @@ data Prog op conVarId symVarId ty = Prog
   deriving (EvaluateSym) via (Default (Prog op conVarId symVarId ty))
 
 deriving via
-  (Default (Concrete.Prog conOp conVarId ty))
+  (Default (Concrete.Prog conOp conVarId conTy))
   instance
-    (ToCon symOp conOp, RelatedVarId conVarId symVarId, Mergeable symOp) =>
+    ( ToCon symOp conOp,
+      RelatedVarId conVarId symVarId,
+      Mergeable symOp,
+      ToCon symTy conTy
+    ) =>
     ToCon
-      (Prog symOp conVarId symVarId ty)
-      (Concrete.Prog conOp conVarId ty)
+      (Prog symOp conVarId symVarId symTy)
+      (Concrete.Prog conOp conVarId conTy)
 
 newtype Env conVarId val = Env (HM.HashMap conVarId val)
 

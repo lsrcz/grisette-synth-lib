@@ -60,7 +60,9 @@ data TestSemanticsObj = TestSemanticsObj
 data TestSemanticsType = IntType
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable)
-  deriving (Mergeable, EvaluateSym) via (Default TestSemanticsType)
+  deriving
+    (Mergeable, EvaluateSym, ToCon TestSemanticsType)
+    via (Default TestSemanticsType)
 
 instance
   (MonadContext ctx) =>

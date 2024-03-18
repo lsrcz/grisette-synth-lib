@@ -94,7 +94,7 @@ instance
 -- type info for that generation.
 data OpType = IntegerType
   deriving (Show, Eq, Generic)
-  deriving (Mergeable, EvaluateSym) via (Default OpType)
+  deriving (Mergeable, EvaluateSym, ToCon OpType) via (Default OpType)
 
 -- instance OpTypingSimple OpCode OpType where
 instance OpTypingSimple OpCode OpType where

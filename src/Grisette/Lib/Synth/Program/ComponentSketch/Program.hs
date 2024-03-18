@@ -120,15 +120,20 @@ instance Mergeable (Prog op symVarId ty) where
   rootStrategy = NoStrategy
 
 instance
-  (Mergeable symOp, ToCon symOp conOp, RelatedVarId conVarId symVarId) =>
-  ToCon (Prog symOp symVarId ty) (Concrete.Prog conOp conVarId ty)
+  ( Mergeable symOp,
+    ToCon symOp conOp,
+    RelatedVarId conVarId symVarId,
+    ToCon symTy conTy
+  ) =>
+  ToCon (Prog symOp symVarId symTy) (Concrete.Prog conOp conVarId conTy)
   where
   toCon (Prog name argList stmtList resList) = do
-    let conArgList =
-          zipWith
-            (\(ProgArg name ty) varId -> Concrete.ProgArg name varId ty)
-            argList
-            [0 ..]
+    conArgList <-
+      traverse
+        ( \(ProgArg name ty, varId) ->
+            Concrete.ProgArg name varId <$> toCon ty
+        )
+        $ zip argList [0 ..]
     let toConStmt (Stmt op argIds argNum resIds resNum disabled) = do
           disabled <- toCon disabled
           if disabled
@@ -150,10 +155,11 @@ instance
       traverse
         ( \(ProgRes resId ty) -> do
             conResId <- toCon resId
+            conTy <- toCon ty
             return $
               Concrete.ProgRes
                 { Concrete.progResId = conResId,
-                  Concrete.progResType = ty
+                  Concrete.progResType = conTy
                 }
         )
         resList

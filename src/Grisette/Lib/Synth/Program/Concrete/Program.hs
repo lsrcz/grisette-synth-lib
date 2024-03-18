@@ -121,6 +121,12 @@ data ProgArg varId ty = ProgArg
   deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (ProgArg varId ty))
 
+instance
+  (ToCon symTy conTy) =>
+  ToCon (ProgArg varId symTy) (ProgArg varId conTy)
+  where
+  toCon (ProgArg name varId ty) = ProgArg name varId <$> toCon ty
+
 data ProgRes varId ty = ProgRes
   { progResId :: varId,
     progResType :: ty
@@ -128,6 +134,12 @@ data ProgRes varId ty = ProgRes
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (ProgRes varId ty))
+
+instance
+  (ToCon symTy conTy) =>
+  ToCon (ProgRes varId symTy) (ProgRes varId conTy)
+  where
+  toCon (ProgRes varId ty) = ProgRes varId <$> toCon ty
 
 data Prog op varId ty = Prog
   { progName :: T.Text,
@@ -140,11 +152,11 @@ data Prog op varId ty = Prog
   deriving (EvaluateSym) via (Default (Prog op varId ty))
 
 instance
-  (ToCon symOp conOp) =>
-  ToCon (Prog symOp varId ty) (Prog conOp varId ty)
+  (ToCon symOp conOp, ToCon symTy conTy) =>
+  ToCon (Prog symOp varId symTy) (Prog conOp varId conTy)
   where
   toCon (Prog name arg stmt res) =
-    Prog name arg <$> traverse toCon stmt <*> return res
+    Prog name <$> toCon arg <*> traverse toCon stmt <*> toCon res
 
 instance Mergeable (Prog op varId ty) where
   rootStrategy = NoStrategy
