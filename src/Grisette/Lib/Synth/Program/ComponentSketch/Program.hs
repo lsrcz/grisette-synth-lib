@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -15,10 +16,12 @@ module Grisette.Lib.Synth.Program.ComponentSketch.Program
   )
 where
 
+import Control.DeepSeq (NFData)
 import Control.Monad (join)
 import Control.Monad.State (MonadState (get), MonadTrans (lift), StateT)
 import Data.Data (Proxy (Proxy))
 import Data.Foldable (Foldable (foldl'))
+import Data.Hashable (Hashable)
 import Data.List (sortOn, tails)
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
@@ -75,6 +78,7 @@ data Stmt op symVarId ty = Stmt
     stmtDisabled :: SymBool
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (Stmt op symVarId ty))
 
 instance Mergeable (Stmt op symVarId ty) where
@@ -85,6 +89,7 @@ data ProgArg ty = ProgArg
     progArgType :: ty
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (ProgArg ty))
 
 instance Mergeable (ProgArg ty) where
@@ -95,6 +100,7 @@ data ProgRes symVarId ty = ProgRes
     progResType :: ty
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (ProgRes symVarId ty))
 
 instance Mergeable (ProgRes symVarId ty) where
@@ -107,6 +113,7 @@ data Prog op symVarId ty = Prog
     progResList :: [ProgRes symVarId ty]
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (Prog op symVarId ty))
 
 instance Mergeable (Prog op symVarId ty) where
