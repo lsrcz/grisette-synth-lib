@@ -19,15 +19,15 @@ packages:
   original:
     hackage: quickcheck-with-counterexamples-1.2
 - completed:
-    commit: 9494142520cf9d8a6ad326e85ce7ec9ad8101d06
+    commit: 0afdddd66a2cafa60509ae75b3916f61de32fb64
     git: https://github.com/lsrcz/grisette.git
     name: grisette
     pantry-tree:
-      sha256: 12bb05976f366a8e4e2267dbd81976411082436306dc45985d746f507999e611
-      size: 14787
+      sha256: d885ec724487e44a5f1a4ece15bf24dda261d871b5a7d2b99af3921271a91ded
+      size: 15710
     version: 0.5.0.0
   original:
-    commit: 9494142520cf9d8a6ad326e85ce7ec9ad8101d06
+    commit: 0afdddd66a2cafa60509ae75b3916f61de32fb64
     git: https://github.com/lsrcz/grisette.git
 - completed:
     commit: 649bcf551ce1fe8cd7958ed1a1e93a28b4ac3e93

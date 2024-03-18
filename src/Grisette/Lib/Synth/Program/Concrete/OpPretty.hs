@@ -8,7 +8,8 @@
 module Grisette.Lib.Synth.Program.Concrete.OpPretty
   ( VarIdMap,
     OpPrettyError (..),
-    OpPretty (..),
+    DescribeArguments (..),
+    PrefixByType (..),
     prettyArguments,
     prettyResults,
   )
@@ -21,6 +22,9 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (Default (Default), GPretty (gpretty), Mergeable)
+import Grisette.Lib.Synth.Context (ConcreteContext)
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Util.Pretty
   ( Doc,
     parenCommaList,
@@ -30,10 +34,11 @@ import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 data OpPrettyError varId op
-  = IncorrectNumberOfArguments op Int
+  = IncorrectNumberOfArguments op Int Int
   | UndefinedArgument Int varId
   | IncorrectNumberOfResults op Int Int
   | RedefinedResult Int varId
+  | PrettyTypingError op T.Text
   deriving (Show, Eq, Generic, Functor)
   deriving (Mergeable) via (Default (OpPrettyError varId op))
 
@@ -41,43 +46,62 @@ instance
   (GPretty op, ConcreteVarId varId) =>
   GPretty (OpPrettyError varId op)
   where
-  gpretty (IncorrectNumberOfArguments op numOfArguments) =
+  gpretty (IncorrectNumberOfArguments op expectedNumArguments numArguments) =
     "Incorrect number of arguments for "
       <> gpretty op
-      <> ": it cannot accept "
-      <> gpretty numOfArguments
-      <> " arguments."
+      <> ": expected "
+      <> gpretty expectedNumArguments
+      <> " arguments, but got"
+      <> gpretty numArguments
   gpretty (UndefinedArgument idx varId) =
     "The argument "
       <> gpretty (toInteger varId)
       <> " at index "
       <> gpretty idx
       <> " is undefined."
-  gpretty (IncorrectNumberOfResults op numOfArguments numOfResults) =
+  gpretty (IncorrectNumberOfResults op expectedNumResults numResults) =
     "Incorrect number of result for "
       <> gpretty op
-      <> ": it cannot return "
-      <> gpretty numOfResults
-      <> " results when supplied with"
-      <> gpretty numOfArguments
-      <> " arguments."
+      <> ": expected "
+      <> gpretty expectedNumResults
+      <> " results, but got"
+      <> gpretty numResults
+      <> " results."
   gpretty (RedefinedResult idx varId) =
     "The result "
       <> gpretty (toInteger varId)
       <> " at index "
       <> gpretty idx
       <> " is redefined."
+  gpretty (PrettyTypingError op err) =
+    "Error while typing "
+      <> gpretty op
+      <> ": "
+      <> gpretty err
 
-class OpPretty op where
-  describeArguments ::
-    op -> Int -> Either (OpPrettyError varId op) [Maybe T.Text]
-  prefixResults ::
-    op -> Int -> Int -> Either (OpPrettyError varId op) [T.Text]
+class PrefixByType ty where
+  prefixByType :: ty -> T.Text
+
+class DescribeArguments op where
+  describeArguments :: op -> Either (OpPrettyError varId op) [Maybe T.Text]
+
+prefixResults ::
+  (OpTyping op ty ConcreteContext, PrefixByType ty) =>
+  op ->
+  Either (OpPrettyError varId op) [T.Text]
+prefixResults op = case typeOp op of
+  Right (TypeSignature _ resTypes) ->
+    return $ prefixByType <$> resTypes
+  Left err -> throwError $ PrettyTypingError op err
 
 type VarIdMap varId = HM.HashMap varId T.Text
 
 prettyArguments ::
-  (ConcreteVarId varId, OpPretty op) =>
+  ( ConcreteVarId varId,
+    DescribeArguments op,
+    OpTyping op ty ConcreteContext,
+    PrefixByType ty
+  ) =>
   op ->
   [varId] ->
   VarIdMap varId ->
@@ -89,7 +113,10 @@ prettyArguments op varIds map = do
           return
           (HM.lookup varId map)
   argNames <- traverse lookupVarId $ zip [0 ..] varIds
-  argDescriptions <- describeArguments op (length varIds)
+  argDescriptions <- describeArguments op
+  when (length argNames /= length argDescriptions) $
+    throwError $
+      IncorrectNumberOfArguments op (length argDescriptions) (length argNames)
 
   let describe argName Nothing = gpretty argName
       describe argName (Just argDesc) =
@@ -98,17 +125,23 @@ prettyArguments op varIds map = do
   return $ parenCommaList argPretty
 
 prettyResults ::
-  (ConcreteVarId varId, OpPretty op) =>
+  ( ConcreteVarId varId,
+    DescribeArguments op,
+    OpTyping op ty ConcreteContext,
+    PrefixByType ty
+  ) =>
   op ->
-  Int ->
   [varId] ->
   VarIdMap varId ->
   Either (OpPrettyError varId op) (VarIdMap varId, Doc ann)
-prettyResults op numOfArguments varIds map = do
+prettyResults op varIds map = do
   let ensureNotRedefined (idx, varId) =
         when (HM.member varId map) $ throwError $ RedefinedResult idx varId
   traverse_ ensureNotRedefined $ zip [0 ..] varIds
-  prefixes <- prefixResults op numOfArguments (length varIds)
+  prefixes <- prefixResults op
+  when (length varIds /= length prefixes) $
+    throwError $
+      IncorrectNumberOfResults op (length prefixes) (length varIds)
   let names =
         zipWith
           (\prefix varId -> prefix <> showText (toInteger varId))

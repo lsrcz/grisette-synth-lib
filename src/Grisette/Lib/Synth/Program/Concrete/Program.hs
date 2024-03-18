@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- |
 -- Module      :    Grisette.Lib.Synth.Program.Concrete
@@ -63,11 +64,13 @@ import Grisette
     tryMerge,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
-import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
 import Grisette.Lib.Synth.Program.Concrete.OpPretty
-  ( OpPretty,
+  ( DescribeArguments,
     OpPrettyError,
+    PrefixByType,
     VarIdMap,
     prettyArguments,
     prettyResults,
@@ -181,7 +184,12 @@ instance
       <> " is undefined."
 
 prettyStmt ::
-  (ConcreteVarId varId, OpPretty op, GPretty op) =>
+  ( ConcreteVarId varId,
+    DescribeArguments op,
+    GPretty op,
+    OpTyping op ty ConcreteContext,
+    PrefixByType ty
+  ) =>
   Int ->
   Stmt op varId ->
   StateT (VarIdMap varId) (Either (ProgPrettyError varId op)) (Doc ann)
@@ -191,14 +199,20 @@ prettyStmt index stmt@(Stmt op argIds resIds) = do
     Left err -> throwError $ StmtPrettyError stmt index err
     Right argPretty -> pure argPretty
   let opPretty = gpretty op
-  (newMap, resPretty) <- case prettyResults op (length argIds) resIds map of
+  (newMap, resPretty) <- case prettyResults op resIds map of
     Left err -> throwError $ StmtPrettyError stmt index err
     Right resPretty -> pure resPretty
   put newMap
   return $ resPretty <> " = " <> opPretty <> argPretty
 
 prettyProg ::
-  (ConcreteVarId varId, OpPretty op, GPretty op, GPretty ty) =>
+  ( ConcreteVarId varId,
+    DescribeArguments op,
+    GPretty op,
+    GPretty ty,
+    OpTyping op ty ConcreteContext,
+    PrefixByType ty
+  ) =>
   Prog op varId ty ->
   Either (ProgPrettyError varId op) (Doc ann)
 prettyProg (Prog name argList stmtList resList) = do
@@ -232,11 +246,13 @@ prettyProg (Prog name argList stmtList resList) = do
 data SomePrettyProg where
   SomePrettyProg ::
     ( ConcreteVarId varId,
-      OpPretty op,
+      DescribeArguments op,
       Show op,
       GPretty op,
       GPretty ty,
       Show ty,
+      OpTyping op ty ConcreteContext,
+      PrefixByType ty,
       OpDirectSubProgs op SomePrettyProg
     ) =>
     Prog op varId ty ->
@@ -293,11 +309,13 @@ topologicalSortSubProg prog =
 
 instance
   ( ConcreteVarId varId,
-    OpPretty op,
+    DescribeArguments op,
     Show op,
     GPretty op,
     GPretty ty,
     Show ty,
+    OpTyping op ty ConcreteContext,
+    PrefixByType ty,
     OpDirectSubProgs op SomePrettyProg
   ) =>
   GPretty (Prog op varId ty)

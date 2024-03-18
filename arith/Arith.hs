@@ -37,9 +37,9 @@ import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
   )
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpDirectSubProgs (opDirectSubProgs),
-    OpPretty (describeArguments, prefixResults),
-    OpPrettyError (IncorrectNumberOfArguments, IncorrectNumberOfResults),
+  ( DescribeArguments (describeArguments),
+    OpDirectSubProgs (opDirectSubProgs),
+    PrefixByType (prefixByType),
     SomePrettyProg,
   )
 import Grisette.Lib.Synth.TypeSignature
@@ -131,14 +131,11 @@ instance GPretty OpCode where
   gpretty Minus = "minus"
   gpretty UMinus = "uminus"
 
-instance OpPretty OpCode where
-  describeArguments Plus 2 = Right [Just "lhs", Just "rhs"]
-  describeArguments Mul 2 = Right [Just "lhs", Just "rhs"]
-  describeArguments Minus 2 = Right [Just "lhs", Just "rhs"]
-  describeArguments UMinus 1 = Right [Nothing]
-  describeArguments op n = Left $ IncorrectNumberOfArguments op n
-  prefixResults Plus 2 1 = Right ["r"]
-  prefixResults Mul 2 1 = Right ["r"]
-  prefixResults Minus 2 1 = Right ["r"]
-  prefixResults UMinus 1 1 = Right ["r"]
-  prefixResults op n m = Left $ IncorrectNumberOfResults op n m
+instance DescribeArguments OpCode where
+  describeArguments Plus = Right [Just "lhs", Just "rhs"]
+  describeArguments Mul = Right [Just "lhs", Just "rhs"]
+  describeArguments Minus = Right [Just "lhs", Just "rhs"]
+  describeArguments UMinus = Right [Nothing]
+
+instance PrefixByType OpType where
+  prefixByType IntegerType = "r"

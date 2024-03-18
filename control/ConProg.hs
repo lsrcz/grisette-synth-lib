@@ -21,8 +21,8 @@ import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
   )
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpPretty (describeArguments, prefixResults),
-    OpPrettyError (IncorrectNumberOfArguments),
+  ( DescribeArguments (describeArguments),
+    PrefixByType (prefixByType),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
@@ -59,16 +59,16 @@ instance (GPretty intVal) => GPretty (Op varId intVal) where
   gpretty (If true false) =
     "if" <> parenCommaList (gpretty <$> [nameProg true, nameProg false])
 
-instance (GPretty intVal) => OpPretty (Op varId intVal) where
-  describeArguments Plus 2 = return $ replicate 2 Nothing
-  describeArguments Equals 2 = return $ replicate 2 Nothing
-  describeArguments Minus 2 = return $ replicate 2 Nothing
-  describeArguments (IntConst _) 0 = return []
-  describeArguments (If true _) n
-    | n == 1 + length (Concrete.progArgList true) =
-        return $ Just "cond" : (Nothing <$ Concrete.progArgList true)
-  describeArguments op n = Left $ IncorrectNumberOfArguments op n
-  prefixResults _ _ r = return $ replicate r "r"
+instance (GPretty intVal) => DescribeArguments (Op varId intVal) where
+  describeArguments Plus = return $ replicate 2 Nothing
+  describeArguments Equals = return $ replicate 2 Nothing
+  describeArguments Minus = return $ replicate 2 Nothing
+  describeArguments (IntConst _) = return []
+  describeArguments (If true _) =
+    return $ Just "cond" : (Nothing <$ Concrete.progArgList true)
+
+instance PrefixByType Type where
+  prefixByType _ = "r"
 
 instance
   ( ConcreteVarId varId,

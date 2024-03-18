@@ -21,7 +21,7 @@ import Grisette.Lib.Synth.Program.Concrete
   )
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   ( TestPrettyExtOp (TestPrettyExtOp),
-    TestPrettyOp (PrettyInvokeExtOp, PrettyInvokeOp, PrettyOp2),
+    TestPrettyOp (PrettyInvokeExtOp, PrettyInvokeOp, PrettyOp1, PrettyOp2),
     TestPrettyType (PrettyType1, PrettyType2),
   )
 import Grisette.Lib.Synth.Util.Pretty (renderDoc)
@@ -59,43 +59,34 @@ prettyTest =
     [ testGroup "prettyStmt" $ do
         (PrettyStmtTestCase groupName stmt index loose compact newMap) <-
           [ PrettyStmtTestCase
-              { testStmtGroupName = "0 ret, 0 arg",
-                testStmt = Stmt PrettyOp2 [] [],
-                testStmtIndex = 3,
-                testStmtLooseExpectedResult = Right "() = op2()",
-                testStmtCompactExpectedResult = Right "() = op2()",
-                testStmtNewMap = env
-              },
-            PrettyStmtTestCase
               { testStmtGroupName = "1 ret, 1 arg",
-                testStmt = Stmt PrettyOp2 [0] [2],
+                testStmt = Stmt PrettyOp1 [0] [2],
                 testStmtIndex = 3,
-                testStmtLooseExpectedResult = Right "op2'1'res2 = op2(x)",
+                testStmtLooseExpectedResult = Right "t1_2 = op1(op1=x)",
                 testStmtCompactExpectedResult =
-                  Right "op2'1'res2 = op2(\n  x\n)",
-                testStmtNewMap = HM.union env $ HM.fromList [(2, "op2'1'res2")]
+                  Right "t1_2 = op1(\n  op1=x\n)",
+                testStmtNewMap = HM.union env $ HM.fromList [(2, "t1_2")]
               },
             PrettyStmtTestCase
               { testStmtGroupName = "2 ret, 2 arg",
                 testStmt = Stmt PrettyOp2 [0, 1] [2, 3],
                 testStmtIndex = 3,
                 testStmtLooseExpectedResult =
-                  Right "(op2'2'0'res2, op2'2'1'res3) = op2(op2'2'0'arg=x, y)",
+                  Right "(t2_2, t1_3) = op2(op2'2'0'arg=x, y)",
                 testStmtCompactExpectedResult =
                   Right $
                     T.intercalate
                       "\n"
                       [ "(",
-                        "  op2'2'0'res2,",
-                        "  op2'2'1'res3",
+                        "  t2_2,",
+                        "  t1_3",
                         ") = op2(",
                         "  op2'2'0'arg=x,",
                         "  y",
                         ")"
                       ],
                 testStmtNewMap =
-                  HM.union env $
-                    HM.fromList [(2, "op2'2'0'res2"), (3, "op2'2'1'res3")]
+                  HM.union env $ HM.fromList [(2, "t2_2"), (3, "t1_3")]
               },
             PrettyStmtTestCase
               { testStmtGroupName = "arg error",
@@ -111,13 +102,13 @@ prettyTest =
               },
             PrettyStmtTestCase
               { testStmtGroupName = "res error",
-                testStmt = Stmt PrettyOp2 [0] [1],
+                testStmt = Stmt PrettyOp2 [0, 1] [1, 2],
                 testStmtIndex = 3,
                 testStmtLooseExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [0] [1]) 3 $
+                  Left . StmtPrettyError (Stmt PrettyOp2 [0, 1] [1, 2]) 3 $
                     RedefinedResult 0 1,
                 testStmtCompactExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [0] [1]) 3 $
+                  Left . StmtPrettyError (Stmt PrettyOp2 [0, 1] [1, 2]) 3 $
                     RedefinedResult 0 1,
                 testStmtNewMap = env
               }
@@ -144,15 +135,15 @@ prettyTest =
                   Prog
                     "prog2"
                     [ProgArg "x" 0 PrettyType1]
-                    [Stmt PrettyOp2 [0] [1]]
+                    [Stmt PrettyOp1 [0] [1]]
                     [ProgRes 1 PrettyType2],
                 testProgLooseExpectedResult =
                   Right $
                     T.intercalate
                       "\n"
                       [ "def prog2(x: PrettyType1):",
-                        "  op2'1'res1 = op2(x)",
-                        "  return op2'1'res1"
+                        "  t1_1 = op1(op1=x)",
+                        "  return t1_1"
                       ],
                 testProgCompactExpectedResult =
                   Right $
@@ -161,10 +152,10 @@ prettyTest =
                       [ "def prog2(",
                         "  x: PrettyType1",
                         "):",
-                        "  op2'1'res1 = op2(",
-                        "    x",
+                        "  t1_1 = op1(",
+                        "    op1=x",
                         "  )",
-                        "  return op2'1'res1"
+                        "  return t1_1"
                       ]
               },
             PrettyProgTestCase
@@ -174,18 +165,17 @@ prettyTest =
                     "prog3"
                     [ProgArg "x" 0 PrettyType1, ProgArg "y" 1 PrettyType2]
                     [ Stmt PrettyOp2 [0, 1] [2, 3],
-                      Stmt PrettyOp2 [2] [4]
+                      Stmt PrettyOp1 [3] [4]
                     ]
-                    [ProgRes 4 PrettyType1, ProgRes 3 PrettyType2],
+                    [ProgRes 4 PrettyType1, ProgRes 2 PrettyType2],
                 testProgLooseExpectedResult =
                   Right $
                     T.intercalate
                       "\n"
                       [ "def prog3(x: PrettyType1, y: PrettyType2):",
-                        "  (op2'2'0'res2, op2'2'1'res3) = "
-                          <> "op2(op2'2'0'arg=x, y)",
-                        "  op2'1'res4 = op2(op2'2'0'res2)",
-                        "  return (op2'1'res4, op2'2'1'res3)"
+                        "  (t2_2, t1_3) = op2(op2'2'0'arg=x, y)",
+                        "  t1_4 = op1(op1=t1_3)",
+                        "  return (t1_4, t2_2)"
                       ],
                 testProgCompactExpectedResult =
                   Right $
@@ -196,18 +186,18 @@ prettyTest =
                         "  y: PrettyType2",
                         "):",
                         "  (",
-                        "    op2'2'0'res2,",
-                        "    op2'2'1'res3",
+                        "    t2_2,",
+                        "    t1_3",
                         "  ) = op2(",
                         "    op2'2'0'arg=x,",
                         "    y",
                         "  )",
-                        "  op2'1'res4 = op2(",
-                        "    op2'2'0'res2",
+                        "  t1_4 = op1(",
+                        "    op1=t1_3",
                         "  )",
                         "  return (",
-                        "    op2'1'res4,",
-                        "    op2'2'1'res3",
+                        "    t1_4,",
+                        "    t2_2",
                         "  )"
                       ]
               },
@@ -216,14 +206,14 @@ prettyTest =
                 testProg =
                   Prog
                     "prog4"
-                    [ProgArg "x" 0 PrettyType1, ProgArg "y" 1 PrettyType1]
-                    [Stmt PrettyOp2 [0] [1]]
-                    [ProgRes 1 PrettyType1],
+                    [ProgArg "x" 0 PrettyType1, ProgArg "y" 1 PrettyType2]
+                    [Stmt PrettyOp2 [0, 1] [1, 2]]
+                    [ProgRes 0 PrettyType1],
                 testProgLooseExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [0] [1]) 0 $
+                  Left . StmtPrettyError (Stmt PrettyOp2 [0, 1] [1, 2]) 0 $
                     RedefinedResult 0 1,
                 testProgCompactExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [0] [1]) 0 $
+                  Left . StmtPrettyError (Stmt PrettyOp2 [0, 1] [1, 2]) 0 $
                     RedefinedResult 0 1
               },
             PrettyProgTestCase
@@ -232,7 +222,7 @@ prettyTest =
                   Prog
                     "prog5"
                     [ProgArg "x" 0 PrettyType1]
-                    [Stmt PrettyOp2 [0] [1]]
+                    [Stmt PrettyOp1 [0] [1]]
                     [ProgRes 2 PrettyType1],
                 testProgLooseExpectedResult = Left $ ResultUndefined 0 2,
                 testProgCompactExpectedResult = Left $ ResultUndefined 0 2
@@ -248,7 +238,7 @@ prettyTest =
               Prog
                 "ext"
                 [ProgArg "x" 0 PrettyType1]
-                [Stmt TestPrettyExtOp [0] [1]]
+                [Stmt TestPrettyExtOp [0] [1, 2]]
                 [ProgRes 1 PrettyType1]
         let prog1 =
               Prog
@@ -271,15 +261,15 @@ prettyTest =
                   T.intercalate
                     "\n"
                     [ "def ext(x: PrettyType1):",
-                      "  o1 = ext(x)",
-                      "  return o1",
+                      "  (t1_1, t2_2) = ext(x)",
+                      "  return t1_1",
                       "def prog1(x: PrettyType1):",
-                      "  o1 = invoke_ext(ext)(x)",
-                      "  return o1",
+                      "  t1_1 = invoke_ext(ext)(x)",
+                      "  return t1_1",
                       "def prog2(x: PrettyType1):",
-                      "  o1 = invoke_ext(ext)(x)",
-                      "  o2 = invoke(prog1)(o1)",
-                      "  return o2"
+                      "  t1_1 = invoke_ext(ext)(x)",
+                      "  t1_2 = invoke(prog1)(t1_1)",
+                      "  return t1_2"
                     ]
             actual @?= expected
           ]

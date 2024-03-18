@@ -19,7 +19,7 @@ import Grisette.Lib.Synth.Program.Concrete
     prettyResults,
   )
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
-  ( TestPrettyOp (PrettyOp1, PrettyOp2),
+  ( TestPrettyOp (PrettyOp0, PrettyOp1, PrettyOp2),
   )
 import Grisette.Lib.Synth.Util.Pretty (renderDoc)
 import Test.Framework (Test, testGroup)
@@ -41,19 +41,17 @@ compactlyRenderArguments op args =
 
 looselyRenderResults ::
   TestPrettyOp ->
-  Int ->
   [Int] ->
   Either (OpPrettyError Int TestPrettyOp) (VarIdMap Int, T.Text)
-looselyRenderResults op numArgs res =
-  second (renderDoc 80) <$> prettyResults op numArgs res env
+looselyRenderResults op res =
+  second (renderDoc 80) <$> prettyResults op res env
 
 compactlyRenderResults ::
   TestPrettyOp ->
-  Int ->
   [Int] ->
   Either (OpPrettyError Int TestPrettyOp) (VarIdMap Int, T.Text)
-compactlyRenderResults op numArgs res =
-  second (renderDoc 1) <$> prettyResults op numArgs res env
+compactlyRenderResults op res =
+  second (renderDoc 1) <$> prettyResults op res env
 
 opPrettyTest :: Test
 opPrettyTest =
@@ -65,7 +63,7 @@ opPrettyTest =
             "Errors"
             [ testCase "IncorrectNumofArguments" $ do
                 let actual = looselyRenderArguments PrettyOp1 [0, 1]
-                let expected = Left (IncorrectNumberOfArguments PrettyOp1 2)
+                let expected = Left (IncorrectNumberOfArguments PrettyOp1 1 2)
                 actual @?= expected,
               testCase "UndefinedArgument" $ do
                 let actual = looselyRenderArguments PrettyOp2 [1, 2]
@@ -77,16 +75,17 @@ opPrettyTest =
             [ testGroup
                 "0 arguments"
                 [ testCase "loose" $
-                    looselyRenderArguments PrettyOp2 [] @?= Right "()",
+                    looselyRenderArguments PrettyOp0 [] @?= Right "()",
                   testCase "compact" $
-                    compactlyRenderArguments PrettyOp2 [] @?= Right "()"
+                    compactlyRenderArguments PrettyOp0 [] @?= Right "()"
                 ],
               testGroup
                 "1 arguments"
                 [ testCase "loose" $
-                    looselyRenderArguments PrettyOp2 [0] @?= Right "(x)",
+                    looselyRenderArguments PrettyOp1 [0] @?= Right "(op1=x)",
                   testCase "compact" $
-                    compactlyRenderArguments PrettyOp2 [0] @?= Right "(\n  x\n)"
+                    compactlyRenderArguments PrettyOp1 [0]
+                      @?= Right "(\n  op1=x\n)"
                 ],
               testGroup
                 "2 arguments"
@@ -106,47 +105,40 @@ opPrettyTest =
         [ testGroup
             "Errors"
             [ testCase "IncorrectNumofResults" $ do
-                let actual = looselyRenderResults PrettyOp1 1 [2, 3]
+                let actual = looselyRenderResults PrettyOp1 [2, 3]
                 let expected = Left (IncorrectNumberOfResults PrettyOp1 1 2)
                 actual @?= expected,
               testCase "RedefinedResult" $ do
-                let actual = looselyRenderResults PrettyOp2 2 [0, 2]
+                let actual = looselyRenderResults PrettyOp2 [0, 2]
                 let expected = Left (RedefinedResult 0 0)
                 actual @?= expected
             ],
           testGroup
             "Success"
             [ testGroup
-                "0 results"
-                [ testCase "loose" $
-                    looselyRenderResults PrettyOp2 0 [] @?= Right (env, "()"),
-                  testCase "compact" $
-                    compactlyRenderResults PrettyOp2 0 [] @?= Right (env, "()")
-                ],
-              testGroup
                 "1 results"
                 [ testCase "loose" $ do
-                    let actual = looselyRenderResults PrettyOp2 1 [3]
-                    let name = "op2'1'res3"
+                    let actual = looselyRenderResults PrettyOp1 [3]
+                    let name = "t1_3"
                     let expected = Right (HM.insert 3 name env, name)
                     actual @?= expected,
                   testCase "compact" $ do
-                    let actual = compactlyRenderResults PrettyOp2 1 [3]
-                    let name = "op2'1'res3"
+                    let actual = compactlyRenderResults PrettyOp1 [3]
+                    let name = "t1_3"
                     let expected = Right (HM.insert 3 name env, name)
                     actual @?= expected
                 ],
               testGroup "2 results" $ do
-                let name2 = "op2'2'0'res2"
-                let name3 = "op2'2'1'res3"
+                let name2 = "t2_2"
+                let name3 = "t1_3"
                 let newEnv = HM.insert 2 name2 $ HM.insert 3 name3 env
                 [ testCase "loose" $ do
-                    let actual = looselyRenderResults PrettyOp2 2 [2, 3]
+                    let actual = looselyRenderResults PrettyOp2 [2, 3]
                     let expected =
                           Right (newEnv, "(" <> name2 <> ", " <> name3 <> ")")
                     actual @?= expected,
                   testCase "compact" $ do
-                    let actual = compactlyRenderResults PrettyOp2 2 [2, 3]
+                    let actual = compactlyRenderResults PrettyOp2 [2, 3]
                     let expected =
                           Right
                             ( newEnv,
