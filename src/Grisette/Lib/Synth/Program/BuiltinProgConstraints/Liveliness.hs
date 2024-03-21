@@ -42,8 +42,8 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
   )
 where
 
-import Control.Monad (unless)
 import Control.Monad.Except (MonadError (throwError))
+import Data.Foldable (foldl')
 import Data.Maybe (isJust, mapMaybe)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -65,11 +65,11 @@ import Grisette
     mrgTraverse,
     mrgTraverse_,
     simpleMerge,
-    symOr,
     symUnless,
   )
 import Grisette.Core.Data.Class.SOrd (SOrd ((.<=), (.>=)))
 import Grisette.Generics.BoolLike (BoolLike)
+import Grisette.Generics.Class.MonadBranching (MonadBranching (mrgIf))
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
@@ -337,6 +337,63 @@ concreteResUnionUses ::
 concreteResUnionUses defUseObj =
   mrgReturn . concreteResUses defUseObj
 
+invalidateList ::
+  (Resource bool res) =>
+  [Def bool conVarId res] ->
+  [Def bool conVarId res] ->
+  bool
+invalidateList invalidatingDefs defs =
+  foldl'
+    (.||)
+    (toSym False)
+    [ conflict (defResource invalidatingDef) (defResource def)
+      | invalidatingDef <- invalidatingDefs,
+        def <- defs
+    ]
+
+cannotUseInvalidatedSingle ::
+  ( LivelinessName defUseObj,
+    Resource bool res,
+    MonadBranching bool ctx,
+    ConcreteVarId conVarId,
+    MonadContext ctx
+  ) =>
+  defUseObj ->
+  Use bool conVarId ->
+  Def bool conVarId res ->
+  bool ->
+  ctx ()
+cannotUseInvalidatedSingle defUseObj use def invalidated = do
+  mrgIf
+    ( useDisabled use
+        .|| defDisabled def
+        .|| ( toSym (useId use == defId def)
+                `symImplies` symNot invalidated
+            )
+    )
+    (return ())
+    $ mrgThrowError
+    $ "Cannot use invalidated resource for " <> livelinessName defUseObj
+
+cannotUseInvalidatedList ::
+  ( LivelinessName defUseObj,
+    Resource bool res,
+    MonadBranching bool ctx,
+    ConcreteVarId conVarId,
+    MonadContext ctx
+  ) =>
+  defUseObj ->
+  [Use bool conVarId] ->
+  [Def bool conVarId res] ->
+  bool ->
+  ctx ()
+cannotUseInvalidatedList defUseObj uses defs invalidated =
+  mrgSequence_
+    [ cannotUseInvalidatedSingle defUseObj use def invalidated
+      | use <- uses,
+        def <- defs
+    ]
+
 instance
   ( LivelinessConstraint defUseObj Bool op ty res ctx,
     ConcreteVarId conVarId
@@ -354,46 +411,20 @@ instance
       availableDefs <- goStmts [(argDefs, toSym False)] stmtList
       cannotUseInvalidated resUses availableDefs
       where
-        invalidateList :: [Def Bool conVarId res] -> [Def Bool conVarId res] -> Bool
-        invalidateList invalidatingDefs defs =
-          or
-            [ conflict (defResource invalidatingDef) (defResource def)
-              | invalidatingDef <- invalidatingDefs,
-                def <- defs
-            ]
         invalidate ::
-          [Def Bool conVarId res] ->
-          [([Def Bool conVarId res], Bool)] ->
-          [([Def Bool conVarId res], Bool)]
+          (Resource bool res) =>
+          [Def bool conVarId res] ->
+          [([Def bool conVarId res], bool)] ->
+          [([Def bool conVarId res], bool)]
         invalidate invalidatingDef =
           fmap
             ( \(def, invalidated) ->
-                (def, invalidated || invalidateList invalidatingDef def)
+                (def, invalidated .|| invalidateList invalidatingDef def)
             )
-        cannotUseInvalidatedSingle ::
-          Use Bool conVarId -> Def Bool conVarId res -> Bool -> ctx ()
-        cannotUseInvalidatedSingle use def invalidated = do
-          unless
-            ( useDisabled use
-                || defDisabled def
-                || ( (useId use == defId def)
-                       `symImplies` symNot invalidated
-                   )
-            )
-            $ mrgThrowError
-            $ "Cannot use invalidated resource for " <> livelinessName defUseObj
-        cannotUseInvalidatedList ::
-          [Use Bool conVarId] -> [Def Bool conVarId res] -> Bool -> ctx ()
-        cannotUseInvalidatedList uses defs invalidated =
-          mrgSequence_
-            [ cannotUseInvalidatedSingle use def invalidated
-              | use <- uses,
-                def <- defs
-            ]
         cannotUseInvalidated ::
           [Use Bool conVarId] -> [([Def Bool conVarId res], Bool)] -> ctx ()
         cannotUseInvalidated uses =
-          mrgTraverse_ (uncurry (cannotUseInvalidatedList uses))
+          mrgTraverse_ (uncurry (cannotUseInvalidatedList defUseObj uses))
         goStmts ::
           [([Def Bool conVarId res], Bool)] ->
           [Concrete.Stmt op conVarId] ->
@@ -423,13 +454,6 @@ instance
       availableDefs <- goStmts [(argDefs, toSym False)] stmtList
       cannotUseInvalidated resUses availableDefs
       where
-        invalidateList :: [Def SymBool conVarId res] -> [Def SymBool conVarId res] -> SymBool
-        invalidateList invalidatingDefs defs =
-          symOr
-            [ conflict (defResource invalidatingDef) (defResource def)
-              | invalidatingDef <- invalidatingDefs,
-                def <- defs
-            ]
         invalidateUnion ::
           UnionDef conVarId res -> UnionDef conVarId res -> SymBool
         invalidateUnion unionInvalidatingDef unionDef =
@@ -443,32 +467,12 @@ instance
             ( \(def, invalidated) ->
                 (def, invalidated .|| invalidateUnion invalidatingDef def)
             )
-        cannotUseInvalidatedSingle ::
-          Use SymBool conVarId -> Def SymBool conVarId res -> SymBool -> ctx ()
-        cannotUseInvalidatedSingle use def invalidated = do
-          symUnless
-            ( useDisabled use
-                .|| defDisabled def
-                .|| ( con (useId use == defId def)
-                        `symImplies` symNot invalidated
-                    )
-            )
-            $ mrgThrowError
-            $ "Cannot use invalidated resource for " <> livelinessName defUseObj
-        cannotUseInvalidatedList ::
-          [Use SymBool conVarId] -> [Def SymBool conVarId res] -> SymBool -> ctx ()
-        cannotUseInvalidatedList uses defs invalidated =
-          mrgSequence_
-            [ cannotUseInvalidatedSingle use def invalidated
-              | use <- uses,
-                def <- defs
-            ]
         cannotUseInvalidatedUnion ::
           UnionUse conVarId -> UnionDef conVarId res -> SymBool -> ctx ()
         cannotUseInvalidatedUnion useUnion defUnion invalidated = do
           uses <- liftUnionM useUnion
           defs <- liftUnionM defUnion
-          cannotUseInvalidatedList uses defs invalidated
+          cannotUseInvalidatedList defUseObj uses defs invalidated
         cannotUseInvalidated ::
           UnionUse conVarId -> [(UnionDef conVarId res, SymBool)] -> ctx ()
         cannotUseInvalidated uses =
