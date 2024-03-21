@@ -3,8 +3,8 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraintsTest
   )
 where
 
-import Grisette.Lib.Synth.Program.BuiltinProgConstraints.LinearDefUseTest
-  ( linearDefUseTest,
+import Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
+  ( livelinessTest,
   )
 import Test.Framework (Test, testGroup)
 
@@ -12,5 +12,5 @@ builtinProgConstraintsTest :: Test
 builtinProgConstraintsTest =
   testGroup
     "BuiltinProgConstraints"
-    [ linearDefUseTest
+    [ livelinessTest
     ]

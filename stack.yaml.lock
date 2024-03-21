@@ -16,15 +16,15 @@ packages:
     commit: 0afdddd66a2cafa60509ae75b3916f61de32fb64
     git: https://github.com/lsrcz/grisette.git
 - completed:
-    commit: 649bcf551ce1fe8cd7958ed1a1e93a28b4ac3e93
+    commit: ff2a64d293de9a5cf1ed59cc745cb511a6cbbf9a
     git: https://github.com/lsrcz/grisette-generics.git
     name: grisette-generics
     pantry-tree:
-      sha256: 2318e46795a6293f6f8c6c2ee6f859532c9bc17d1bfc1525d683bd8bb8434caa
+      sha256: a0e6b837688c6a5950df4741bb1787a1ebd52902089daa6e6b46f6d5a6c4bb73
       size: 2144
     version: 0.1.0.0
   original:
-    commit: 649bcf551ce1fe8cd7958ed1a1e93a28b4ac3e93
+    commit: ff2a64d293de9a5cf1ed59cc745cb511a6cbbf9a
     git: https://github.com/lsrcz/grisette-generics.git
 - completed:
     hackage: quickcheck-with-counterexamples-1.2@sha256:d322d79008602df26f5eb4e1379e5b58bf1a92604df8601e71e200cfc3e847a3,1688

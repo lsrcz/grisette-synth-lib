@@ -2,14 +2,16 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
-module Grisette.Lib.Synth.Program.BuiltinProgConstraints.LinearDefUseTest
-  ( linearDefUseTest,
+module Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
+  ( livelinessTest,
   )
 where
 
@@ -17,10 +19,10 @@ import Data.Maybe (fromJust)
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvaluateSym,
     ITEOp (symIte),
     Mergeable,
-    SEq,
+    MonadUnion,
+    SEq ((.==)),
     Solvable (con),
     SymWordN,
     ToCon (toCon),
@@ -31,19 +33,30 @@ import Grisette
   )
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context
-  ( ConcreteContext,
-    MonadContext,
+  ( MonadContext,
     SymbolicContext,
   )
-import Grisette.Lib.Synth.Program.BuiltinProgConstraints.LinearDefUse
-  ( Def (Def),
-    DefUnion,
-    LinearDefUse (LinearDefUse),
-    LinearDefUseExtract (linearDefUseExtractDefs, linearDefUseExtractInvalidatingDefs, linearDefUseExtractUses),
-    LinearDefUseName (linearDefUseName),
-    LinearDefUseTypePredicate (linearDefUseTypePredicate),
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( OpTyping,
+    OpTypingSimple (typeOpSimple),
+  )
+import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
+  ( ComponentUse (ComponentUse),
+    Def (Def),
+    Liveliness (Liveliness),
+    LivelinessName (livelinessName),
+    LivelinessOpResource
+      ( livelinessOpDefs,
+        livelinessOpInvalidatingDefs
+      ),
+    LivelinessTypeResource
+      ( livelinessTypeResource
+      ),
+    Resource (conflict),
+    UnionComponentUse,
+    UnionDef,
+    UnionUse,
     Use (Use),
-    UseUnion,
     componentProgDefs,
     componentProgUses,
     componentStmtDefs,
@@ -56,10 +69,18 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( ProgConstraints (constrainProg),
   )
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
 import Test.SymbolicAssertion ((.@?=))
+
+data Resources = Resource1 | Resource2
+  deriving (Eq, Show, Generic)
+  deriving (Mergeable, SEq) via (Default Resources)
+
+instance Resource Resources where
+  conflict l r = l .== r
 
 data Op
   = OpUse
@@ -68,71 +89,72 @@ data Op
   | OpUseDef
   | OpDefNoInvalidate
   | OpDefShareScope
+  | OpUse2
+  | OpDef2
+  | OpDefShareScope2
   deriving (Generic)
   deriving (Mergeable, ToCon Op) via (Default Op)
 
-data Type = ConstrainedType | OtherType
+data Type = ConstrainedType | ConstrainedType2 | OtherType
   deriving (Generic)
   deriving (Mergeable, ToCon Type) via (Default Type)
 
-data LinearDefUseOp = LinearDefUseOp
+data LivelinessOp = LivelinessOp
 
-instance LinearDefUseName LinearDefUseOp where
-  linearDefUseName LinearDefUseOp = "ConstrainedType"
+instance LivelinessName LivelinessOp where
+  livelinessName LivelinessOp = "ConstrainedType"
 
-instance LinearDefUseExtract LinearDefUseOp Op where
-  linearDefUseExtractDefs LinearDefUseOp OpDefShareScope ids disabled =
-    Just $ Def (head ids) disabled
-  linearDefUseExtractDefs LinearDefUseOp op ids disabled =
-    linearDefUseExtractInvalidatingDefs LinearDefUseOp op ids disabled
-  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpUse _ _ = Nothing
-  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpDef ids disabled =
-    Just $ Def (ids !! 1) disabled
-  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpNone _ _ = Nothing
-  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpUseDef ids disabled =
-    Just $ Def (head ids) disabled
-  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpDefNoInvalidate _ _ =
-    Nothing
-  linearDefUseExtractInvalidatingDefs LinearDefUseOp OpDefShareScope _ _ =
-    Nothing
-  linearDefUseExtractUses LinearDefUseOp OpUse argIds resIds disabled =
-    Just $ Use (head resIds) (argIds !! 1) disabled
-  linearDefUseExtractUses LinearDefUseOp OpDef _ _ _ = Nothing
-  linearDefUseExtractUses LinearDefUseOp OpNone _ _ _ = Nothing
-  linearDefUseExtractUses LinearDefUseOp OpUseDef argIds resIds disabled =
-    Just $ Use (head resIds) (head argIds) disabled
-  linearDefUseExtractUses LinearDefUseOp OpDefNoInvalidate _ _ _ =
-    Nothing
-  linearDefUseExtractUses
-    LinearDefUseOp
-    OpDefShareScope
-    argIds
-    resIds
-    disabled =
-      Just $ Use (head resIds) (head argIds) disabled
+instance OpTypingSimple Op Type where
+  typeOpSimple OpUse = TypeSignature [OtherType, ConstrainedType] [OtherType]
+  typeOpSimple OpDef = TypeSignature [OtherType] [OtherType, ConstrainedType]
+  typeOpSimple OpNone = TypeSignature [OtherType] [OtherType]
+  typeOpSimple OpUseDef = TypeSignature [ConstrainedType] [ConstrainedType]
+  typeOpSimple OpDefNoInvalidate =
+    TypeSignature [OtherType] [ConstrainedType]
+  typeOpSimple OpDefShareScope =
+    TypeSignature [ConstrainedType] [ConstrainedType]
+  typeOpSimple OpUse2 = TypeSignature [OtherType, ConstrainedType2] [OtherType]
+  typeOpSimple OpDef2 = TypeSignature [OtherType] [OtherType, ConstrainedType2]
+  typeOpSimple OpDefShareScope2 =
+    TypeSignature [ConstrainedType2] [ConstrainedType2]
 
-instance LinearDefUseTypePredicate LinearDefUseOp Type where
-  linearDefUseTypePredicate LinearDefUseOp ConstrainedType = True
-  linearDefUseTypePredicate LinearDefUseOp OtherType = False
+instance (MonadContext ctx) => OpTyping Op Type ctx
 
-data LinearDefUseTest where
-  LinearDefUseTest ::
-    ( ProgConstraints (LinearDefUse LinearDefUseOp) prog ctx,
-      SEq (ctx ()),
-      EvaluateSym (ctx ()),
-      Show (ctx ())
+instance
+  (MonadContext ctx, MonadUnion ctx) =>
+  LivelinessOpResource LivelinessOp Op Resources ctx
+  where
+  livelinessOpInvalidatingDefs LivelinessOp OpDefNoInvalidate _ _ = mrgReturn []
+  livelinessOpInvalidatingDefs LivelinessOp OpDefShareScope _ _ = mrgReturn []
+  livelinessOpInvalidatingDefs LivelinessOp op resIds disabled =
+    livelinessOpDefs LivelinessOp op resIds disabled
+
+instance LivelinessTypeResource LivelinessOp Resources Type where
+  livelinessTypeResource LivelinessOp ConstrainedType = Just Resource1
+  livelinessTypeResource LivelinessOp ConstrainedType2 = Just Resource2
+  livelinessTypeResource LivelinessOp OtherType = Nothing
+
+data LivelinessTest where
+  LivelinessTest ::
+    ( ProgConstraints (Liveliness LivelinessOp) prog SymbolicContext
     ) =>
-    { linearDefUseTestName :: String,
-      linearDefUseTestProg :: prog,
-      linearDefUseTestExpectedAssertion :: ctx ()
+    { livelinessTestName :: String,
+      livelinessTestProg :: prog,
+      livelinessTestExpectedAssertion :: SymbolicContext ()
     } ->
-    LinearDefUseTest
+    LivelinessTest
 
 opUse :: UnionM Op
 opUse = mrgReturn OpUse
 
+opUse2 :: UnionM Op
+opUse2 = mrgReturn OpUse2
+
 opDef :: UnionM Op
 opDef = mrgReturn OpDef
+
+opDef2 :: UnionM Op
+opDef2 = mrgReturn OpDef2
 
 opNone :: UnionM Op
 opNone = mrgReturn OpNone
@@ -182,71 +204,85 @@ componentProg =
     [componentDefStmt, componentUseStmt]
     [Component.ProgRes "pr0" OtherType, Component.ProgRes "pr1" ConstrainedType]
 
-linearDefUseTest :: Test
-linearDefUseTest =
+livelinessTest :: Test
+livelinessTest =
   testGroup
-    "LinearDefUse"
+    "Liveliness"
     [ testCase "concreteStmtDef" $ do
-        let actual = concreteStmtDef LinearDefUseOp concreteDefStmt
-        actual @?= Just 3,
+        let actual = concreteStmtDef LivelinessOp concreteDefStmt
+        let expected =
+              mrgReturn (mrgReturn [Def 3 Resource1 (con False)]) ::
+                SymbolicContext (UnionDef (WordN 8) Resources)
+        actual @?= expected,
       testCase "concreteStmtUses" $ do
-        let actual = concreteStmtUse LinearDefUseOp concreteUseStmt
-        actual @?= Just 3,
+        let actual = concreteStmtUse LivelinessOp concreteUseStmt
+        let expected =
+              mrgReturn (mrgReturn [Use 3 (con False)]) ::
+                SymbolicContext (UnionUse (WordN 8))
+        actual @?= expected,
       testCase "componentStmtDefs" $ do
         let actual =
-              componentStmtDefs LinearDefUseOp componentDefStmt ::
-                SymbolicContext [DefUnion (SymWordN 8)]
+              componentStmtDefs LivelinessOp componentDefStmt ::
+                SymbolicContext (UnionDef (SymWordN 8) Resources)
         let expected =
-              mrgReturn
-                [mrgReturn $ Just $ Def (symIte "da" "dr1" "dr0") "ddisabled"]
+              mrgReturn . mrgReturn $
+                [Def (symIte "da" "dr1" "dr0") Resource1 "ddisabled"]
         actual @?= expected,
       testCase "componentStmtUses" $ do
         let actual =
-              componentStmtUses LinearDefUseOp componentUseStmt ::
-                SymbolicContext [UseUnion (SymWordN 8)]
+              componentStmtUses LivelinessOp componentUseStmt ::
+                SymbolicContext (UnionComponentUse (SymWordN 8))
         let expected =
-              mrgReturn
-                [ mrgReturn $
-                    Just $
-                      Use "ur0" (symIte "ua" "ua1" "ua0") "udisabled"
-                ]
+              mrgReturn . mrgReturn $
+                [ComponentUse (symIte "ua" "ua1" "ua0") "ur0" "udisabled"]
         actual @?= expected,
       testCase "componentProgDefs" $ do
         let actual =
-              componentProgDefs LinearDefUseOp componentProg ::
-                SymbolicContext [DefUnion (SymWordN 8)]
+              componentProgDefs LivelinessOp componentProg ::
+                SymbolicContext
+                  [UnionDef (SymWordN 8) Resources]
         let expected =
               mrgReturn
-                [ mrgReturn $ Just $ Def 0 (con False),
-                  mrgReturn $ Just $ Def (symIte "da" "dr1" "dr0") "ddisabled",
+                [ mrgReturn [Def 0 Resource1 (con False)],
+                  mrgReturn
+                    [ Def
+                        (symIte "da" "dr1" "dr0")
+                        Resource1
+                        "ddisabled"
+                    ],
                   mrgIf
                     "ua"
-                    (mrgReturn Nothing)
-                    (mrgReturn $ Just $ Def "ur0" "udisabled")
+                    (mrgReturn [])
+                    ( mrgReturn
+                        [Def "ur0" Resource1 "udisabled"]
+                    )
                 ]
         actual @?= expected,
       testCase "componentProgUses" $ do
         let actual =
-              componentProgUses LinearDefUseOp componentProg ::
-                SymbolicContext [UseUnion (SymWordN 8)]
+              componentProgUses LivelinessOp componentProg ::
+                SymbolicContext [UnionComponentUse (SymWordN 8)]
         let expected =
               mrgReturn
-                [ mrgReturn $ Just $ Use 4 "pr1" (con False),
+                [ mrgReturn [ComponentUse "pr1" 6 (con False)],
                   mrgIf
                     "da"
-                    (mrgReturn Nothing)
-                    (mrgReturn $ Just $ Use "dr0" "da0" "ddisabled"),
-                  mrgReturn $
-                    Just $
-                      Use "ur0" (symIte "ua" "ua1" "ua0") "udisabled"
+                    (mrgReturn [])
+                    (mrgReturn [ComponentUse "da0" "dr0" "ddisabled"]),
+                  mrgReturn
+                    [ ComponentUse
+                        (symIte "ua" "ua1" "ua0")
+                        "ur0"
+                        "udisabled"
+                    ]
                 ]
         actual @?= expected,
       testGroup "ProgConstraint" $ do
-        LinearDefUseTest name prog (assertion :: ctx ()) <-
+        LivelinessTest name prog (assertion :: ctx ()) <-
           concat
-            [ [ LinearDefUseTest
-                  { linearDefUseTestName = "Component/correct",
-                    linearDefUseTestProg =
+            [ [ LivelinessTest
+                  { livelinessTestName = "Component/correct",
+                    livelinessTestProg =
                       Component.Prog
                         "test"
                         [ Component.ProgArg "arg0" OtherType,
@@ -260,12 +296,11 @@ linearDefUseTest =
                           Component.Stmt opNone [7] 2 [8] 1 (con False)
                         ]
                         [Component.ProgRes (6 :: SymWordN 8) ConstrainedType],
-                    linearDefUseTestExpectedAssertion =
-                      mrgReturn () :: SymbolicContext ()
+                    livelinessTestExpectedAssertion = mrgReturn ()
                   },
-                LinearDefUseTest
-                  { linearDefUseTestName = "Component/disabled ok",
-                    linearDefUseTestProg =
+                LivelinessTest
+                  { livelinessTestName = "Component/disabled ok",
+                    livelinessTestProg =
                       Component.Prog
                         "test"
                         [ Component.ProgArg "arg0" OtherType,
@@ -275,12 +310,11 @@ linearDefUseTest =
                           Component.Stmt opUseDef [1] 1 [4] 1 (con True)
                         ]
                         [Component.ProgRes (3 :: SymWordN 8) ConstrainedType],
-                    linearDefUseTestExpectedAssertion =
-                      mrgReturn () :: SymbolicContext ()
+                    livelinessTestExpectedAssertion = mrgReturn ()
                   },
-                LinearDefUseTest
-                  { linearDefUseTestName = "Concrete/correct",
-                    linearDefUseTestProg =
+                LivelinessTest
+                  { livelinessTestName = "Concrete/correct",
+                    livelinessTestProg =
                       Concrete.Prog
                         "test"
                         [ Concrete.ProgArg "arg0" 0 OtherType,
@@ -294,8 +328,7 @@ linearDefUseTest =
                           Concrete.Stmt OpNone [7] [8]
                         ]
                         [Concrete.ProgRes (9 :: WordN 8) ConstrainedType],
-                    linearDefUseTestExpectedAssertion =
-                      mrgReturn () :: ConcreteContext ()
+                    livelinessTestExpectedAssertion = mrgReturn ()
                   }
               ],
               let correct2 =
@@ -309,19 +342,17 @@ linearDefUseTest =
                         Component.Stmt opUse [2, 5] 2 [6] 1 (con False)
                       ]
                       [Component.ProgRes (5 :: SymWordN 8) ConstrainedType]
-               in [ LinearDefUseTest
-                      { linearDefUseTestName = "Component/correct2",
-                        linearDefUseTestProg = correct2,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+               in [ LivelinessTest
+                      { livelinessTestName = "Component/correct2",
+                        livelinessTestProg = correct2,
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName = "Concrete/correct2",
-                        linearDefUseTestProg =
+                    LivelinessTest
+                      { livelinessTestName = "Concrete/correct2",
+                        livelinessTestProg =
                           fromJust $ toCon correct2 ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: ConcreteContext ()
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       }
                   ],
               let notUsingNewestDefButUsingFromArg =
@@ -335,25 +366,22 @@ linearDefUseTest =
                         Component.Stmt opUse [2, 1] 2 [6] 1 (con False)
                       ]
                       [Component.ProgRes (5 :: SymWordN 8) ConstrainedType]
-                  err :: (MonadContext m) => m ()
                   err =
                     mrgThrowError
-                      "Must use the newest definition of ConstrainedType"
-               in [ LinearDefUseTest
-                      { linearDefUseTestName =
+                      "Cannot use invalidated resource for ConstrainedType"
+               in [ LivelinessTest
+                      { livelinessTestName =
                           "Component/not using newest def but using from arg",
-                        linearDefUseTestProg = notUsingNewestDefButUsingFromArg,
-                        linearDefUseTestExpectedAssertion =
-                          err :: SymbolicContext ()
+                        livelinessTestProg = notUsingNewestDefButUsingFromArg,
+                        livelinessTestExpectedAssertion = err
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName =
+                    LivelinessTest
+                      { livelinessTestName =
                           "Concrete/not using newest def but using from arg",
-                        linearDefUseTestProg =
+                        livelinessTestProg =
                           fromJust $ toCon notUsingNewestDefButUsingFromArg ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          err :: ConcreteContext ()
+                        livelinessTestExpectedAssertion = err
                       }
                   ],
               let notUsingNewestDef =
@@ -367,23 +395,20 @@ linearDefUseTest =
                         Component.Stmt opUse [2, 3] 2 [6] 1 (con False)
                       ]
                       [Component.ProgRes (5 :: SymWordN 8) ConstrainedType]
-                  err :: (MonadContext m) => m ()
                   err =
                     mrgThrowError
-                      "Must use the newest definition of ConstrainedType"
-               in [ LinearDefUseTest
-                      { linearDefUseTestName = "Component/not using newest def",
-                        linearDefUseTestProg = notUsingNewestDef,
-                        linearDefUseTestExpectedAssertion =
-                          err :: SymbolicContext ()
+                      "Cannot use invalidated resource for ConstrainedType"
+               in [ LivelinessTest
+                      { livelinessTestName = "Component/not using newest def",
+                        livelinessTestProg = notUsingNewestDef,
+                        livelinessTestExpectedAssertion = err
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName = "Concrete/not using newest def",
-                        linearDefUseTestProg =
+                    LivelinessTest
+                      { livelinessTestName = "Concrete/not using newest def",
+                        livelinessTestProg =
                           fromJust $ toCon notUsingNewestDef ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          err :: ConcreteContext ()
+                        livelinessTestExpectedAssertion = err
                       }
                   ],
               let prog =
@@ -397,25 +422,22 @@ linearDefUseTest =
                         Component.Stmt opUse [2, 1] 2 [6] 1 (con False)
                       ]
                       [Component.ProgRes (1 :: SymWordN 8) ConstrainedType]
-                  err :: (MonadContext m) => m ()
                   err =
                     mrgThrowError
-                      "Must use the newest definition of ConstrainedType"
-               in [ LinearDefUseTest
-                      { linearDefUseTestName =
+                      "Cannot use invalidated resource for ConstrainedType"
+               in [ LivelinessTest
+                      { livelinessTestName =
                           "Component/res not using newest def, use arg",
-                        linearDefUseTestProg = prog,
-                        linearDefUseTestExpectedAssertion =
-                          err :: SymbolicContext ()
+                        livelinessTestProg = prog,
+                        livelinessTestExpectedAssertion = err
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName =
+                    LivelinessTest
+                      { livelinessTestName =
                           "Concrete/res not using newest def, use arg",
-                        linearDefUseTestProg =
+                        livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          err :: ConcreteContext ()
+                        livelinessTestExpectedAssertion = err
                       }
                   ],
               let prog =
@@ -429,25 +451,22 @@ linearDefUseTest =
                         Component.Stmt opUse [2, 1] 2 [6] 1 (con False)
                       ]
                       [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
-                  err :: (MonadContext m) => m ()
                   err =
                     mrgThrowError
-                      "Must use the newest definition of ConstrainedType"
-               in [ LinearDefUseTest
-                      { linearDefUseTestName =
+                      "Cannot use invalidated resource for ConstrainedType"
+               in [ LivelinessTest
+                      { livelinessTestName =
                           "Component/res not using newest def, use old stmt",
-                        linearDefUseTestProg = prog,
-                        linearDefUseTestExpectedAssertion =
-                          err :: SymbolicContext ()
+                        livelinessTestProg = prog,
+                        livelinessTestExpectedAssertion = err
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName =
+                    LivelinessTest
+                      { livelinessTestName =
                           "Concrete/res not using newest def, use old stmt",
-                        linearDefUseTestProg =
+                        livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          err :: ConcreteContext ()
+                        livelinessTestExpectedAssertion = err
                       }
                   ],
               let prog =
@@ -461,19 +480,17 @@ linearDefUseTest =
                       [ Component.ProgRes (2 :: SymWordN 8) ConstrainedType,
                         Component.ProgRes (1 :: SymWordN 8) ConstrainedType
                       ]
-               in [ LinearDefUseTest
-                      { linearDefUseTestName = "Component/multiple arguments",
-                        linearDefUseTestProg = prog,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+               in [ LivelinessTest
+                      { livelinessTestName = "Component/multiple arguments",
+                        livelinessTestProg = prog,
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName = "Concrete/multiple arguments",
-                        linearDefUseTestProg =
+                    LivelinessTest
+                      { livelinessTestName = "Concrete/multiple arguments",
+                        livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          return () :: ConcreteContext ()
+                        livelinessTestExpectedAssertion = return ()
                       }
                   ],
               let prog =
@@ -493,21 +510,19 @@ linearDefUseTest =
                         Component.Stmt opUse [2, 3] 2 [5] 1 (con False)
                       ]
                       [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
-               in [ LinearDefUseTest
-                      { linearDefUseTestName =
+               in [ LivelinessTest
+                      { livelinessTestName =
                           "Component/no invalidate should not invalidate",
-                        linearDefUseTestProg = prog,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+                        livelinessTestProg = prog,
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName =
+                    LivelinessTest
+                      { livelinessTestName =
                           "Concrete/no invalidate should not invalidate",
-                        linearDefUseTestProg =
+                        livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       }
                   ],
               let prog =
@@ -526,21 +541,19 @@ linearDefUseTest =
                           (con False)
                       ]
                       [Component.ProgRes (4 :: SymWordN 8) ConstrainedType]
-               in [ LinearDefUseTest
-                      { linearDefUseTestName =
+               in [ LivelinessTest
+                      { livelinessTestName =
                           "Component/use no invalidate ok",
-                        linearDefUseTestProg = prog,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+                        livelinessTestProg = prog,
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName =
+                    LivelinessTest
+                      { livelinessTestName =
                           "Concrete/use no invalidate ok",
-                        linearDefUseTestProg =
+                        livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       }
                   ],
               let prog =
@@ -549,31 +562,29 @@ linearDefUseTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
+                        Component.Stmt
                           opDefNoInvalidate
                           [1]
                           1
-                          [2]
+                          [4]
                           1
-                          (con False),
-                        Component.Stmt opDef [0] 1 [3, 4] 2 (con False)
+                          (con False)
                       ]
-                      [Component.ProgRes (2 :: SymWordN 8) ConstrainedType]
-               in [ LinearDefUseTest
-                      { linearDefUseTestName =
+                      [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
+               in [ LivelinessTest
+                      { livelinessTestName =
                           "Component/use old no invalidate ok",
-                        linearDefUseTestProg = prog,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+                        livelinessTestProg = prog,
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName =
+                    LivelinessTest
+                      { livelinessTestName =
                           "Concrete/use old no invalidate ok",
-                        linearDefUseTestProg =
+                        livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       }
                   ],
               let prog =
@@ -596,25 +607,91 @@ linearDefUseTest =
                       [ Component.ProgRes (3 :: SymWordN 8) ConstrainedType,
                         Component.ProgRes (4 :: SymWordN 8) ConstrainedType
                       ]
-               in [ LinearDefUseTest
-                      { linearDefUseTestName =
+               in [ LivelinessTest
+                      { livelinessTestName =
                           "Component/no invalidate should not invalidate",
-                        linearDefUseTestProg = prog,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+                        livelinessTestProg = prog,
+                        livelinessTestExpectedAssertion = mrgReturn ()
                       },
-                    LinearDefUseTest
-                      { linearDefUseTestName =
+                    LivelinessTest
+                      { livelinessTestName =
                           "Concrete/no invalidate should not invalidate",
-                        linearDefUseTestProg =
+                        livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        linearDefUseTestExpectedAssertion =
-                          mrgReturn () :: SymbolicContext ()
+                        livelinessTestExpectedAssertion = mrgReturn ()
+                      }
+                  ],
+              let prog =
+                    Component.Prog
+                      "test"
+                      [ Component.ProgArg "arg0" ConstrainedType,
+                        Component.ProgArg "arg1" ConstrainedType2,
+                        Component.ProgArg "arg2" OtherType
+                      ]
+                      [ Component.Stmt opUse [2, 0] 2 [3] 1 (con False),
+                        Component.Stmt opUse2 [2, 1] 2 [4] 1 (con False),
+                        Component.Stmt opDef [0] 1 [5, 6] 2 (con False),
+                        Component.Stmt opDef2 [1] 1 [7, 8] 2 (con False),
+                        Component.Stmt opUse [2, 6] 2 [9] 1 (con False),
+                        Component.Stmt opUse2 [2, 8] 2 [10] 1 (con False)
+                      ]
+                      [ Component.ProgRes (6 :: SymWordN 8) ConstrainedType,
+                        Component.ProgRes (8 :: SymWordN 8) ConstrainedType2
+                      ]
+               in [ LivelinessTest
+                      { livelinessTestName =
+                          "Component/multiple resources",
+                        livelinessTestProg = prog,
+                        livelinessTestExpectedAssertion = mrgReturn ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/multiple resources",
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion = mrgReturn ()
+                      }
+                  ],
+              let prog =
+                    Component.Prog
+                      "test"
+                      [ Component.ProgArg "arg0" ConstrainedType,
+                        Component.ProgArg "arg1" ConstrainedType2,
+                        Component.ProgArg "arg2" OtherType
+                      ]
+                      [ Component.Stmt opUse [2, 0] 2 [3] 1 (con False),
+                        Component.Stmt opUse2 [2, 1] 2 [4] 1 (con False),
+                        Component.Stmt opDef [0] 1 [5, 6] 2 (con False),
+                        Component.Stmt opDef2 [1] 1 [7, 8] 2 (con False),
+                        Component.Stmt opUse [2, 0] 2 [9] 1 (con False),
+                        Component.Stmt opUse2 [2, 8] 2 [10] 1 (con False)
+                      ]
+                      [ Component.ProgRes (6 :: SymWordN 8) ConstrainedType,
+                        Component.ProgRes (8 :: SymWordN 8) ConstrainedType2
+                      ]
+                  err =
+                    mrgThrowError
+                      "Cannot use invalidated resource for ConstrainedType"
+               in [ LivelinessTest
+                      { livelinessTestName =
+                          "Component/multiple resources failure",
+                        livelinessTestProg = prog,
+                        livelinessTestExpectedAssertion = err
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/multiple resources failure",
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion = err
                       }
                   ]
             ]
         return $
-          testCase name $
-            constrainProg (LinearDefUse LinearDefUseOp) prog .@?= assertion
+          testCase name $ do
+            let actual = constrainProg (Liveliness LivelinessOp) prog
+            actual .@?= assertion
     ]
