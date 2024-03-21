@@ -27,7 +27,9 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
     Resource (..),
     LivelinessConstraint,
     livelinessOpDefsByType,
+    livelinessTypeDefs,
     livelinessOpUsesByType,
+    livelinessTypeUses,
     concreteStmtDef,
     concreteStmtUse,
     componentStmtDefs,
@@ -96,6 +98,24 @@ newtype Liveliness livelinessObj = Liveliness livelinessObj
 class LivelinessName defUseObj where
   livelinessName :: defUseObj -> T.Text
 
+livelinessTypeDefs ::
+  ( Mergeable varId,
+    LivelinessTypeResource defUseObj res ty,
+    MonadContext ctx
+  ) =>
+  defUseObj ->
+  [ty] ->
+  [varId] ->
+  SymBool ->
+  ctx [Def varId res]
+livelinessTypeDefs defUseObj tys resIds disabled = do
+  mrgReturn
+    $ mapMaybe
+      ( \(id, ty) ->
+          (\res -> Def id res disabled) <$> livelinessTypeResource defUseObj ty
+      )
+    $ zip resIds tys
+
 livelinessOpDefsByType ::
   ( Mergeable varId,
     OpTyping op ty ctx,
@@ -108,12 +128,25 @@ livelinessOpDefsByType ::
   ctx [Def varId res]
 livelinessOpDefsByType defUseObj op resIds disabled = do
   ty <- typeOp op
+  livelinessTypeDefs defUseObj (resTypes ty) resIds disabled
+
+livelinessTypeUses ::
+  ( Mergeable varId,
+    LivelinessTypeResource defUseObj res ty,
+    MonadContext ctx
+  ) =>
+  defUseObj ->
+  [ty] ->
+  [varId] ->
+  SymBool ->
+  ctx [Use varId]
+livelinessTypeUses defUseObj tys argIds disabled = do
   mrgReturn
     $ mapMaybe
       ( \(id, ty) ->
-          (\res -> Def id res disabled) <$> livelinessTypeResource defUseObj ty
+          Use id disabled <$ livelinessTypeResource defUseObj ty
       )
-    $ zip resIds (resTypes ty)
+    $ zip argIds tys
 
 livelinessOpUsesByType ::
   ( Mergeable varId,
@@ -127,12 +160,7 @@ livelinessOpUsesByType ::
   ctx [Use varId]
 livelinessOpUsesByType defUseObj op argIds disabled = do
   ty <- typeOp op
-  mrgReturn
-    $ mapMaybe
-      ( \(id, ty) ->
-          Use id disabled <$ livelinessTypeResource defUseObj ty
-      )
-    $ zip argIds (argTypes ty)
+  livelinessTypeUses defUseObj (argTypes ty) argIds disabled
 
 class
   (LivelinessName defUseObj, MonadContext ctx, Resource res) =>
