@@ -39,6 +39,8 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
     componentProgDefs,
     componentProgInvalidatingDefs,
     componentProgUses,
+    livelinessConcreteProgInvalidatingDefs,
+    livelinessComponentProgInvalidatingDefs,
   )
 where
 
@@ -60,6 +62,7 @@ import Grisette
     UnionM,
     liftUnionM,
     mrgFmap,
+    mrgFoldM,
     mrgReturn,
     mrgSequence_,
     mrgTraverse,
@@ -70,6 +73,7 @@ import Grisette
 import Grisette.Core.Data.Class.SOrd (SOrd ((.<=), (.>=)))
 import Grisette.Generics.BoolLike (BoolLike)
 import Grisette.Generics.Class.MonadBranching (MonadBranching (mrgIf))
+import Grisette.Generics.Class.SimpleMergeable (SimpleMergeable)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
@@ -172,6 +176,56 @@ livelinessOpUsesByType ::
 livelinessOpUsesByType defUseObj op argIds disabled = do
   ty <- typeOp op
   livelinessTypeUses defUseObj (argTypes ty) argIds disabled
+
+livelinessConcreteProgInvalidatingDefs ::
+  forall defUseObj bool op ty res ctx conVarId varId.
+  ( LivelinessConstraint defUseObj bool op ty res ctx,
+    ConcreteVarId conVarId,
+    Mergeable varId,
+    Resource bool res,
+    SimpleMergeable bool res
+  ) =>
+  defUseObj ->
+  Concrete.Prog op conVarId ty ->
+  varId ->
+  ctx [Def bool varId res]
+livelinessConcreteProgInvalidatingDefs
+  defUseObj
+  (Concrete.Prog _ _ stmtList _)
+  varId = do
+    mrgFoldM
+      ( \acc stmt -> do
+          v <- concreteStmtInvalidatingDef defUseObj stmt
+          mrgReturn $ acc ++ ((\x -> x {defId = varId}) <$> v)
+      )
+      []
+      stmtList
+
+livelinessComponentProgInvalidatingDefs ::
+  forall defUseObj op ty res ctx symVarId varId.
+  ( LivelinessConstraint defUseObj SymBool op ty res ctx,
+    SymbolicVarId symVarId,
+    Mergeable varId,
+    MonadUnion ctx,
+    Resource SymBool res,
+    SimpleMergeable SymBool res,
+    Show res
+  ) =>
+  defUseObj ->
+  Component.Prog op symVarId ty ->
+  varId ->
+  ctx [Def SymBool varId res]
+livelinessComponentProgInvalidatingDefs
+  defUseObj
+  (Component.Prog _ _ stmtList _)
+  varId = do
+    mrgFoldM
+      ( \acc stmt -> do
+          v <- componentStmtInvalidatingDefs defUseObj stmt >>= liftUnionM
+          mrgReturn $ acc ++ ((\x -> x {defId = varId}) <$> v)
+      )
+      []
+      stmtList
 
 class
   (LivelinessName defUseObj, MonadContext ctx, Resource bool res) =>
