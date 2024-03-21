@@ -18,7 +18,22 @@ import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
-import Grisette.Lib.Synth.Reasoning.Fuzzing (SynthesisWithFuzzerTask (SynthesisWithFuzzerTask, synthesisWithFuzzerTaskConstraints, synthesisWithFuzzerTaskContextType, synthesisWithFuzzerTaskGenerators, synthesisWithFuzzerTaskMaxTests, synthesisWithFuzzerTaskSemantics, synthesisWithFuzzerTaskSolverConfig, synthesisWithFuzzerTaskSpec, synthesisWithFuzzerTaskSymProg, synthesisWithFuzzerTaskSymValType))
+import Grisette.Lib.Synth.Reasoning.Fuzzing
+  ( SynthesisWithFuzzerTask
+      ( SynthesisWithFuzzerTask,
+        synthesisWithFuzzerTaskConConstraints,
+        synthesisWithFuzzerTaskConSemantics,
+        synthesisWithFuzzerTaskContextType,
+        synthesisWithFuzzerTaskGenerators,
+        synthesisWithFuzzerTaskMaxTests,
+        synthesisWithFuzzerTaskSolverConfig,
+        synthesisWithFuzzerTaskSpec,
+        synthesisWithFuzzerTaskSymConstraints,
+        synthesisWithFuzzerTaskSymProg,
+        synthesisWithFuzzerTaskSymSemantics,
+        synthesisWithFuzzerTaskSymValType
+      ),
+  )
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
     synthesizeProgWithVerifier,
@@ -139,8 +154,10 @@ main = do
             synthesisWithFuzzerTaskSpec = spec,
             -- You need a working z3 installation available in your PATH.
             synthesisWithFuzzerTaskSolverConfig = precise z3,
-            synthesisWithFuzzerTaskSemantics = Sem,
-            synthesisWithFuzzerTaskConstraints = (),
+            synthesisWithFuzzerTaskConSemantics = Sem,
+            synthesisWithFuzzerTaskSymSemantics = Sem,
+            synthesisWithFuzzerTaskConConstraints = (),
+            synthesisWithFuzzerTaskSymConstraints = (),
             synthesisWithFuzzerTaskMaxTests = 100,
             synthesisWithFuzzerTaskGenerators = [gen]
           }

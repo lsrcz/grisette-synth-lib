@@ -120,11 +120,13 @@ data SynthesisTask conVal conProg matcher exception where
       conProg
       symProg
       matcher
-      semObj
-      constrObj.
+      conSemObj
+      symSemObj
+      conConstrObj
+      symConstrObj.
     ( ConfigurableSolver config h,
-      ProgSemantics semObj symProg symVal ctx,
-      ProgConstraints constrObj symProg ctx,
+      ProgSemantics symSemObj symProg symVal ctx,
+      ProgConstraints symConstrObj symProg ctx,
       SynthesisContext ctx,
       Matcher matcher SymBool symVal,
       ToSym conVal symVal,
@@ -140,11 +142,14 @@ data SynthesisTask conVal conProg matcher exception where
       synthesisTaskVerifier ::
         forall p.
         p conProg ->
-        semObj ->
+        conSemObj ->
+        conConstrObj ->
         symProg ->
         StatefulVerifierFun state (IOPair conVal, matcher) exception,
-      synthesisTaskSemantics :: semObj,
-      synthesisTaskConstraints :: constrObj,
+      synthesisTaskConSemantics :: conSemObj,
+      synthesisTaskSymSemantics :: symSemObj,
+      synthesisTaskConConstraints :: conConstrObj,
+      synthesisTaskSymConstraints :: symConstrObj,
       synthesisTaskSymProg :: symProg
     } ->
     SynthesisTask conVal conProg matcher exception
@@ -181,23 +186,33 @@ synthesizeProgWithVerifier ::
   IO ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
 synthesizeProgWithVerifier task =
   case toSynthesisTask task of
-    SynthesisTask pctx psymVal config initialState verifier sem constr prog -> do
-      (ioPairs, r) <-
-        genericCEGIS
-          config
-          (con True)
-          ( synthesisConstraintFun
-              pctx
-              psymVal
-              sem
-              constr
-              prog
-          )
-          initialState
-          (verifier (Proxy :: Proxy conProg) sem prog)
-      case r of
-        CEGISSuccess model ->
-          return (ioPairs, SynthesisSuccess $ evaluateSymToCon model prog)
-        CEGISVerifierFailure ex -> return (ioPairs, SynthesisVerifierFailure ex)
-        CEGISSolverFailure failure ->
-          return (ioPairs, SynthesisSolverFailure failure)
+    SynthesisTask
+      pctx
+      psymVal
+      config
+      initialState
+      verifier
+      conSem
+      symSem
+      conConstr
+      symConstr
+      prog -> do
+        (ioPairs, r) <-
+          genericCEGIS
+            config
+            (con True)
+            ( synthesisConstraintFun
+                pctx
+                psymVal
+                symSem
+                symConstr
+                prog
+            )
+            initialState
+            (verifier (Proxy :: Proxy conProg) conSem conConstr prog)
+        case r of
+          CEGISSuccess model ->
+            return (ioPairs, SynthesisSuccess $ evaluateSymToCon model prog)
+          CEGISVerifierFailure ex -> return (ioPairs, SynthesisVerifierFailure ex)
+          CEGISSolverFailure failure ->
+            return (ioPairs, SynthesisSolverFailure failure)

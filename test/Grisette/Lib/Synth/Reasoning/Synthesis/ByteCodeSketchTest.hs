@@ -22,14 +22,16 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( SynthesisWithFuzzerMatcherTask
       ( SynthesisWithFuzzerMatcherTask,
-        synthesisWithFuzzerMatcherTaskConstraints,
+        synthesisWithFuzzerMatcherTaskConConstraints,
+        synthesisWithFuzzerMatcherTaskConSemantics,
         synthesisWithFuzzerMatcherTaskContextType,
         synthesisWithFuzzerMatcherTaskGenerators,
         synthesisWithFuzzerMatcherTaskMaxTests,
-        synthesisWithFuzzerMatcherTaskSemantics,
         synthesisWithFuzzerMatcherTaskSolverConfig,
         synthesisWithFuzzerMatcherTaskSpec,
+        synthesisWithFuzzerMatcherTaskSymConstraints,
         synthesisWithFuzzerMatcherTaskSymProg,
+        synthesisWithFuzzerMatcherTaskSymSemantics,
         synthesisWithFuzzerMatcherTaskSymValType
       ),
     fuzzingTestProg,
@@ -133,11 +135,13 @@ byteCodeSketchTest =
               synthesisWithFuzzerMatcherTaskSpec = spec,
               synthesisWithFuzzerMatcherTaskMaxTests = 100,
               synthesisWithFuzzerMatcherTaskGenerators = [gen],
-              synthesisWithFuzzerMatcherTaskSemantics = TestSemanticsObj,
-              synthesisWithFuzzerMatcherTaskConstraints = (),
+              synthesisWithFuzzerMatcherTaskConSemantics = TestSemanticsObj,
+              synthesisWithFuzzerMatcherTaskSymSemantics = TestSemanticsObj,
+              synthesisWithFuzzerMatcherTaskConConstraints = (),
+              synthesisWithFuzzerMatcherTaskSymConstraints = (),
               synthesisWithFuzzerMatcherTaskSymProg = sketch
             }
     return $ testCase name $ do
       (_, SynthesisSuccess prog) <- synthesizeProgWithVerifier task
-      fuzzingResult <- fuzzingTestProg gen spec 100 TestSemanticsObj prog
+      fuzzingResult <- fuzzingTestProg gen spec 100 TestSemanticsObj () prog
       fst <$> fuzzingResult @?= Nothing

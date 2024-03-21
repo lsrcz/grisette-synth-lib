@@ -19,10 +19,9 @@ import Data.Maybe (fromJust)
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
+    EvaluateSym,
     ITEOp (symIte),
     Mergeable,
-    MonadUnion,
-    SEq ((.==)),
     Solvable (con),
     SymWordN,
     ToCon (toCon),
@@ -31,9 +30,13 @@ import Grisette
     mrgIf,
     mrgReturn,
   )
+import qualified Grisette
+import Grisette.Generics.BoolLike (BoolLike)
+import Grisette.Generics.Class.SEq (SEq ((.==)))
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context
-  ( MonadContext,
+  ( ConcreteContext,
+    MonadContext,
     SymbolicContext,
   )
 import Grisette.Lib.Synth.Operator.OpTyping
@@ -44,6 +47,7 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
   ( ComponentUse (ComponentUse),
     Def (Def),
     Liveliness (Liveliness),
+    LivelinessConcrete (LivelinessConcrete),
     LivelinessName (livelinessName),
     LivelinessOpResource
       ( livelinessOpDefs,
@@ -55,7 +59,6 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
     Resource (conflict),
     UnionComponentUse,
     UnionDef,
-    UnionUse,
     Use (Use),
     componentProgDefs,
     componentProgUses,
@@ -77,9 +80,9 @@ import Test.SymbolicAssertion ((.@?=))
 
 data Resources = Resource1 | Resource2
   deriving (Eq, Show, Generic)
-  deriving (Mergeable, SEq) via (Default Resources)
+  deriving (Mergeable, Grisette.SEq) via (Default Resources)
 
-instance Resource Resources where
+instance (BoolLike bool, SEq bool Resources) => Resource bool Resources where
   conflict l r = l .== r
 
 data Op
@@ -121,8 +124,8 @@ instance OpTypingSimple Op Type where
 instance (MonadContext ctx) => OpTyping Op Type ctx
 
 instance
-  (MonadContext ctx, MonadUnion ctx) =>
-  LivelinessOpResource LivelinessOp Op Resources ctx
+  (MonadContext ctx, Resource bool Resources) =>
+  LivelinessOpResource LivelinessOp bool Op Resources ctx
   where
   livelinessOpInvalidatingDefs LivelinessOp OpDefNoInvalidate _ _ = mrgReturn []
   livelinessOpInvalidatingDefs LivelinessOp OpDefShareScope _ _ = mrgReturn []
@@ -136,11 +139,15 @@ instance LivelinessTypeResource LivelinessOp Resources Type where
 
 data LivelinessTest where
   LivelinessTest ::
-    ( ProgConstraints (Liveliness LivelinessOp) prog SymbolicContext
+    ( ProgConstraints obj prog ctx,
+      Show (ctx ()),
+      Grisette.SEq (ctx ()),
+      EvaluateSym (ctx ())
     ) =>
     { livelinessTestName :: String,
+      livelinessTestObj :: obj,
       livelinessTestProg :: prog,
-      livelinessTestExpectedAssertion :: SymbolicContext ()
+      livelinessTestExpectedAssertion :: ctx ()
     } ->
     LivelinessTest
 
@@ -211,14 +218,14 @@ livelinessTest =
     [ testCase "concreteStmtDef" $ do
         let actual = concreteStmtDef LivelinessOp concreteDefStmt
         let expected =
-              mrgReturn (mrgReturn [Def 3 Resource1 (con False)]) ::
-                SymbolicContext (UnionDef (WordN 8) Resources)
+              mrgReturn [Def 3 Resource1 False] ::
+                SymbolicContext [Def Bool (WordN 8) Resources]
         actual @?= expected,
       testCase "concreteStmtUses" $ do
         let actual = concreteStmtUse LivelinessOp concreteUseStmt
         let expected =
-              mrgReturn (mrgReturn [Use 3 (con False)]) ::
-                SymbolicContext (UnionUse (WordN 8))
+              mrgReturn [Use 3 False] ::
+                SymbolicContext [Use Bool (WordN 8)]
         actual @?= expected,
       testCase "componentStmtDefs" $ do
         let actual =
@@ -278,10 +285,11 @@ livelinessTest =
                 ]
         actual @?= expected,
       testGroup "ProgConstraint" $ do
-        LivelinessTest name prog (assertion :: ctx ()) <-
+        LivelinessTest name obj prog (assertion :: ctx ()) <-
           concat
             [ [ LivelinessTest
                   { livelinessTestName = "Component/correct",
+                    livelinessTestObj = Liveliness LivelinessOp,
                     livelinessTestProg =
                       Component.Prog
                         "test"
@@ -296,10 +304,12 @@ livelinessTest =
                           Component.Stmt opNone [7] 2 [8] 1 (con False)
                         ]
                         [Component.ProgRes (6 :: SymWordN 8) ConstrainedType],
-                    livelinessTestExpectedAssertion = mrgReturn ()
+                    livelinessTestExpectedAssertion =
+                      mrgReturn () :: SymbolicContext ()
                   },
                 LivelinessTest
                   { livelinessTestName = "Component/disabled ok",
+                    livelinessTestObj = Liveliness LivelinessOp,
                     livelinessTestProg =
                       Component.Prog
                         "test"
@@ -310,10 +320,12 @@ livelinessTest =
                           Component.Stmt opUseDef [1] 1 [4] 1 (con True)
                         ]
                         [Component.ProgRes (3 :: SymWordN 8) ConstrainedType],
-                    livelinessTestExpectedAssertion = mrgReturn ()
+                    livelinessTestExpectedAssertion =
+                      mrgReturn () :: SymbolicContext ()
                   },
                 LivelinessTest
                   { livelinessTestName = "Concrete/correct",
+                    livelinessTestObj = Liveliness LivelinessOp,
                     livelinessTestProg =
                       Concrete.Prog
                         "test"
@@ -328,7 +340,28 @@ livelinessTest =
                           Concrete.Stmt OpNone [7] [8]
                         ]
                         [Concrete.ProgRes (9 :: WordN 8) ConstrainedType],
-                    livelinessTestExpectedAssertion = mrgReturn ()
+                    livelinessTestExpectedAssertion =
+                      mrgReturn () :: SymbolicContext ()
+                  },
+                LivelinessTest
+                  { livelinessTestName = "Concrete/Concrete/correct",
+                    livelinessTestObj = LivelinessConcrete LivelinessOp,
+                    livelinessTestProg =
+                      Concrete.Prog
+                        "test"
+                        [ Concrete.ProgArg "arg0" 0 OtherType,
+                          Concrete.ProgArg "arg1" (-1) ConstrainedType
+                        ]
+                        [ Concrete.Stmt OpUse [0, -1] [2],
+                          Concrete.Stmt OpDef [0] [3, 4],
+                          Concrete.Stmt OpUse [3, 4] [5],
+                          Concrete.Stmt OpUseDef [4] [9],
+                          Concrete.Stmt OpUse [3, 9] [7],
+                          Concrete.Stmt OpNone [7] [8]
+                        ]
+                        [Concrete.ProgRes (9 :: WordN 8) ConstrainedType],
+                    livelinessTestExpectedAssertion =
+                      mrgReturn () :: ConcreteContext ()
                   }
               ],
               let correct2 =
@@ -344,15 +377,28 @@ livelinessTest =
                       [Component.ProgRes (5 :: SymWordN 8) ConstrainedType]
                in [ LivelinessTest
                       { livelinessTestName = "Component/correct2",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = correct2,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName = "Concrete/correct2",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon correct2 ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName = "Concrete/Concrete/correct2",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon correct2 ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: ConcreteContext ()
                       }
                   ],
               let notUsingNewestDefButUsingFromArg =
@@ -366,22 +412,38 @@ livelinessTest =
                         Component.Stmt opUse [2, 1] 2 [6] 1 (con False)
                       ]
                       [Component.ProgRes (5 :: SymWordN 8) ConstrainedType]
+                  err :: (MonadContext ctx) => ctx ()
                   err =
                     mrgThrowError
                       "Cannot use invalidated resource for ConstrainedType"
                in [ LivelinessTest
                       { livelinessTestName =
                           "Component/not using newest def but using from arg",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = notUsingNewestDefButUsingFromArg,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName =
                           "Concrete/not using newest def but using from arg",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon notUsingNewestDefButUsingFromArg ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/not using newest def but using "
+                            <> "from arg",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon notUsingNewestDefButUsingFromArg ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          err :: ConcreteContext ()
                       }
                   ],
               let notUsingNewestDef =
@@ -395,20 +457,35 @@ livelinessTest =
                         Component.Stmt opUse [2, 3] 2 [6] 1 (con False)
                       ]
                       [Component.ProgRes (5 :: SymWordN 8) ConstrainedType]
+                  err :: (MonadContext ctx) => ctx ()
                   err =
                     mrgThrowError
                       "Cannot use invalidated resource for ConstrainedType"
                in [ LivelinessTest
                       { livelinessTestName = "Component/not using newest def",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = notUsingNewestDef,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName = "Concrete/not using newest def",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon notUsingNewestDef ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/not using newest def",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon notUsingNewestDef ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          err :: ConcreteContext ()
                       }
                   ],
               let prog =
@@ -422,22 +499,37 @@ livelinessTest =
                         Component.Stmt opUse [2, 1] 2 [6] 1 (con False)
                       ]
                       [Component.ProgRes (1 :: SymWordN 8) ConstrainedType]
+                  err :: (MonadContext ctx) => ctx ()
                   err =
                     mrgThrowError
                       "Cannot use invalidated resource for ConstrainedType"
                in [ LivelinessTest
                       { livelinessTestName =
                           "Component/res not using newest def, use arg",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = prog,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName =
                           "Concrete/res not using newest def, use arg",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/res not using newest def, use arg",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          err :: ConcreteContext ()
                       }
                   ],
               let prog =
@@ -451,22 +543,38 @@ livelinessTest =
                         Component.Stmt opUse [2, 1] 2 [6] 1 (con False)
                       ]
                       [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
+                  err :: (MonadContext ctx) => ctx ()
                   err =
                     mrgThrowError
                       "Cannot use invalidated resource for ConstrainedType"
                in [ LivelinessTest
                       { livelinessTestName =
                           "Component/res not using newest def, use old stmt",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = prog,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName =
                           "Concrete/res not using newest def, use old stmt",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/res not using newest def, use old "
+                            <> "stmt",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          err :: ConcreteContext ()
                       }
                   ],
               let prog =
@@ -482,15 +590,29 @@ livelinessTest =
                       ]
                in [ LivelinessTest
                       { livelinessTestName = "Component/multiple arguments",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = prog,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName = "Concrete/multiple arguments",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = return ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/multiple arguments",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: ConcreteContext ()
                       }
                   ],
               let prog =
@@ -513,16 +635,31 @@ livelinessTest =
                in [ LivelinessTest
                       { livelinessTestName =
                           "Component/no invalidate should not invalidate",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = prog,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName =
                           "Concrete/no invalidate should not invalidate",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/no invalidate should not "
+                            <> "invalidate",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: ConcreteContext ()
                       }
                   ],
               let prog =
@@ -544,16 +681,30 @@ livelinessTest =
                in [ LivelinessTest
                       { livelinessTestName =
                           "Component/use no invalidate ok",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = prog,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName =
                           "Concrete/use no invalidate ok",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/use no invalidate ok",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: ConcreteContext ()
                       }
                   ],
               let prog =
@@ -575,16 +726,30 @@ livelinessTest =
                in [ LivelinessTest
                       { livelinessTestName =
                           "Component/use old no invalidate ok",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = prog,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName =
                           "Concrete/use old no invalidate ok",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/use old no invalidate ok",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: ConcreteContext ()
                       }
                   ],
               let prog =
@@ -610,16 +775,31 @@ livelinessTest =
                in [ LivelinessTest
                       { livelinessTestName =
                           "Component/no invalidate should not invalidate",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = prog,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName =
                           "Concrete/no invalidate should not invalidate",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/no invalidate should not "
+                            <> "invalidate",
+                        livelinessTestObj = Liveliness LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
                       }
                   ],
               let prog =
@@ -640,18 +820,30 @@ livelinessTest =
                         Component.ProgRes (8 :: SymWordN 8) ConstrainedType2
                       ]
                in [ LivelinessTest
-                      { livelinessTestName =
-                          "Component/multiple resources",
+                      { livelinessTestName = "Component/multiple resources",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = prog,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
                       },
                     LivelinessTest
-                      { livelinessTestName =
-                          "Concrete/multiple resources",
+                      { livelinessTestName = "Concrete/multiple resources",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = mrgReturn ()
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/multiple resources",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          mrgReturn () :: ConcreteContext ()
                       }
                   ],
               let prog =
@@ -671,27 +863,42 @@ livelinessTest =
                       [ Component.ProgRes (6 :: SymWordN 8) ConstrainedType,
                         Component.ProgRes (8 :: SymWordN 8) ConstrainedType2
                       ]
+                  err :: (MonadContext ctx) => ctx ()
                   err =
                     mrgThrowError
                       "Cannot use invalidated resource for ConstrainedType"
                in [ LivelinessTest
                       { livelinessTestName =
                           "Component/multiple resources failure",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg = prog,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
                       },
                     LivelinessTest
                       { livelinessTestName =
                           "Concrete/multiple resources failure",
+                        livelinessTestObj = Liveliness LivelinessOp,
                         livelinessTestProg =
                           fromJust $ toCon prog ::
                             Concrete.Prog Op (WordN 8) Type,
-                        livelinessTestExpectedAssertion = err
+                        livelinessTestExpectedAssertion =
+                          err :: SymbolicContext ()
+                      },
+                    LivelinessTest
+                      { livelinessTestName =
+                          "Concrete/Concrete/multiple resources failure",
+                        livelinessTestObj = LivelinessConcrete LivelinessOp,
+                        livelinessTestProg =
+                          fromJust $ toCon prog ::
+                            Concrete.Prog Op (WordN 8) Type,
+                        livelinessTestExpectedAssertion =
+                          err :: ConcreteContext ()
                       }
                   ]
             ]
         return $
           testCase name $ do
-            let actual = constrainProg (Liveliness LivelinessOp) prog
+            let actual = constrainProg obj prog
             actual .@?= assertion
     ]

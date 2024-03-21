@@ -28,8 +28,11 @@ import Grisette
     evaluateSymToCon,
   )
 import Grisette.Lib.Synth.Context (ConcreteContext)
-import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints)
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgConstraints
+  ( ProgConstraints,
+    runProgWithConstraints,
+  )
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics)
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 import Grisette.Lib.Synth.Reasoning.Matcher
   ( EqMatcher (EqMatcher),
@@ -58,21 +61,23 @@ import Test.QuickCheck.Counterexamples
 fuzzingTestProg ::
   ( Matcher matcher Bool conVal,
     Show conVal,
-    ProgSemantics semObj conProg conVal ConcreteContext
+    ProgSemantics semObj conProg conVal ConcreteContext,
+    ProgConstraints constrObj conProg ConcreteContext
   ) =>
   Gen [conVal] ->
   ([conVal] -> ([conVal], matcher)) ->
   Int ->
   semObj ->
+  constrObj ->
   conProg ->
   IO (Maybe (IOPair conVal, matcher))
-fuzzingTestProg gen spec maxTests sem prog = do
+fuzzingTestProg gen spec maxTests sem constrObj prog = do
   maybeCex <-
     quickCheckWith
       stdArgs {maxSuccess = maxTests, chatty = False}
       ( forAll gen $ \inputs ->
           let (expectedOutputs, matcher) = spec inputs
-           in case runProg sem prog inputs of
+           in case runProgWithConstraints sem constrObj prog inputs of
                 Left _ -> False
                 Right actualOutputs ->
                   match matcher actualOutputs expectedOutputs
@@ -84,10 +89,11 @@ fuzzingTestProg gen spec maxTests sem prog = do
       return $ Just (IOPair cex outputs, matcher)
 
 fuzzingTestSymProgWithModel ::
-  forall conVal conProg symProg matcher semObj p.
+  forall conVal conProg symProg matcher semObj constrObj p.
   ( Matcher matcher Bool conVal,
     Show conVal,
     ProgSemantics semObj conProg conVal ConcreteContext,
+    ProgConstraints constrObj conProg ConcreteContext,
     ToCon symProg conProg,
     EvaluateSym symProg
   ) =>
@@ -96,22 +102,25 @@ fuzzingTestSymProgWithModel ::
   Int ->
   p conProg ->
   semObj ->
+  constrObj ->
   symProg ->
   Model ->
   IO (Maybe (IOPair conVal, matcher))
-fuzzingTestSymProgWithModel gen spec maxTests _ sem prog model = do
+fuzzingTestSymProgWithModel gen spec maxTests _ sem constr prog model = do
   fuzzingTestProg
     gen
     spec
     maxTests
     sem
+    constr
     (evaluateSymToCon model prog :: conProg)
 
 fuzzingTestStatefulVerifierFun ::
-  forall conVal conProg symProg matcher semObj p.
+  forall conVal conProg symProg matcher semObj constrObj p.
   ( Matcher matcher Bool conVal,
     Show conVal,
     ProgSemantics semObj conProg conVal ConcreteContext,
+    ProgConstraints constrObj conProg ConcreteContext,
     ToCon symProg conProg,
     EvaluateSym symProg
   ) =>
@@ -119,14 +128,15 @@ fuzzingTestStatefulVerifierFun ::
   Int ->
   p conProg ->
   semObj ->
+  constrObj ->
   symProg ->
   StatefulVerifierFun [Gen [conVal]] (IOPair conVal, matcher) ()
-fuzzingTestStatefulVerifierFun spec maxTests p sem prog = go
+fuzzingTestStatefulVerifierFun spec maxTests p sem constr prog = go
   where
     go [] _ = return ([], CEGISVerifierNoCex)
     go (g : gs) model = do
       fuzzingResult <-
-        fuzzingTestSymProgWithModel g spec maxTests p sem prog model
+        fuzzingTestSymProgWithModel g spec maxTests p sem constr prog model
       case fuzzingResult of
         Just cex ->
           return (g : gs, CEGISVerifierFoundCex cex)
@@ -134,11 +144,24 @@ fuzzingTestStatefulVerifierFun spec maxTests p sem prog = go
 
 data SynthesisWithFuzzerMatcherTask conVal conProg matcher where
   SynthesisWithFuzzerMatcherTask ::
-    forall config h conVal symVal ctx conProg symProg matcher semObj constrObj.
+    forall
+      config
+      h
+      conVal
+      symVal
+      ctx
+      conProg
+      symProg
+      matcher
+      conSemObj
+      symSemObj
+      conConstrObj
+      symConstrObj.
     ( ConfigurableSolver config h,
-      ProgSemantics semObj symProg symVal ctx,
-      ProgSemantics semObj conProg conVal ConcreteContext,
-      ProgConstraints constrObj symProg ctx,
+      ProgSemantics symSemObj symProg symVal ctx,
+      ProgSemantics conSemObj conProg conVal ConcreteContext,
+      ProgConstraints symConstrObj symProg ctx,
+      ProgConstraints conConstrObj conProg ConcreteContext,
       SynthesisContext ctx,
       ToSym conVal symVal,
       EvaluateSym symProg,
@@ -155,19 +178,21 @@ data SynthesisWithFuzzerMatcherTask conVal conProg matcher where
       synthesisWithFuzzerMatcherTaskSpec :: [conVal] -> ([conVal], matcher),
       synthesisWithFuzzerMatcherTaskMaxTests :: Int,
       synthesisWithFuzzerMatcherTaskGenerators :: [Gen [conVal]],
-      synthesisWithFuzzerMatcherTaskSemantics :: semObj,
-      synthesisWithFuzzerMatcherTaskConstraints :: constrObj,
+      synthesisWithFuzzerMatcherTaskConSemantics :: conSemObj,
+      synthesisWithFuzzerMatcherTaskSymSemantics :: symSemObj,
+      synthesisWithFuzzerMatcherTaskConConstraints :: conConstrObj,
+      synthesisWithFuzzerMatcherTaskSymConstraints :: symConstrObj,
       synthesisWithFuzzerMatcherTaskSymProg :: symProg
     } ->
     SynthesisWithFuzzerMatcherTask conVal conProg matcher
 
 data SynthesisWithFuzzerTask conVal conProg where
   SynthesisWithFuzzerTask ::
-    forall config h conVal symVal ctx conProg symProg semObj constrObj.
     ( ConfigurableSolver config h,
-      ProgSemantics semObj symProg symVal ctx,
-      ProgSemantics semObj conProg conVal ConcreteContext,
-      ProgConstraints constrObj symProg ctx,
+      ProgSemantics symSemObj symProg symVal ctx,
+      ProgSemantics conSemObj conProg conVal ConcreteContext,
+      ProgConstraints symConstrObj symProg ctx,
+      ProgConstraints conConstrObj conProg ConcreteContext,
       SynthesisContext ctx,
       ToSym conVal symVal,
       EvaluateSym symProg,
@@ -184,8 +209,10 @@ data SynthesisWithFuzzerTask conVal conProg where
       synthesisWithFuzzerTaskSpec :: [conVal] -> [conVal],
       synthesisWithFuzzerTaskMaxTests :: Int,
       synthesisWithFuzzerTaskGenerators :: [Gen [conVal]],
-      synthesisWithFuzzerTaskSemantics :: semObj,
-      synthesisWithFuzzerTaskConstraints :: constrObj,
+      synthesisWithFuzzerTaskConSemantics :: conSemObj,
+      synthesisWithFuzzerTaskSymSemantics :: symSemObj,
+      synthesisWithFuzzerTaskConConstraints :: conConstrObj,
+      synthesisWithFuzzerTaskSymConstraints :: symConstrObj,
       synthesisWithFuzzerTaskSymProg :: symProg
     } ->
     SynthesisWithFuzzerTask conVal conProg
@@ -214,8 +241,10 @@ instance
         spec
         maxTests
         gens
-        sem
-        constr
+        conSem
+        symSem
+        conConstr
+        symConstr
         prog
       ) =
       SynthesisTask
@@ -224,8 +253,10 @@ instance
         config
         gens
         (fuzzingTestStatefulVerifierFun spec maxTests)
-        sem
-        constr
+        conSem
+        symSem
+        conConstr
+        symConstr
         prog
 
 instance ToSynthesisTask (SynthesisWithFuzzerTask conVal conProg) where
@@ -241,8 +272,10 @@ instance ToSynthesisTask (SynthesisWithFuzzerTask conVal conProg) where
         spec
         maxTests
         gens
-        sem
-        constr
+        conSem
+        symSem
+        conConstr
+        symConstr
         prog
       ) =
       SynthesisTask
@@ -254,6 +287,8 @@ instance ToSynthesisTask (SynthesisWithFuzzerTask conVal conProg) where
             (\inputs -> (spec inputs, EqMatcher))
             maxTests
         )
-        sem
-        constr
+        conSem
+        symSem
+        conConstr
+        symConstr
         prog
