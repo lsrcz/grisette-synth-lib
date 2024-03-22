@@ -4,7 +4,7 @@
 
 module Grisette.Lib.Synth.Program.ProgConstraints
   ( ProgConstraints (..),
-    runProgWithConstraints,
+    WithConstraints (..),
   )
 where
 
@@ -48,13 +48,12 @@ instance
   constrainProg (obj1, obj2, obj3, obj4) =
     constrainProg (obj1, (obj2, obj3, obj4))
 
-runProgWithConstraints ::
+data WithConstraints semObj constObj = WithConstraints semObj constObj
+
+instance
   (ProgSemantics semObj prog val ctx, ProgConstraints constObj prog ctx) =>
-  semObj ->
-  constObj ->
-  prog ->
-  [val] ->
-  ctx [val]
-runProgWithConstraints semObj constObj prog inputs = do
-  constrainProg constObj prog
-  runProg semObj prog inputs
+  ProgSemantics (WithConstraints semObj constObj) prog val ctx
+  where
+  runProg (WithConstraints semObj constObj) prog inputs = do
+    constrainProg constObj prog
+    runProg semObj prog inputs

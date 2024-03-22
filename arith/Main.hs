@@ -13,14 +13,12 @@ import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( SynthesisWithFuzzerTask
       ( SynthesisWithFuzzerTask,
-        synthesisWithFuzzerTaskConConstraints,
         synthesisWithFuzzerTaskConSemantics,
         synthesisWithFuzzerTaskContextType,
         synthesisWithFuzzerTaskGenerators,
         synthesisWithFuzzerTaskMaxTests,
         synthesisWithFuzzerTaskSolverConfig,
         synthesisWithFuzzerTaskSpec,
-        synthesisWithFuzzerTaskSymConstraints,
         synthesisWithFuzzerTaskSymProg,
         synthesisWithFuzzerTaskSymSemantics,
         synthesisWithFuzzerTaskSymValType
@@ -86,8 +84,6 @@ main = do
             synthesisWithFuzzerTaskSolverConfig = precise z3,
             synthesisWithFuzzerTaskConSemantics = Sem,
             synthesisWithFuzzerTaskSymSemantics = Sem,
-            synthesisWithFuzzerTaskConConstraints = (),
-            synthesisWithFuzzerTaskSymConstraints = (),
             synthesisWithFuzzerTaskMaxTests = 100,
             synthesisWithFuzzerTaskGenerators = [gen]
           }

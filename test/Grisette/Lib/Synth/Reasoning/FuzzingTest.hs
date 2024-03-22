@@ -93,15 +93,15 @@ fuzzingTest =
     [ testGroup
         "fuzzingTestProg"
         [ testCase "goodSpec" $ do
-            result <- fuzzingTestProg gen spec 100 TestSemanticsObj () conProg
+            result <- fuzzingTestProg gen spec 100 TestSemanticsObj conProg
             fst <$> result @?= Nothing,
           testCase "reverseSpec" $ do
             result <-
-              fuzzingTestProg gen reverseSpec 100 TestSemanticsObj () conProg
+              fuzzingTestProg gen reverseSpec 100 TestSemanticsObj conProg
             fst <$> result @?= Nothing,
           testCase "badSpec" $ do
             Just (IOPair i o, _) <-
-              fuzzingTestProg gen badSpec 100 TestSemanticsObj () conProg
+              fuzzingTestProg gen badSpec 100 TestSemanticsObj conProg
             fst (badSpec i) @?= o
             (runProg TestSemanticsObj conProg i /= Right o)
               @? "Should fail the test."
@@ -116,7 +116,6 @@ fuzzingTest =
                 100
                 (Proxy :: Proxy ConProgType)
                 TestSemanticsObj
-                ()
                 symProg
                 model
             fst <$> result @?= Nothing,
@@ -128,7 +127,6 @@ fuzzingTest =
                 100
                 (Proxy :: Proxy ConProgType)
                 TestSemanticsObj
-                ()
                 symProg
                 model
             fst (badSpec i) @?= o
@@ -142,7 +140,6 @@ fuzzingTest =
             100
             (Proxy :: Proxy ConProgType)
             TestSemanticsObj
-            ()
             symProg
             [return [1, -1], gen]
             model
