@@ -128,7 +128,8 @@ livelinessTypeDefs defUseObj tys resIds disabled = do
   mrgReturn
     $ mapMaybe
       ( \(id, ty) ->
-          (\res -> Def id res disabled) <$> livelinessTypeResource defUseObj ty
+          (\res -> Def id res disabled)
+            <$> livelinessTypeDefResource defUseObj ty
       )
     $ zip resIds tys
 
@@ -162,7 +163,9 @@ livelinessTypeUses defUseObj tys argIds disabled = do
   mrgReturn
     $ mapMaybe
       ( \(id, ty) ->
-          Use id disabled <$ livelinessTypeResource defUseObj ty
+          if livelinessTypeValidUse defUseObj ty
+            then Just $ Use id disabled
+            else Nothing
       )
     $ zip argIds tys
 
@@ -346,7 +349,10 @@ class
   LivelinessTypeResource defUseObj res ty
     | defUseObj -> res
   where
-  livelinessTypeResource :: defUseObj -> ty -> Maybe res
+  livelinessTypeDefResource :: defUseObj -> ty -> Maybe res
+  livelinessTypeValidUse :: defUseObj -> ty -> Bool
+  livelinessTypeValidUse defUseObj ty =
+    isJust $ livelinessTypeDefResource defUseObj ty
 
 type LivelinessConstraint defUseObj bool op ty res ctx =
   ( LivelinessOpResource defUseObj bool op res ctx,
@@ -419,7 +425,7 @@ concreteArgDefs defUseObj =
   mapMaybe
     ( \(Concrete.ProgArg _ argId argType) ->
         (\res -> Def argId res (toSym False))
-          <$> livelinessTypeResource defUseObj argType
+          <$> livelinessTypeDefResource defUseObj argType
     )
 
 concreteArgUnionDefs ::
@@ -443,8 +449,9 @@ concreteResUses ::
 concreteResUses defUseObj =
   mapMaybe
     ( \(Concrete.ProgRes resId resType) ->
-        livelinessTypeResource defUseObj resType
-          *> Just (Use resId (toSym False))
+        if livelinessTypeValidUse defUseObj resType
+          then Just (Use resId (toSym False))
+          else Nothing
     )
 
 concreteResUnionUses ::
@@ -688,7 +695,7 @@ componentProgDefs
         mrgReturn
           $ mapMaybe
             ( \(i, Component.ProgArg _ ty) -> do
-                res <- livelinessTypeResource defUseObj ty
+                res <- livelinessTypeDefResource defUseObj ty
                 return $ Def (fromIntegral i) res (con False)
             )
           $ zip [0 ..] argList
@@ -728,8 +735,7 @@ componentProgUses
           (\useId -> ComponentUse useId resEffectiveDefId (con False))
             . Component.progResId
             <$> filter
-              ( isJust
-                  . livelinessTypeResource defUseObj
+              ( livelinessTypeValidUse defUseObj
                   . Component.progResType
               )
               resList

@@ -57,7 +57,7 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
         livelinessOpInvalidatingDefs
       ),
     LivelinessTypeResource
-      ( livelinessTypeResource
+      ( livelinessTypeDefResource
       ),
     Resource (conflict),
     UnionComponentUse,
@@ -152,9 +152,9 @@ instance
   (BoolLike bool) =>
   LivelinessTypeResource (LivelinessOp bool) (Resources bool) Type
   where
-  livelinessTypeResource LivelinessOp ConstrainedType = Just mkResource1
-  livelinessTypeResource LivelinessOp ConstrainedType2 = Just mkResource2
-  livelinessTypeResource LivelinessOp OtherType = Nothing
+  livelinessTypeDefResource LivelinessOp ConstrainedType = Just mkResource1
+  livelinessTypeDefResource LivelinessOp ConstrainedType2 = Just mkResource2
+  livelinessTypeDefResource LivelinessOp OtherType = Nothing
 
 data LivelinessTest where
   LivelinessTest ::
