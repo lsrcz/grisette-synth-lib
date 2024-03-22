@@ -110,60 +110,60 @@ newtype Liveliness livelinessObj = Liveliness livelinessObj
 
 newtype LivelinessConcrete livelinessObj = LivelinessConcrete livelinessObj
 
-class LivelinessName defUseObj where
-  livelinessName :: defUseObj -> T.Text
+class LivelinessName livelinessObj where
+  livelinessName :: livelinessObj -> T.Text
 
 livelinessTypeDefs ::
   ( Mergeable varId,
-    LivelinessTypeResource defUseObj res ty,
+    LivelinessTypeResource livelinessObj res ty,
     MonadContext ctx,
     BoolLike bool
   ) =>
-  defUseObj ->
+  livelinessObj ->
   [ty] ->
   [varId] ->
   bool ->
   ctx [Def bool varId res]
-livelinessTypeDefs defUseObj tys resIds disabled = do
+livelinessTypeDefs livelinessObj tys resIds disabled = do
   mrgReturn
     $ mapMaybe
       ( \(id, ty) ->
           (\res -> Def id res disabled)
-            <$> livelinessTypeDefResource defUseObj ty
+            <$> livelinessTypeDefResource livelinessObj ty
       )
     $ zip resIds tys
 
 livelinessOpDefsByType ::
   ( Mergeable varId,
     OpTyping op ty ctx,
-    LivelinessTypeResource defUseObj res ty,
+    LivelinessTypeResource livelinessObj res ty,
     BoolLike bool
   ) =>
-  defUseObj ->
+  livelinessObj ->
   op ->
   [varId] ->
   bool ->
   ctx [Def bool varId res]
-livelinessOpDefsByType defUseObj op resIds disabled = do
+livelinessOpDefsByType livelinessObj op resIds disabled = do
   ty <- typeOp op
-  livelinessTypeDefs defUseObj (resTypes ty) resIds disabled
+  livelinessTypeDefs livelinessObj (resTypes ty) resIds disabled
 
 livelinessTypeUses ::
   ( Mergeable varId,
-    LivelinessTypeResource defUseObj res ty,
+    LivelinessTypeResource livelinessObj res ty,
     MonadContext ctx,
     BoolLike bool
   ) =>
-  defUseObj ->
+  livelinessObj ->
   [ty] ->
   [varId] ->
   bool ->
   ctx [Use bool varId]
-livelinessTypeUses defUseObj tys argIds disabled = do
+livelinessTypeUses livelinessObj tys argIds disabled = do
   mrgReturn
     $ mapMaybe
       ( \(id, ty) ->
-          if livelinessTypeValidUse defUseObj ty
+          if livelinessTypeValidUse livelinessObj ty
             then Just $ Use id disabled
             else Nothing
       )
@@ -172,17 +172,17 @@ livelinessTypeUses defUseObj tys argIds disabled = do
 livelinessOpUsesByType ::
   ( Mergeable varId,
     OpTyping op ty ctx,
-    LivelinessTypeResource defUseObj res ty,
+    LivelinessTypeResource livelinessObj res ty,
     BoolLike bool
   ) =>
-  defUseObj ->
+  livelinessObj ->
   op ->
   [varId] ->
   bool ->
   ctx [Use bool varId]
-livelinessOpUsesByType defUseObj op argIds disabled = do
+livelinessOpUsesByType livelinessObj op argIds disabled = do
   ty <- typeOp op
-  livelinessTypeUses defUseObj (argTypes ty) argIds disabled
+  livelinessTypeUses livelinessObj (argTypes ty) argIds disabled
 
 newtype MergeResourceListWithDisabled bool res
   = MergeResourceListWithDisabled [(res, bool)]
@@ -234,20 +234,20 @@ mergeResourceListFromDefList =
   MergeResourceListWithDisabled . fmap (\d -> (defResource d, defDisabled d))
 
 livelinessConcreteProgInvalidatingDefs ::
-  forall defUseObj bool op ty res ctx conVarId varId.
-  ( LivelinessConstraint defUseObj bool op ty res ctx,
+  forall livelinessObj bool op ty res ctx conVarId varId.
+  ( LivelinessConstraint livelinessObj bool op ty res ctx,
     ConcreteVarId conVarId,
     Mergeable varId,
     Resource bool res,
     Mergeable (MergeResourceListWithDisabled bool res)
   ) =>
-  defUseObj ->
+  livelinessObj ->
   Concrete.Prog op conVarId ty ->
   varId ->
   bool ->
   ctx [Def bool varId res]
 livelinessConcreteProgInvalidatingDefs
-  defUseObj
+  livelinessObj
   (Concrete.Prog _ _ stmtList _)
   varId
   disabled = do
@@ -256,7 +256,7 @@ livelinessConcreteProgInvalidatingDefs
         ( \acc stmt -> do
             v <-
               mrgFmap mergeResourceListFromDefList $
-                concreteStmtInvalidatingDef defUseObj stmt
+                concreteStmtInvalidatingDef livelinessObj stmt
             mrgReturn $ acc <> applyDisabled disabled v
         )
         (MergeResourceListWithDisabled [])
@@ -264,21 +264,21 @@ livelinessConcreteProgInvalidatingDefs
     mrgReturn $ uncurry (Def varId) <$> lst
 
 livelinessComponentProgInvalidatingDefs ::
-  forall defUseObj op ty res ctx symVarId varId.
-  ( LivelinessConstraint defUseObj SymBool op ty res ctx,
+  forall livelinessObj op ty res ctx symVarId varId.
+  ( LivelinessConstraint livelinessObj SymBool op ty res ctx,
     SymbolicVarId symVarId,
     Mergeable varId,
     MonadUnion ctx,
     Resource SymBool res,
     Grisette.SimpleMergeable res
   ) =>
-  defUseObj ->
+  livelinessObj ->
   Component.Prog op symVarId ty ->
   varId ->
   SymBool ->
   ctx [Def SymBool varId res]
 livelinessComponentProgInvalidatingDefs
-  defUseObj
+  livelinessObj
   (Component.Prog _ _ stmtList _)
   varId
   disabled = do
@@ -287,7 +287,7 @@ livelinessComponentProgInvalidatingDefs
         ( \acc stmt -> do
             v <-
               mrgFmap mergeResourceListFromDefList $
-                componentStmtInvalidatingDefs defUseObj stmt >>= liftUnionM
+                componentStmtInvalidatingDefs livelinessObj stmt >>= liftUnionM
             mrgReturn $ acc <> applyDisabled disabled v
         )
         (MergeResourceListWithDisabled [])
@@ -295,13 +295,13 @@ livelinessComponentProgInvalidatingDefs
     mrgReturn $ uncurry (Def varId) <$> lst
 
 class
-  (LivelinessName defUseObj, MonadContext ctx, Resource bool res) =>
-  LivelinessOpResource defUseObj bool op res ctx
-    | defUseObj -> res
+  (LivelinessName livelinessObj, MonadContext ctx, Resource bool res) =>
+  LivelinessOpResource livelinessObj bool op res ctx
+    | livelinessObj -> res
   where
   livelinessOpDefs ::
     (Mergeable varId) =>
-    defUseObj ->
+    livelinessObj ->
     op ->
     [varId] ->
     bool ->
@@ -309,9 +309,9 @@ class
   default livelinessOpDefs ::
     ( Mergeable varId,
       OpTyping op ty ctx,
-      LivelinessTypeResource defUseObj res ty
+      LivelinessTypeResource livelinessObj res ty
     ) =>
-    defUseObj ->
+    livelinessObj ->
     op ->
     [varId] ->
     bool ->
@@ -319,7 +319,7 @@ class
   livelinessOpDefs = livelinessOpDefsByType
   livelinessOpInvalidatingDefs ::
     (Mergeable varId) =>
-    defUseObj ->
+    livelinessObj ->
     op ->
     [varId] ->
     bool ->
@@ -327,7 +327,7 @@ class
   livelinessOpInvalidatingDefs = livelinessOpDefs
   livelinessOpUses ::
     (Mergeable varId) =>
-    defUseObj ->
+    livelinessObj ->
     op ->
     [varId] ->
     bool ->
@@ -335,9 +335,9 @@ class
   default livelinessOpUses ::
     ( Mergeable varId,
       OpTyping op ty ctx,
-      LivelinessTypeResource defUseObj res ty
+      LivelinessTypeResource livelinessObj res ty
     ) =>
-    defUseObj ->
+    livelinessObj ->
     op ->
     [varId] ->
     bool ->
@@ -346,17 +346,17 @@ class
 
 class
   (Mergeable res) =>
-  LivelinessTypeResource defUseObj res ty
-    | defUseObj -> res
+  LivelinessTypeResource livelinessObj res ty
+    | livelinessObj -> res
   where
-  livelinessTypeDefResource :: defUseObj -> ty -> Maybe res
-  livelinessTypeValidUse :: defUseObj -> ty -> Bool
-  livelinessTypeValidUse defUseObj ty =
-    isJust $ livelinessTypeDefResource defUseObj ty
+  livelinessTypeDefResource :: livelinessObj -> ty -> Maybe res
+  livelinessTypeValidUse :: livelinessObj -> ty -> Bool
+  livelinessTypeValidUse livelinessObj ty =
+    isJust $ livelinessTypeDefResource livelinessObj ty
 
-type LivelinessConstraint defUseObj bool op ty res ctx =
-  ( LivelinessOpResource defUseObj bool op res ctx,
-    LivelinessTypeResource defUseObj res ty,
+type LivelinessConstraint livelinessObj bool op ty res ctx =
+  ( LivelinessOpResource livelinessObj bool op res ctx,
+    LivelinessTypeResource livelinessObj res ty,
     Mergeable op
   )
 
@@ -365,102 +365,114 @@ type UnionDef varId res = UnionM [Def SymBool varId res]
 type UnionUse varId = UnionM [Use SymBool varId]
 
 concreteStmtDef ::
-  (ConcreteVarId conVarId, LivelinessOpResource defUseObj bool op res ctx) =>
-  defUseObj ->
+  ( ConcreteVarId conVarId,
+    LivelinessOpResource livelinessObj bool op res ctx
+  ) =>
+  livelinessObj ->
   Concrete.Stmt op conVarId ->
   ctx [Def bool conVarId res]
-concreteStmtDef defUseObj (Concrete.Stmt op _ resIds) =
-  livelinessOpDefs defUseObj op resIds (toSym False)
+concreteStmtDef livelinessObj (Concrete.Stmt op _ resIds) =
+  livelinessOpDefs livelinessObj op resIds (toSym False)
 
 concreteStmtUnionDef ::
-  (ConcreteVarId conVarId, LivelinessOpResource defUseObj SymBool op res ctx) =>
-  defUseObj ->
+  ( ConcreteVarId conVarId,
+    LivelinessOpResource livelinessObj SymBool op res ctx
+  ) =>
+  livelinessObj ->
   Concrete.Stmt op conVarId ->
   ctx (UnionDef conVarId res)
-concreteStmtUnionDef defUseObj stmt =
-  mrgFmap mrgReturn $ concreteStmtDef defUseObj stmt
+concreteStmtUnionDef livelinessObj stmt =
+  mrgFmap mrgReturn $ concreteStmtDef livelinessObj stmt
 
 concreteStmtInvalidatingDef ::
-  (ConcreteVarId conVarId, LivelinessOpResource defUseObj bool op res ctx) =>
-  defUseObj ->
+  ( ConcreteVarId conVarId,
+    LivelinessOpResource livelinessObj bool op res ctx
+  ) =>
+  livelinessObj ->
   Concrete.Stmt op conVarId ->
   ctx [Def bool conVarId res]
-concreteStmtInvalidatingDef defUseObj (Concrete.Stmt op _ resIds) =
-  livelinessOpInvalidatingDefs defUseObj op resIds (toSym False)
+concreteStmtInvalidatingDef livelinessObj (Concrete.Stmt op _ resIds) =
+  livelinessOpInvalidatingDefs livelinessObj op resIds (toSym False)
 
 concreteStmtInvalidatingUnionDef ::
-  (ConcreteVarId conVarId, LivelinessOpResource defUseObj SymBool op res ctx) =>
-  defUseObj ->
+  ( ConcreteVarId conVarId,
+    LivelinessOpResource livelinessObj SymBool op res ctx
+  ) =>
+  livelinessObj ->
   Concrete.Stmt op conVarId ->
   ctx (UnionDef conVarId res)
-concreteStmtInvalidatingUnionDef defUseObj stmt =
-  mrgFmap mrgReturn $ concreteStmtInvalidatingDef defUseObj stmt
+concreteStmtInvalidatingUnionDef livelinessObj stmt =
+  mrgFmap mrgReturn $ concreteStmtInvalidatingDef livelinessObj stmt
 
 concreteStmtUse ::
-  (ConcreteVarId conVarId, LivelinessOpResource defUseObj bool op res ctx) =>
-  defUseObj ->
+  ( ConcreteVarId conVarId,
+    LivelinessOpResource livelinessObj bool op res ctx
+  ) =>
+  livelinessObj ->
   Concrete.Stmt op conVarId ->
   ctx [Use bool conVarId]
-concreteStmtUse defUseObj (Concrete.Stmt op argIds _) =
-  livelinessOpUses defUseObj op argIds (toSym False)
+concreteStmtUse livelinessObj (Concrete.Stmt op argIds _) =
+  livelinessOpUses livelinessObj op argIds (toSym False)
 
 concreteStmtUnionUse ::
-  (ConcreteVarId conVarId, LivelinessOpResource defUseObj SymBool op res ctx) =>
-  defUseObj ->
+  ( ConcreteVarId conVarId,
+    LivelinessOpResource livelinessObj SymBool op res ctx
+  ) =>
+  livelinessObj ->
   Concrete.Stmt op conVarId ->
   ctx (UnionUse conVarId)
-concreteStmtUnionUse defUseObj stmt =
-  mrgFmap mrgReturn $ concreteStmtUse defUseObj stmt
+concreteStmtUnionUse livelinessObj stmt =
+  mrgFmap mrgReturn $ concreteStmtUse livelinessObj stmt
 
 concreteArgDefs ::
   ( ConcreteVarId conVarId,
-    LivelinessTypeResource defUseObj res ty,
+    LivelinessTypeResource livelinessObj res ty,
     BoolLike bool,
     Mergeable res
   ) =>
-  defUseObj ->
+  livelinessObj ->
   [Concrete.ProgArg conVarId ty] ->
   [Def bool conVarId res]
-concreteArgDefs defUseObj =
+concreteArgDefs livelinessObj =
   mapMaybe
     ( \(Concrete.ProgArg _ argId argType) ->
         (\res -> Def argId res (toSym False))
-          <$> livelinessTypeDefResource defUseObj argType
+          <$> livelinessTypeDefResource livelinessObj argType
     )
 
 concreteArgUnionDefs ::
   ( ConcreteVarId conVarId,
-    LivelinessTypeResource defUseObj res ty,
+    LivelinessTypeResource livelinessObj res ty,
     Mergeable res
   ) =>
-  defUseObj ->
+  livelinessObj ->
   [Concrete.ProgArg conVarId ty] ->
   UnionDef conVarId res
-concreteArgUnionDefs defUseObj = mrgReturn . concreteArgDefs defUseObj
+concreteArgUnionDefs livelinessObj = mrgReturn . concreteArgDefs livelinessObj
 
 concreteResUses ::
   ( ConcreteVarId conVarId,
-    LivelinessTypeResource defUseObj res ty,
+    LivelinessTypeResource livelinessObj res ty,
     BoolLike bool
   ) =>
-  defUseObj ->
+  livelinessObj ->
   [Concrete.ProgRes conVarId ty] ->
   [Use bool conVarId]
-concreteResUses defUseObj =
+concreteResUses livelinessObj =
   mapMaybe
     ( \(Concrete.ProgRes resId resType) ->
-        if livelinessTypeValidUse defUseObj resType
+        if livelinessTypeValidUse livelinessObj resType
           then Just (Use resId (toSym False))
           else Nothing
     )
 
 concreteResUnionUses ::
-  (ConcreteVarId conVarId, LivelinessTypeResource defUseObj res ty) =>
-  defUseObj ->
+  (ConcreteVarId conVarId, LivelinessTypeResource livelinessObj res ty) =>
+  livelinessObj ->
   [Concrete.ProgRes conVarId ty] ->
   UnionUse conVarId
-concreteResUnionUses defUseObj =
-  mrgReturn . concreteResUses defUseObj
+concreteResUnionUses livelinessObj =
+  mrgReturn . concreteResUses livelinessObj
 
 invalidateList ::
   (Resource bool res) =>
@@ -477,18 +489,18 @@ invalidateList invalidatingDefs defs =
     ]
 
 cannotUseInvalidatedSingle ::
-  ( LivelinessName defUseObj,
+  ( LivelinessName livelinessObj,
     Resource bool res,
     MonadBranching bool ctx,
     ConcreteVarId conVarId,
     MonadContext ctx
   ) =>
-  defUseObj ->
+  livelinessObj ->
   Use bool conVarId ->
   Def bool conVarId res ->
   bool ->
   ctx ()
-cannotUseInvalidatedSingle defUseObj use def invalidated = do
+cannotUseInvalidatedSingle livelinessObj use def invalidated = do
   mrgIf
     ( useDisabled use
         .|| defDisabled def
@@ -498,41 +510,41 @@ cannotUseInvalidatedSingle defUseObj use def invalidated = do
     )
     (return ())
     $ mrgThrowError
-    $ "Cannot use invalidated resource for " <> livelinessName defUseObj
+    $ "Cannot use invalidated resource for " <> livelinessName livelinessObj
 
 cannotUseInvalidatedList ::
-  ( LivelinessName defUseObj,
+  ( LivelinessName livelinessObj,
     Resource bool res,
     MonadBranching bool ctx,
     ConcreteVarId conVarId,
     MonadContext ctx
   ) =>
-  defUseObj ->
+  livelinessObj ->
   [Use bool conVarId] ->
   [Def bool conVarId res] ->
   bool ->
   ctx ()
-cannotUseInvalidatedList defUseObj uses defs invalidated =
+cannotUseInvalidatedList livelinessObj uses defs invalidated =
   mrgSequence_
-    [ cannotUseInvalidatedSingle defUseObj use def invalidated
+    [ cannotUseInvalidatedSingle livelinessObj use def invalidated
       | use <- uses,
         def <- defs
     ]
 
 instance
-  ( LivelinessConstraint defUseObj Bool op ty res ctx,
+  ( LivelinessConstraint livelinessObj Bool op ty res ctx,
     ConcreteVarId conVarId
   ) =>
   ProgConstraints
-    (LivelinessConcrete defUseObj)
+    (LivelinessConcrete livelinessObj)
     (Concrete.Prog op conVarId ty)
     ctx
   where
   constrainProg
-    (LivelinessConcrete defUseObj)
+    (LivelinessConcrete livelinessObj)
     (Concrete.Prog _ argList stmtList resList) = do
-      let argDefs = concreteArgDefs defUseObj argList
-      let resUses = concreteResUses defUseObj resList
+      let argDefs = concreteArgDefs livelinessObj argList
+      let resUses = concreteResUses livelinessObj resList
       availableDefs <- goStmts [(argDefs, toSym False)] stmtList
       cannotUseInvalidated resUses availableDefs
       where
@@ -549,33 +561,33 @@ instance
         cannotUseInvalidated ::
           [Use Bool conVarId] -> [([Def Bool conVarId res], Bool)] -> ctx ()
         cannotUseInvalidated uses =
-          mrgTraverse_ (uncurry (cannotUseInvalidatedList defUseObj uses))
+          mrgTraverse_ (uncurry (cannotUseInvalidatedList livelinessObj uses))
         goStmts ::
           [([Def Bool conVarId res], Bool)] ->
           [Concrete.Stmt op conVarId] ->
           ctx [([Def Bool conVarId res], Bool)]
         goStmts allDefs [] = mrgReturn allDefs
         goStmts allDefs (stmt : rest) = do
-          uses <- concreteStmtUse defUseObj stmt
+          uses <- concreteStmtUse livelinessObj stmt
           cannotUseInvalidated uses allDefs
-          invalidatingDef <- concreteStmtInvalidatingDef defUseObj stmt
+          invalidatingDef <- concreteStmtInvalidatingDef livelinessObj stmt
           let invalidatedDefs = invalidate invalidatingDef allDefs
-          def <- concreteStmtDef defUseObj stmt
+          def <- concreteStmtDef livelinessObj stmt
           let newDefs = (def, toSym False) : invalidatedDefs
           goStmts newDefs rest
 
 instance
-  ( LivelinessConstraint defUseObj SymBool op ty res ctx,
+  ( LivelinessConstraint livelinessObj SymBool op ty res ctx,
     ConcreteVarId conVarId,
     MonadUnion ctx
   ) =>
-  ProgConstraints (Liveliness defUseObj) (Concrete.Prog op conVarId ty) ctx
+  ProgConstraints (Liveliness livelinessObj) (Concrete.Prog op conVarId ty) ctx
   where
   constrainProg
-    (Liveliness defUseObj)
+    (Liveliness livelinessObj)
     (Concrete.Prog _ argList stmtList resList) = do
-      let argDefs = concreteArgUnionDefs defUseObj argList
-      let resUses = concreteResUnionUses defUseObj resList
+      let argDefs = concreteArgUnionDefs livelinessObj argList
+      let resUses = concreteResUnionUses livelinessObj resList
       availableDefs <- goStmts [(argDefs, toSym False)] stmtList
       cannotUseInvalidated resUses availableDefs
       where
@@ -597,7 +609,7 @@ instance
         cannotUseInvalidatedUnion useUnion defUnion invalidated = do
           uses <- liftUnionM useUnion
           defs <- liftUnionM defUnion
-          cannotUseInvalidatedList defUseObj uses defs invalidated
+          cannotUseInvalidatedList livelinessObj uses defs invalidated
         cannotUseInvalidated ::
           UnionUse conVarId -> [(UnionDef conVarId res, SymBool)] -> ctx ()
         cannotUseInvalidated uses =
@@ -608,11 +620,11 @@ instance
           ctx [(UnionDef conVarId res, SymBool)]
         goStmts allDefs [] = mrgReturn allDefs
         goStmts allDefs (stmt : rest) = do
-          uses <- concreteStmtUnionUse defUseObj stmt
+          uses <- concreteStmtUnionUse livelinessObj stmt
           cannotUseInvalidated uses allDefs
-          invalidatingDef <- concreteStmtInvalidatingUnionDef defUseObj stmt
+          invalidatingDef <- concreteStmtInvalidatingUnionDef livelinessObj stmt
           let invalidatedDefs = invalidate invalidatingDef allDefs
-          def <- concreteStmtUnionDef defUseObj stmt
+          def <- concreteStmtUnionDef livelinessObj stmt
           let newDefs = (def, toSym False) : invalidatedDefs
           goStmts newDefs rest
 
@@ -633,98 +645,100 @@ componentStmtDefs ::
     MonadUnion ctx,
     Mergeable op,
     Mergeable res,
-    LivelinessOpResource defUseObj SymBool op res ctx
+    LivelinessOpResource livelinessObj SymBool op res ctx
   ) =>
-  defUseObj ->
+  livelinessObj ->
   Component.Stmt op symVarId ty ->
   ctx (UnionDef symVarId res)
-componentStmtDefs defUseObj (Component.Stmt opUnion _ _ resIds _ disabled) = do
-  op <- liftUnionM opUnion
-  mrgFmap mrgReturn $ livelinessOpDefs defUseObj op resIds disabled
+componentStmtDefs
+  livelinessObj
+  (Component.Stmt opUnion _ _ resIds _ disabled) = do
+    op <- liftUnionM opUnion
+    mrgFmap mrgReturn $ livelinessOpDefs livelinessObj op resIds disabled
 
 componentStmtInvalidatingDefs ::
   ( SymbolicVarId symVarId,
     MonadUnion ctx,
     Mergeable op,
     Mergeable res,
-    LivelinessOpResource defUseObj SymBool op res ctx
+    LivelinessOpResource livelinessObj SymBool op res ctx
   ) =>
-  defUseObj ->
+  livelinessObj ->
   Component.Stmt op symVarId ty ->
   ctx (UnionDef symVarId res)
 componentStmtInvalidatingDefs
-  defUseObj
+  livelinessObj
   (Component.Stmt opUnion _ _ resIds _ disabled) = do
     op <- liftUnionM opUnion
     mrgFmap mrgReturn $
-      livelinessOpInvalidatingDefs defUseObj op resIds disabled
+      livelinessOpInvalidatingDefs livelinessObj op resIds disabled
 
 componentStmtUses ::
   ( SymbolicVarId symVarId,
     MonadUnion ctx,
     Mergeable op,
-    LivelinessOpResource defUseObj SymBool op res ctx
+    LivelinessOpResource livelinessObj SymBool op res ctx
   ) =>
-  defUseObj ->
+  livelinessObj ->
   Component.Stmt op symVarId ty ->
   ctx (UnionComponentUse symVarId)
 componentStmtUses
-  defUseObj
+  livelinessObj
   (Component.Stmt opUnion argIds _ resIds _ disabled) = do
     op <- liftUnionM opUnion
-    opUses <- livelinessOpUses defUseObj op argIds disabled
+    opUses <- livelinessOpUses livelinessObj op argIds disabled
     mrgReturn . mrgReturn $
       (\(Use i useDisabled) -> ComponentUse i (head resIds) useDisabled)
         <$> opUses
 
 componentProgDefs ::
   ( SymbolicVarId symVarId,
-    LivelinessConstraint defUseObj SymBool op ty res ctx,
+    LivelinessConstraint livelinessObj SymBool op ty res ctx,
     MonadUnion ctx
   ) =>
-  defUseObj ->
+  livelinessObj ->
   Component.Prog op symVarId ty ->
   ctx [UnionDef symVarId res]
 componentProgDefs
-  defUseObj
+  livelinessObj
   (Component.Prog _ argList stmtList _) = do
-    stmtDefs <- mrgTraverse (componentStmtDefs defUseObj) stmtList
+    stmtDefs <- mrgTraverse (componentStmtDefs livelinessObj) stmtList
     mrgReturn $ argDefs : stmtDefs
     where
       argDefs =
         mrgReturn
           $ mapMaybe
             ( \(i, Component.ProgArg _ ty) -> do
-                res <- livelinessTypeDefResource defUseObj ty
+                res <- livelinessTypeDefResource livelinessObj ty
                 return $ Def (fromIntegral i) res (con False)
             )
           $ zip [0 ..] argList
 
 componentProgInvalidatingDefs ::
   ( SymbolicVarId symVarId,
-    LivelinessConstraint defUseObj SymBool op ty res ctx,
+    LivelinessConstraint livelinessObj SymBool op ty res ctx,
     MonadUnion ctx
   ) =>
-  defUseObj ->
+  livelinessObj ->
   Component.Prog op symVarId ty ->
   ctx [UnionDef symVarId res]
 componentProgInvalidatingDefs
-  defUseObj
+  livelinessObj
   (Component.Prog _ _ stmtList _) =
-    mrgTraverse (componentStmtInvalidatingDefs defUseObj) stmtList
+    mrgTraverse (componentStmtInvalidatingDefs livelinessObj) stmtList
 
 componentProgUses ::
   ( SymbolicVarId symVarId,
-    LivelinessConstraint defUseObj SymBool op ty res ctx,
+    LivelinessConstraint livelinessObj SymBool op ty res ctx,
     MonadUnion ctx
   ) =>
-  defUseObj ->
+  livelinessObj ->
   Component.Prog op symVarId ty ->
   ctx [UnionComponentUse symVarId]
 componentProgUses
-  defUseObj
+  livelinessObj
   (Component.Prog _ argList stmtList resList) = do
-    stmtUses <- mrgTraverse (componentStmtUses defUseObj) stmtList
+    stmtUses <- mrgTraverse (componentStmtUses livelinessObj) stmtList
     mrgReturn $ resUses : stmtUses
     where
       resEffectiveDefId =
@@ -735,70 +749,60 @@ componentProgUses
           (\useId -> ComponentUse useId resEffectiveDefId (con False))
             . Component.progResId
             <$> filter
-              ( livelinessTypeValidUse defUseObj
+              ( livelinessTypeValidUse livelinessObj
                   . Component.progResType
               )
               resList
 
-componentProgOnlyUseNewestDef ::
-  forall defUseObj op symVarId ty ctx res.
-  ( SymbolicVarId symVarId,
-    LivelinessConstraint defUseObj SymBool op ty res ctx,
-    MonadUnion ctx
-  ) =>
-  defUseObj ->
-  Component.Prog op symVarId ty ->
-  ctx ()
-componentProgOnlyUseNewestDef defUseObj sketch =
-  mrgTraverse_
-    ( \useUnion -> traverseUnion useUnion $ \use -> do
-        invalidatingDefIds <- invalidatingDefs
-        mrgTraverse_ (\d -> defUseConstraint use d invalidatingDefIds) =<< defs
-    )
-    =<< uses
-  where
-    traverseUnion ::
-      (Mergeable a) => UnionM [a] -> (a -> ctx ()) -> ctx ()
-    traverseUnion union f = liftUnionM union >>= mrgTraverse_ f
-    invalidatingDefs = componentProgInvalidatingDefs defUseObj sketch
-    uses = componentProgUses defUseObj sketch
-    defs = componentProgDefs defUseObj sketch
-    defUseConstraint ::
-      ComponentUse symVarId ->
-      UnionDef symVarId res ->
-      [UnionDef symVarId res] ->
-      ctx ()
-    defUseConstraint
-      (ComponentUse useId eDefId disabled)
-      defUnion
-      invalidatingDefIds = traverseUnion defUnion $
-        \(Def defId res _disabled) ->
-          mrgTraverse_
-            ( \invalidatingDefUnion ->
-                traverseUnion invalidatingDefUnion $
-                  \(Def invalidateDefId invalidateRes invalidateDisabled) ->
-                    symUnless
-                      ( symImplies
-                          ( symNot disabled
-                              .&& (useId .== defId)
-                              .&& symNot invalidateDisabled
-                              .&& conflict res invalidateRes
-                          )
-                          ( (invalidateDefId .<= useId)
-                              .|| (invalidateDefId .>= eDefId)
-                          )
-                      )
-                      $ throwError
-                      $ "Cannot use invalidated resource for "
-                        <> livelinessName defUseObj
-            )
-            invalidatingDefIds
-
 instance
-  ( LivelinessConstraint defUseObj SymBool op ty res ctx,
+  ( LivelinessConstraint livelinessObj SymBool op ty res ctx,
     SymbolicVarId symVarId,
     MonadUnion ctx
   ) =>
-  ProgConstraints (Liveliness defUseObj) (Component.Prog op symVarId ty) ctx
+  ProgConstraints (Liveliness livelinessObj) (Component.Prog op symVarId ty) ctx
   where
-  constrainProg (Liveliness defUseObj) = componentProgOnlyUseNewestDef defUseObj
+  constrainProg (Liveliness livelinessObj) sketch =
+    mrgTraverse_
+      ( \useUnion -> traverseUnion useUnion $ \use -> do
+          invalidatingDefIds <- invalidatingDefs
+          mrgTraverse_ (\d -> defUseConstraint use d invalidatingDefIds)
+            =<< defs
+      )
+      =<< uses
+    where
+      traverseUnion ::
+        (Mergeable a) => UnionM [a] -> (a -> ctx ()) -> ctx ()
+      traverseUnion union f = liftUnionM union >>= mrgTraverse_ f
+      invalidatingDefs = componentProgInvalidatingDefs livelinessObj sketch
+      uses = componentProgUses livelinessObj sketch
+      defs = componentProgDefs livelinessObj sketch
+      defUseConstraint ::
+        ComponentUse symVarId ->
+        UnionDef symVarId res ->
+        [UnionDef symVarId res] ->
+        ctx ()
+      defUseConstraint
+        (ComponentUse useId eDefId disabled)
+        defUnion
+        invalidatingDefIds = traverseUnion defUnion $
+          \(Def defId res _disabled) ->
+            mrgTraverse_
+              ( \invalidatingDefUnion ->
+                  traverseUnion invalidatingDefUnion $
+                    \(Def invalidateDefId invalidateRes invalidateDisabled) ->
+                      symUnless
+                        ( symImplies
+                            ( symNot disabled
+                                .&& (useId .== defId)
+                                .&& symNot invalidateDisabled
+                                .&& conflict res invalidateRes
+                            )
+                            ( (invalidateDefId .<= useId)
+                                .|| (invalidateDefId .>= eDefId)
+                            )
+                        )
+                        $ throwError
+                        $ "Cannot use invalidated resource for "
+                          <> livelinessName livelinessObj
+              )
+              invalidatingDefIds
