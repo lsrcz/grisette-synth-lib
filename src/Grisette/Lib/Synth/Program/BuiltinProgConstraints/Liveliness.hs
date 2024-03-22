@@ -11,6 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
@@ -44,6 +45,7 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
   )
 where
 
+import Control.Arrow (Arrow (second))
 import Control.Monad.Except (MonadError (throwError))
 import Data.Foldable (foldl')
 import Data.Maybe (isJust, mapMaybe)
@@ -53,9 +55,11 @@ import Grisette
   ( Default (Default),
     EvaluateSym,
     LogicalOp (symImplies, symNot, (.&&), (.||)),
-    Mergeable,
+    Mergeable (rootStrategy),
+    MergingStrategy (SimpleStrategy),
     MonadUnion,
     SEq ((.==)),
+    SimpleMergeable,
     Solvable (con),
     SymBool,
     ToSym (toSym),
@@ -73,7 +77,7 @@ import Grisette
 import Grisette.Core.Data.Class.SOrd (SOrd ((.<=), (.>=)))
 import Grisette.Generics.BoolLike (BoolLike)
 import Grisette.Generics.Class.MonadBranching (MonadBranching (mrgIf))
-import Grisette.Generics.Class.SimpleMergeable (SimpleMergeable)
+import Grisette.Generics.Class.SimpleMergeable (SimpleMergeable (mrgIte))
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
@@ -177,29 +181,84 @@ livelinessOpUsesByType defUseObj op argIds disabled = do
   ty <- typeOp op
   livelinessTypeUses defUseObj (argTypes ty) argIds disabled
 
+newtype MergeResourceListWithDisabled bool res
+  = MergeResourceListWithDisabled [(res, bool)]
+  deriving (Generic)
+
+applyDisabled ::
+  (BoolLike bool) =>
+  bool ->
+  MergeResourceListWithDisabled bool res ->
+  MergeResourceListWithDisabled bool res
+applyDisabled disabled (MergeResourceListWithDisabled l) =
+  MergeResourceListWithDisabled $ second (.|| disabled) <$> l
+
+instance Monoid (MergeResourceListWithDisabled bool res) where
+  mempty = MergeResourceListWithDisabled []
+
+instance Semigroup (MergeResourceListWithDisabled bool res) where
+  MergeResourceListWithDisabled l1 <> MergeResourceListWithDisabled l2 =
+    MergeResourceListWithDisabled $ l1 ++ l2
+
+deriving via
+  (Default (MergeResourceListWithDisabled Bool res))
+  instance
+    (Mergeable res) =>
+    Mergeable (MergeResourceListWithDisabled Bool res)
+
+instance
+  (Grisette.SimpleMergeable res) =>
+  Mergeable (MergeResourceListWithDisabled SymBool res)
+  where
+  rootStrategy =
+    SimpleStrategy $
+      \cond
+       (MergeResourceListWithDisabled l1)
+       (MergeResourceListWithDisabled l2) ->
+          MergeResourceListWithDisabled $
+            zipWith (mrgIte cond) (pad l2 l1) (pad l1 l2)
+    where
+      pad ref l
+        | length l >= length ref = l
+        | otherwise =
+            l ++ (second (const $ con True) <$> drop (length l) ref)
+
+mergeResourceListFromDefList ::
+  (Resource bool res) =>
+  [Def bool varId res] ->
+  MergeResourceListWithDisabled bool res
+mergeResourceListFromDefList =
+  MergeResourceListWithDisabled . fmap (\d -> (defResource d, defDisabled d))
+
 livelinessConcreteProgInvalidatingDefs ::
   forall defUseObj bool op ty res ctx conVarId varId.
   ( LivelinessConstraint defUseObj bool op ty res ctx,
     ConcreteVarId conVarId,
     Mergeable varId,
     Resource bool res,
-    SimpleMergeable bool res
+    Mergeable (MergeResourceListWithDisabled bool res)
   ) =>
   defUseObj ->
   Concrete.Prog op conVarId ty ->
   varId ->
+  bool ->
   ctx [Def bool varId res]
 livelinessConcreteProgInvalidatingDefs
   defUseObj
   (Concrete.Prog _ _ stmtList _)
-  varId = do
-    mrgFoldM
-      ( \acc stmt -> do
-          v <- concreteStmtInvalidatingDef defUseObj stmt
-          mrgReturn $ acc ++ ((\x -> x {defId = varId}) <$> v)
-      )
-      []
-      stmtList
+  varId
+  disabled = do
+    MergeResourceListWithDisabled lst <-
+      mrgFoldM
+        ( \acc stmt -> do
+            v <-
+              mrgFmap mergeResourceListFromDefList $
+                concreteStmtInvalidatingDef defUseObj stmt
+            mrgReturn $ acc <> applyDisabled disabled v
+        )
+        (MergeResourceListWithDisabled [])
+        stmtList
+    mrgReturn $ uncurry (Def varId) <$> lst
 
 livelinessComponentProgInvalidatingDefs ::
   forall defUseObj op ty res ctx symVarId varId.
@@ -208,24 +267,29 @@ livelinessComponentProgInvalidatingDefs ::
     Mergeable varId,
     MonadUnion ctx,
     Resource SymBool res,
-    SimpleMergeable SymBool res,
-    Show res
+    Grisette.SimpleMergeable res
   ) =>
   defUseObj ->
   Component.Prog op symVarId ty ->
   varId ->
+  SymBool ->
   ctx [Def SymBool varId res]
 livelinessComponentProgInvalidatingDefs
   defUseObj
   (Component.Prog _ _ stmtList _)
-  varId = do
-    mrgFoldM
-      ( \acc stmt -> do
-          v <- componentStmtInvalidatingDefs defUseObj stmt >>= liftUnionM
-          mrgReturn $ acc ++ ((\x -> x {defId = varId}) <$> v)
-      )
-      []
-      stmtList
+  varId
+  disabled = do
+    MergeResourceListWithDisabled lst <-
+      mrgFoldM
+        ( \acc stmt -> do
+            v <-
+              mrgFmap mergeResourceListFromDefList $
+                componentStmtInvalidatingDefs defUseObj stmt >>= liftUnionM
+            mrgReturn $ acc <> applyDisabled disabled v
+        )
+        (MergeResourceListWithDisabled [])
+        stmtList
+    mrgReturn $ uncurry (Def varId) <$> lst
 
 class
   (LivelinessName defUseObj, MonadContext ctx, Resource bool res) =>

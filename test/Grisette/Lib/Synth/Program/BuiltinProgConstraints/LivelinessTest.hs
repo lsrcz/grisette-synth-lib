@@ -21,6 +21,7 @@ import Grisette
   ( Default (Default),
     EvaluateSym,
     ITEOp (symIte),
+    LogicalOp ((.||)),
     Mergeable,
     SEq ((.==)),
     SimpleMergeable (mrgIte),
@@ -942,6 +943,7 @@ livelinessTest =
                 conLivelinessOp
                 prog
                 (10 :: WordN 8)
+                False
         let expected =
               mrgReturn
                 [ Def 10 mkResource1 False,
@@ -963,15 +965,15 @@ livelinessTest =
                     1
                     [2, 3]
                     2
-                    (con False),
+                    "disabled1",
                   Component.Stmt
                     (mrgIf "b" opDef opDef2)
                     [0]
                     1
                     [4, 5]
                     2
-                    (con False),
-                  Component.Stmt opUseDef [3] 2 [6] 1 (con False)
+                    "disabled2",
+                  Component.Stmt opUseDef [3] 2 [6] 1 "disabled3"
                 ]
                 [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
         let actual =
@@ -979,20 +981,19 @@ livelinessTest =
                 symLivelinessOp
                 prog
                 (10 :: WordN 8)
+                "disabled"
         let expected =
-              mrgIf
-                "a"
-                ( mrgReturn
-                    [ Def 10 mkResource1 (con False),
-                      Def 10 (mrgIte "b" mkResource1 mkResource2) (con False),
-                      Def 10 mkResource1 (con False)
-                    ]
-                )
-                ( mrgReturn
-                    [ Def 10 (mrgIte "b" mkResource1 mkResource2) (con False),
-                      Def 10 mkResource1 (con False)
-                    ]
-                ) ::
+              mrgReturn
+                [ Def
+                    10
+                    mkResource1
+                    (symIte "a" "disabled1" (con True) .|| "disabled"),
+                  Def
+                    10
+                    (mrgIte "b" mkResource1 mkResource2)
+                    ("disabled2" .|| "disabled"),
+                  Def 10 mkResource1 ("disabled3" .|| "disabled")
+                ] ::
                 SymbolicContext [Def SymBool (WordN 8) (Resources SymBool)]
         actual @?= expected
     ]
