@@ -354,6 +354,7 @@ class
     ctx [Use bool varId]
   livelinessOpUses = livelinessOpUsesByType
   livelinessSubProgConstraint :: livelinessObj -> proxy bool -> op -> ctx ()
+  livelinessSubProgConstraint _ _ _ = mrgReturn ()
 
 class
   (Mergeable res) =>
