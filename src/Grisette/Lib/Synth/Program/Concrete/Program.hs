@@ -75,6 +75,7 @@ import Grisette.Lib.Synth.Program.Concrete.OpPretty
     prettyArguments,
     prettyResults,
   )
+import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints (constrainProg), WithConstraints (WithConstraints))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
@@ -384,6 +385,19 @@ instance
     flip evalStateT initialEnv $ do
       traverse_ runStmt stmts
       traverse (lookupVal . progResId) ret
+
+instance
+  {-# OVERLAPPING #-}
+  ( OpSemantics semObj op val ctx,
+    ConcreteVarId varId,
+    Mergeable val,
+    ProgConstraints constObj (Prog op varId ty) ctx
+  ) =>
+  ProgSemantics (WithConstraints semObj constObj) (Prog op varId ty) val ctx
+  where
+  runProg (WithConstraints semObj constObj) prog inputs = do
+    constrainProg constObj prog
+    runProg semObj prog inputs
 
 instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
   typeProg prog =

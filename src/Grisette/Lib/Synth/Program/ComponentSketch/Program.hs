@@ -60,6 +60,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
     genOpIntermediates,
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints (constrainProg), WithConstraints (WithConstraints))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
@@ -368,6 +369,22 @@ instance
       connected
       defDistinct
       mrgReturn resVals
+
+instance
+  {-# OVERLAPPING #-}
+  ( SymbolicVarId symVarId,
+    GenIntermediate sem ty val ctx,
+    OpSemantics sem op val ctx,
+    OpTyping op ty ctx,
+    Mergeable op,
+    SEq val,
+    ProgConstraints constObj (Prog op symVarId ty) ctx
+  ) =>
+  ProgSemantics (WithConstraints sem constObj) (Prog op symVarId ty) val ctx
+  where
+  runProg (WithConstraints semObj constObj) prog inputs = do
+    constrainProg constObj prog
+    runProg semObj prog inputs
 
 instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
   typeProg prog =
