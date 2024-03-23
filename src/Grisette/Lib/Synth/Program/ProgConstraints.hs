@@ -5,11 +5,13 @@
 module Grisette.Lib.Synth.Program.ProgConstraints
   ( ProgConstraints (..),
     WithConstraints (..),
+    runProgWithConstraints,
   )
 where
 
 import Grisette (mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 
 class (MonadContext ctx) => ProgConstraints constObj prog ctx where
   constrainProg :: constObj -> prog -> ctx ()
@@ -48,3 +50,13 @@ instance
     constrainProg (obj1, (obj2, obj3, obj4))
 
 data WithConstraints semObj constObj = WithConstraints semObj constObj
+
+runProgWithConstraints ::
+  (ProgConstraints constObj prog ctx, ProgSemantics semObj prog val ctx) =>
+  WithConstraints semObj constObj ->
+  prog ->
+  [val] ->
+  ctx [val]
+runProgWithConstraints (WithConstraints semObj constObj) prog inputs = do
+  constrainProg constObj prog
+  runProg semObj prog inputs

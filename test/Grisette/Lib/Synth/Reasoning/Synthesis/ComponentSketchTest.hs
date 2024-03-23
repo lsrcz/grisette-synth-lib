@@ -19,6 +19,9 @@ import Grisette.Lib.Synth.Program.ComponentSketch
     Stmt (Stmt),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.ProgConstraints
+  ( WithConstraints (WithConstraints),
+  )
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( SynthesisWithFuzzerMatcherTask
       ( SynthesisWithFuzzerMatcherTask,
@@ -166,11 +169,14 @@ componentSketchTest =
               synthesisWithFuzzerMatcherTaskSpec = spec,
               synthesisWithFuzzerMatcherTaskMaxTests = 100,
               synthesisWithFuzzerMatcherTaskGenerators = [gen],
-              synthesisWithFuzzerMatcherTaskConSemantics = TestSemanticsObj,
-              synthesisWithFuzzerMatcherTaskSymSemantics = TestSemanticsObj,
+              synthesisWithFuzzerMatcherTaskConSemantics =
+                WithConstraints TestSemanticsObj (),
+              synthesisWithFuzzerMatcherTaskSymSemantics =
+                WithConstraints TestSemanticsObj (),
               synthesisWithFuzzerMatcherTaskSymProg = sketch
             }
     return $ testCase (name <> namePostFix) $ do
       (_, SynthesisSuccess prog) <- synthesizeProgWithVerifier task
-      fuzzingResult <- fuzzingTestProg gen spec 100 TestSemanticsObj prog
+      fuzzingResult <-
+        fuzzingTestProg gen spec 100 (WithConstraints TestSemanticsObj ()) prog
       fst <$> fuzzingResult @?= Nothing

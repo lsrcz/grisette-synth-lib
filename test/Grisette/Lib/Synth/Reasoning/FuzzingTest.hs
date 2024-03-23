@@ -13,6 +13,9 @@ import Grisette
   )
 import qualified Grisette.Lib.Synth.Program.ByteCodeSketch as ByteCodeSketch
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.ProgConstraints
+  ( WithConstraints (WithConstraints),
+  )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( fuzzingTestProg,
@@ -93,15 +96,31 @@ fuzzingTest =
     [ testGroup
         "fuzzingTestProg"
         [ testCase "goodSpec" $ do
-            result <- fuzzingTestProg gen spec 100 TestSemanticsObj conProg
+            result <-
+              fuzzingTestProg
+                gen
+                spec
+                100
+                (WithConstraints TestSemanticsObj ())
+                conProg
             fst <$> result @?= Nothing,
           testCase "reverseSpec" $ do
             result <-
-              fuzzingTestProg gen reverseSpec 100 TestSemanticsObj conProg
+              fuzzingTestProg
+                gen
+                reverseSpec
+                100
+                (WithConstraints TestSemanticsObj ())
+                conProg
             fst <$> result @?= Nothing,
           testCase "badSpec" $ do
             Just (IOPair i o, _) <-
-              fuzzingTestProg gen badSpec 100 TestSemanticsObj conProg
+              fuzzingTestProg
+                gen
+                badSpec
+                100
+                (WithConstraints TestSemanticsObj ())
+                conProg
             fst (badSpec i) @?= o
             (runProg TestSemanticsObj conProg i /= Right o)
               @? "Should fail the test."
@@ -115,7 +134,7 @@ fuzzingTest =
                 spec
                 100
                 (Proxy :: Proxy ConProgType)
-                TestSemanticsObj
+                (WithConstraints TestSemanticsObj ())
                 symProg
                 model
             fst <$> result @?= Nothing,
@@ -126,7 +145,7 @@ fuzzingTest =
                 badSpec
                 100
                 (Proxy :: Proxy ConProgType)
-                TestSemanticsObj
+                (WithConstraints TestSemanticsObj ())
                 symProg
                 model
             fst (badSpec i) @?= o
@@ -139,7 +158,7 @@ fuzzingTest =
             badSpec
             100
             (Proxy :: Proxy ConProgType)
-            TestSemanticsObj
+            (WithConstraints TestSemanticsObj ())
             symProg
             [return [1, -1], gen]
             model

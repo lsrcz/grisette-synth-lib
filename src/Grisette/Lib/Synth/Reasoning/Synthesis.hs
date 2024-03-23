@@ -38,7 +38,12 @@ import Grisette
     simpleMerge,
   )
 import Grisette.Lib.Synth.Context (AngelicContext, SymbolicContext)
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgConstraints
+  ( ProgConstraints,
+    WithConstraints,
+    runProgWithConstraints,
+  )
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics)
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher (match))
 
@@ -67,8 +72,9 @@ instance SynthesisContext AngelicContext where
       (runFreshT actual (FreshIdentWithInfo "::synth::" i))
 
 synthesisConstraintFun ::
-  forall semObj symProg conVal symVal ctx matcher p q.
+  forall semObj constObj symProg conVal symVal ctx matcher p q.
   ( ProgSemantics semObj symProg symVal ctx,
+    ProgConstraints constObj symProg ctx,
     SynthesisContext ctx,
     Matcher matcher SymBool symVal,
     ToSym conVal symVal,
@@ -77,7 +83,7 @@ synthesisConstraintFun ::
   ) =>
   p ctx ->
   q symVal ->
-  semObj ->
+  WithConstraints semObj constObj ->
   symProg ->
   SynthesisConstraintFun (IOPair conVal, matcher)
 synthesisConstraintFun
@@ -91,7 +97,7 @@ synthesisConstraintFun
       genSynthesisConstraint
         i
         matcher
-        (runProg sem prog (toSym inputs) :: ctx [symVal])
+        (runProgWithConstraints sem prog (toSym inputs) :: ctx [symVal])
         (toSym expectedOutputs)
 
 data SynthesisResult conProg exception
@@ -114,9 +120,12 @@ data SynthesisTask conVal conProg matcher exception where
       symProg
       matcher
       conSemObj
-      symSemObj.
+      symSemObj
+      conConstObj
+      symConstObj.
     ( ConfigurableSolver config h,
       ProgSemantics symSemObj symProg symVal ctx,
+      ProgConstraints symConstObj symProg ctx,
       SynthesisContext ctx,
       Matcher matcher SymBool symVal,
       ToSym conVal symVal,
@@ -132,11 +141,11 @@ data SynthesisTask conVal conProg matcher exception where
       synthesisTaskVerifier ::
         forall p.
         p conProg ->
-        conSemObj ->
+        WithConstraints conSemObj conConstObj ->
         symProg ->
         StatefulVerifierFun state (IOPair conVal, matcher) exception,
-      synthesisTaskConSemantics :: conSemObj,
-      synthesisTaskSymSemantics :: symSemObj,
+      synthesisTaskConSemantics :: WithConstraints conSemObj conConstObj,
+      synthesisTaskSymSemantics :: WithConstraints symSemObj symConstObj,
       synthesisTaskSymProg :: symProg
     } ->
     SynthesisTask conVal conProg matcher exception
