@@ -556,8 +556,7 @@ invalidateList invalidatingDef =
 
 instance
   ( LivelinessConstraint livelinessObj Bool op ty res ctx,
-    ConcreteVarId conVarId,
-    Show res
+    ConcreteVarId conVarId
   ) =>
   ProgConstraints
     (Liveliness Bool livelinessObj)
