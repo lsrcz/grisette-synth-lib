@@ -29,6 +29,7 @@ import Grisette
     SafeDivision (safeDivMod),
     SymInteger,
     ToCon,
+    ToSym,
     liftToMonadUnion,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -52,7 +53,7 @@ data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving (Show, Generic, Eq)
   deriving anyclass (Hashable)
   deriving
-    (Mergeable, ToCon TestSemanticsOp, EvaluateSym)
+    (Mergeable, ToCon TestSemanticsOp, EvaluateSym, ToSym TestSemanticsOp)
     via (Default TestSemanticsOp)
 
 data TestSemanticsObj = TestSemanticsObj
@@ -61,7 +62,7 @@ data TestSemanticsType = IntType
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable)
   deriving
-    (Mergeable, EvaluateSym, ToCon TestSemanticsType)
+    (Mergeable, EvaluateSym, ToCon TestSemanticsType, ToSym TestSemanticsType)
     via (Default TestSemanticsType)
 
 instance

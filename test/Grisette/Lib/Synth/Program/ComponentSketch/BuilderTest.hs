@@ -31,7 +31,8 @@ import Grisette.Lib.Synth.Program.ComponentSketch
       ),
     freshStmt,
   )
-import Grisette.Lib.Synth.Program.ComponentSketch.Builder (simpleFreshStmt)
+import Grisette.Lib.Synth.Program.ComponentSketch.Builder (fromConcrete, simpleFreshStmt)
+import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (Add, DivMod),
     TestSemanticsType (IntType),
@@ -157,6 +158,45 @@ builderTest =
                 ]
                 [ ProgRes (isym "x" 13) IntType,
                   ProgRes (isym "x" 14) IntType
+                ]
+        runFresh actual "x" @?= expected,
+      testCase "fromConcrete" $ do
+        let conProg =
+              Concrete.Prog
+                "test"
+                [Concrete.ProgArg "x" 0 IntType, Concrete.ProgArg "y" 1 IntType]
+                [ Concrete.Stmt Add [0, 1] [2],
+                  Concrete.Stmt DivMod [2, 0] [3, 4]
+                ]
+                [ Concrete.ProgRes 3 IntType,
+                  Concrete.ProgRes 4 IntType,
+                  Concrete.ProgRes 2 IntType
+                ]
+        let actual =
+              fromConcrete conProg ::
+                Fresh (Prog TestSemanticsOp SymInteger TestSemanticsType)
+        let expected =
+              Prog
+                "test"
+                [ProgArg "x" IntType, ProgArg "y" IntType]
+                [ Stmt
+                    (mrgReturn Add)
+                    [isym "x" 0, isym "x" 1]
+                    (isym "x" 2)
+                    [isym "x" 3]
+                    (isym "x" 4)
+                    (isym "x" 5),
+                  Stmt
+                    (mrgReturn DivMod)
+                    [isym "x" 6, isym "x" 7]
+                    (isym "x" 8)
+                    [isym "x" 9, isym "x" 10]
+                    (isym "x" 11)
+                    (isym "x" 12)
+                ]
+                [ ProgRes (isym "x" 13) IntType,
+                  ProgRes (isym "x" 14) IntType,
+                  ProgRes (isym "x" 15) IntType
                 ]
         runFresh actual "x" @?= expected
     ]

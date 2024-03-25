@@ -11,6 +11,7 @@ module Grisette.Lib.Synth.Program.ComponentSketch.Builder
     freshStmt,
     MkProg (..),
     MkFreshProg (..),
+    fromConcrete,
   )
 where
 
@@ -20,6 +21,7 @@ import Grisette
   ( Fresh,
     GenSymSimple (simpleFresh),
     Mergeable,
+    ToSym (toSym),
     chooseFresh,
   )
 import Grisette.Lib.Synth.Operator.OpTyping
@@ -31,6 +33,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch.Program
     ProgRes (ProgRes),
     Stmt (Stmt),
   )
+import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Util.Show (showText)
 
 simpleFreshStmt ::
@@ -95,3 +98,31 @@ instance
       [ProgArg ("arg" <> showText n) ty | (n, ty) <- zip [0 ..] argTypes]
       <$> sequence freshStmts
       <*> sequence [ProgRes <$> simpleFresh () <*> return ty | ty <- retTypes]
+
+fromConcrete ::
+  forall symOp symVarId symTy conOp conVarId conTy.
+  ( ToSym conTy symTy,
+    ToSym conOp symOp,
+    SymOpLimits symOp,
+    Mergeable symOp,
+    GenSymSimple () symVarId
+  ) =>
+  Concrete.Prog conOp conVarId conTy ->
+  Fresh (Prog symOp symVarId symTy)
+fromConcrete (Concrete.Prog name argList stmtList resList) = do
+  stmts <- freshStmts
+  Prog name args stmts <$> freshResults
+  where
+    args =
+      (\(Concrete.ProgArg name _ ty) -> ProgArg name (toSym ty)) <$> argList
+    freshStmts =
+      traverse
+        (\(Concrete.Stmt op _ _) -> freshStmt (return [toSym op :: symOp]))
+        stmtList
+    freshResults =
+      traverse
+        ( \(Concrete.ProgRes _ ty) -> do
+            freshId <- simpleFresh ()
+            return $ ProgRes freshId (toSym ty)
+        )
+        resList
