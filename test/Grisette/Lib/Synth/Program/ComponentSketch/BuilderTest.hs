@@ -47,8 +47,7 @@ builderTest =
     "Builder"
     [ testCase "simpleFreshStmt" $ do
         let actual =
-              simpleFreshStmt Add ::
-                Fresh (Stmt TestSemanticsOp SymInteger TestSemanticsType)
+              simpleFreshStmt Add :: Fresh (Stmt TestSemanticsOp SymInteger)
         let expected =
               Stmt
                 { stmtOp = mrgReturn Add,
@@ -62,7 +61,7 @@ builderTest =
       testCase "freshStmt" $ do
         let actual =
               freshStmt (return [Add, DivMod]) ::
-                Fresh (Stmt TestSemanticsOp SymInteger TestSemanticsType)
+                Fresh (Stmt TestSemanticsOp SymInteger)
         let expected =
               Stmt
                 { stmtOp = mrgIf (isym "x" 0) (return Add) (return DivMod),

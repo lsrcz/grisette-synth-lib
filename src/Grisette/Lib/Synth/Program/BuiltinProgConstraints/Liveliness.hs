@@ -664,7 +664,7 @@ componentStmtDefs ::
     LivelinessOpResource livelinessObj SymBool op res ctx
   ) =>
   livelinessObj ->
-  Component.Stmt op symVarId ty ->
+  Component.Stmt op symVarId ->
   ctx (UnionDef symVarId res)
 componentStmtDefs
   livelinessObj
@@ -680,7 +680,7 @@ componentStmtInvalidatingDefs ::
     LivelinessOpResource livelinessObj SymBool op res ctx
   ) =>
   livelinessObj ->
-  Component.Stmt op symVarId ty ->
+  Component.Stmt op symVarId ->
   ctx (UnionDef symVarId res)
 componentStmtInvalidatingDefs
   livelinessObj
@@ -696,7 +696,7 @@ componentStmtUses ::
     LivelinessOpResource livelinessObj SymBool op res ctx
   ) =>
   livelinessObj ->
-  Component.Stmt op symVarId ty ->
+  Component.Stmt op symVarId ->
   ctx (UnionComponentUse symVarId)
 componentStmtUses
   livelinessObj

@@ -39,13 +39,13 @@ import Grisette.Lib.Synth.Util.Show (showText)
 simpleFreshStmt ::
   (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
   op ->
-  Fresh (Stmt op symVarId ty)
+  Fresh (Stmt op symVarId)
 simpleFreshStmt op = freshStmt (return [op])
 
 freshStmt ::
   (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
   Fresh [op] ->
-  Fresh (Stmt op symVarId ty)
+  Fresh (Stmt op symVarId)
 freshStmt freshOps = do
   ops <- freshOps
   chosenOps <- chooseFresh ops
@@ -66,14 +66,14 @@ class MkProg prog stmt op symVarId ty | prog -> stmt op symVarId ty where
     [(symVarId, ty)] ->
     prog
 
-instance MkProg (Prog op symVarId ty) (Stmt op symVarId ty) op symVarId ty where
+instance MkProg (Prog op symVarId ty) (Stmt op symVarId) op symVarId ty where
   mkProg name args stmts rets =
     Prog name (uncurry ProgArg <$> args) stmts (uncurry ProgRes <$> rets)
 
 instance
   MkProg
     (Fresh (Prog op symVarId ty))
-    (Fresh (Stmt op symVarId ty))
+    (Fresh (Stmt op symVarId))
     (Fresh op)
     (Fresh symVarId)
     ty
@@ -90,7 +90,7 @@ class MkFreshProg prog stmt op ty | prog -> stmt op ty where
 
 instance
   (GenSymSimple () symVarId) =>
-  MkFreshProg (Prog op symVarId ty) (Stmt op symVarId ty) op ty
+  MkFreshProg (Prog op symVarId ty) (Stmt op symVarId) op ty
   where
   mkFreshProg name argTypes freshStmts retTypes =
     Prog

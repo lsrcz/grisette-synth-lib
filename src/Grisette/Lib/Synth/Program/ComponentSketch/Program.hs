@@ -69,7 +69,7 @@ import Grisette.Lib.Synth.TypeSignature
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
 
-data Stmt op symVarId ty = Stmt
+data Stmt op symVarId = Stmt
   { stmtOp :: UnionM op,
     stmtArgIds :: [symVarId],
     stmtArgNum :: symVarId,
@@ -79,9 +79,9 @@ data Stmt op symVarId ty = Stmt
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
-  deriving (EvaluateSym) via (Default (Stmt op symVarId ty))
+  deriving (EvaluateSym) via (Default (Stmt op symVarId))
 
-instance Mergeable (Stmt op symVarId ty) where
+instance Mergeable (Stmt op symVarId) where
   rootStrategy = NoStrategy
 
 data ProgArg ty = ProgArg
@@ -109,7 +109,7 @@ instance Mergeable (ProgRes symVarId ty) where
 data Prog op symVarId ty = Prog
   { progName :: T.Text,
     progArgList :: [ProgArg ty],
-    progStmtList :: [Stmt op symVarId ty],
+    progStmtList :: [Stmt op symVarId],
     progResList :: [ProgRes symVarId ty]
   }
   deriving (Show, Eq, Generic)
@@ -254,7 +254,7 @@ constrainStmt ::
   p ty ->
   sem ->
   Int ->
-  Stmt op symVarId ty ->
+  Stmt op symVarId ->
   StateT (CollectedDefUse symVarId val) ctx ()
 constrainStmt
   p
