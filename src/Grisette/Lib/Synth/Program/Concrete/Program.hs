@@ -61,6 +61,7 @@ import Grisette
     Mergeable (rootStrategy),
     MergingStrategy (NoStrategy),
     ToCon (toCon),
+    ToSym (toSym),
     tryMerge,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -109,6 +110,12 @@ instance
   toCon (Stmt op argIds resIds) =
     Stmt <$> toCon op <*> return argIds <*> return resIds
 
+instance
+  (ToSym conOp symOp) =>
+  ToSym (Stmt conOp varId) (Stmt symOp varId)
+  where
+  toSym (Stmt op argIds resIds) = Stmt (toSym op) argIds resIds
+
 instance Mergeable (Stmt op varId) where
   rootStrategy = NoStrategy
 
@@ -127,6 +134,12 @@ instance
   where
   toCon (ProgArg name varId ty) = ProgArg name varId <$> toCon ty
 
+instance
+  (ToSym conTy symTy) =>
+  ToSym (ProgArg varId conTy) (ProgArg varId symTy)
+  where
+  toSym (ProgArg name varId ty) = ProgArg name varId $ toSym ty
+
 data ProgRes varId ty = ProgRes
   { progResId :: varId,
     progResType :: ty
@@ -140,6 +153,12 @@ instance
   ToCon (ProgRes varId symTy) (ProgRes varId conTy)
   where
   toCon (ProgRes varId ty) = ProgRes varId <$> toCon ty
+
+instance
+  (ToSym conTy symTy) =>
+  ToSym (ProgRes varId conTy) (ProgRes varId symTy)
+  where
+  toSym (ProgRes varId ty) = ProgRes varId $ toSym ty
 
 data Prog op varId ty = Prog
   { progName :: T.Text,
@@ -157,6 +176,13 @@ instance
   where
   toCon (Prog name arg stmt res) =
     Prog name <$> toCon arg <*> traverse toCon stmt <*> toCon res
+
+instance
+  (ToSym conOp symOp, ToSym conTy symTy) =>
+  ToSym (Prog conOp varId conTy) (Prog symOp varId symTy)
+  where
+  toSym (Prog name arg stmt res) =
+    Prog name (toSym arg) (toSym stmt) (toSym res)
 
 instance Mergeable (Prog op varId ty) where
   rootStrategy = NoStrategy
