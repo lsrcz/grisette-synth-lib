@@ -43,6 +43,8 @@ import Grisette
     MergingStrategy (NoStrategy),
     MonadUnion,
     SEq ((./=), (.==)),
+    -- SOrd ((.<), (.<=)),
+
     SOrd ((.<), (.<=)),
     Solvable (con),
     SymBool,
@@ -54,6 +56,7 @@ import Grisette
     mrgIf,
     mrgSequence_,
     mrgTraverse_,
+    symAny,
     symAssertWith,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -299,8 +302,13 @@ genProgResVals sem resList = do
     )
   return resVals
 
-inBound :: (SymbolicVarId symVarId) => symVarId -> symVarId -> SymBool
-inBound bound val = (0 .<= val) .&& (val .< bound)
+inBound :: (SymbolicVarId symVarId) => Int -> symVarId -> SymBool
+inBound bound val =
+  symInBound (fromIntegral bound) val
+    .&& symAny (.== val) (fromIntegral <$> [0 .. bound - 1])
+
+symInBound :: (SymbolicVarId symVarId) => symVarId -> symVarId -> SymBool
+symInBound bound val = (0 .<= val) .&& (val .< bound)
 
 symAll :: (Foldable t) => (a -> SymBool) -> t a -> SymBool
 symAll f = foldl' (\acc v -> acc .&& f v) (con True)
@@ -325,7 +333,7 @@ constrainStmt
   idBound
   (Stmt opUnion argIds argNum resIds resNum disabled) = do
     symAssertWith "Out-of-bound statement results." $
-      symAll (inBound (fromIntegral idBound)) resIds
+      symAll (inBound idBound) resIds
 
     symAssertWith "result not canonical." $
       symAll (\(i, isucc) -> isucc .== i + 1) $
@@ -358,7 +366,7 @@ constrainStmt
     let usedResIds = take (length resVals) resIds
 
     symAssertWith "Variable is undefined." $
-      symAll (\resId -> symAll (inBound resId) usedArgIds) usedResIds
+      symAll (\resId -> symAll (symInBound resId) usedArgIds) usedResIds
     mrgIf disabled (return ()) $ do
       computedResVals <- lift $ applyOp sem op argVals
       symAssertWith "Incorrect results." $ do
@@ -426,7 +434,7 @@ instance
       mrgTraverse_ (constrainStmt (Proxy :: Proxy ty) sem bound) stmts
       resVals <- genProgResVals sem ret
       symAssertWith "Variable is undefined." $
-        symAll (inBound (fromIntegral bound)) $
+        symAll (inBound bound) $
           progResId <$> ret
       connected
       defDistinct
