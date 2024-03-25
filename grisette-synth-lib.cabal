@@ -142,6 +142,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.ComponentSketch.SemanticsTest
       Grisette.Lib.Synth.Program.ComponentSketch.TestProgram
       Grisette.Lib.Synth.Program.ComponentSketch.ToConTest
+      Grisette.Lib.Synth.Program.ComponentSketch.ToSymTest
       Grisette.Lib.Synth.Program.ComponentSketch.TypingTest
       Grisette.Lib.Synth.Program.ComponentSketchTest
       Grisette.Lib.Synth.Program.Concrete.BuilderTest

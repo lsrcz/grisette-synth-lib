@@ -18,12 +18,21 @@ where
 
 import Control.DeepSeq (NFData)
 import Control.Monad (join)
-import Control.Monad.State (MonadState (get), MonadTrans (lift), StateT)
+import Control.Monad.State
+  ( MonadState (get, put),
+    MonadTrans (lift),
+    State,
+    StateT,
+    evalState,
+    gets,
+  )
+import Data.Bifunctor (Bifunctor (first))
 import Data.Data (Proxy (Proxy))
 import Data.Foldable (Foldable (foldl'))
+import qualified Data.HashMap.Lazy as M
 import Data.Hashable (Hashable)
 import Data.List (sortOn, tails)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
@@ -38,6 +47,7 @@ import Grisette
     Solvable (con),
     SymBool,
     ToCon (toCon),
+    ToSym (toSym),
     UnionM,
     liftUnionM,
     mrgFmap,
@@ -67,7 +77,7 @@ import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
 import Grisette.Lib.Synth.Util.Show (showText)
-import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
+import Grisette.Lib.Synth.VarId (ConcreteVarId, RelatedVarId, SymbolicVarId)
 
 data Stmt op symVarId = Stmt
   { stmtOp :: UnionM op,
@@ -118,6 +128,59 @@ data Prog op symVarId ty = Prog
 
 instance Mergeable (Prog op symVarId ty) where
   rootStrategy = NoStrategy
+
+instance
+  ( ToSym conOp symOp,
+    ConcreteVarId conVarId,
+    SymbolicVarId symVarId,
+    Mergeable symOp,
+    ToSym conTy symTy
+  ) =>
+  ToSym (Concrete.Prog conOp conVarId conTy) (Prog symOp symVarId symTy)
+  where
+  toSym (Concrete.Prog name argList stmtList resList) =
+    flip evalState initialMapping $ do
+      stmts <- traverse toSymStmt stmtList
+      res <- traverse toSymRes resList
+      return $ Prog name componentArgList stmts res
+    where
+      componentArgList =
+        (\(Concrete.ProgArg name _ ty) -> ProgArg name (toSym ty)) <$> argList
+      initialMapping :: M.HashMap conVarId symVarId
+      initialMapping =
+        M.fromList $
+          first Concrete.progArgId <$> zip argList (fromIntegral <$> [0 ..])
+      lookupId :: conVarId -> State (M.HashMap conVarId symVarId) symVarId
+      lookupId varId = gets (fromMaybe (-1) . M.lookup varId)
+      addId :: conVarId -> State (M.HashMap conVarId symVarId) symVarId
+      addId conVarId = do
+        m <- get
+        let newId = fromIntegral $ M.size m
+        put $ M.insert conVarId newId m
+        return newId
+      toSymStmt ::
+        Concrete.Stmt conOp conVarId ->
+        State (M.HashMap conVarId symVarId) (Stmt symOp symVarId)
+      toSymStmt (Concrete.Stmt op argIds resIds) = do
+        let symOp = toSym op
+        conArgIds <- traverse lookupId argIds
+        conResIds <- traverse addId resIds
+        return $
+          Stmt
+            { stmtOp = symOp,
+              stmtArgIds = conArgIds,
+              stmtArgNum = fromIntegral $ length conArgIds,
+              stmtResIds = conResIds,
+              stmtResNum = fromIntegral $ length conResIds,
+              stmtDisabled = con False
+            }
+      toSymRes ::
+        Concrete.ProgRes conVarId conTy ->
+        State (M.HashMap conVarId symVarId) (ProgRes symVarId symTy)
+      toSymRes (Concrete.ProgRes conId ty) = do
+        symId <- lookupId conId
+        let symTy = toSym ty
+        return $ ProgRes symId symTy
 
 instance
   ( Mergeable symOp,

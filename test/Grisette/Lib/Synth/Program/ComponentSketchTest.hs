@@ -12,9 +12,8 @@ import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediateTest
   ( genIntermediateTest,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch.SemanticsTest (semanticsTest)
-import Grisette.Lib.Synth.Program.ComponentSketch.ToConTest
-  ( toConTest,
-  )
+import Grisette.Lib.Synth.Program.ComponentSketch.ToConTest (toConTest)
+import Grisette.Lib.Synth.Program.ComponentSketch.ToSymTest (toSymTest)
 import Grisette.Lib.Synth.Program.ComponentSketch.TypingTest (typingTest)
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Test.Framework (Test, testGroup)
@@ -27,6 +26,7 @@ componentSketchTest =
     "Grisette.Lib.Synth.Program.ComponentSketch"
     [ genIntermediateTest,
       toConTest,
+      toSymTest,
       semanticsTest,
       typingTest,
       builderTest,
