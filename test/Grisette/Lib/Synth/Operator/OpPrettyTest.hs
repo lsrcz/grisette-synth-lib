@@ -129,8 +129,8 @@ opPrettyTest =
                     actual @?= expected
                 ],
               testGroup "2 results" $ do
-                let name2 = "t2_2"
-                let name3 = "t1_3"
+                let name2 = "op2_2"
+                let name3 = "op2'_3"
                 let newEnv = HM.insert 2 name2 $ HM.insert 3 name3 env
                 [ testCase "loose" $ do
                     let actual = looselyRenderResults PrettyOp2 [2, 3]

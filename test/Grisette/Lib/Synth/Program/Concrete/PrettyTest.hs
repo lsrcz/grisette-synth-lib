@@ -72,21 +72,21 @@ prettyTest =
                 testStmt = Stmt PrettyOp2 [0, 1] [2, 3],
                 testStmtIndex = 3,
                 testStmtLooseExpectedResult =
-                  Right "(t2_2, t1_3) = op2(op2'2'0'arg=x, y)",
+                  Right "(op2_2, op2'_3) = op2(op2'2'0'arg=x, y)",
                 testStmtCompactExpectedResult =
                   Right $
                     T.intercalate
                       "\n"
                       [ "(",
-                        "  t2_2,",
-                        "  t1_3",
+                        "  op2_2,",
+                        "  op2'_3",
                         ") = op2(",
                         "  op2'2'0'arg=x,",
                         "  y",
                         ")"
                       ],
                 testStmtNewMap =
-                  HM.union env $ HM.fromList [(2, "t2_2"), (3, "t1_3")]
+                  HM.union env $ HM.fromList [(2, "op2_2"), (3, "op2'_3")]
               },
             PrettyStmtTestCase
               { testStmtGroupName = "arg error",
@@ -173,9 +173,9 @@ prettyTest =
                     T.intercalate
                       "\n"
                       [ "def prog3(x: PrettyType1, y: PrettyType2):",
-                        "  (t2_2, t1_3) = op2(op2'2'0'arg=x, y)",
-                        "  t1_4 = op1(op1=t1_3)",
-                        "  return (t1_4, t2_2)"
+                        "  (op2_2, op2'_3) = op2(op2'2'0'arg=x, y)",
+                        "  t1_4 = op1(op1=op2'_3)",
+                        "  return (t1_4, op2_2)"
                       ],
                 testProgCompactExpectedResult =
                   Right $
@@ -186,18 +186,18 @@ prettyTest =
                         "  y: PrettyType2",
                         "):",
                         "  (",
-                        "    t2_2,",
-                        "    t1_3",
+                        "    op2_2,",
+                        "    op2'_3",
                         "  ) = op2(",
                         "    op2'2'0'arg=x,",
                         "    y",
                         "  )",
                         "  t1_4 = op1(",
-                        "    op1=t1_3",
+                        "    op1=op2'_3",
                         "  )",
                         "  return (",
                         "    t1_4,",
-                        "    t2_2",
+                        "    op2_2",
                         "  )"
                       ]
               },

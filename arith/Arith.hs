@@ -37,8 +37,8 @@ import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
   )
 import Grisette.Lib.Synth.Program.Concrete
-  ( DescribeArguments (describeArguments),
-    OpDirectSubProgs (opDirectSubProgs),
+  ( OpDirectSubProgs (opDirectSubProgs),
+    OpPretty (describeArguments),
     PrefixByType (prefixByType),
     SomePrettyProg,
   )
@@ -131,7 +131,7 @@ instance GPretty OpCode where
   gpretty Minus = "minus"
   gpretty UMinus = "uminus"
 
-instance DescribeArguments OpCode where
+instance OpPretty OpCode where
   describeArguments Plus = Right [Just "lhs", Just "rhs"]
   describeArguments Mul = Right [Just "lhs", Just "rhs"]
   describeArguments Minus = Right [Just "lhs", Just "rhs"]

@@ -1,3 +1,4 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -8,8 +9,10 @@
 module Grisette.Lib.Synth.Program.Concrete.OpPretty
   ( VarIdMap,
     OpPrettyError (..),
-    DescribeArguments (..),
+    noArgumentsDescription,
+    allPrefixesByTypes,
     PrefixByType (..),
+    OpPretty (..),
     prettyArguments,
     prettyResults,
   )
@@ -82,25 +85,43 @@ instance
 class PrefixByType ty where
   prefixByType :: ty -> T.Text
 
-class DescribeArguments op where
-  describeArguments :: op -> Either (OpPrettyError varId op) [Maybe T.Text]
-
-prefixResults ::
+allPrefixesByTypes ::
   (OpTyping op ty ConcreteContext, PrefixByType ty) =>
   op ->
   Either (OpPrettyError varId op) [T.Text]
-prefixResults op = case typeOp op of
+allPrefixesByTypes op = case typeOp op of
   Right (TypeSignature _ resTypes) ->
     return $ prefixByType <$> resTypes
   Left err -> throwError $ PrettyTypingError op err
+
+noArgumentsDescription ::
+  (OpTyping op ty ConcreteContext) =>
+  op ->
+  Either (OpPrettyError varId op) [Maybe T.Text]
+noArgumentsDescription op = case typeOp op of
+  Right (TypeSignature argTypes _) ->
+    return $ Nothing <$ argTypes
+  Left err -> throwError $ PrettyTypingError op err
+
+class GPretty op => OpPretty op where
+  prefixResults :: op -> Either (OpPrettyError varId op) [T.Text]
+  default prefixResults ::
+    (OpTyping op ty ConcreteContext, PrefixByType ty) =>
+    op ->
+    Either (OpPrettyError varId op) [T.Text]
+  prefixResults = allPrefixesByTypes
+  describeArguments :: op -> Either (OpPrettyError varId op) [Maybe T.Text]
+  default describeArguments ::
+    (OpTyping op ty ConcreteContext) =>
+    op ->
+    Either (OpPrettyError varId op) [Maybe T.Text]
+  describeArguments = noArgumentsDescription
 
 type VarIdMap varId = HM.HashMap varId T.Text
 
 prettyArguments ::
   ( ConcreteVarId varId,
-    DescribeArguments op,
-    OpTyping op ty ConcreteContext,
-    PrefixByType ty
+    OpPretty op
   ) =>
   op ->
   [varId] ->
@@ -126,9 +147,7 @@ prettyArguments op varIds map = do
 
 prettyResults ::
   ( ConcreteVarId varId,
-    DescribeArguments op,
-    OpTyping op ty ConcreteContext,
-    PrefixByType ty
+    OpPretty op
   ) =>
   op ->
   [varId] ->

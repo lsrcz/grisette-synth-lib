@@ -17,13 +17,14 @@ import Grisette.Core.Data.Class.GPretty (GPretty (gpretty))
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
 import Grisette.Lib.Synth.Program.Concrete
-  ( DescribeArguments (describeArguments),
-    OpDirectSubProgs (opDirectSubProgs),
+  ( OpDirectSubProgs (opDirectSubProgs),
+    OpPretty (describeArguments, prefixResults),
     PrefixByType (prefixByType),
     Prog (progArgList, progName, progResList),
     ProgArg (progArgType),
     ProgRes (progResType),
     SomePrettyProg (SomePrettyProg),
+    allPrefixesByTypes,
   )
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 
@@ -34,7 +35,7 @@ data TestPrettyExtOp = TestPrettyExtOp
 instance GPretty TestPrettyExtOp where
   gpretty TestPrettyExtOp = "ext"
 
-instance DescribeArguments TestPrettyExtOp where
+instance OpPretty TestPrettyExtOp where
   describeArguments TestPrettyExtOp = Right [Nothing]
 
 instance OpTyping TestPrettyExtOp TestPrettyType ConcreteContext where
@@ -58,7 +59,7 @@ instance GPretty TestPrettyOp where
   gpretty (PrettyInvokeExtOp prog) =
     "invoke_ext(" <> gpretty (progName prog) <> ")"
 
-instance DescribeArguments TestPrettyOp where
+instance OpPretty TestPrettyOp where
   describeArguments PrettyOp0 = Right []
   describeArguments PrettyOp1 = Right [Just "op1"]
   describeArguments PrettyOp2 = Right [Just "op2'2'0'arg", Nothing]
@@ -66,6 +67,8 @@ instance DescribeArguments TestPrettyOp where
     Right $ replicate (length $ progArgList prog) Nothing
   describeArguments (PrettyInvokeExtOp prog) =
     Right $ replicate (length $ progArgList prog) Nothing
+  prefixResults PrettyOp2 = return ["op2_", "op2'_"]
+  prefixResults op = allPrefixesByTypes op
 
 data TestPrettyType = PrettyType1 | PrettyType2
   deriving (Show, Generic, Eq)

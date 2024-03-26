@@ -21,7 +21,7 @@ import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
   )
 import Grisette.Lib.Synth.Program.Concrete
-  ( DescribeArguments (describeArguments),
+  ( OpPretty (describeArguments),
     PrefixByType (prefixByType),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
@@ -59,7 +59,7 @@ instance (GPretty intVal) => GPretty (Op varId intVal) where
   gpretty (If true false) =
     "if" <> parenCommaList (gpretty <$> [nameProg true, nameProg false])
 
-instance (GPretty intVal) => DescribeArguments (Op varId intVal) where
+instance (GPretty intVal) => OpPretty (Op varId intVal) where
   describeArguments Plus = return $ replicate 2 Nothing
   describeArguments Equals = return $ replicate 2 Nothing
   describeArguments Minus = return $ replicate 2 Nothing

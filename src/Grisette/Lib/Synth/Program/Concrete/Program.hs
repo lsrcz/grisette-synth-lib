@@ -65,13 +65,11 @@ import Grisette
     tryMerge,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
-import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
+import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
 import Grisette.Lib.Synth.Program.Concrete.OpPretty
-  ( DescribeArguments,
+  ( OpPretty,
     OpPrettyError,
-    PrefixByType,
     VarIdMap,
     prettyArguments,
     prettyResults,
@@ -223,10 +221,8 @@ instance
 
 prettyStmt ::
   ( ConcreteVarId varId,
-    DescribeArguments op,
-    GPretty op,
-    OpTyping op ty ConcreteContext,
-    PrefixByType ty
+    OpPretty op,
+    GPretty op
   ) =>
   Int ->
   Stmt op varId ->
@@ -245,11 +241,8 @@ prettyStmt index stmt@(Stmt op argIds resIds) = do
 
 prettyProg ::
   ( ConcreteVarId varId,
-    DescribeArguments op,
-    GPretty op,
-    GPretty ty,
-    OpTyping op ty ConcreteContext,
-    PrefixByType ty
+    OpPretty op,
+    GPretty ty
   ) =>
   Prog op varId ty ->
   Either (ProgPrettyError varId op) (Doc ann)
@@ -284,13 +277,10 @@ prettyProg (Prog name argList stmtList resList) = do
 data SomePrettyProg where
   SomePrettyProg ::
     ( ConcreteVarId varId,
-      DescribeArguments op,
+      OpPretty op,
       Show op,
-      GPretty op,
       GPretty ty,
       Show ty,
-      OpTyping op ty ConcreteContext,
-      PrefixByType ty,
       OpDirectSubProgs op SomePrettyProg
     ) =>
     Prog op varId ty ->
@@ -347,13 +337,10 @@ topologicalSortSubProg prog =
 
 instance
   ( ConcreteVarId varId,
-    DescribeArguments op,
+    OpPretty op,
     Show op,
-    GPretty op,
     GPretty ty,
     Show ty,
-    OpTyping op ty ConcreteContext,
-    PrefixByType ty,
     OpDirectSubProgs op SomePrettyProg
   ) =>
   GPretty (Prog op varId ty)
