@@ -22,6 +22,7 @@ import Control.Monad (when)
 import Control.Monad.Except (MonadError (throwError))
 import Data.Foldable (traverse_)
 import qualified Data.HashMap.Lazy as HM
+import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (Default (Default), GPretty (gpretty), Mergeable)
@@ -103,7 +104,7 @@ noArgumentsDescription op = case typeOp op of
     return $ Nothing <$ argTypes
   Left err -> throwError $ PrettyTypingError op err
 
-class GPretty op => OpPretty op where
+class (GPretty op) => OpPretty op where
   prefixResults :: op -> Either (OpPrettyError varId op) [T.Text]
   default prefixResults ::
     (OpTyping op ty ConcreteContext, PrefixByType ty) =>
@@ -116,6 +117,9 @@ class GPretty op => OpPretty op where
     op ->
     Either (OpPrettyError varId op) [Maybe T.Text]
   describeArguments = noArgumentsDescription
+  topologicalGPrettySubProg ::
+    op -> OM.OMap T.Text (Doc ann) -> OM.OMap T.Text (Doc ann)
+  topologicalGPrettySubProg _ = id
 
 type VarIdMap varId = HM.HashMap varId T.Text
 

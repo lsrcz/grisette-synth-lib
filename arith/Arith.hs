@@ -37,10 +37,8 @@ import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
   )
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpDirectSubProgs (opDirectSubProgs),
-    OpPretty (describeArguments),
+  ( OpPretty (describeArguments),
     PrefixByType (prefixByType),
-    SomePrettyProg,
   )
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
@@ -116,11 +114,6 @@ instance
   genIntermediate _ IntegerType = simpleFresh ()
 
 -- Pretty printing
-
--- You may ignore this for now. This is used when your program supports
--- procedure calls.
-instance OpDirectSubProgs OpCode SomePrettyProg where
-  opDirectSubProgs _ = []
 
 instance GPretty OpType where
   gpretty IntegerType = "int"

@@ -5,14 +5,13 @@ module Grisette.Lib.Synth.Program.Concrete.TopologicalSortTest
   )
 where
 
+import qualified Data.Map.Ordered as OM
 import Grisette.Lib.Synth.Program.Concrete
   ( Prog (Prog),
     ProgArg (ProgArg),
     ProgRes (ProgRes),
-    SomeConstrainedProg (someProgName),
-    SomePrettyProg (SomePrettyProg),
     Stmt (Stmt),
-    topologicalSortSubProg,
+    topologicalGPrettyProg,
   )
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   ( TestPrettyExtOp (TestPrettyExtOp),
@@ -62,5 +61,5 @@ prog3 =
 
 topologicalSortTest :: Test
 topologicalSortTest = testCase "topologicalSort" $ do
-  let sorted = topologicalSortSubProg (SomePrettyProg prog3)
-  someProgName <$> sorted @?= ["ext", "prog1", "prog2", "prog3"]
+  let sorted = topologicalGPrettyProg prog3 OM.empty
+  fst <$> OM.assocs sorted @?= ["ext", "prog1", "prog2", "prog3"]

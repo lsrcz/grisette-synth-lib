@@ -23,6 +23,7 @@ import Grisette.Lib.Synth.Operator.OpTyping
 import Grisette.Lib.Synth.Program.Concrete
   ( OpPretty (describeArguments),
     PrefixByType (prefixByType),
+    topologicalGPrettyProg,
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
@@ -59,27 +60,22 @@ instance (GPretty intVal) => GPretty (Op varId intVal) where
   gpretty (If true false) =
     "if" <> parenCommaList (gpretty <$> [nameProg true, nameProg false])
 
-instance (GPretty intVal) => OpPretty (Op varId intVal) where
+instance
+  (GPretty intVal, ConcreteVarId varId, Show intVal) =>
+  OpPretty (Op varId intVal)
+  where
   describeArguments Plus = return $ replicate 2 Nothing
   describeArguments Equals = return $ replicate 2 Nothing
   describeArguments Minus = return $ replicate 2 Nothing
   describeArguments (IntConst _) = return []
   describeArguments (If true _) =
     return $ Just "cond" : (Nothing <$ Concrete.progArgList true)
+  topologicalGPrettySubProg (If true false) =
+    topologicalGPrettyProg true . topologicalGPrettyProg false
+  topologicalGPrettySubProg _ = id
 
 instance PrefixByType Type where
   prefixByType _ = "r"
-
-instance
-  ( ConcreteVarId varId,
-    GPretty intVal,
-    Show intVal
-  ) =>
-  Concrete.OpDirectSubProgs (Op varId intVal) Concrete.SomePrettyProg
-  where
-  opDirectSubProgs (If true false) =
-    [Concrete.SomePrettyProg true, Concrete.SomePrettyProg false]
-  opDirectSubProgs _ = []
 
 instance (MonadContext ctx) => OpTyping (Op varId intVal) Type ctx where
   typeOp Plus = typePlus

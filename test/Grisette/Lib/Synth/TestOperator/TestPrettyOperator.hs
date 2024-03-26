@@ -17,14 +17,13 @@ import Grisette.Core.Data.Class.GPretty (GPretty (gpretty))
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpDirectSubProgs (opDirectSubProgs),
-    OpPretty (describeArguments, prefixResults),
+  ( OpPretty (describeArguments, prefixResults, topologicalGPrettySubProg),
     PrefixByType (prefixByType),
     Prog (progArgList, progName, progResList),
     ProgArg (progArgType),
     ProgRes (progResType),
-    SomePrettyProg (SomePrettyProg),
     allPrefixesByTypes,
+    topologicalGPrettyProg,
   )
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 
@@ -69,6 +68,10 @@ instance OpPretty TestPrettyOp where
     Right $ replicate (length $ progArgList prog) Nothing
   prefixResults PrettyOp2 = return ["op2_", "op2'_"]
   prefixResults op = allPrefixesByTypes op
+  topologicalGPrettySubProg (PrettyInvokeOp prog) = topologicalGPrettyProg prog
+  topologicalGPrettySubProg (PrettyInvokeExtOp prog) =
+    topologicalGPrettyProg prog
+  topologicalGPrettySubProg _ = id
 
 data TestPrettyType = PrettyType1 | PrettyType2
   deriving (Show, Generic, Eq)
@@ -93,11 +96,3 @@ instance OpTyping TestPrettyOp TestPrettyType ConcreteContext where
       TypeSignature
         (progArgType <$> progArgList prog)
         (progResType <$> progResList prog)
-
-instance OpDirectSubProgs TestPrettyExtOp SomePrettyProg where
-  opDirectSubProgs _ = []
-
-instance OpDirectSubProgs TestPrettyOp SomePrettyProg where
-  opDirectSubProgs (PrettyInvokeOp prog) = [SomePrettyProg prog]
-  opDirectSubProgs (PrettyInvokeExtOp prog) = [SomePrettyProg prog]
-  opDirectSubProgs _ = []

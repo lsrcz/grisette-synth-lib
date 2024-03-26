@@ -32,10 +32,7 @@ module Grisette.Lib.Synth.Program.Concrete.Program
     ProgPrettyError (..),
     prettyStmt,
     prettyProg,
-    OpDirectSubProgs (..),
-    SomeConstrainedProg (..),
-    topologicalSortSubProg,
-    SomePrettyProg (..),
+    topologicalGPrettyProg,
   )
 where
 
@@ -68,7 +65,7 @@ import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Program.Concrete.OpPretty
-  ( OpPretty,
+  ( OpPretty (topologicalGPrettySubProg),
     OpPrettyError,
     VarIdMap,
     prettyArguments,
@@ -274,22 +271,20 @@ prettyProg (Prog name argList stmtList resList) = do
     return . nest 2 . concatWith (\x y -> x <> hardline <> y) $
       concat [[firstLine], stmtsPretty, [ret]]
 
-data SomePrettyProg where
-  SomePrettyProg ::
-    ( ConcreteVarId varId,
-      OpPretty op,
-      Show op,
-      GPretty ty,
-      Show ty,
-      OpDirectSubProgs op SomePrettyProg
-    ) =>
-    Prog op varId ty ->
-    SomePrettyProg
-
-instance GPretty SomePrettyProg where
-  gpretty (SomePrettyProg prog) = do
-    let progDoc = prettyProg prog
-    case progDoc of
+topologicalGPrettyProg ::
+  (OpPretty op, ConcreteVarId varId, GPretty ty, Show op, Show ty) =>
+  Prog op varId ty ->
+  OM.OMap T.Text (Doc ann) ->
+  OM.OMap T.Text (Doc ann)
+topologicalGPrettyProg prog map
+  | OM.member (progName prog) map = map
+  | otherwise =
+      allSub OM.>| (progName prog, progDoc)
+  where
+    allSub =
+      foldl (flip topologicalGPrettySubProg) map $
+        stmtOp <$> progStmtList prog
+    progDoc = case prettyProg prog of
       Left err ->
         nest
           2
@@ -302,53 +297,19 @@ instance GPretty SomePrettyProg where
           <> nest 2 ("Raw program: " <> hardline <> gpretty (show prog))
       Right doc -> doc
 
-class OpDirectSubProgs op someConstrainedProg where
-  opDirectSubProgs :: op -> [someConstrainedProg]
-
-class SomeConstrainedProg someConstrainedProg where
-  someProgName :: someConstrainedProg -> T.Text
-  someDirectSubProgs :: someConstrainedProg -> [someConstrainedProg]
-
-instance SomeConstrainedProg SomePrettyProg where
-  someProgName (SomePrettyProg prog) = progName prog
-  someDirectSubProgs (SomePrettyProg (Prog _ _ stmts _)) =
-    opDirectSubProgs . stmtOp =<< stmts
-
-topologicalSortSubProgStep ::
-  (SomeConstrainedProg someConstrainedProg) =>
-  OM.OMap T.Text someConstrainedProg ->
-  someConstrainedProg ->
-  OM.OMap T.Text someConstrainedProg
-topologicalSortSubProgStep map someConstrainedProg
-  | OM.member (someProgName someConstrainedProg) map = map
-topologicalSortSubProgStep map someConstrainedProg =
-  allSub OM.>| (someProgName someConstrainedProg, someConstrainedProg)
-  where
-    allSub =
-      foldl topologicalSortSubProgStep map $
-        someDirectSubProgs someConstrainedProg
-
-topologicalSortSubProg ::
-  (SomeConstrainedProg someConstrainedProg) =>
-  someConstrainedProg ->
-  [someConstrainedProg]
-topologicalSortSubProg prog =
-  snd <$> OM.assocs (topologicalSortSubProgStep OM.empty prog)
-
 instance
-  ( ConcreteVarId varId,
-    OpPretty op,
-    Show op,
+  ( OpPretty op,
+    ConcreteVarId varId,
     GPretty ty,
-    Show ty,
-    OpDirectSubProgs op SomePrettyProg
+    Show op,
+    Show ty
   ) =>
   GPretty (Prog op varId ty)
   where
   gpretty prog =
-    concatWith (\l r -> l <> hardline <> r) $ gpretty <$> allProgs
+    concatWith (\l r -> l <> hardline <> r) allProgs
     where
-      allProgs = topologicalSortSubProg (SomePrettyProg prog)
+      allProgs = topologicalGPrettyProg prog OM.empty
 
 type Env varId val = HM.HashMap varId val
 
