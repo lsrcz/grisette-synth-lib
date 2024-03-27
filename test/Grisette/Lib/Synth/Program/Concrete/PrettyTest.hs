@@ -90,13 +90,13 @@ prettyTest =
               },
             PrettyStmtTestCase
               { testStmtGroupName = "arg error",
-                testStmt = Stmt PrettyOp2 [2] [3],
+                testStmt = Stmt PrettyOp1 [2] [3],
                 testStmtIndex = 3,
                 testStmtLooseExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [2] [3]) 3 $
+                  Left . StmtPrettyError (Stmt PrettyOp1 [2] [3]) 3 $
                     UndefinedArgument 0 2,
                 testStmtCompactExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [2] [3]) 3 $
+                  Left . StmtPrettyError (Stmt PrettyOp1 [2] [3]) 3 $
                     UndefinedArgument 0 2,
                 testStmtNewMap = env
               },
