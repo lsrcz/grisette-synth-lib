@@ -71,7 +71,6 @@ import Data.GraphViz.Attributes.Complete
   )
 import qualified Data.HashMap.Lazy as HM
 import Data.Hashable (Hashable)
-import Data.List (singleton)
 import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -406,7 +405,7 @@ progToDot (Prog name argList stmtList resList) = do
   let resNode =
         DotNode
           resNodeId
-          [ Label . RecordLabel . singleton . FlipFields $
+          [ Label . RecordLabel . return . FlipFields $
               [ FlipFields $ zipWith buildResField [0 ..] resList,
                 FieldLabel "res"
               ],

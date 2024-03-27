@@ -4,7 +4,16 @@
 module Grisette.Lib.Synth.Program.Concrete.ToDotTest (toDotTest) where
 
 import Control.Monad.State (StateT (runStateT))
-import Data.GraphViz (DotEdge (DotEdge), DotNode (DotNode, nodeAttributes, nodeID), DotStatements (DotStmts, attrStmts, edgeStmts, nodeStmts, subGraphs), DotSubGraph (DotSG), GlobalAttributes (GraphAttrs), GraphID (Str), Shape (Record), textLabel)
+import Data.GraphViz
+  ( DotEdge (DotEdge),
+    DotNode (DotNode, nodeAttributes, nodeID),
+    DotStatements (DotStmts, attrStmts, edgeStmts, nodeStmts, subGraphs),
+    DotSubGraph (DotSG),
+    GlobalAttributes (GraphAttrs),
+    GraphID (Str),
+    Shape (Record),
+    textLabel,
+  )
 import Data.GraphViz.Attributes.Complete
   ( Attribute (HeadPort, Label, Shape, TailPort),
     Label (RecordLabel),
@@ -13,7 +22,6 @@ import Data.GraphViz.Attributes.Complete
     RecordField (FieldLabel, FlipFields, LabelledTarget),
   )
 import qualified Data.HashMap.Lazy as HM
-import Data.List (singleton)
 import qualified Data.Text as T
 import Grisette.Lib.Synth.Program.Concrete
   ( OpPrettyError (RedefinedResult, UndefinedArgument),
@@ -186,7 +194,7 @@ toDotTest =
                         DotNode
                           { nodeID = "prog_args",
                             nodeAttributes =
-                              [ Label . RecordLabel . singleton . FlipFields $
+                              [ Label . RecordLabel . return . FlipFields $
                                   [ FieldLabel "args",
                                     FlipFields
                                       [ LabelledTarget
@@ -204,7 +212,7 @@ toDotTest =
                         DotNode
                           { nodeID = "prog_stmt0",
                             nodeAttributes =
-                              [ Label . RecordLabel . singleton . FlipFields $
+                              [ Label . RecordLabel . return . FlipFields $
                                   [ FlipFields
                                       [ LabelledTarget
                                           (PN "arg0")
@@ -224,7 +232,7 @@ toDotTest =
                         DotNode
                           { nodeID = "prog_stmt1",
                             nodeAttributes =
-                              [ Label . RecordLabel . singleton . FlipFields $
+                              [ Label . RecordLabel . return . FlipFields $
                                   [ FlipFields
                                       [LabelledTarget (PN "arg0") "op1"],
                                     FieldLabel "op1",
@@ -238,7 +246,7 @@ toDotTest =
                         DotNode
                           { nodeID = "prog_res",
                             nodeAttributes =
-                              [ Label . RecordLabel . singleton . FlipFields $
+                              [ Label . RecordLabel . return . FlipFields $
                                   [ FlipFields
                                       [ LabelledTarget
                                           (PN "res0")
