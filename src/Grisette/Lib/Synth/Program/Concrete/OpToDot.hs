@@ -37,11 +37,11 @@ import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 class (OpPretty op) => OpToDot op where
-  topologicalOpToDotSubProg ::
+  topologicalSubProgToDot ::
     op ->
     OM.OMap T.Text (DotSubGraph T.Text) ->
     OM.OMap T.Text (DotSubGraph T.Text)
-  topologicalOpToDotSubProg _ = id
+  topologicalSubProgToDot _ = id
 
 type VarIdToLabel varId = HM.HashMap varId (T.Text, PortName)
 

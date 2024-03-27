@@ -97,7 +97,7 @@ import Grisette.Lib.Synth.Program.Concrete.OpPretty
     prettyResults,
   )
 import Grisette.Lib.Synth.Program.Concrete.OpToDot
-  ( OpToDot (topologicalOpToDotSubProg),
+  ( OpToDot (topologicalSubProgToDot),
     VarIdToLabel,
     argumentsToFieldEdges,
     resultsToFieldEdges,
@@ -465,7 +465,7 @@ topologicalProgToDot prog map
       allSub OM.>| (progName prog, progSubGraph)
   where
     allSub =
-      foldl (flip topologicalOpToDotSubProg) map $
+      foldl (flip topologicalSubProgToDot) map $
         stmtOp <$> progStmtList prog
     progSubGraph = case progToDot prog of
       Left err ->

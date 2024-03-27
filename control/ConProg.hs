@@ -27,7 +27,7 @@ import Grisette.Lib.Synth.Program.Concrete
     topologicalProgToDot,
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.Concrete.OpToDot (OpToDot (topologicalOpToDotSubProg))
+import Grisette.Lib.Synth.Program.Concrete.OpToDot (OpToDot (topologicalSubProgToDot))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Util.Pretty (parenCommaList)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
@@ -80,9 +80,9 @@ instance
   (GPretty intVal, ConcreteVarId varId, Show intVal) =>
   OpToDot (Op varId intVal)
   where
-  topologicalOpToDotSubProg (If true false) =
+  topologicalSubProgToDot (If true false) =
     topologicalProgToDot true . topologicalProgToDot false
-  topologicalOpToDotSubProg _ = id
+  topologicalSubProgToDot _ = id
 
 instance PrefixByType Type where
   prefixByType _ = "r"
