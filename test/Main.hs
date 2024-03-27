@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Grisette.Lib.Synth.Operator.OpPrettyTest (opPrettyTest)
+import Grisette.Lib.Synth.Operator.OpToDotTest (opToDotTest)
 import Grisette.Lib.Synth.Operator.OpTypingTest (opTypingTest)
 import Grisette.Lib.Synth.Program.BuiltinProgConstraintsTest
   ( builtinProgConstraintsTest,
@@ -22,6 +23,7 @@ tests =
   [ prettyTest,
     showTest,
     opPrettyTest,
+    opToDotTest,
     opTypingTest,
     concreteTest,
     byteCodeSketchTest,

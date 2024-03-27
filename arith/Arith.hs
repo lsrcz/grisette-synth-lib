@@ -40,6 +40,7 @@ import Grisette.Lib.Synth.Program.Concrete
   ( OpPretty (describeArguments),
     PrefixByType (prefixByType),
   )
+import Grisette.Lib.Synth.Program.Concrete.OpToDot (OpToDot)
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -129,6 +130,8 @@ instance OpPretty OpCode where
   describeArguments Mul = Right [Just "lhs", Just "rhs"]
   describeArguments Minus = Right [Just "lhs", Just "rhs"]
   describeArguments UMinus = Right [Nothing]
+
+instance OpToDot OpCode
 
 instance PrefixByType OpType where
   prefixByType IntegerType = "r"

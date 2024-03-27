@@ -75,6 +75,8 @@ extra-deps:
   - stm-2.5.0.1
   - async-2.2.2
   - quickcheck-with-counterexamples-1.2
+  - graphviz-2999.20.0.4
+  - dlist-0.8.0.8
   - git: https://github.com/lsrcz/grisette.git
     commit: 0afdddd66a2cafa60509ae75b3916f61de32fb64
   - git: https://github.com/lsrcz/grisette-generics.git

@@ -27,6 +27,7 @@ dependencies:
   - prettyprinter >= 1.5 && < 1.8
   - ordered-containers >= 0.1.1 && < 0.3
   - deepseq
+  - graphviz >= 2999.20.0.4 && < 3000
 
 ghc-options:
   - -Wextra

@@ -39,6 +39,7 @@ library
       Grisette.Lib.Synth.Program.Concrete
       Grisette.Lib.Synth.Program.Concrete.Builder
       Grisette.Lib.Synth.Program.Concrete.OpPretty
+      Grisette.Lib.Synth.Program.Concrete.OpToDot
       Grisette.Lib.Synth.Program.Concrete.Program
       Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath
       Grisette.Lib.Synth.Program.ProgConstraints
@@ -62,6 +63,7 @@ library
       QuickCheck ==2.14.*
     , base >=4.14 && <5
     , deepseq
+    , graphviz >=2999.20.0.4 && <3000
     , grisette >=0.5.0.0 && <0.6
     , grisette-generics
     , hashable >=1.3 && <1.5
@@ -86,6 +88,7 @@ executable arith
       QuickCheck ==2.14.*
     , base >=4.14 && <5
     , deepseq
+    , graphviz >=2999.20.0.4 && <3000
     , grisette >=0.5.0.0 && <0.6
     , grisette-generics
     , grisette-synth-lib
@@ -115,6 +118,7 @@ executable control
       QuickCheck ==2.14.*
     , base >=4.14 && <5
     , deepseq
+    , graphviz >=2999.20.0.4 && <3000
     , grisette >=0.5.0.0 && <0.6
     , grisette-generics
     , grisette-synth-lib
@@ -133,6 +137,7 @@ test-suite spec
   main-is: Main.hs
   other-modules:
       Grisette.Lib.Synth.Operator.OpPrettyTest
+      Grisette.Lib.Synth.Operator.OpToDotTest
       Grisette.Lib.Synth.Operator.OpTypingTest
       Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
       Grisette.Lib.Synth.Program.BuiltinProgConstraintsTest
@@ -149,6 +154,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest
       Grisette.Lib.Synth.Program.Concrete.PrettyTest
       Grisette.Lib.Synth.Program.Concrete.SemanticsTest
+      Grisette.Lib.Synth.Program.Concrete.ToDotTest
       Grisette.Lib.Synth.Program.Concrete.TopologicalSortTest
       Grisette.Lib.Synth.Program.Concrete.TypingTest
       Grisette.Lib.Synth.Program.ConcreteTest
@@ -172,6 +178,7 @@ test-suite spec
     , QuickCheck ==2.14.*
     , base >=4.14 && <5
     , deepseq
+    , graphviz >=2999.20.0.4 && <3000
     , grisette >=0.5.0.0 && <0.6
     , grisette-generics
     , grisette-synth-lib

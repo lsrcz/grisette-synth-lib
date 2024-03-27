@@ -24,6 +24,10 @@ import Grisette.Lib.Synth.Program.Concrete
     ProgRes (progResType),
     allPrefixesByTypes,
     topologicalGPrettyProg,
+    topologicalProgToDot,
+  )
+import Grisette.Lib.Synth.Program.Concrete.OpToDot
+  ( OpToDot (topologicalOpToDotSubProg),
   )
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 
@@ -40,6 +44,9 @@ instance OpPretty TestPrettyExtOp where
 instance OpTyping TestPrettyExtOp TestPrettyType ConcreteContext where
   typeOp TestPrettyExtOp =
     return $ TypeSignature [PrettyType1] [PrettyType1, PrettyType2]
+
+instance OpToDot TestPrettyExtOp where
+  topologicalOpToDotSubProg _ = id
 
 data TestPrettyOp
   = PrettyOp0
@@ -72,6 +79,12 @@ instance OpPretty TestPrettyOp where
   topologicalGPrettySubProg (PrettyInvokeExtOp prog) =
     topologicalGPrettyProg prog
   topologicalGPrettySubProg _ = id
+
+instance OpToDot TestPrettyOp where
+  topologicalOpToDotSubProg (PrettyInvokeOp prog) = topologicalProgToDot prog
+  topologicalOpToDotSubProg (PrettyInvokeExtOp prog) =
+    topologicalProgToDot prog
+  topologicalOpToDotSubProg _ = id
 
 data TestPrettyType = PrettyType1 | PrettyType2
   deriving (Show, Generic, Eq)

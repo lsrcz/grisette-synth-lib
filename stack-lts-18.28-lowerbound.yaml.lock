@@ -229,6 +229,20 @@ packages:
   original:
     hackage: quickcheck-with-counterexamples-1.2
 - completed:
+    hackage: graphviz-2999.20.0.4@sha256:1bc27e5c9684be123605cee57888091bb0fe0f727f0abe3898d08a8a0ceff8a3,7706
+    pantry-tree:
+      sha256: 0b71da584d46a409ca280e48f82aebc1b0580357c827d51a4481f585130ffe3b
+      size: 4322
+  original:
+    hackage: graphviz-2999.20.0.4
+- completed:
+    hackage: dlist-0.8.0.8@sha256:90ca348bffdc62d7070bcf0e97c728f8d01b24fbc7ea08d2909157d0da76534c,2066
+    pantry-tree:
+      sha256: 1b5b9142a932f15c77f758f92f90bea6c805c42d4c62f7a697e8e4f6cf1ad6e6
+      size: 426
+  original:
+    hackage: dlist-0.8.0.8
+- completed:
     commit: 0afdddd66a2cafa60509ae75b3916f61de32fb64
     git: https://github.com/lsrcz/grisette.git
     name: grisette

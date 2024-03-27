@@ -4,7 +4,9 @@
 module Main (main) where
 
 import qualified ConProg as C
+import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
 import Data.Proxy (Proxy (Proxy))
+import qualified Data.Text.Lazy as TL
 import Grisette
   ( Fresh,
     GPretty (gpretty),
@@ -164,6 +166,7 @@ main = do
   case r of
     SynthesisSuccess (prog :: ConProg) -> do
       print $ gpretty prog
+      writeFile "/tmp/control.dot" $ TL.unpack $ renderDot $ toDot prog
       print $ spec [IntValue 5, IntValue 5]
       print (runProg Sem prog [IntValue 5, IntValue 5] :: ConResult)
       print $ spec [IntValue 5, IntValue 4]

@@ -32,7 +32,10 @@ module Grisette.Lib.Synth.Program.Concrete.Program
     ProgPrettyError (..),
     prettyStmt,
     prettyProg,
+    stmtToDot,
+    progToDot,
     topologicalGPrettyProg,
+    topologicalProgToDot,
   )
 where
 
@@ -46,10 +49,32 @@ import Control.Monad.State
     evalStateT,
   )
 import Data.Foldable (traverse_)
+import Data.GraphViz
+  ( DotEdge (DotEdge),
+    DotGraph (DotGraph, directedGraph, graphID, graphStatements, strictGraph),
+    DotNode (DotNode),
+    DotStatements (DotStmts, attrStmts, edgeStmts, nodeStmts, subGraphs),
+    DotSubGraph (DotSG, isCluster, subGraphID, subGraphStmts),
+    GlobalAttributes (GraphAttrs),
+    GraphID (Str),
+    PrintDot (unqtDot),
+    Shape (Record),
+    shape,
+  )
+import Data.GraphViz.Attributes (textLabel)
+import Data.GraphViz.Attributes.Complete
+  ( Attribute (HeadPort, Label, TailPort),
+    Label (RecordLabel),
+    PortName (PN),
+    PortPos (LabelledPort),
+    RecordField (FieldLabel, FlipFields, LabelledTarget),
+  )
 import qualified Data.HashMap.Lazy as HM
 import Data.Hashable (Hashable)
+import Data.List (singleton)
 import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
@@ -71,6 +96,12 @@ import Grisette.Lib.Synth.Program.Concrete.OpPretty
     prettyArguments,
     prettyResults,
   )
+import Grisette.Lib.Synth.Program.Concrete.OpToDot
+  ( OpToDot (topologicalOpToDotSubProg),
+    VarIdToLabel,
+    argumentsToFieldEdges,
+    resultsToFieldEdges,
+  )
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
@@ -84,6 +115,7 @@ import Grisette.Lib.Synth.Util.Pretty
     nest,
     parenCommaList,
     parenCommaListIfNotSingle,
+    renderDoc,
     (<+>),
   )
 import Grisette.Lib.Synth.Util.Show (showText)
@@ -296,6 +328,191 @@ topologicalGPrettyProg prog map
           <> hardline
           <> nest 2 ("Raw program: " <> hardline <> gpretty (show prog))
       Right doc -> doc
+
+stmtToDot ::
+  ( ConcreteVarId varId,
+    OpToDot op,
+    GPretty op
+  ) =>
+  T.Text ->
+  Int ->
+  Stmt op varId ->
+  StateT
+    (VarIdToLabel varId)
+    (Either (ProgPrettyError varId op))
+    (DotNode T.Text, [DotEdge T.Text])
+stmtToDot progName index stmt@(Stmt op argIds resIds) = do
+  map <- get
+  let nodeId = progName <> "_stmt" <> showText index
+  (argFields, edges) <-
+    case argumentsToFieldEdges nodeId op argIds map of
+      Left err -> throwError $ StmtPrettyError stmt index err
+      Right argFieldEdges -> pure argFieldEdges
+  let opPretty = TL.fromStrict $ renderDoc 80 $ gpretty op
+  (newMap, resFields) <-
+    case resultsToFieldEdges nodeId op resIds map of
+      Left err -> throwError $ StmtPrettyError stmt index err
+      Right resFields -> pure resFields
+  put newMap
+  return
+    ( DotNode
+        nodeId
+        [ Label . RecordLabel $
+            [ FlipFields
+                [ FlipFields argFields,
+                  FieldLabel opPretty,
+                  FlipFields resFields
+                ]
+            ],
+          shape Record
+        ],
+      edges
+    )
+
+progToDot ::
+  ( ConcreteVarId varId,
+    OpToDot op,
+    GPretty ty
+  ) =>
+  Prog op varId ty ->
+  Either (ProgPrettyError varId op) (DotSubGraph T.Text)
+progToDot (Prog name argList stmtList resList) = do
+  let buildArgField arg =
+        let argName = TL.fromStrict $ progArgName arg
+            argType = TL.fromStrict $ renderDoc 80 (gpretty $ progArgType arg)
+         in LabelledTarget (PN argName) (argName <> ": " <> argType)
+  let argNodeId = name <> "_args"
+  let argNode =
+        DotNode
+          argNodeId
+          [ Label . RecordLabel $
+              [ FlipFields
+                  [ FieldLabel "args",
+                    FlipFields $ map buildArgField argList
+                  ]
+              ],
+            shape Record
+          ]
+  let resPortAtPos pos = TL.fromStrict $ "res" <> showText pos
+  let resLabel pos res =
+        TL.fromStrict $
+          "res"
+            <> showText pos
+            <> ": "
+            <> renderDoc 80 (gpretty (progResType res))
+  let buildResField pos res =
+        LabelledTarget (PN $ resPortAtPos pos) $ resLabel pos res
+  let resNodeId = name <> "_res"
+  let resNode =
+        DotNode
+          resNodeId
+          [ Label . RecordLabel . singleton . FlipFields $
+              [ FlipFields $ zipWith buildResField [0 ..] resList,
+                FieldLabel "res"
+              ],
+            shape Record
+          ]
+  let initMap =
+        HM.fromList $
+          map
+            ( \arg ->
+                ( progArgId arg,
+                  (argNodeId, PN $ TL.fromStrict $ progArgName arg)
+                )
+            )
+            argList
+  flip evalStateT initMap $ do
+    stmtsPretty <- traverse (uncurry $ stmtToDot name) (zip [0 ..] stmtList)
+    let nodes = fst <$> stmtsPretty
+    let edges = concatMap snd stmtsPretty
+    allMap <- get
+    let lookupLabel map idx varId =
+          maybe
+            (throwError $ ResultUndefined idx varId)
+            return
+            (HM.lookup varId map)
+    resPreLabels <-
+      traverse (uncurry $ lookupLabel allMap) . zip [0 ..] $
+        progResId <$> resList
+    let preLabelToEdge (from, port) resPos =
+          DotEdge
+            from
+            resNodeId
+            [ HeadPort $ LabelledPort (PN $ resPortAtPos resPos) Nothing,
+              TailPort $ LabelledPort port Nothing
+            ]
+    return $
+      DotSG
+        { isCluster = True,
+          subGraphID = Just $ Str $ TL.fromStrict name,
+          subGraphStmts =
+            DotStmts
+              { attrStmts = [GraphAttrs [textLabel $ TL.fromStrict name]],
+                subGraphs = [],
+                nodeStmts = [argNode] <> nodes <> [resNode],
+                edgeStmts = edges <> zipWith preLabelToEdge resPreLabels [0 ..]
+              }
+        }
+
+topologicalProgToDot ::
+  (OpToDot op, ConcreteVarId varId, GPretty ty, Show op, Show ty) =>
+  Prog op varId ty ->
+  OM.OMap T.Text (DotSubGraph T.Text) ->
+  OM.OMap T.Text (DotSubGraph T.Text)
+topologicalProgToDot prog map
+  | OM.member (progName prog) map = map
+  | otherwise =
+      allSub OM.>| (progName prog, progSubGraph)
+  where
+    allSub =
+      foldl (flip topologicalOpToDotSubProg) map $
+        stmtOp <$> progStmtList prog
+    progSubGraph = case progToDot prog of
+      Left err ->
+        let errTxt =
+              renderDoc 80 $
+                nest
+                  2
+                  ( "Error while pretty-printing program "
+                      <> gpretty (progName prog)
+                      <> hardline
+                      <> gpretty err
+                  )
+                  <> hardline
+                  <> nest 2 ("Raw program: " <> hardline <> gpretty (show prog))
+         in DotSG
+              { isCluster = True,
+                subGraphID = Just $ Str $ TL.fromStrict $ progName prog,
+                subGraphStmts =
+                  DotStmts
+                    { attrStmts = [],
+                      subGraphs = [],
+                      nodeStmts = [DotNode errTxt []],
+                      edgeStmts = []
+                    }
+              }
+      Right graph -> graph
+
+instance
+  (OpToDot op, ConcreteVarId varId, GPretty ty, Show op, Show ty) =>
+  PrintDot (Prog op varId ty)
+  where
+  unqtDot prog = unqtDot dotGraph
+    where
+      allDots = topologicalProgToDot prog OM.empty
+      dotGraph =
+        DotGraph
+          { strictGraph = False,
+            directedGraph = True,
+            graphID = Nothing,
+            graphStatements =
+              DotStmts
+                { attrStmts = [],
+                  subGraphs = snd <$> OM.assocs allDots,
+                  nodeStmts = [],
+                  edgeStmts = []
+                }
+          }
 
 instance
   ( OpPretty op,

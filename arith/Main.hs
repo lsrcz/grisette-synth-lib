@@ -4,7 +4,9 @@
 module Main (main) where
 
 import Arith (OpCode (Minus, Mul, Plus), OpType (IntegerType), Sem (Sem))
+import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
 import Data.Proxy (Proxy (Proxy))
+import qualified Data.Text.Lazy as TL
 import Grisette (GPretty (gpretty), SymInteger, precise, runFresh, z3)
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
@@ -100,6 +102,7 @@ main = do
       --   r4 = minus(lhs=r3, rhs=y)
       --   return r4
       print $ gpretty prog
+      writeFile "/tmp/arith.dot" $ TL.unpack $ renderDot $ toDot prog
       let input = [5, 20]
       print $ spec input
       print (runProg Sem prog input :: ConcreteContext [Integer])
