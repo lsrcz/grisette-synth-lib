@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Grisette.Lib.Synth.Program.Concrete.TopologicalSortTest
-  ( topologicalSortTest, prog3
+  ( topologicalSortTest,
+    prog3,
   )
 where
 
