@@ -55,8 +55,8 @@ toConTest = testGroup "ToCon" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn DivMod) [2, 0] 2 [3, 4] 2 $ con False,
-                Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con False
+              [ Stmt (mrgReturn DivMod) [2, 0] 2 [3, 4] 2 (con False) [],
+                Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con False) []
               ]
               [ProgRes 3 IntType, ProgRes 4 IntType],
           toConTestCaseExpected =
@@ -77,8 +77,8 @@ toConTest = testGroup "ToCon" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn DivMod) [2, 0, 3] 2 [4, 5, 6] 2 $ con False,
-                Stmt (mrgReturn Add) [0, 1, 0] 2 [2, 3] 1 $ con False
+              [ Stmt (mrgReturn DivMod) [2, 0, 3] 2 [4, 5, 6] 2 (con False) [],
+                Stmt (mrgReturn Add) [0, 1, 0] 2 [2, 3] 1 (con False) []
               ]
               [ProgRes 4 IntType, ProgRes 5 IntType],
           toConTestCaseExpected =

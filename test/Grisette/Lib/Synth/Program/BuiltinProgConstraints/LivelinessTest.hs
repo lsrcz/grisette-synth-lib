@@ -231,6 +231,7 @@ componentDefStmt =
     ["dr0", "dr1"]
     "dnr"
     "ddisabled"
+    []
 
 concreteUseStmt :: Concrete.Stmt Op (WordN 8)
 concreteUseStmt = Concrete.Stmt OpUse [0, 3] [4]
@@ -244,6 +245,7 @@ componentUseStmt =
     ["ur0", "ur1"]
     "unr"
     "udisabled"
+    []
 
 componentProg :: Component.Prog Op (SymWordN 8) Type
 componentProg =
@@ -352,12 +354,12 @@ livelinessTest =
                         [ Component.ProgArg "arg0" OtherType,
                           Component.ProgArg "arg1" ConstrainedType
                         ]
-                        [ Component.Stmt opUse [0, 1] 2 [2] 1 (con False),
-                          Component.Stmt opDef [0] 1 [3, 4] 2 (con False),
-                          Component.Stmt opUse [3, 4] 2 [5] 1 (con False),
-                          Component.Stmt opUseDef [4] 1 [6] 1 (con False),
-                          Component.Stmt opUse [3, 6] 2 [7] 1 (con False),
-                          Component.Stmt opNone [7] 2 [8] 1 (con False)
+                        [ Component.Stmt opUse [0, 1] 2 [2] 1 (con False) [],
+                          Component.Stmt opDef [0] 1 [3, 4] 2 (con False) [],
+                          Component.Stmt opUse [3, 4] 2 [5] 1 (con False) [],
+                          Component.Stmt opUseDef [4] 1 [6] 1 (con False) [],
+                          Component.Stmt opUse [3, 6] 2 [7] 1 (con False) [],
+                          Component.Stmt opNone [7] 2 [8] 1 (con False) []
                         ]
                         [Component.ProgRes (6 :: SymWordN 8) ConstrainedType],
                     livelinessTestExpectedAssertion =
@@ -372,8 +374,8 @@ livelinessTest =
                         [ Component.ProgArg "arg0" OtherType,
                           Component.ProgArg "arg1" ConstrainedType
                         ]
-                        [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
-                          Component.Stmt opUseDef [1] 1 [4] 1 (con True)
+                        [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
+                          Component.Stmt opUseDef [1] 1 [4] 1 (con True) []
                         ]
                         [Component.ProgRes (3 :: SymWordN 8) ConstrainedType],
                     livelinessTestExpectedAssertion =
@@ -426,9 +428,9 @@ livelinessTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
-                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False),
-                        Component.Stmt opUse [2, 5] 2 [6] 1 (con False)
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
+                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False) [],
+                        Component.Stmt opUse [2, 5] 2 [6] 1 (con False) []
                       ]
                       [Component.ProgRes (5 :: SymWordN 8) ConstrainedType]
                in [ LivelinessTest
@@ -463,9 +465,9 @@ livelinessTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
-                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False),
-                        Component.Stmt opUse [2, 1] 2 [6] 1 (con False)
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
+                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False) [],
+                        Component.Stmt opUse [2, 1] 2 [6] 1 (con False) []
                       ]
                       [Component.ProgRes (5 :: SymWordN 8) ConstrainedType]
                   err :: (MonadContext ctx) => ctx ()
@@ -508,9 +510,9 @@ livelinessTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
-                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False),
-                        Component.Stmt opUse [2, 3] 2 [6] 1 (con False)
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
+                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False) [],
+                        Component.Stmt opUse [2, 3] 2 [6] 1 (con False) []
                       ]
                       [Component.ProgRes (5 :: SymWordN 8) ConstrainedType]
                   err :: (MonadContext ctx) => ctx ()
@@ -550,9 +552,9 @@ livelinessTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
-                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False),
-                        Component.Stmt opUse [2, 1] 2 [6] 1 (con False)
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
+                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False) [],
+                        Component.Stmt opUse [2, 1] 2 [6] 1 (con False) []
                       ]
                       [Component.ProgRes (1 :: SymWordN 8) ConstrainedType]
                   err :: (MonadContext ctx) => ctx ()
@@ -594,9 +596,9 @@ livelinessTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
-                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False),
-                        Component.Stmt opUse [2, 1] 2 [6] 1 (con False)
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
+                        Component.Stmt opDef [0] 1 [4, 5] 2 (con False) [],
+                        Component.Stmt opUse [2, 1] 2 [6] 1 (con False) []
                       ]
                       [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
                   err :: (MonadContext ctx) => ctx ()
@@ -677,15 +679,16 @@ livelinessTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
                         Component.Stmt
                           opDefNoInvalidate
                           [1]
                           1
                           [4]
                           1
-                          (con False),
-                        Component.Stmt opUse [2, 3] 2 [5] 1 (con False)
+                          (con False)
+                          [],
+                        Component.Stmt opUse [2, 3] 2 [5] 1 (con False) []
                       ]
                       [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
                in [ LivelinessTest
@@ -724,7 +727,7 @@ livelinessTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
                         Component.Stmt
                           opDefNoInvalidate
                           [1]
@@ -732,6 +735,7 @@ livelinessTest =
                           [4]
                           1
                           (con False)
+                          []
                       ]
                       [Component.ProgRes (4 :: SymWordN 8) ConstrainedType]
                in [ LivelinessTest
@@ -769,7 +773,7 @@ livelinessTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
                         Component.Stmt
                           opDefNoInvalidate
                           [1]
@@ -777,6 +781,7 @@ livelinessTest =
                           [4]
                           1
                           (con False)
+                          []
                       ]
                       [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
                in [ LivelinessTest
@@ -814,16 +819,17 @@ livelinessTest =
                       [ Component.ProgArg "arg0" OtherType,
                         Component.ProgArg "arg1" ConstrainedType
                       ]
-                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False),
+                      [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
                         Component.Stmt
                           opDefShareScope
                           [3]
                           1
                           [4]
                           1
-                          (con False),
-                        Component.Stmt opUse [2, 3] 2 [5] 1 (con False),
-                        Component.Stmt opUse [2, 4] 2 [6] 1 (con False)
+                          (con False)
+                          [],
+                        Component.Stmt opUse [2, 3] 2 [5] 1 (con False) [],
+                        Component.Stmt opUse [2, 4] 2 [6] 1 (con False) []
                       ]
                       [ Component.ProgRes (3 :: SymWordN 8) ConstrainedType,
                         Component.ProgRes (4 :: SymWordN 8) ConstrainedType
@@ -865,12 +871,12 @@ livelinessTest =
                         Component.ProgArg "arg1" ConstrainedType2,
                         Component.ProgArg "arg2" OtherType
                       ]
-                      [ Component.Stmt opUse [2, 0] 2 [3] 1 (con False),
-                        Component.Stmt opUse2 [2, 1] 2 [4] 1 (con False),
-                        Component.Stmt opDef [0] 1 [5, 6] 2 (con False),
-                        Component.Stmt opDef2 [1] 1 [7, 8] 2 (con False),
-                        Component.Stmt opUse [2, 6] 2 [9] 1 (con False),
-                        Component.Stmt opUse2 [2, 8] 2 [10] 1 (con False)
+                      [ Component.Stmt opUse [2, 0] 2 [3] 1 (con False) [],
+                        Component.Stmt opUse2 [2, 1] 2 [4] 1 (con False) [],
+                        Component.Stmt opDef [0] 1 [5, 6] 2 (con False) [],
+                        Component.Stmt opDef2 [1] 1 [7, 8] 2 (con False) [],
+                        Component.Stmt opUse [2, 6] 2 [9] 1 (con False) [],
+                        Component.Stmt opUse2 [2, 8] 2 [10] 1 (con False) []
                       ]
                       [ Component.ProgRes (6 :: SymWordN 8) ConstrainedType,
                         Component.ProgRes (8 :: SymWordN 8) ConstrainedType2
@@ -909,12 +915,12 @@ livelinessTest =
                         Component.ProgArg "arg1" ConstrainedType2,
                         Component.ProgArg "arg2" OtherType
                       ]
-                      [ Component.Stmt opUse [2, 0] 2 [3] 1 (con False),
-                        Component.Stmt opUse2 [2, 1] 2 [4] 1 (con False),
-                        Component.Stmt opDef [0] 1 [5, 6] 2 (con False),
-                        Component.Stmt opDef2 [1] 1 [7, 8] 2 (con False),
-                        Component.Stmt opUse [2, 0] 2 [9] 1 (con False),
-                        Component.Stmt opUse2 [2, 8] 2 [10] 1 (con False)
+                      [ Component.Stmt opUse [2, 0] 2 [3] 1 (con False) [],
+                        Component.Stmt opUse2 [2, 1] 2 [4] 1 (con False) [],
+                        Component.Stmt opDef [0] 1 [5, 6] 2 (con False) [],
+                        Component.Stmt opDef2 [1] 1 [7, 8] 2 (con False) [],
+                        Component.Stmt opUse [2, 0] 2 [9] 1 (con False) [],
+                        Component.Stmt opUse2 [2, 8] 2 [10] 1 (con False) []
                       ]
                       [ Component.ProgRes (6 :: SymWordN 8) ConstrainedType,
                         Component.ProgRes (8 :: SymWordN 8) ConstrainedType2
@@ -983,10 +989,11 @@ livelinessTest =
                           3
                           [3, 4]
                           2
-                          (con False),
-                        Component.Stmt opUse [0, 3] 2 [5] 1 (con False),
-                        Component.Stmt opUse2 [0, 2] 2 [6] 1 (con False),
-                        Component.Stmt opUse2 [0, 4] 2 [7] 1 (con False)
+                          (con False)
+                          [],
+                        Component.Stmt opUse [0, 3] 2 [5] 1 (con False) [],
+                        Component.Stmt opUse2 [0, 2] 2 [6] 1 (con False) [],
+                        Component.Stmt opUse2 [0, 4] 2 [7] 1 (con False) []
                       ]
                       [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
                   useSubProgInvalidated =
@@ -1002,8 +1009,9 @@ livelinessTest =
                           3
                           [3, 4]
                           2
-                          (con False),
-                        Component.Stmt opUse [0, 1] 2 [5] 1 (con False)
+                          (con False)
+                          [],
+                        Component.Stmt opUse [0, 1] 2 [5] 1 (con False) []
                       ]
                       [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
                   invalidSubProg =
@@ -1030,6 +1038,7 @@ livelinessTest =
                           [2]
                           1
                           (con False)
+                          []
                       ]
                       [Component.ProgRes (2 :: SymWordN 8) ConstrainedType]
                   err :: (MonadContext ctx) => ctx ()
@@ -1159,15 +1168,17 @@ livelinessTest =
                     1
                     [2, 3]
                     2
-                    "disabled1",
+                    "disabled1"
+                    [],
                   Component.Stmt
                     (mrgIf "b" opDef opDef2)
                     [0]
                     1
                     [4, 5]
                     2
-                    "disabled2",
-                  Component.Stmt opUseDef [3] 2 [6] 1 "disabled3"
+                    "disabled2"
+                    [],
+                  Component.Stmt opUseDef [3] 2 [6] 1 "disabled3" []
                 ]
                 [Component.ProgRes (3 :: SymWordN 8) ConstrainedType]
         let actual =

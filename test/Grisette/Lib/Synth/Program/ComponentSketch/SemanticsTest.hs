@@ -89,7 +89,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [Stmt (mrgReturn Add) [0, 1, 5] 2 [2] 1 $ con False]
+              [Stmt (mrgReturn Add) [0, 1, 5] 2 [2] 1 (con False) []]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
           semanticsTestCaseExpected =
@@ -112,7 +112,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 (con False) []
               ]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -137,7 +137,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 4] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 4] 1 (con False) []
               ]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -151,7 +151,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 2] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 2] 1 (con False) []
               ]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -165,8 +165,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 5] 1 $ con False,
-                Stmt (mrgReturn Add) [0, 2] 2 [4, 3] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 5] 1 (con False) [],
+                Stmt (mrgReturn Add) [0, 2] 2 [4, 3] 1 (con False) []
               ]
               [ProgRes 4 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -180,8 +180,23 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 $ con False,
-                Stmt (mrgReturn Add) [2, 3] 2 [4, 5] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 (con False) [],
+                Stmt (mrgReturn Add) [2, 3] 2 [4, 5] 1 (con False) []
+              ]
+              [ProgRes 4 IntType],
+          semanticsTestCaseArgs = [13, 20],
+          semanticsTestCaseExpected = ErrorResult,
+          semanticsTestCaseFreshIdent = "x"
+        },
+      SemanticsTestCase
+        { semanticsTestCaseName =
+            "failed must be after constraint",
+          semanticsTestCaseProg =
+            Prog
+              "test"
+              [ProgArg "x" IntType, ProgArg "y" IntType]
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 (con False) [4],
+                Stmt (mrgReturn Add) [0, 1] 2 [4, 5] 1 (con False) []
               ]
               [ProgRes 4 IntType],
           semanticsTestCaseArgs = [13, 20],
@@ -194,8 +209,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 "dis0",
-                Stmt (mrgReturn DivMod) [0, 1] 2 [3, 4] 2 "dis1"
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 "dis0" [],
+                Stmt (mrgReturn DivMod) [0, 1] 2 [3, 4] 2 "dis1" []
               ]
               [ProgRes 1 IntType, ProgRes 2 IntType],
           semanticsTestCaseArgs = [1, 0],
@@ -234,6 +249,7 @@ semanticsTest = testGroup "Semantics" $ do
                   [2, 3]
                   "resNum"
                   "dis0"
+                  []
               ]
               [ProgRes 1 IntType, ProgRes 2 IntType],
           semanticsTestCaseArgs = [10, 4],
@@ -293,7 +309,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con False]
+              [Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con False) []]
               [ProgRes "res" IntType],
           semanticsTestCaseArgs = [13, 20],
           semanticsTestCaseExpected =
@@ -331,9 +347,15 @@ semanticsTest = testGroup "Semantics" $ do
                 Prog
                   "test"
                   [ProgArg "x" IntType]
-                  [ Stmt (mrgReturn Inc) [argInc] 1 [resInc] 1 $ con False,
-                    Stmt (mrgReturn Double) [argDouble] 1 [resDouble] 1 $
-                      con False
+                  [ Stmt (mrgReturn Inc) [argInc] 1 [resInc] 1 (con False) [],
+                    Stmt
+                      (mrgReturn Double)
+                      [argDouble]
+                      1
+                      [resDouble]
+                      1
+                      (con False)
+                      []
                   ]
                   [ProgRes 2 IntType],
               semanticsTestCaseArgs = [13],
@@ -400,10 +422,22 @@ semanticsTest = testGroup "Semantics" $ do
                 Prog
                   "test"
                   [ProgArg "x" IntType, ProgArg "y" IntType]
-                  [ Stmt (mrgReturn DivMod) [0, 1] 2 [res00, res01] 2 $
-                      con False,
-                    Stmt (mrgReturn DivMod) [0, 1] 2 [res10, res11] 2 $
-                      con False
+                  [ Stmt
+                      (mrgReturn DivMod)
+                      [0, 1]
+                      2
+                      [res00, res01]
+                      2
+                      (con False)
+                      [],
+                    Stmt
+                      (mrgReturn DivMod)
+                      [0, 1]
+                      2
+                      [res10, res11]
+                      2
+                      (con False)
+                      []
                   ]
                   [ProgRes 4 IntType, ProgRes 5 IntType],
               semanticsTestCaseArgs = [20, 13],
@@ -448,7 +482,7 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 2 $ con False]
+              [Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 2 (con False) []]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [1, 2],
           semanticsTestCaseExpected = ErrorResult,
@@ -460,8 +494,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con True,
-                Stmt (mrgReturn Add) [0, 2] 2 [3] 1 $ con False
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con True) [],
+                Stmt (mrgReturn Add) [0, 2] 2 [3] 1 (con False) []
               ]
               [ProgRes 0 IntType],
           semanticsTestCaseArgs = [1, 2],
@@ -474,8 +508,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con True,
-                Stmt (mrgReturn Add) [0, 2] 2 [3] 1 $ con True
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con True) [],
+                Stmt (mrgReturn Add) [0, 2] 2 [3] 1 (con True) []
               ]
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [1, 2],
@@ -489,8 +523,8 @@ semanticsTest = testGroup "Semantics" $ do
             Prog
               "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
-              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 $ con True,
-                Stmt (mrgReturn Add) [0, 2] 2 [3] 1 $ con True
+              [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con True) [],
+                Stmt (mrgReturn Add) [0, 2] 2 [3] 1 (con True) []
               ]
               [ProgRes 0 IntType],
           semanticsTestCaseArgs = [1, 2],

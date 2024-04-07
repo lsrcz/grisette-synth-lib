@@ -43,9 +43,7 @@ import Grisette
     MergingStrategy (NoStrategy),
     MonadUnion,
     SEq ((./=), (.==)),
-    -- SOrd ((.<), (.<=)),
-
-    SOrd ((.<), (.<=)),
+    SOrd ((.<), (.<=), (.>)),
     Solvable (con),
     SymBool,
     ToCon (toCon),
@@ -88,7 +86,8 @@ data Stmt op symVarId = Stmt
     stmtArgNum :: symVarId,
     stmtResIds :: [symVarId],
     stmtResNum :: symVarId,
-    stmtDisabled :: SymBool
+    stmtDisabled :: SymBool,
+    stmtMustBeAfter :: [symVarId]
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
@@ -175,7 +174,8 @@ instance
               stmtArgNum = fromIntegral $ length conArgIds,
               stmtResIds = conResIds,
               stmtResNum = fromIntegral $ length conResIds,
-              stmtDisabled = con False
+              stmtDisabled = con False,
+              stmtMustBeAfter = []
             }
       toSymRes ::
         Concrete.ProgRes conVarId conTy ->
@@ -200,7 +200,7 @@ instance
             Concrete.ProgArg name varId <$> toCon ty
         )
         $ zip argList [0 ..]
-    let toConStmt (Stmt op argIds argNum resIds resNum disabled) = do
+    let toConStmt (Stmt op argIds argNum resIds resNum disabled _) = do
           disabled <- toCon disabled
           if disabled
             then return []
@@ -331,7 +331,7 @@ constrainStmt
   p
   sem
   idBound
-  (Stmt opUnion argIds argNum resIds resNum disabled) = do
+  (Stmt opUnion argIds argNum resIds resNum disabled mustBeAfters) = do
     symAssertWith "Out-of-bound statement results." $
       symAll (inBound idBound) resIds
 
@@ -361,6 +361,12 @@ constrainStmt
     symAssertWith "Incorrect number of results." $
       resNum .== fromIntegral (length resVals)
     addDefs =<< getIdValPairs disabled resIds resVals
+
+    mrgTraverse_
+      ( \(res, mustBeAfter) ->
+          symAssertWith "Failed must be after constraint." $ res .> mustBeAfter
+      )
+      [(res, mustBeAfter) | res <- resIds, mustBeAfter <- mustBeAfters]
 
     let usedArgIds = take (length argVals) argIds
     let usedResIds = take (length resVals) resIds

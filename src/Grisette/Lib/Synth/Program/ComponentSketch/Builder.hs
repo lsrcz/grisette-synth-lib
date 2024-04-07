@@ -7,8 +7,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch.Builder
-  ( simpleFreshStmt,
+  ( StmtExtraConstraint (..),
+    simpleFreshStmt,
+    simpleFreshStmt',
     freshStmt,
+    freshStmt',
     MkProg (..),
     MkFreshProg (..),
     fromConcrete,
@@ -31,10 +34,21 @@ import Grisette.Lib.Synth.Program.ComponentSketch.Program
   ( Prog (Prog),
     ProgArg (ProgArg),
     ProgRes (ProgRes),
-    Stmt (Stmt),
+    Stmt (Stmt, stmtResIds),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Util.Show (showText)
+
+newtype StmtExtraConstraint op symVarId = StmtExtraConstraint
+  { stmtMustBeAfterStmts :: [Stmt op symVarId]
+  }
+
+simpleFreshStmt' ::
+  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  op ->
+  StmtExtraConstraint op symVarId ->
+  Fresh (Stmt op symVarId)
+simpleFreshStmt' op = freshStmt' (return [op])
 
 simpleFreshStmt ::
   (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
@@ -42,11 +56,12 @@ simpleFreshStmt ::
   Fresh (Stmt op symVarId)
 simpleFreshStmt op = freshStmt (return [op])
 
-freshStmt ::
+freshStmt' ::
   (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
   Fresh [op] ->
+  StmtExtraConstraint op symVarId ->
   Fresh (Stmt op symVarId)
-freshStmt freshOps = do
+freshStmt' freshOps (StmtExtraConstraint mustBeAfterStmts) = do
   ops <- freshOps
   chosenOps <- chooseFresh ops
   let maxArgNum = maximum $ symOpMaximumArgNum <$> ops
@@ -56,7 +71,15 @@ freshStmt freshOps = do
   resIds <- replicateM maxResNum (simpleFresh ())
   resNum <- simpleFresh ()
   disabled <- simpleFresh ()
-  return $ Stmt chosenOps argIds argNum resIds resNum disabled
+  return $
+    Stmt chosenOps argIds argNum resIds resNum disabled $
+      concatMap stmtResIds mustBeAfterStmts
+
+freshStmt ::
+  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  Fresh [op] ->
+  Fresh (Stmt op symVarId)
+freshStmt freshOps = freshStmt' freshOps (StmtExtraConstraint [])
 
 class MkProg prog stmt op symVarId ty | prog -> stmt op symVarId ty where
   mkProg ::

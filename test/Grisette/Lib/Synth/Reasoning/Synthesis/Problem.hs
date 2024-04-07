@@ -4,6 +4,8 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.Problem
     divModTwiceSpec,
     divModTwiceGen,
     addThenDoubleReverseSpec,
+    addThenDivModSpec,
+    addThenDivModGen,
   )
 where
 
@@ -28,6 +30,17 @@ addThenDoubleReverseSpec _ = error "Error"
 
 addThenDoubleGen :: Gen [Integer]
 addThenDoubleGen = vectorOf 2 arbitrary
+
+addThenDivModSpec :: [Integer] -> ([Integer], EqMatcher)
+addThenDivModSpec [x, y, z] =
+  ([(x + y) `div` z, (x + y) `mod` z], EqMatcher)
+addThenDivModSpec _ = error "Error"
+
+addThenDivModGen :: Gen [Integer]
+addThenDivModGen = flip suchThat noException $ vectorOf 3 arbitrary
+  where
+    noException [_, _, c] = c /= 0
+    noException _ = False
 
 divModTwiceSpec :: [Integer] -> ([Integer], EqMatcher)
 divModTwiceSpec [x, y] =

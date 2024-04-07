@@ -25,13 +25,20 @@ import Grisette.Lib.Synth.Program.ComponentSketch
         stmtArgIds,
         stmtArgNum,
         stmtDisabled,
+        stmtMustBeAfter,
         stmtOp,
         stmtResIds,
         stmtResNum
       ),
+    StmtExtraConstraint (StmtExtraConstraint, stmtMustBeAfterStmts),
     freshStmt,
+    freshStmt',
   )
-import Grisette.Lib.Synth.Program.ComponentSketch.Builder (fromConcrete, simpleFreshStmt)
+import Grisette.Lib.Synth.Program.ComponentSketch.Builder
+  ( fromConcrete,
+    simpleFreshStmt,
+    simpleFreshStmt',
+  )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (Add, DivMod),
@@ -55,7 +62,32 @@ builderTest =
                   stmtArgNum = isym "x" 2,
                   stmtResIds = [isym "x" 3],
                   stmtResNum = isym "x" 4,
-                  stmtDisabled = isym "x" 5
+                  stmtDisabled = isym "x" 5,
+                  stmtMustBeAfter = []
+                }
+        runFresh actual "x" @?= expected,
+      testCase "simpleFreshStmt'" $ do
+        let actual = do
+              precursor <-
+                simpleFreshStmt DivMod ::
+                  Fresh (Stmt TestSemanticsOp SymInteger)
+              precursor2 <- simpleFreshStmt DivMod
+              simpleFreshStmt'
+                Add
+                ( StmtExtraConstraint
+                    { stmtMustBeAfterStmts = [precursor, precursor2]
+                    }
+                )
+        let expected =
+              Stmt
+                { stmtOp = mrgReturn Add,
+                  stmtArgIds = [isym "x" 14, isym "x" 15],
+                  stmtArgNum = isym "x" 16,
+                  stmtResIds = [isym "x" 17],
+                  stmtResNum = isym "x" 18,
+                  stmtDisabled = isym "x" 19,
+                  stmtMustBeAfter =
+                    [isym "x" 3, isym "x" 4, isym "x" 10, isym "x" 11]
                 }
         runFresh actual "x" @?= expected,
       testCase "freshStmt" $ do
@@ -69,7 +101,32 @@ builderTest =
                   stmtArgNum = isym "x" 3,
                   stmtResIds = [isym "x" 4, isym "x" 5],
                   stmtResNum = isym "x" 6,
-                  stmtDisabled = isym "x" 7
+                  stmtDisabled = isym "x" 7,
+                  stmtMustBeAfter = []
+                }
+        runFresh actual "x" @?= expected,
+      testCase "freshStmt'" $ do
+        let actual = do
+              precursor <-
+                simpleFreshStmt DivMod ::
+                  Fresh (Stmt TestSemanticsOp SymInteger)
+              precursor2 <- simpleFreshStmt DivMod
+              freshStmt'
+                (return [Add, DivMod])
+                ( StmtExtraConstraint
+                    { stmtMustBeAfterStmts = [precursor, precursor2]
+                    }
+                )
+        let expected =
+              Stmt
+                { stmtOp = mrgIf (isym "x" 14) (return Add) (return DivMod),
+                  stmtArgIds = [isym "x" 15, isym "x" 16],
+                  stmtArgNum = isym "x" 17,
+                  stmtResIds = [isym "x" 18, isym "x" 19],
+                  stmtResNum = isym "x" 20,
+                  stmtDisabled = isym "x" 21,
+                  stmtMustBeAfter =
+                    [isym "x" 3, isym "x" 4, isym "x" 10, isym "x" 11]
                 }
         runFresh actual "x" @?= expected,
       testGroup
@@ -79,8 +136,15 @@ builderTest =
                   mkProg
                     "test"
                     [("x", IntType), ("y", IntType)]
-                    [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f",
-                      Stmt (mrgReturn DivMod) ["g", "h"] "i" ["j", "k"] "l" "m"
+                    [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f" [],
+                      Stmt
+                        (mrgReturn DivMod)
+                        ["g", "h"]
+                        "i"
+                        ["j", "k"]
+                        "l"
+                        "m"
+                        []
                     ]
                     [("n", IntType), ("o", IntType)] ::
                     Prog TestSemanticsOp SymInteger TestSemanticsType
@@ -88,8 +152,15 @@ builderTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f",
-                      Stmt (mrgReturn DivMod) ["g", "h"] "i" ["j", "k"] "l" "m"
+                    [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f" [],
+                      Stmt
+                        (mrgReturn DivMod)
+                        ["g", "h"]
+                        "i"
+                        ["j", "k"]
+                        "l"
+                        "m"
+                        []
                     ]
                     [ProgRes "n" IntType, ProgRes "o" IntType]
             actual @?= expected,
@@ -114,7 +185,8 @@ builderTest =
                         (isym "x" 2)
                         [isym "x" 3]
                         (isym "x" 4)
-                        (isym "x" 5),
+                        (isym "x" 5)
+                        [],
                       Stmt
                         (mrgReturn DivMod)
                         [isym "x" 6, isym "x" 7]
@@ -122,6 +194,7 @@ builderTest =
                         [isym "x" 9, isym "x" 10]
                         (isym "x" 11)
                         (isym "x" 12)
+                        []
                     ]
                     [ ProgRes (isym "x" 13) IntType,
                       ProgRes (isym "x" 14) IntType
@@ -146,7 +219,8 @@ builderTest =
                     (isym "x" 2)
                     [isym "x" 3]
                     (isym "x" 4)
-                    (isym "x" 5),
+                    (isym "x" 5)
+                    [],
                   Stmt
                     (mrgReturn DivMod)
                     [isym "x" 6, isym "x" 7]
@@ -154,6 +228,7 @@ builderTest =
                     [isym "x" 9, isym "x" 10]
                     (isym "x" 11)
                     (isym "x" 12)
+                    []
                 ]
                 [ ProgRes (isym "x" 13) IntType,
                   ProgRes (isym "x" 14) IntType
@@ -184,7 +259,8 @@ builderTest =
                     (isym "x" 2)
                     [isym "x" 3]
                     (isym "x" 4)
-                    (isym "x" 5),
+                    (isym "x" 5)
+                    [],
                   Stmt
                     (mrgReturn DivMod)
                     [isym "x" 6, isym "x" 7]
@@ -192,6 +268,7 @@ builderTest =
                     [isym "x" 9, isym "x" 10]
                     (isym "x" 11)
                     (isym "x" 12)
+                    []
                 ]
                 [ ProgRes (isym "x" 13) IntType,
                   ProgRes (isym "x" 14) IntType,

@@ -668,7 +668,7 @@ componentStmtDefs ::
   ctx (UnionDef symVarId res)
 componentStmtDefs
   livelinessObj
-  (Component.Stmt opUnion _ _ resIds _ disabled) = do
+  (Component.Stmt opUnion _ _ resIds _ disabled _) = do
     op <- liftUnionM opUnion
     mrgFmap mrgReturn $ livelinessOpDefs livelinessObj op resIds disabled
 
@@ -684,7 +684,7 @@ componentStmtInvalidatingDefs ::
   ctx (UnionDef symVarId res)
 componentStmtInvalidatingDefs
   livelinessObj
-  (Component.Stmt opUnion _ _ resIds _ disabled) = do
+  (Component.Stmt opUnion _ _ resIds _ disabled _) = do
     op <- liftUnionM opUnion
     mrgFmap mrgReturn $
       livelinessOpInvalidatingDefs livelinessObj op resIds disabled
@@ -700,7 +700,7 @@ componentStmtUses ::
   ctx (UnionComponentUse symVarId)
 componentStmtUses
   livelinessObj
-  (Component.Stmt opUnion argIds _ resIds _ disabled) = do
+  (Component.Stmt opUnion argIds _ resIds _ disabled _) = do
     op <- liftUnionM opUnion
     opUses <- livelinessOpUses livelinessObj op argIds disabled
     mrgReturn . mrgReturn $
