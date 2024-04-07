@@ -252,16 +252,19 @@ componentSketchTest =
             ]
 
         return $ testCase (name <> namePostFix) $ do
-          (_, SynthesisSuccess prog) <-
+          (_, r) <-
             synthesizeProgWithVerifier $ task spec gen sketch
-          fuzzingResult <-
-            fuzzingTestProg
-              gen
-              spec
-              100
-              (WithConstraints TestSemanticsObj ())
-              prog
-          fst <$> fuzzingResult @?= Nothing
+          case r of
+            SynthesisSuccess prog -> do
+              fuzzingResult <-
+                fuzzingTestProg
+                  gen
+                  spec
+                  100
+                  (WithConstraints TestSemanticsObj ())
+                  prog
+              fst <$> fuzzingResult @?= Nothing
+            r -> fail $ "Unexpected result: " <> show r
     )
       ++ [ testCase "Add then DivMod with must be after constraint" $ do
              (_, SynthesisSuccess prog) <-

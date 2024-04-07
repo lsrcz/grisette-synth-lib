@@ -23,7 +23,7 @@ import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
     EvaluateSym,
-    FreshIdent (FreshIdentWithInfo),
+    FreshIdent (FreshIdent),
     Mergeable,
     Solvable (con),
     SolvingFailure,
@@ -46,6 +46,7 @@ import Grisette.Lib.Synth.Program.ProgConstraints
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics)
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher (match))
+import Grisette.Lib.Synth.Util.Show (showText)
 
 class SynthesisContext ctx where
   genSynthesisConstraint ::
@@ -69,7 +70,7 @@ instance SynthesisContext AngelicContext where
     genSynthesisConstraint
       i
       matcher
-      (runFreshT actual (FreshIdentWithInfo "::synth::" i))
+      (runFreshT actual (FreshIdent $ "::synth::[" <> showText i <> "]"))
 
 synthesisConstraintFun ::
   forall semObj constObj symProg conVal symVal ctx matcher p q.
