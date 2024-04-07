@@ -49,7 +49,6 @@ import Grisette
     ToCon (toCon),
     ToSym (toSym),
     UnionM,
-    liftUnionM,
     mrgFmap,
     mrgIf,
     mrgSequence_,
@@ -339,8 +338,7 @@ constrainStmt
       symAll (\(i, isucc) -> isucc .== i + 1) $
         zip resIds (tail resIds)
 
-    op <- liftUnionM opUnion
-    signature <- lift $ typeOp op
+    signature <- lift $ typeOp opUnion
     Intermediates argVals resVals <- lift $ genOpIntermediates p sem signature
 
     let getIdValPairs _ [] [] = mrgReturn []
@@ -374,9 +372,8 @@ constrainStmt
     symAssertWith "Variable is undefined." $
       symAll (\resId -> symAll (symInBound resId) usedArgIds) usedResIds
     mrgIf disabled (return ()) $ do
-      computedResVals <- lift $ applyOp sem op argVals
-      symAssertWith "Incorrect results." $ do
-        resVals .== computedResVals
+      computedResVals <- lift $ applyOp sem opUnion argVals
+      symAssertWith "Incorrect results." $ resVals .== computedResVals
 
 connected ::
   ( MonadUnion ctx,

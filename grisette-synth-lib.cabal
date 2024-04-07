@@ -137,6 +137,7 @@ test-suite spec
   main-is: Main.hs
   other-modules:
       Grisette.Lib.Synth.Operator.OpPrettyTest
+      Grisette.Lib.Synth.Operator.OpSemanticsTest
       Grisette.Lib.Synth.Operator.OpToDotTest
       Grisette.Lib.Synth.Operator.OpTypingTest
       Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest

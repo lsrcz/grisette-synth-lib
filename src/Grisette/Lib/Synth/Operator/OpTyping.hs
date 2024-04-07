@@ -25,6 +25,7 @@ import Grisette
     mrgFmap,
     mrgReturn,
     simpleMerge,
+    tryMerge,
   )
 import Grisette.Lib.Synth.Context (MonadContext, SymbolicContext)
 import Grisette.Lib.Synth.TypeSignature
@@ -43,10 +44,10 @@ class (MonadContext ctx) => OpTyping op ty ctx | op -> ty where
   typeOp = mrgReturn . typeOpSimple
 
 instance
-  (MonadUnion ctx, OpTyping op ty ctx, Mergeable op) =>
+  (MonadUnion ctx, OpTyping op ty ctx, Mergeable op, Mergeable ty) =>
   OpTyping (UnionM op) ty ctx
   where
-  typeOp op = liftUnionM op >>= typeOp
+  typeOp op = tryMerge $ liftUnionM op >>= typeOp
 
 newtype MaxAcrossBranches = MaxAcrossBranches {unMaxAcrossBranches :: Int}
 
