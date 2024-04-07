@@ -80,7 +80,7 @@ import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId, RelatedVarId, SymbolicVarId)
 
 data Stmt op symVarId = Stmt
-  { stmtOp :: UnionM op,
+  { stmtOp :: op,
     stmtArgIds :: [symVarId],
     stmtArgNum :: symVarId,
     stmtResIds :: [symVarId],

@@ -29,7 +29,6 @@ import Grisette
     GenSymSimple (simpleFresh),
     Mergeable,
     ToSym (toSym),
-    chooseFresh,
   )
 import Grisette.Lib.Synth.Operator.OpTyping
   ( SymOpLimits (symOpMaximumArgNum, symOpMaximumResNum),
@@ -48,81 +47,83 @@ newtype StmtExtraConstraint op symVarId = StmtExtraConstraint
   }
 
 simpleFreshStmt' ::
-  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  (SymOpLimits op, GenSymSimple () symVarId) =>
   op ->
   StmtExtraConstraint op symVarId ->
   Fresh [Stmt op symVarId]
-simpleFreshStmt' op = freshStmt' (return [op])
-
-simpleFreshStmts' ::
-  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
-  Int ->
-  op ->
-  StmtExtraConstraint op symVarId ->
-  Fresh [Stmt op symVarId]
-simpleFreshStmts' num op = freshStmts' num (return [op])
-
-simpleFreshStmt ::
-  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
-  op ->
-  Fresh [Stmt op symVarId]
-simpleFreshStmt op = freshStmt (return [op])
-
-simpleFreshStmts ::
-  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
-  Int ->
-  op ->
-  Fresh [Stmt op symVarId]
-simpleFreshStmts num op = freshStmts num (return [op])
-
-freshStmt' ::
-  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
-  Fresh [op] ->
-  StmtExtraConstraint op symVarId ->
-  Fresh [Stmt op symVarId]
-freshStmt' freshOps (StmtExtraConstraint mustBeAfterStmts) = do
-  ops <- freshOps
-  chosenOps <- chooseFresh ops
-  let maxArgNum = maximum $ symOpMaximumArgNum <$> ops
+simpleFreshStmt' op (StmtExtraConstraint mustBeAfterStmts) = do
+  let maxArgNum = symOpMaximumArgNum op
   argIds <- replicateM maxArgNum (simpleFresh ())
   argNum <- simpleFresh ()
-  let maxResNum = maximum $ symOpMaximumResNum <$> ops
+  let maxResNum = symOpMaximumResNum op
   resIds <- replicateM maxResNum (simpleFresh ())
   resNum <- simpleFresh ()
   disabled <- simpleFresh ()
   return
-    [ Stmt chosenOps argIds argNum resIds resNum disabled $
+    [ Stmt op argIds argNum resIds resNum disabled $
         concatMap stmtResIds mustBeAfterStmts
     ]
+
+augmentMustBeAfterForStmts :: [symVarId] -> [Stmt op symVarId] -> [Stmt op symVarId]
+augmentMustBeAfterForStmts _ [] = []
+augmentMustBeAfterForStmts resIds (stmt : stmts) =
+  stmt {stmtMustBeAfter = stmtMustBeAfter stmt ++ resIds}
+    : augmentMustBeAfterForStmts (resIds ++ stmtResIds stmt) stmts
+
+simpleFreshStmts' ::
+  (SymOpLimits op, GenSymSimple () symVarId) =>
+  Int ->
+  op ->
+  StmtExtraConstraint op symVarId ->
+  Fresh [Stmt op symVarId]
+simpleFreshStmts' num op extraConstraint = do
+  stmts <- concat <$> replicateM num (simpleFreshStmt' op extraConstraint)
+  return $ augmentMustBeAfterForStmts [] stmts
+
+simpleFreshStmt ::
+  (SymOpLimits op, GenSymSimple () symVarId) =>
+  op ->
+  Fresh [Stmt op symVarId]
+simpleFreshStmt op = simpleFreshStmt' op (StmtExtraConstraint [])
+
+simpleFreshStmts ::
+  (SymOpLimits op, GenSymSimple () symVarId) =>
+  Int ->
+  op ->
+  Fresh [Stmt op symVarId]
+simpleFreshStmts num op = simpleFreshStmts' num op (StmtExtraConstraint [])
+
+freshStmt' ::
+  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  Fresh op ->
+  StmtExtraConstraint op symVarId ->
+  Fresh [Stmt op symVarId]
+freshStmt' freshOp extraConstraint = do
+  op <- freshOp
+  simpleFreshStmt' op extraConstraint
 
 freshStmts' ::
   (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
   Int ->
-  Fresh [op] ->
+  Fresh op ->
   StmtExtraConstraint op symVarId ->
   Fresh [Stmt op symVarId]
-freshStmts' num ops extraConstraint = do
-  stmts <- concat <$> replicateM num (freshStmt' ops extraConstraint)
-  return $ augmentMustBeAfter [] stmts
-  where
-    augmentMustBeAfter :: [symVarId] -> [Stmt op symVarId] -> [Stmt op symVarId]
-    augmentMustBeAfter _ [] = []
-    augmentMustBeAfter resIds (stmt : stmts) =
-      stmt {stmtMustBeAfter = stmtMustBeAfter stmt ++ resIds}
-        : augmentMustBeAfter (resIds ++ stmtResIds stmt) stmts
+freshStmts' num freshOp extraConstraint = do
+  stmts <- concat <$> replicateM num (freshStmt' freshOp extraConstraint)
+  return $ augmentMustBeAfterForStmts [] stmts
 
 freshStmt ::
   (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
-  Fresh [op] ->
+  Fresh op ->
   Fresh [Stmt op symVarId]
-freshStmt freshOps = freshStmt' freshOps (StmtExtraConstraint [])
+freshStmt freshOp = freshStmt' freshOp (StmtExtraConstraint [])
 
 freshStmts ::
   (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
   Int ->
-  Fresh [op] ->
+  Fresh op ->
   Fresh [Stmt op symVarId]
-freshStmts num freshOps = freshStmts' num freshOps (StmtExtraConstraint [])
+freshStmts num freshOp = freshStmts' num freshOp (StmtExtraConstraint [])
 
 class MkProg prog stmts op symVarId ty | prog -> stmts op symVarId ty where
   mkProg ::
@@ -170,7 +171,6 @@ fromConcrete ::
   ( ToSym conTy symTy,
     ToSym conOp symOp,
     SymOpLimits symOp,
-    Mergeable symOp,
     GenSymSimple () symVarId
   ) =>
   Concrete.Prog conOp conVarId conTy ->
@@ -183,7 +183,7 @@ fromConcrete (Concrete.Prog name argList stmtList resList) = do
       (\(Concrete.ProgArg name _ ty) -> ProgArg name (toSym ty)) <$> argList
     allFreshStmts =
       traverse
-        (\(Concrete.Stmt op _ _) -> freshStmt (return [toSym op :: symOp]))
+        (\(Concrete.Stmt op _ _) -> simpleFreshStmt (toSym op :: symOp))
         stmtList
     freshResults =
       traverse

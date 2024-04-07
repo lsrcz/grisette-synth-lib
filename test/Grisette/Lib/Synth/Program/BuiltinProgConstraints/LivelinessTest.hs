@@ -222,7 +222,7 @@ opSubProg = mrgReturn . OpSubProg
 concreteDefStmt :: Concrete.Stmt Op (WordN 8)
 concreteDefStmt = Concrete.Stmt OpDef [0] [2, 3]
 
-componentDefStmt :: Component.Stmt Op (SymWordN 8)
+componentDefStmt :: Component.Stmt (UnionM Op) (SymWordN 8)
 componentDefStmt =
   Component.Stmt
     (mrgIf "da" opDef opUseDef)
@@ -236,7 +236,7 @@ componentDefStmt =
 concreteUseStmt :: Concrete.Stmt Op (WordN 8)
 concreteUseStmt = Concrete.Stmt OpUse [0, 3] [4]
 
-componentUseStmt :: Component.Stmt Op (SymWordN 8)
+componentUseStmt :: Component.Stmt (UnionM Op) (SymWordN 8)
 componentUseStmt =
   Component.Stmt
     (mrgIf "ua" opUse opUseDef)
@@ -247,7 +247,7 @@ componentUseStmt =
     "udisabled"
     []
 
-componentProg :: Component.Prog Op (SymWordN 8) Type
+componentProg :: Component.Prog (UnionM Op) (SymWordN 8) Type
 componentProg =
   Component.Prog
     "test"

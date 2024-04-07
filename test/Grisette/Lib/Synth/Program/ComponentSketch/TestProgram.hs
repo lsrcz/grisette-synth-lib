@@ -5,7 +5,7 @@ module Grisette.Lib.Synth.Program.ComponentSketch.TestProgram
   )
 where
 
-import Grisette (Solvable (con), SymInteger, mrgReturn)
+import Grisette (Solvable (con), SymInteger, mrgReturn, UnionM)
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -17,7 +17,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
     TestSemanticsType (IntType),
   )
 
-goodConcreteProg :: Prog TestSemanticsOp SymInteger TestSemanticsType
+goodConcreteProg :: Prog (UnionM TestSemanticsOp) SymInteger TestSemanticsType
 goodConcreteProg =
   Prog
     "test"

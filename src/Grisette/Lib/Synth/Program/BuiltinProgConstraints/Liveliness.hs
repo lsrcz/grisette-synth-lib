@@ -47,7 +47,6 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
 where
 
 import Control.Arrow (Arrow (second))
-import Control.Monad ((>=>))
 import Control.Monad.Except (MonadError (throwError))
 import Data.Foldable (foldl')
 import Data.Maybe (isJust, mapMaybe)
@@ -75,6 +74,7 @@ import Grisette
     mrgTraverse,
     mrgTraverse_,
     symUnless,
+    (.>>=),
   )
 import Grisette.Core.Data.Class.SOrd (SOrd ((.<=), (.>=)))
 import Grisette.Generics.BoolLike (BoolLike)
@@ -355,6 +355,25 @@ class
   livelinessOpUses = livelinessOpUsesByType
   livelinessSubProgConstraint :: livelinessObj -> proxy bool -> op -> ctx ()
   livelinessSubProgConstraint _ _ _ = mrgReturn ()
+
+instance
+  ( LivelinessOpResource livelinessObj SymBool op res ctx,
+    MonadUnion ctx,
+    Mergeable op
+  ) =>
+  LivelinessOpResource livelinessObj SymBool (UnionM op) res ctx
+  where
+  livelinessOpDefs livelinessObj opUnion resIds disabled =
+    liftUnionM opUnion
+      .>>= \op -> livelinessOpDefs livelinessObj op resIds disabled
+  livelinessOpInvalidatingDefs livelinessObj opUnion resIds disabled =
+    liftUnionM opUnion
+      .>>= \op -> livelinessOpInvalidatingDefs livelinessObj op resIds disabled
+  livelinessOpUses livelinessObj opUnion argIds disabled =
+    liftUnionM opUnion
+      .>>= \op -> livelinessOpUses livelinessObj op argIds disabled
+  livelinessSubProgConstraint livelinessObj p opUnion =
+    liftUnionM opUnion .>>= livelinessSubProgConstraint livelinessObj p
 
 class
   (Mergeable res) =>
@@ -668,8 +687,7 @@ componentStmtDefs ::
   ctx (UnionDef symVarId res)
 componentStmtDefs
   livelinessObj
-  (Component.Stmt opUnion _ _ resIds _ disabled _) = do
-    op <- liftUnionM opUnion
+  (Component.Stmt op _ _ resIds _ disabled _) = do
     mrgFmap mrgReturn $ livelinessOpDefs livelinessObj op resIds disabled
 
 componentStmtInvalidatingDefs ::
@@ -684,8 +702,7 @@ componentStmtInvalidatingDefs ::
   ctx (UnionDef symVarId res)
 componentStmtInvalidatingDefs
   livelinessObj
-  (Component.Stmt opUnion _ _ resIds _ disabled _) = do
-    op <- liftUnionM opUnion
+  (Component.Stmt op _ _ resIds _ disabled _) = do
     mrgFmap mrgReturn $
       livelinessOpInvalidatingDefs livelinessObj op resIds disabled
 
@@ -700,8 +717,7 @@ componentStmtUses ::
   ctx (UnionComponentUse symVarId)
 componentStmtUses
   livelinessObj
-  (Component.Stmt opUnion argIds _ resIds _ disabled _) = do
-    op <- liftUnionM opUnion
+  (Component.Stmt op argIds _ resIds _ disabled _) = do
     opUses <- livelinessOpUses livelinessObj op argIds disabled
     mrgReturn . mrgReturn $
       (\(Use i useDisabled) -> ComponentUse i (head resIds) useDisabled)
@@ -789,8 +805,7 @@ instance
       )
       =<< uses
     mrgTraverse_
-      ( liftUnionM
-          >=> livelinessSubProgConstraint livelinessObj (Proxy :: Proxy SymBool)
+      ( livelinessSubProgConstraint livelinessObj (Proxy :: Proxy SymBool)
       )
       $ Component.stmtOp <$> Component.progStmtList sketch
     where

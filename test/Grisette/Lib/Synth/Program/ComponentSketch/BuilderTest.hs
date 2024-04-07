@@ -10,6 +10,8 @@ import Grisette
     GenSymSimple (simpleFresh),
     Solvable (isym),
     SymInteger,
+    UnionM,
+    chooseFresh,
     mrgIf,
     mrgReturn,
     runFresh,
@@ -58,7 +60,7 @@ builderTest =
               simpleFreshStmt Add :: Fresh [Stmt TestSemanticsOp SymInteger]
         let expected =
               Stmt
-                { stmtOp = mrgReturn Add,
+                { stmtOp = Add,
                   stmtArgIds = [isym "x" 0, isym "x" 1],
                   stmtArgNum = isym "x" 2,
                   stmtResIds = [isym "x" 3],
@@ -81,7 +83,7 @@ builderTest =
                 )
         let expected =
               Stmt
-                { stmtOp = mrgReturn Add,
+                { stmtOp = Add,
                   stmtArgIds = [isym "x" 14, isym "x" 15],
                   stmtArgNum = isym "x" 16,
                   stmtResIds = [isym "x" 17],
@@ -93,8 +95,8 @@ builderTest =
         runFresh actual "x" @?= [expected],
       testCase "freshStmt" $ do
         let actual =
-              freshStmt (return [Add, DivMod]) ::
-                Fresh [Stmt TestSemanticsOp SymInteger]
+              freshStmt (chooseFresh [Add, DivMod]) ::
+                Fresh [Stmt (UnionM TestSemanticsOp) SymInteger]
         let expected =
               Stmt
                 { stmtOp = mrgIf (isym "x" 0) (return Add) (return DivMod),
@@ -109,11 +111,11 @@ builderTest =
       testCase "freshStmt'" $ do
         let actual = do
               precursor <-
-                simpleFreshStmt DivMod ::
-                  Fresh [Stmt TestSemanticsOp SymInteger]
-              precursor2 <- simpleFreshStmt DivMod
+                simpleFreshStmt $ mrgReturn DivMod ::
+                  Fresh [Stmt (UnionM TestSemanticsOp) SymInteger]
+              precursor2 <- simpleFreshStmt $ mrgReturn DivMod
               freshStmt'
-                (return [Add, DivMod])
+                (chooseFresh [Add, DivMod])
                 ( StmtExtraConstraint
                     { stmtMustBeAfterStmts = precursor ++ precursor2
                     }
@@ -133,12 +135,12 @@ builderTest =
       testCase "freshStmts'" $ do
         let actual = do
               precursor <-
-                simpleFreshStmt DivMod ::
-                  Fresh [Stmt TestSemanticsOp SymInteger]
-              precursor2 <- simpleFreshStmt DivMod
+                simpleFreshStmt (mrgReturn DivMod) ::
+                  Fresh [Stmt (UnionM TestSemanticsOp) SymInteger]
+              precursor2 <- simpleFreshStmt (mrgReturn DivMod)
               freshStmts'
                 3
-                (return [Add, DivMod])
+                (chooseFresh [Add, DivMod])
                 ( StmtExtraConstraint
                     { stmtMustBeAfterStmts = precursor ++ precursor2
                     }
@@ -197,15 +199,8 @@ builderTest =
                   mkProg
                     "test"
                     [("x", IntType), ("y", IntType)]
-                    [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f" [],
-                      Stmt
-                        (mrgReturn DivMod)
-                        ["g", "h"]
-                        "i"
-                        ["j", "k"]
-                        "l"
-                        "m"
-                        []
+                    [ Stmt Add ["a", "b"] "c" ["d"] "e" "f" [],
+                      Stmt DivMod ["g", "h"] "i" ["j", "k"] "l" "m" []
                     ]
                     [("n", IntType), ("o", IntType)] ::
                     Prog TestSemanticsOp SymInteger TestSemanticsType
@@ -213,15 +208,8 @@ builderTest =
                   Prog
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f" [],
-                      Stmt
-                        (mrgReturn DivMod)
-                        ["g", "h"]
-                        "i"
-                        ["j", "k"]
-                        "l"
-                        "m"
-                        []
+                    [ Stmt Add ["a", "b"] "c" ["d"] "e" "f" [],
+                      Stmt DivMod ["g", "h"] "i" ["j", "k"] "l" "m" []
                     ]
                     [ProgRes "n" IntType, ProgRes "o" IntType]
             actual @?= expected,
@@ -241,7 +229,7 @@ builderTest =
                     "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
                     [ Stmt
-                        (mrgReturn Add)
+                        Add
                         [isym "x" 0, isym "x" 1]
                         (isym "x" 2)
                         [isym "x" 3]
@@ -249,7 +237,7 @@ builderTest =
                         (isym "x" 5)
                         [],
                       Stmt
-                        (mrgReturn DivMod)
+                        DivMod
                         [isym "x" 6, isym "x" 7]
                         (isym "x" 8)
                         [isym "x" 9, isym "x" 10]
@@ -275,7 +263,7 @@ builderTest =
                 "test"
                 [ProgArg "arg0" IntType, ProgArg "arg1" IntType]
                 [ Stmt
-                    (mrgReturn Add)
+                    Add
                     [isym "x" 0, isym "x" 1]
                     (isym "x" 2)
                     [isym "x" 3]
@@ -283,7 +271,7 @@ builderTest =
                     (isym "x" 5)
                     [],
                   Stmt
-                    (mrgReturn DivMod)
+                    DivMod
                     [isym "x" 6, isym "x" 7]
                     (isym "x" 8)
                     [isym "x" 9, isym "x" 10]
@@ -315,7 +303,7 @@ builderTest =
                 "test"
                 [ProgArg "x" IntType, ProgArg "y" IntType]
                 [ Stmt
-                    (mrgReturn Add)
+                    Add
                     [isym "x" 0, isym "x" 1]
                     (isym "x" 2)
                     [isym "x" 3]
@@ -323,7 +311,7 @@ builderTest =
                     (isym "x" 5)
                     [],
                   Stmt
-                    (mrgReturn DivMod)
+                    DivMod
                     [isym "x" 6, isym "x" 7]
                     (isym "x" 8)
                     [isym "x" 9, isym "x" 10]

@@ -6,6 +6,7 @@ import Grisette
   ( Solvable (con),
     SymInteger,
     ToCon (toCon),
+    UnionM,
     mrgReturn,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
@@ -26,7 +27,8 @@ import Test.HUnit ((@?=))
 
 data ToConTestCase = ToConTestCase
   { toConTestCaseName :: String,
-    toConTestCaseProg :: Prog TestSemanticsOp SymInteger TestSemanticsType,
+    toConTestCaseProg ::
+      Prog (UnionM TestSemanticsOp) SymInteger TestSemanticsType,
     toConTestCaseExpected ::
       Maybe (Concrete.Prog TestSemanticsOp Integer TestSemanticsType)
   }

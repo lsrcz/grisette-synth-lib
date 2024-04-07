@@ -16,6 +16,7 @@ import Grisette
     Solvable (con, isym),
     SymBool,
     SymInteger,
+    UnionM,
     mrgIf,
     runFreshT,
   )
@@ -46,7 +47,7 @@ data ExpectedResult
 data SemanticsTestCase = SemanticsTestCase
   { semanticsTestCaseName :: String,
     semanticsTestCaseProg ::
-      Prog TestSemanticsOp SymInteger TestSemanticsType,
+      Prog (UnionM TestSemanticsOp) SymInteger TestSemanticsType,
     semanticsTestCaseArgs :: [SymInteger],
     semanticsTestCaseExpected :: ExpectedResult,
     semanticsTestCaseFreshIdent :: FreshIdent

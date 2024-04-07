@@ -14,6 +14,7 @@ import Grisette
   ( SolvingFailure (Unsat),
     SymBool,
     SymInteger,
+    UnionM,
     mrgIf,
     mrgReturn,
     precise,
@@ -75,7 +76,7 @@ type SymVal = SymInteger
 
 type ConProg = Concrete.Prog TestSemanticsOp Integer TestSemanticsType
 
-type SymProg = Prog TestSemanticsOp SymInteger TestSemanticsType
+type SymProg = Prog (UnionM TestSemanticsOp) SymInteger TestSemanticsType
 
 sharedSketch :: SymProg
 sharedSketch =
@@ -147,7 +148,7 @@ addThenDivModSketch =
     "test"
     [ProgArg "x" IntType, ProgArg "y" IntType, ProgArg "z" IntType]
     [ Stmt
-        (return Add)
+        (mrgReturn Add)
         ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
         "stmt0'arg_num"
         ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
@@ -155,7 +156,7 @@ addThenDivModSketch =
         "stmt0'dis"
         [],
       Stmt
-        (return DivMod)
+        (mrgReturn DivMod)
         ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
         "stmt1'arg_num"
         ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"]

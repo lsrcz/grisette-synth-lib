@@ -129,8 +129,7 @@ sketch =
         Component.simpleFreshStmt S.Equals,
         Component.freshStmt $ do
           trueBranch <- trueBranchSketch
-          falseBranch <- falseBranchSketch
-          return [S.If trueBranch falseBranch]
+          S.If trueBranch <$> falseBranchSketch
       ]
       [IntType]
 
