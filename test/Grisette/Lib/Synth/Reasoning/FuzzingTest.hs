@@ -9,7 +9,6 @@ import Grisette
     ModelValuePair ((::=)),
     SymInteger,
     VerifierResult (CEGISVerifierFoundCex),
-    mrgReturn,
   )
 import qualified Grisette.Lib.Synth.Program.ByteCodeSketch as ByteCodeSketch
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
@@ -61,8 +60,8 @@ symProg =
     [ ByteCodeSketch.ProgArg "x" 0 IntType,
       ByteCodeSketch.ProgArg "y" 1 IntType
     ]
-    [ ByteCodeSketch.Stmt (mrgReturn Add) [0, 1] 2 [3] 1,
-      ByteCodeSketch.Stmt (mrgReturn DivMod) [3, "x"] 2 [4, 5] 2
+    [ ByteCodeSketch.Stmt Add [0, 1] 2 [3] 1,
+      ByteCodeSketch.Stmt DivMod [3, "x"] 2 [4, 5] 2
     ]
     [ByteCodeSketch.ProgRes 4 IntType, ByteCodeSketch.ProgRes 5 IntType]
 

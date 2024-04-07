@@ -10,7 +10,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
 where
 
 import Data.Proxy (Proxy (Proxy))
-import Grisette (SymBool, SymInteger, mrgIf, precise, z3)
+import Grisette (SymBool, SymInteger, UnionM, mrgIf, precise, z3)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.ByteCodeSketch
   ( Prog (Prog),
@@ -65,7 +65,8 @@ type SymVal = SymInteger
 
 type ConProg = Concrete.Prog TestSemanticsOp Integer TestSemanticsType
 
-type SymProg = Prog TestSemanticsOp Integer SymInteger TestSemanticsType
+type SymProg =
+  Prog (UnionM TestSemanticsOp) Integer SymInteger TestSemanticsType
 
 sharedSketch :: SymProg
 sharedSketch =

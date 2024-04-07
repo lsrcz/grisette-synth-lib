@@ -31,8 +31,6 @@ import Grisette
     SimpleMergeable (mrgIte),
     ToCon (toCon),
     ToSym (toSym),
-    UnionM,
-    liftToMonadUnion,
     mrgIf,
     symAssertWith,
   )
@@ -55,7 +53,7 @@ import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId, RelatedVarId, SymbolicVarId)
 
 data Stmt op conVarId symVarId = Stmt
-  { stmtOp :: UnionM op,
+  { stmtOp :: op,
     stmtArgIds :: [symVarId],
     stmtArgNum :: symVarId,
     stmtResIds :: [conVarId],
@@ -223,9 +221,8 @@ instance
     let runStmt (Stmt op argIds argNum resIds resNum) = do
           args <- mrgTraverse lookupVal argIds
           res <- lift $ do
-            singleOp <- liftToMonadUnion op
             keptArgs <- takeNumArg argNum args
-            applyOp sem singleOp keptArgs
+            applyOp sem op keptArgs
           symAssertWith "Incorrect number of results." $
             resNum .== fromIntegral (length res)
           symAssertWith "Insufficient result IDs." $

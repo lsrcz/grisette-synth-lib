@@ -62,8 +62,8 @@ goodConcreteProg =
   Prog
     "test"
     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-    [ Stmt (mrgReturn Add) [0, 1] 2 [3] 1,
-      Stmt (mrgReturn DivMod) [3, 0] 2 [4, 5] 2
+    [ Stmt Add [0, 1] 2 [3] 1,
+      Stmt DivMod [3, 0] 2 [4, 5] 2
     ]
     [ProgRes 4 IntType, ProgRes 5 IntType]
 
@@ -94,7 +94,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [ Stmt (mrgReturn Inc) [0, 1] 1 [2, 3] 1
+                    [ Stmt Inc [0, 1] 1 [2, 3] 1
                     ]
                     [ProgRes 2 IntType],
                 toConTestCaseExpected =
@@ -124,7 +124,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn Add) [0, 1] "a" [2] 1]
+                    [Stmt Add [0, 1] "a" [2] 1]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
@@ -136,7 +136,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn Add) ["a", 1] 2 [2] 1]
+                    [Stmt Add ["a", 1] 2 [2] 1]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
@@ -150,7 +150,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [2] "a"]
+                    [Stmt Add [0, 1] 2 [2] "a"]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
@@ -162,7 +162,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [2] 1]
+                    [Stmt Add [0, 1] 2 [2] 1]
                     [ProgRes "a" IntType],
                 semanticsTestCaseArgs = [13, 20],
                 semanticsTestCaseExpected =
@@ -191,7 +191,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 2]
+                    [Stmt Add [0, 1] 2 [2, 3] 2]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
@@ -204,7 +204,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn Add) [0] 1 [2] 1]
+                    [Stmt Add [0] 1 [2] 1]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
@@ -218,7 +218,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "x" 1 IntType]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [1] 1]
+                    [Stmt Add [0, 1] 2 [1] 1]
                     [ProgRes 1 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
@@ -230,7 +230,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [2] 1]
+                    [Stmt Add [0, 1] 2 [2] 1]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1],
                 semanticsTestCaseExpected =
@@ -242,7 +242,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn Add) [0, 1] 2 [2] 1]
+                    [Stmt Add [0, 1] 2 [2] 1]
                     [ProgRes 3 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
@@ -254,7 +254,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn Add) [0, 1, 1] 2 [2] 1]
+                    [Stmt Add [0, 1, 1] 2 [2] 1]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected = Result (con True) [3]
@@ -265,7 +265,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn Add) [0] 2 [2] 1]
+                    [Stmt Add [0] 2 [2] 1]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
@@ -277,7 +277,7 @@ byteCodeSketchTest =
                   Prog
                     "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt (mrgReturn DivMod) [0, 1] 2 [2] 2]
+                    [Stmt DivMod [0, 1] 2 [2] 2]
                     [ProgRes 2 IntType],
                 semanticsTestCaseArgs = [1, 2],
                 semanticsTestCaseExpected =
@@ -301,8 +301,8 @@ byteCodeSketchTest =
               Prog
                 "test"
                 [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                [ Stmt (mrgReturn Add) [0, 1] 2 [3] 1,
-                  Stmt (mrgReturn DivMod) [3, 0] 2 [4, 5] 2
+                [ Stmt Add [0, 1] 2 [3] 1,
+                  Stmt DivMod [3, 0] 2 [4, 5] 2
                 ]
                 [ProgRes 4 IntType, ProgRes 5 IntType] ::
                 Prog TestSemanticsOp Integer SymInteger TestSemanticsType
