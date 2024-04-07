@@ -33,6 +33,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch
     StmtExtraConstraint (StmtExtraConstraint, stmtMustBeAfterStmts),
     freshStmt,
     freshStmt',
+    freshStmts',
   )
 import Grisette.Lib.Synth.Program.ComponentSketch.Builder
   ( fromConcrete,
@@ -54,7 +55,7 @@ builderTest =
     "Builder"
     [ testCase "simpleFreshStmt" $ do
         let actual =
-              simpleFreshStmt Add :: Fresh (Stmt TestSemanticsOp SymInteger)
+              simpleFreshStmt Add :: Fresh [Stmt TestSemanticsOp SymInteger]
         let expected =
               Stmt
                 { stmtOp = mrgReturn Add,
@@ -65,17 +66,17 @@ builderTest =
                   stmtDisabled = isym "x" 5,
                   stmtMustBeAfter = []
                 }
-        runFresh actual "x" @?= expected,
+        runFresh actual "x" @?= [expected],
       testCase "simpleFreshStmt'" $ do
         let actual = do
               precursor <-
                 simpleFreshStmt DivMod ::
-                  Fresh (Stmt TestSemanticsOp SymInteger)
+                  Fresh [Stmt TestSemanticsOp SymInteger]
               precursor2 <- simpleFreshStmt DivMod
               simpleFreshStmt'
                 Add
                 ( StmtExtraConstraint
-                    { stmtMustBeAfterStmts = [precursor, precursor2]
+                    { stmtMustBeAfterStmts = precursor ++ precursor2
                     }
                 )
         let expected =
@@ -89,11 +90,11 @@ builderTest =
                   stmtMustBeAfter =
                     [isym "x" 3, isym "x" 4, isym "x" 10, isym "x" 11]
                 }
-        runFresh actual "x" @?= expected,
+        runFresh actual "x" @?= [expected],
       testCase "freshStmt" $ do
         let actual =
               freshStmt (return [Add, DivMod]) ::
-                Fresh (Stmt TestSemanticsOp SymInteger)
+                Fresh [Stmt TestSemanticsOp SymInteger]
         let expected =
               Stmt
                 { stmtOp = mrgIf (isym "x" 0) (return Add) (return DivMod),
@@ -104,17 +105,17 @@ builderTest =
                   stmtDisabled = isym "x" 7,
                   stmtMustBeAfter = []
                 }
-        runFresh actual "x" @?= expected,
+        runFresh actual "x" @?= [expected],
       testCase "freshStmt'" $ do
         let actual = do
               precursor <-
                 simpleFreshStmt DivMod ::
-                  Fresh (Stmt TestSemanticsOp SymInteger)
+                  Fresh [Stmt TestSemanticsOp SymInteger]
               precursor2 <- simpleFreshStmt DivMod
               freshStmt'
                 (return [Add, DivMod])
                 ( StmtExtraConstraint
-                    { stmtMustBeAfterStmts = [precursor, precursor2]
+                    { stmtMustBeAfterStmts = precursor ++ precursor2
                     }
                 )
         let expected =
@@ -128,6 +129,66 @@ builderTest =
                   stmtMustBeAfter =
                     [isym "x" 3, isym "x" 4, isym "x" 10, isym "x" 11]
                 }
+        runFresh actual "x" @?= [expected],
+      testCase "freshStmts'" $ do
+        let actual = do
+              precursor <-
+                simpleFreshStmt DivMod ::
+                  Fresh [Stmt TestSemanticsOp SymInteger]
+              precursor2 <- simpleFreshStmt DivMod
+              freshStmts'
+                3
+                (return [Add, DivMod])
+                ( StmtExtraConstraint
+                    { stmtMustBeAfterStmts = precursor ++ precursor2
+                    }
+                )
+        let expected =
+              [ Stmt
+                  { stmtOp = mrgIf (isym "x" 14) (return Add) (return DivMod),
+                    stmtArgIds = [isym "x" 15, isym "x" 16],
+                    stmtArgNum = isym "x" 17,
+                    stmtResIds = [isym "x" 18, isym "x" 19],
+                    stmtResNum = isym "x" 20,
+                    stmtDisabled = isym "x" 21,
+                    stmtMustBeAfter =
+                      [isym "x" 3, isym "x" 4, isym "x" 10, isym "x" 11]
+                  },
+                Stmt
+                  { stmtOp = mrgIf (isym "x" 22) (return Add) (return DivMod),
+                    stmtArgIds = [isym "x" 23, isym "x" 24],
+                    stmtArgNum = isym "x" 25,
+                    stmtResIds = [isym "x" 26, isym "x" 27],
+                    stmtResNum = isym "x" 28,
+                    stmtDisabled = isym "x" 29,
+                    stmtMustBeAfter =
+                      [ isym "x" 3,
+                        isym "x" 4,
+                        isym "x" 10,
+                        isym "x" 11,
+                        isym "x" 18,
+                        isym "x" 19
+                      ]
+                  },
+                Stmt
+                  { stmtOp = mrgIf (isym "x" 30) (return Add) (return DivMod),
+                    stmtArgIds = [isym "x" 31, isym "x" 32],
+                    stmtArgNum = isym "x" 33,
+                    stmtResIds = [isym "x" 34, isym "x" 35],
+                    stmtResNum = isym "x" 36,
+                    stmtDisabled = isym "x" 37,
+                    stmtMustBeAfter =
+                      [ isym "x" 3,
+                        isym "x" 4,
+                        isym "x" 10,
+                        isym "x" 11,
+                        isym "x" 18,
+                        isym "x" 19,
+                        isym "x" 26,
+                        isym "x" 27
+                      ]
+                  }
+              ]
         runFresh actual "x" @?= expected,
       testGroup
         "MkProg"
