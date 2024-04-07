@@ -5,7 +5,7 @@ module Grisette.Lib.Synth.Program.ComponentSketch.TestProgram
   )
 where
 
-import Grisette (Solvable (con), SymInteger, mrgReturn, UnionM)
+import Grisette (Solvable (con), SymInteger, UnionM, mrgReturn)
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
