@@ -5,6 +5,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (..),
@@ -13,8 +14,19 @@ module Grisette.Lib.Synth.Operator.OpTyping
   )
 where
 
-import Grisette (Mergeable, mrgReturn)
-import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
+import Control.Monad.Except (runExceptT)
+import Grisette
+  ( Mergeable (rootStrategy),
+    MergingStrategy (SimpleStrategy),
+    MonadUnion,
+    SimpleMergeable (mrgIte),
+    UnionM,
+    liftUnionM,
+    mrgFmap,
+    mrgReturn,
+    simpleMerge,
+  )
+import Grisette.Lib.Synth.Context (MonadContext, SymbolicContext)
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -30,16 +42,48 @@ class (MonadContext ctx) => OpTyping op ty ctx | op -> ty where
     ctx (TypeSignature ty)
   typeOp = mrgReturn . typeOpSimple
 
+instance
+  (MonadUnion ctx, OpTyping op ty ctx, Mergeable op) =>
+  OpTyping (UnionM op) ty ctx
+  where
+  typeOp op = liftUnionM op >>= typeOp
+
+newtype MaxAcrossBranches = MaxAcrossBranches {unMaxAcrossBranches :: Int}
+
+instance Mergeable MaxAcrossBranches where
+  rootStrategy = SimpleStrategy mrgIte
+
+instance SimpleMergeable MaxAcrossBranches where
+  mrgIte _ (MaxAcrossBranches a) (MaxAcrossBranches b) =
+    MaxAcrossBranches (max a b)
+
 class SymOpLimits op where
   symOpMaximumArgNum :: op -> Int
-  default symOpMaximumArgNum :: (OpTyping op ty ConcreteContext) => op -> Int
+  default symOpMaximumArgNum :: (OpTyping op ty SymbolicContext) => op -> Int
   symOpMaximumArgNum op =
-    case typeOp op of
-      Right (TypeSignature argTypes _) -> length argTypes
-      Left err -> error $ "symOpMaximumArgNum: " ++ show err
+    unMaxAcrossBranches $ simpleMerge $ mrgFmap MaxAcrossBranches $ do
+      ty <- runExceptT $ typeOp op
+      case ty of
+        Left _ -> return 0 :: UnionM Int
+        Right (TypeSignature argTypes _) -> return $ length argTypes
   symOpMaximumResNum :: op -> Int
-  default symOpMaximumResNum :: (OpTyping op ty ConcreteContext) => op -> Int
+  default symOpMaximumResNum :: (OpTyping op ty SymbolicContext) => op -> Int
   symOpMaximumResNum op =
-    case typeOp op of
-      Right (TypeSignature _ resTypes) -> length resTypes
-      Left err -> error $ "symOpMaximumArgNum: " ++ show err
+    unMaxAcrossBranches $ simpleMerge $ mrgFmap MaxAcrossBranches $ do
+      ty <- runExceptT $ typeOp op
+      case ty of
+        Left _ -> return 0 :: UnionM Int
+        Right (TypeSignature _ resTypes) -> return $ length resTypes
+
+instance
+  (SymOpLimits op, Mergeable op) =>
+  SymOpLimits (UnionM op)
+  where
+  symOpMaximumArgNum op =
+    unMaxAcrossBranches $
+      simpleMerge $
+        mrgFmap (MaxAcrossBranches . symOpMaximumArgNum) op
+  symOpMaximumResNum op =
+    unMaxAcrossBranches $
+      simpleMerge $
+        mrgFmap (MaxAcrossBranches . symOpMaximumResNum) op
