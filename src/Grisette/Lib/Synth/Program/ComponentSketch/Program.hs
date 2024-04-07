@@ -340,6 +340,9 @@ constrainStmt
 
     signature <- lift $ typeOp opUnion
     Intermediates argVals resVals <- lift $ genOpIntermediates p sem signature
+    mrgIf disabled (return ()) $ do
+      computedResVals <- lift $ applyOp sem opUnion argVals
+      symAssertWith "Incorrect results." $ resVals .== computedResVals
 
     let getIdValPairs _ [] [] = mrgReturn []
         getIdValPairs disabled (i : is) [] =
@@ -371,9 +374,6 @@ constrainStmt
 
     symAssertWith "Variable is undefined." $
       symAll (\resId -> symAll (symInBound resId) usedArgIds) usedResIds
-    mrgIf disabled (return ()) $ do
-      computedResVals <- lift $ applyOp sem opUnion argVals
-      symAssertWith "Incorrect results." $ resVals .== computedResVals
 
 connected ::
   ( MonadUnion ctx,
