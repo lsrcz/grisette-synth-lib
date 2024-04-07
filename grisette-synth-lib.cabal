@@ -32,6 +32,7 @@ library
       Grisette.Lib.Synth.Operator.OpTyping
       Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
       Grisette.Lib.Synth.Program.ByteCodeSketch
+      Grisette.Lib.Synth.Program.ByteCodeSketch.Program
       Grisette.Lib.Synth.Program.ComponentSketch
       Grisette.Lib.Synth.Program.ComponentSketch.Builder
       Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
