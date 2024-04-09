@@ -27,7 +27,9 @@ import qualified Data.Text as T
 import Grisette
   ( Fresh,
     GenSymSimple (simpleFresh),
+    LogicalOp ((.||)),
     Mergeable,
+    Solvable (con),
     ToSym (toSym),
   )
 import Grisette.Lib.Synth.Operator.OpTyping
@@ -37,7 +39,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch.Program
   ( Prog (Prog),
     ProgArg (ProgArg),
     ProgRes (ProgRes),
-    Stmt (Stmt, stmtMustBeAfter, stmtResIds),
+    Stmt (Stmt, stmtDisabled, stmtMustBeAfter, stmtResIds),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Util.Show (showText)
@@ -64,11 +66,23 @@ simpleFreshStmt' op (StmtExtraConstraint mustBeAfterStmts) = do
         concatMap stmtResIds mustBeAfterStmts
     ]
 
-augmentMustBeAfterForStmts :: [symVarId] -> [Stmt op symVarId] -> [Stmt op symVarId]
-augmentMustBeAfterForStmts _ [] = []
-augmentMustBeAfterForStmts resIds (stmt : stmts) =
-  stmt {stmtMustBeAfter = stmtMustBeAfter stmt ++ resIds}
-    : augmentMustBeAfterForStmts (resIds ++ stmtResIds stmt) stmts
+augmentMustBeAfterForStmts ::
+  [Stmt op symVarId] -> [Stmt op symVarId]
+augmentMustBeAfterForStmts = go []
+  where
+    go _ [] = []
+    go resIds (stmt : stmts) =
+      stmt {stmtMustBeAfter = stmtMustBeAfter stmt ++ resIds}
+        : go (resIds ++ stmtResIds stmt) stmts
+
+augmentDisabled ::
+  [Stmt op symVarId] -> [Stmt op symVarId]
+augmentDisabled = go (con False)
+  where
+    go _ [] = []
+    go disabled (stmt : stmts) =
+      let newDisabled = stmtDisabled stmt .|| disabled
+       in stmt {stmtDisabled = newDisabled} : go newDisabled stmts
 
 simpleFreshStmts' ::
   (SymOpLimits op, GenSymSimple () symVarId) =>
@@ -78,7 +92,7 @@ simpleFreshStmts' ::
   Fresh [Stmt op symVarId]
 simpleFreshStmts' num op extraConstraint = do
   stmts <- concat <$> replicateM num (simpleFreshStmt' op extraConstraint)
-  return $ augmentMustBeAfterForStmts [] stmts
+  return $ augmentDisabled $ augmentMustBeAfterForStmts stmts
 
 simpleFreshStmt ::
   (SymOpLimits op, GenSymSimple () symVarId) =>
@@ -110,7 +124,7 @@ freshStmts' ::
   Fresh [Stmt op symVarId]
 freshStmts' num freshOp extraConstraint = do
   stmts <- concat <$> replicateM num (freshStmt' freshOp extraConstraint)
-  return $ augmentMustBeAfterForStmts [] stmts
+  return $ augmentDisabled $ augmentMustBeAfterForStmts stmts
 
 freshStmt ::
   (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>

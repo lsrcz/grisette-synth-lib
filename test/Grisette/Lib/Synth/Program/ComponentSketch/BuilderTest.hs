@@ -8,6 +8,7 @@ where
 import Grisette
   ( Fresh,
     GenSymSimple (simpleFresh),
+    LogicalOp ((.||)),
     Solvable (isym),
     SymInteger,
     UnionM,
@@ -162,7 +163,7 @@ builderTest =
                     stmtArgNum = isym "x" 25,
                     stmtResIds = [isym "x" 26, isym "x" 27],
                     stmtResNum = isym "x" 28,
-                    stmtDisabled = isym "x" 29,
+                    stmtDisabled = isym "x" 29 .|| isym "x" 21,
                     stmtMustBeAfter =
                       [ isym "x" 3,
                         isym "x" 4,
@@ -178,7 +179,8 @@ builderTest =
                     stmtArgNum = isym "x" 33,
                     stmtResIds = [isym "x" 34, isym "x" 35],
                     stmtResNum = isym "x" 36,
-                    stmtDisabled = isym "x" 37,
+                    stmtDisabled =
+                      isym "x" 37 .|| (isym "x" 29 .|| isym "x" 21),
                     stmtMustBeAfter =
                       [ isym "x" 3,
                         isym "x" 4,
