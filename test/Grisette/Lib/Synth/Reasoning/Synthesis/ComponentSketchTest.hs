@@ -21,6 +21,7 @@ import Grisette
     z3,
   )
 import Grisette.Lib.Synth.Context (AngelicContext)
+import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction (ComponentSymmetryReduction (ComponentSymmetryReduction))
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -69,7 +70,6 @@ import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
 import Test.QuickCheck.Counterexamples (Gen)
-import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction (ComponentSymmetryReduction(ComponentSymmetryReduction))
 
 type ConVal = Integer
 
