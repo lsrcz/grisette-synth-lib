@@ -30,6 +30,7 @@ library
       Grisette.Lib.Synth.Context
       Grisette.Lib.Synth.Operator.OpSemantics
       Grisette.Lib.Synth.Operator.OpTyping
+      Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction
       Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
       Grisette.Lib.Synth.Program.ByteCodeSketch
       Grisette.Lib.Synth.Program.ByteCodeSketch.Program
@@ -141,6 +142,7 @@ test-suite spec
       Grisette.Lib.Synth.Operator.OpSemanticsTest
       Grisette.Lib.Synth.Operator.OpToDotTest
       Grisette.Lib.Synth.Operator.OpTypingTest
+      Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReductionTest
       Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
       Grisette.Lib.Synth.Program.BuiltinProgConstraintsTest
       Grisette.Lib.Synth.Program.ByteCodeSketchTest

@@ -69,6 +69,7 @@ import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
 import Test.QuickCheck.Counterexamples (Gen)
+import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction (ComponentSymmetryReduction(ComponentSymmetryReduction))
 
 type ConVal = Integer
 
@@ -218,7 +219,7 @@ task spec gen sketch =
       synthesisWithFuzzerMatcherTaskConSemantics =
         WithConstraints TestSemanticsObj (),
       synthesisWithFuzzerMatcherTaskSymSemantics =
-        WithConstraints TestSemanticsObj (),
+        WithConstraints TestSemanticsObj ComponentSymmetryReduction,
       synthesisWithFuzzerMatcherTaskSymProg = sketch
     }
 

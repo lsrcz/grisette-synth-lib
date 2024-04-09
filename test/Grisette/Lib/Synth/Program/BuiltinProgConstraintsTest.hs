@@ -3,6 +3,9 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraintsTest
   )
 where
 
+import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReductionTest
+  ( componentSymmetryReductionTest,
+  )
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
   ( livelinessTest,
   )
@@ -12,5 +15,6 @@ builtinProgConstraintsTest :: Test
 builtinProgConstraintsTest =
   testGroup
     "BuiltinProgConstraints"
-    [ livelinessTest
+    [ componentSymmetryReductionTest,
+      livelinessTest
     ]
