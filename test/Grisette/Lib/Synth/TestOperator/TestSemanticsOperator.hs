@@ -44,6 +44,7 @@ import Grisette.Lib.Synth.Operator.OpTyping
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
   )
+import Grisette.Lib.Synth.Program.ProgConstraints (OpSubProgConstraints)
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -55,6 +56,10 @@ data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving
     (Mergeable, ToCon TestSemanticsOp, EvaluateSym, ToSym TestSemanticsOp)
     via (Default TestSemanticsOp)
+
+instance
+  (MonadContext ctx) =>
+  OpSubProgConstraints constrObj TestSemanticsOp ctx
 
 data TestSemanticsObj = TestSemanticsObj
 

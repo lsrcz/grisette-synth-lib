@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -20,25 +20,26 @@ import Grisette
     Mergeable,
     MonadUnion,
     SEq ((.==)),
+    SimpleMergeable,
     Solvable (con),
     SymBool,
     mrgIf,
     mrgReturn,
     mrgTraverse,
+    mrgTraverse_,
     simpleMerge,
     symAnd,
     symAny,
     symAssertWith,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
   ( ComponentUse (ComponentUse),
     Def (defDisabled, defId, defResource),
     Liveliness (Liveliness),
     LivelinessConstraint,
     Resource (conflict),
-    UnionComponentUse,
-    UnionDef,
     componentProgDefs,
     componentProgUses,
     componentStmtDefs,
@@ -48,13 +49,15 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
 import Grisette.Lib.Synth.Program.ComponentSketch.Program (Stmt (stmtDisabled))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch.Program as Component
 import Grisette.Lib.Synth.Program.ProgConstraints
-  ( ProgConstraints (constrainProg),
+  ( OpSubProgConstraints (constrainOpSubProg),
+    ProgConstraints (constrainProg),
   )
 import Grisette.Lib.Synth.VarId (SymbolicVarId)
 
 class
-  (MonadContext ctx, SymbolicVarId symVarId, MonadUnion ctx) =>
-  ComponentStatementUnreorderable constrObj op symVarId ty ctx
+  (MonadContext ctx, MonadUnion ctx) =>
+  ComponentStatementUnreorderable constrObj op ty ctx
+    | op -> ty
   where
   -- | Determines whether two statements in a program can be reordered without
   -- altering the program's semantics.
@@ -98,6 +101,7 @@ class
   -- However, the function must not return 'False' if the two statements are
   -- genuinely unreorderable.
   componentStatementUnreorderable ::
+    (SymbolicVarId symVarId) =>
     constrObj ->
     Component.Prog op symVarId ty ->
     Int ->
@@ -123,7 +127,9 @@ class
 --   immediate successor of the statement at the first index. We will never try
 --   to reorder them.
 componentStatementUnreorderable' ::
-  (ComponentStatementUnreorderable constrObj op symVarId ty ctx) =>
+  ( ComponentStatementUnreorderable constrObj op ty ctx,
+    SymbolicVarId symVarId
+  ) =>
   constrObj ->
   Component.Prog op symVarId ty ->
   Int ->
@@ -156,10 +162,11 @@ componentStatementUnreorderable' obj prog i j
 -- * they are unreorderable, or
 -- * @stmt0@ has the smaller index than @stmt1@.
 canonicalOrderConstraint ::
+  forall constrObj op symVarId ty ctx.
   ( SymbolicVarId symVarId,
     MonadContext ctx,
     MonadUnion ctx,
-    ComponentStatementUnreorderable constrObj op symVarId ty ctx
+    ComponentStatementUnreorderable constrObj op ty ctx
   ) =>
   constrObj ->
   Component.Prog op symVarId ty ->
@@ -176,7 +183,8 @@ canonicalOrderConstraint obj prog = do
     cond i j
       | i == j = mrgReturn $ con True
       | otherwise = do
-          unreorderable <- componentStatementUnreorderable' obj prog i j
+          unreorderable <-
+            componentStatementUnreorderable' obj prog i j :: ctx SymBool
           mrgReturn $
             statementsAdjacent (stmts !! i) (stmts !! j)
               `symImplies` unreorderable
@@ -188,33 +196,36 @@ newtype ComponentSymmetryReduction constrObj
 -- enforced.
 instance
   ( ProgConstraints constrObj (Component.Prog op symVarId ty) ctx,
-    ComponentStatementUnreorderable constrObj op symVarId ty ctx
+    OpSubProgConstraints (ComponentSymmetryReduction constrObj) op ctx,
+    ComponentStatementUnreorderable constrObj op ty ctx,
+    SymbolicVarId symVarId
   ) =>
   ProgConstraints
     (ComponentSymmetryReduction constrObj)
     (Component.Prog op symVarId ty)
     ctx
   where
-  constrainProg (ComponentSymmetryReduction constrObj) prog = do
+  constrainProg obj@(ComponentSymmetryReduction constrObj) prog = do
     constrainProg constrObj prog
     canonicalOrderConstraint constrObj prog
+    mrgTraverse_ (constrainOpSubProg obj) $
+      Component.stmtOp <$> Component.progStmtList prog
 
 instance
-  (MonadContext ctx, SymbolicVarId symVarId, MonadUnion ctx) =>
-  ComponentStatementUnreorderable () op symVarId ty ctx
+  (MonadContext ctx, MonadUnion ctx, OpTyping op ty ctx) =>
+  ComponentStatementUnreorderable () op ty ctx
   where
   componentStatementUnreorderable _ _ _ _ = mrgReturn $ con False
 
 instance
   ( LivelinessConstraint livelinessObj SymBool op ty res ctx,
-    SymbolicVarId symVarId,
+    SimpleMergeable res,
     Mergeable op,
     MonadUnion ctx
   ) =>
   ComponentStatementUnreorderable
     (Liveliness SymBool livelinessObj)
     op
-    symVarId
     ty
     ctx
   where
@@ -241,7 +252,6 @@ instance
           secondDefs <- componentStmtDefs obj second
           otherDefs <- componentProgDefs obj removedProg
           otherUses <- componentProgUses obj removedProg
-
           mrgReturn $
             symAny
               (firstUsedDefInvalidatedBySecond firstUses secondInvalidated)
@@ -251,8 +261,6 @@ instance
                 otherUses
       where
         stmtList = Component.progStmtList prog
-        defInvalidated ::
-          UnionDef varId res -> Def SymBool varId res -> SymBool
         defInvalidated invalidatingDef def =
           simpleMerge $
             symAny
@@ -262,11 +270,6 @@ instance
                     .&& conflict (defResource i) (defResource def)
               )
               <$> invalidatingDef
-        firstUsedDefInvalidatedBySecond' ::
-          UnionComponentUse symVarId ->
-          UnionDef symVarId res ->
-          Def SymBool symVarId res ->
-          SymBool
         firstUsedDefInvalidatedBySecond' firstUses secondInvalidated otherDef =
           simpleMerge $ do
             uses <- firstUses
@@ -278,18 +281,11 @@ instance
                     uses
             return $
               defIsUsed .&& defInvalidated secondInvalidated otherDef
-        firstUsedDefInvalidatedBySecond ::
-          UnionComponentUse symVarId ->
-          UnionDef symVarId res ->
-          UnionDef symVarId res ->
-          SymBool
         firstUsedDefInvalidatedBySecond firstUses secondInvalidated otherDef =
           simpleMerge $
             symAny
               (firstUsedDefInvalidatedBySecond' firstUses secondInvalidated)
               <$> otherDef
-        defUsed ::
-          UnionComponentUse symVarId -> Def SymBool symVarId res -> SymBool
         defUsed uses def =
           simpleMerge $
             symAny
@@ -297,11 +293,6 @@ instance
                   symNot disabled .&& (useId .== defId def)
               )
               <$> uses
-        usedSecondDefInvalidatedByFirst ::
-          UnionDef symVarId res ->
-          UnionDef symVarId res ->
-          UnionComponentUse symVarId ->
-          SymBool
         usedSecondDefInvalidatedByFirst secondDefs firstInvalidated otherUse =
           simpleMerge $
             symAny
@@ -312,13 +303,12 @@ instance
               <$> secondDefs
 
 instance
-  ( ComponentStatementUnreorderable constrObj1 op symVarId ty ctx,
-    ComponentStatementUnreorderable constrObj2 op symVarId ty ctx
+  ( ComponentStatementUnreorderable constrObj1 op ty ctx,
+    ComponentStatementUnreorderable constrObj2 op ty ctx
   ) =>
   ComponentStatementUnreorderable
     (constrObj1, constrObj2)
     op
-    symVarId
     ty
     ctx
   where
@@ -328,14 +318,13 @@ instance
     mrgReturn $ unreorderable1 .|| unreorderable2
 
 instance
-  ( ComponentStatementUnreorderable constrObj1 op symVarId ty ctx,
-    ComponentStatementUnreorderable constrObj2 op symVarId ty ctx,
-    ComponentStatementUnreorderable constrObj3 op symVarId ty ctx
+  ( ComponentStatementUnreorderable constrObj1 op ty ctx,
+    ComponentStatementUnreorderable constrObj2 op ty ctx,
+    ComponentStatementUnreorderable constrObj3 op ty ctx
   ) =>
   ComponentStatementUnreorderable
     (constrObj1, constrObj2, constrObj3)
     op
-    symVarId
     ty
     ctx
   where

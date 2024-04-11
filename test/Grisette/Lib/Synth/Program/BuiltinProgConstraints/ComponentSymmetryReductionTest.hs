@@ -150,13 +150,7 @@ data ComponentStatementUnreorderableTest = ComponentStatementUnreorderableTest
 
 data CanonicalOrderConstraintTest where
   CanonicalOrderConstraintTest ::
-    ( ComponentStatementUnreorderable
-        constrObj
-        op
-        SymInteger
-        ty
-        SymbolicContext
-    ) =>
+    (ComponentStatementUnreorderable constrObj op ty SymbolicContext) =>
     { canonicalOrderConstraintTestName :: String,
       canonicalOrderConstraintTestProg :: Prog op SymInteger ty,
       canonicalOrderConstraintTestConstraintObj :: constrObj,

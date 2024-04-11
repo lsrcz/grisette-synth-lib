@@ -56,8 +56,7 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
     LivelinessName (livelinessName),
     LivelinessOpResource
       ( livelinessOpDefs,
-        livelinessOpInvalidatingDefs,
-        livelinessSubProgConstraint
+        livelinessOpInvalidatingDefs
       ),
     LivelinessTypeResource
       ( livelinessTypeDefResource
@@ -77,9 +76,7 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
   )
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.ProgConstraints
-  ( ProgConstraints (constrainProg),
-  )
+import Grisette.Lib.Synth.Program.ProgConstraints (OpSubProgConstraints (constrainOpSubProg), ProgConstraints (constrainProg))
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
@@ -167,11 +164,18 @@ instance
       disabled
   livelinessOpInvalidatingDefs LivelinessOp op resIds disabled =
     livelinessOpDefs LivelinessOp op resIds disabled
-  livelinessSubProgConstraint LivelinessOp _ (OpSubProg prog) =
-    constrainProg
-      (Liveliness LivelinessOp :: Liveliness bool (LivelinessOp bool))
-      prog
-  livelinessSubProgConstraint LivelinessOp _ _ = mrgReturn ()
+
+instance
+  ( ProgConstraints
+      constrObj
+      (Concrete.Prog Op (WordN 8) Type)
+      ctx,
+    MonadContext ctx
+  ) =>
+  OpSubProgConstraints constrObj Op ctx
+  where
+  constrainOpSubProg obj (OpSubProg prog) = constrainProg obj prog
+  constrainOpSubProg _ _ = mrgReturn ()
 
 instance
   (BoolLike bool) =>

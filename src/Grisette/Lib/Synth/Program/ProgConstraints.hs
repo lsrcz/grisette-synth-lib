@@ -6,10 +6,11 @@ module Grisette.Lib.Synth.Program.ProgConstraints
   ( ProgConstraints (..),
     WithConstraints (..),
     runProgWithConstraints,
+    OpSubProgConstraints (..),
   )
 where
 
-import Grisette (mrgReturn)
+import Grisette (Mergeable, MonadUnion, UnionM, liftUnionM, mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 
@@ -60,3 +61,14 @@ runProgWithConstraints ::
 runProgWithConstraints (WithConstraints semObj constObj) prog inputs = do
   constrainProg constObj prog
   runProg semObj prog inputs
+
+class (MonadContext ctx) => OpSubProgConstraints constObj op ctx where
+  constrainOpSubProg :: constObj -> op -> ctx ()
+  constrainOpSubProg _ _ = mrgReturn ()
+
+instance
+  (MonadUnion ctx, OpSubProgConstraints constObj op ctx, Mergeable op) =>
+  OpSubProgConstraints constObj (UnionM op) ctx
+  where
+  constrainOpSubProg constObj op =
+    liftUnionM op >>= constrainOpSubProg constObj

@@ -50,7 +50,6 @@ import Control.Arrow (Arrow (second))
 import Control.Monad.Except (MonadError (throwError))
 import Data.Foldable (foldl')
 import Data.Maybe (isJust, mapMaybe)
-import Data.Proxy (Proxy (Proxy))
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
@@ -86,7 +85,8 @@ import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch.Program as Component
 import qualified Grisette.Lib.Synth.Program.Concrete.Program as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
-  ( ProgConstraints (constrainProg),
+  ( OpSubProgConstraints (constrainOpSubProg),
+    ProgConstraints (constrainProg),
   )
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (argTypes, resTypes))
 import Grisette.Lib.Synth.VarId (ConcreteVarId, SymbolicVarId)
@@ -353,8 +353,6 @@ class
     bool ->
     ctx [Use bool varId]
   livelinessOpUses = livelinessOpUsesByType
-  livelinessSubProgConstraint :: livelinessObj -> proxy bool -> op -> ctx ()
-  livelinessSubProgConstraint _ _ _ = mrgReturn ()
 
 instance
   ( LivelinessOpResource livelinessObj SymBool op res ctx,
@@ -372,8 +370,6 @@ instance
   livelinessOpUses livelinessObj opUnion argIds disabled =
     liftUnionM opUnion
       .>>= \op -> livelinessOpUses livelinessObj op argIds disabled
-  livelinessSubProgConstraint livelinessObj p opUnion =
-    liftUnionM opUnion .>>= livelinessSubProgConstraint livelinessObj p
 
 class
   (Mergeable res) =>
@@ -388,7 +384,8 @@ class
 type LivelinessConstraint livelinessObj bool op ty res ctx =
   ( LivelinessOpResource livelinessObj bool op res ctx,
     LivelinessTypeResource livelinessObj res ty,
-    Mergeable op
+    Mergeable op,
+    OpTyping op ty ctx
   )
 
 type UnionDef varId res = UnionM [Def SymBool varId res]
@@ -576,6 +573,7 @@ invalidateList invalidatingDef =
 
 instance
   ( LivelinessConstraint livelinessObj Bool op ty res ctx,
+    OpSubProgConstraints (Liveliness Bool livelinessObj) op ctx,
     ConcreteVarId conVarId
   ) =>
   ProgConstraints
@@ -584,15 +582,13 @@ instance
     ctx
   where
   constrainProg
-    (Liveliness livelinessObj)
+    obj@(Liveliness livelinessObj)
     (Concrete.Prog _ argList stmtList resList) = do
       let argDefs = concreteArgDefs livelinessObj argList
       let resUses = concreteResUses livelinessObj resList
       availableDefs <- goStmts ((,toSym False) <$> argDefs) stmtList
       cannotUseInvalidatedList livelinessObj resUses availableDefs
-      mrgTraverse_
-        (livelinessSubProgConstraint livelinessObj (Proxy :: Proxy Bool))
-        $ Concrete.stmtOp <$> stmtList
+      mrgTraverse_ (constrainOpSubProg obj) $ Concrete.stmtOp <$> stmtList
       where
         goStmts ::
           [(Def Bool conVarId res, Bool)] ->
@@ -610,6 +606,7 @@ instance
 
 instance
   ( LivelinessConstraint livelinessObj SymBool op ty res ctx,
+    OpSubProgConstraints (Liveliness SymBool livelinessObj) op ctx,
     ConcreteVarId conVarId,
     MonadUnion ctx
   ) =>
@@ -619,15 +616,13 @@ instance
     ctx
   where
   constrainProg
-    (Liveliness livelinessObj)
+    obj@(Liveliness livelinessObj)
     (Concrete.Prog _ argList stmtList resList) = do
       let argDefs = concreteArgUnionDefs livelinessObj argList
       let resUses = concreteResUnionUses livelinessObj resList
       availableDefs <- goStmts [mrgFmap (fmap (,toSym False)) argDefs] stmtList
       cannotUseInvalidated resUses availableDefs
-      mrgTraverse_
-        (livelinessSubProgConstraint livelinessObj (Proxy :: Proxy SymBool))
-        $ Concrete.stmtOp <$> stmtList
+      mrgTraverse_ (constrainOpSubProg obj) $ Concrete.stmtOp <$> stmtList
       where
         invalidate ::
           UnionDef conVarId res ->
@@ -788,6 +783,7 @@ componentProgUses
 
 instance
   ( LivelinessConstraint livelinessObj SymBool op ty res ctx,
+    OpSubProgConstraints (Liveliness SymBool livelinessObj) op ctx,
     SymbolicVarId symVarId,
     MonadUnion ctx
   ) =>
@@ -796,7 +792,7 @@ instance
     (Component.Prog op symVarId ty)
     ctx
   where
-  constrainProg (Liveliness livelinessObj) sketch = do
+  constrainProg obj@(Liveliness livelinessObj) sketch = do
     mrgTraverse_
       ( \useUnion -> traverseUnion useUnion $ \use -> do
           invalidatingDefIds <- invalidatingDefs
@@ -804,10 +800,8 @@ instance
             =<< defs
       )
       =<< uses
-    mrgTraverse_
-      ( livelinessSubProgConstraint livelinessObj (Proxy :: Proxy SymBool)
-      )
-      $ Component.stmtOp <$> Component.progStmtList sketch
+    mrgTraverse_ (constrainOpSubProg obj) $
+      Component.stmtOp <$> Component.progStmtList sketch
     where
       traverseUnion ::
         (Mergeable a) => UnionM [a] -> (a -> ctx ()) -> ctx ()
