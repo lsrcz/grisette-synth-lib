@@ -1,4 +1,7 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReductionTest
   ( componentSymmetryReductionTest,
@@ -6,24 +9,29 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduct
 where
 
 import Data.Either (isLeft, isRight)
-import Data.Foldable (traverse_)
 import Grisette
   ( Solvable (con),
     SymBool,
     SymInteger,
-    evaluateSymToCon,
+    mrgReturn,
     precise,
-    runFresh,
     solveExcept,
-    solveMultiExcept,
     z3,
   )
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction
-  ( angelicDistanceMatrix,
+  ( ComponentStatementUnreorderable (componentStatementUnreorderable),
     canonicalOrderConstraint,
-    directDep,
-    distanceMatrixConstraint,
+    componentStatementUnreorderable',
+    statementsDirectDep,
+  )
+import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
+  ( Liveliness (Liveliness),
+  )
+import Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
+  ( LivelinessOp (LivelinessOp),
+    Op (OpDef, OpDef2, OpNone, OpUse, OpUse2),
+    Type (ConstrainedType, ConstrainedType2, OtherType),
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog, progStmtList),
@@ -99,17 +107,6 @@ import Test.HUnit (assertBool, (@?=))
 -- 5 F F T T T F T T
 -- 6 F F F F F F F T
 -- 7 F F F F F F F F
---
--- Minimum distance matrix:
---   0 1 2 3 4 5 6 7
--- 0 F 1 2 2 F F 3 3
--- 1 F F 1 1 F F 2 2
--- 2 F F F F F F F 1
--- 3 F F F F F F 1 2
--- 4 F F F 1 F F 2 3
--- 5 F F 1 2 1 F 3 2
--- 6 F F F F F F F 1
--- 7 F F F F F F F F
 goodConcreteProg :: Prog TestSemanticsOp SymInteger TestSemanticsType
 goodConcreteProg =
   Prog
@@ -142,56 +139,41 @@ directReachabilityMatrix =
           [False, False, False, False, False, False, False, False]
         ]
 
-minimumDistanceMatrix :: [[Integer]]
-minimumDistanceMatrix =
-  [ [-1, 1, 2, 2, -1, -1, 3, 3],
-    [-1, -1, 1, 1, -1, -1, 2, 2],
-    [-1, -1, -1, -1, -1, -1, -1, 1],
-    [-1, -1, -1, -1, -1, -1, 1, 2],
-    [-1, -1, -1, 1, -1, -1, 2, 3],
-    [-1, -1, 1, 2, 1, -1, 3, 2],
-    [-1, -1, -1, -1, -1, -1, -1, 1],
-    [-1, -1, -1, -1, -1, -1, -1, -1]
-  ]
+data ComponentStatementUnreorderableTest = ComponentStatementUnreorderableTest
+  { componentStatementUnreorderableTestName :: String,
+    componentStatementUnreorderableTestProg ::
+      Prog Op SymInteger Type,
+    componentStatementUnreorderableTestFirstIdx :: Int,
+    componentStatementUnreorderableTestSecondIdx :: Int,
+    componentStatementUnreorderableTestExpected :: SymBool
+  }
 
-isValidDistanceMatrix :: [[Integer]] -> Bool
-isValidDistanceMatrix mat =
-  and $
-    zipWith
-      ( \m ref ->
-          if m == -1
-            then ref == -1
-            else m >= ref
-      )
-      (concat mat)
-      (concat minimumDistanceMatrix)
-
-badConcreteProg :: Prog TestSemanticsOp SymInteger TestSemanticsType
-badConcreteProg =
-  Prog
-    "test"
-    [ProgArg "x" IntType, ProgArg "y" IntType]
-    [ Stmt Add [0, 1] 2 [2] 1 (con False) [],
-      Stmt Add [0, 2] 2 [4] 1 (con False) [],
-      Stmt Add [4, 3] 2 [5] 1 (con False) [],
-      Stmt Add [4, 6] 2 [7] 1 (con False) [],
-      Stmt Add [0, 3] 2 [6] 1 (con False) [],
-      Stmt Add [0, 1] 2 [3] 1 (con False) [],
-      Stmt Add [0, 7] 2 [8] 1 (con False) [],
-      Stmt Add [5, 8] 2 [9] 1 (con False) []
-    ]
-    [ProgRes 8 IntType, ProgRes 9 IntType]
+data CanonicalOrderConstraintTest where
+  CanonicalOrderConstraintTest ::
+    ( ComponentStatementUnreorderable
+        constrObj
+        op
+        SymInteger
+        ty
+        SymbolicContext
+    ) =>
+    { canonicalOrderConstraintTestName :: String,
+      canonicalOrderConstraintTestProg :: Prog op SymInteger ty,
+      canonicalOrderConstraintTestConstraintObj :: constrObj,
+      canonicalOrderConstraintTestExpected :: Bool
+    } ->
+    CanonicalOrderConstraintTest
 
 componentSymmetryReductionTest :: Test
 componentSymmetryReductionTest =
   testGroup
     "ComponentSymmetryReductionTest"
-    [ testCase "directDep" $ do
+    [ testCase "statementsDirectDep" $ do
         let actual =
               [ [ if i == j
                     then con False
                     else
-                      directDep
+                      statementsDirectDep
                         (goodConcreteProgStmtList !! i)
                         (goodConcreteProgStmtList !! j)
                   | j <- [0 .. length goodConcreteProgStmtList - 1]
@@ -199,32 +181,263 @@ componentSymmetryReductionTest =
                 | i <- [0 .. length goodConcreteProgStmtList - 1]
               ]
         actual @?= directReachabilityMatrix,
-      testCase "distanceMatrixConstraint" $ do
-        let mat =
-              flip runFresh "a" $
-                angelicDistanceMatrix (length goodConcreteProgStmtList)
-        let actual =
-              distanceMatrixConstraint (progStmtList goodConcreteProg) mat ::
-                SymbolicContext ()
-        (l, _) <-
-          solveMultiExcept (precise z3) 100 (con . isRight) actual
-        traverse_
-          ( \m ->
-              assertBool "Should be valid" $
-                isValidDistanceMatrix $
-                  evaluateSymToCon m mat
-          )
-          l,
-      testGroup "CanonicalOrderConstraint" $ do
-        (name, prog, expected) <-
-          [("good", goodConcreteProg, True), ("bad", badConcreteProg, False)]
+      testGroup "ComponentStatementUnreorderable" $ do
+        ComponentStatementUnreorderableTest
+          name
+          prog
+          firstIdx
+          secondIdx
+          reorderable <-
+          [ ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName = "good",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                    [ Stmt OpNone [0] 1 [2] 1 (con False) [],
+                      Stmt OpNone [0] 1 [3] 1 (con False) []
+                    ]
+                    [ProgRes 2 OtherType, ProgRes 3 OtherType],
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 1,
+                componentStatementUnreorderableTestExpected = con False
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName =
+                  "firstUsedDefInvalidatedBySecond",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" ConstrainedType, ProgArg "y" OtherType]
+                    [ Stmt OpUse [1, 0] 2 [2] 1 (con False) [],
+                      Stmt OpDef [1] 1 [3, 4] 2 (con False) []
+                    ]
+                    [ProgRes 2 OtherType, ProgRes 3 OtherType],
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 1,
+                componentStatementUnreorderableTestExpected = con True
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName =
+                  "firstUnusedDefInvalidatedBySecond",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ ProgArg "x" ConstrainedType,
+                      ProgArg "y" ConstrainedType2,
+                      ProgArg "z" OtherType
+                    ]
+                    [ Stmt OpUse2 [2, 1] 2 [3] 1 (con False) [],
+                      Stmt OpDef [2] 1 [4, 5] 2 (con False) []
+                    ]
+                    [ProgRes 3 OtherType, ProgRes 5 ConstrainedType],
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 1,
+                componentStatementUnreorderableTestExpected = con False
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName =
+                  "firstUsedDefNotInvalidatedBySecond",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ ProgArg "x" ConstrainedType,
+                      ProgArg "y" ConstrainedType2,
+                      ProgArg "z" OtherType
+                    ]
+                    [ Stmt OpUse [2, 0] 2 [3] 1 (con False) [],
+                      Stmt OpDef2 [2] 1 [4, 5] 2 (con False) []
+                    ]
+                    [ProgRes 3 OtherType, ProgRes 4 OtherType],
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 1,
+                componentStatementUnreorderableTestExpected = con False
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName =
+                  "usedSecondDefInvalidatedByFirst",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                    [ Stmt OpDef [0] 1 [2, 3] 2 (con False) [],
+                      Stmt OpDef [0] 1 [4, 5] 2 (con False) []
+                    ]
+                    [ProgRes 3 ConstrainedType, ProgRes 5 ConstrainedType],
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 1,
+                componentStatementUnreorderableTestExpected = con True
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName =
+                  "usedSecondDefInvalidatedByFirst'",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                    [ Stmt OpDef [0] 1 [4, 5] 2 (con False) [],
+                      Stmt OpDef [0] 1 [2, 3] 2 (con False) []
+                    ]
+                    [ProgRes 3 ConstrainedType, ProgRes 5 ConstrainedType],
+                componentStatementUnreorderableTestFirstIdx = 1,
+                componentStatementUnreorderableTestSecondIdx = 0,
+                componentStatementUnreorderableTestExpected = con True
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName =
+                  "usedSecondDefNotInvalidatedByFirst",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                    [ Stmt OpDef2 [0] 1 [2, 3] 2 (con False) [],
+                      Stmt OpDef [0] 1 [4, 5] 2 (con False) []
+                    ]
+                    [ProgRes 3 ConstrainedType2, ProgRes 5 ConstrainedType],
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 1,
+                componentStatementUnreorderableTestExpected = con False
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName =
+                  "unusedSecondDefInvalidatedByFirst",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                    [ Stmt OpDef [0] 1 [2, 3] 2 (con False) [],
+                      Stmt OpDef [0] 1 [4, 5] 2 (con False) []
+                    ]
+                    [ProgRes 3 ConstrainedType],
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 1,
+                componentStatementUnreorderableTestExpected = con False
+              }
+            ]
         [ testCase name $ do
-            let stmtList = progStmtList prog
-            let mat =
-                  flip runFresh "a" $ angelicDistanceMatrix (length stmtList)
+            let actual =
+                  componentStatementUnreorderable
+                    (Liveliness @SymBool (LivelinessOp @SymBool))
+                    prog
+                    firstIdx
+                    secondIdx
+            let actual' =
+                  componentStatementUnreorderable'
+                    (Liveliness @SymBool (LivelinessOp @SymBool))
+                    prog
+                    firstIdx
+                    secondIdx
+            let expected = mrgReturn reorderable :: SymbolicContext SymBool
+            actual @?= expected
+            actual' @?= expected
+          ],
+      testGroup "ComponentStatementUnreorderable'" $ do
+        let simpleProg =
+              Prog
+                "test"
+                [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                [ Stmt OpNone [0] 1 [2] 1 (con False) [],
+                  Stmt OpNone [0] 1 [3] 1 (con False) []
+                ]
+                [ProgRes 2 OtherType, ProgRes 3 OtherType]
+        ComponentStatementUnreorderableTest
+          name
+          prog
+          firstIdx
+          secondIdx
+          reorderable <-
+          [ ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName = "Same index",
+                componentStatementUnreorderableTestProg = simpleProg,
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 0,
+                componentStatementUnreorderableTestExpected = con True
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName = "Out of bound index",
+                componentStatementUnreorderableTestProg = simpleProg,
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 2,
+                componentStatementUnreorderableTestExpected = con True
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName = "Disabled statement",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                    [ Stmt OpNone [0] 1 [2] 1 (con True) [],
+                      Stmt OpNone [0] 1 [3] 1 (con False) []
+                    ]
+                    [ProgRes 3 OtherType],
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 1,
+                componentStatementUnreorderableTestExpected = con False
+              },
+            ComponentStatementUnreorderableTest
+              { componentStatementUnreorderableTestName = "Direct dependency",
+                componentStatementUnreorderableTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                    [ Stmt OpNone [0] 1 [2] 1 (con False) [],
+                      Stmt OpNone [2] 1 [3] 1 (con False) []
+                    ]
+                    [ProgRes 3 OtherType],
+                componentStatementUnreorderableTestFirstIdx = 0,
+                componentStatementUnreorderableTestSecondIdx = 1,
+                componentStatementUnreorderableTestExpected = con True
+              }
+            ]
+        [ testCase name $ do
+            let actual =
+                  componentStatementUnreorderable'
+                    (Liveliness @SymBool (LivelinessOp @SymBool))
+                    prog
+                    firstIdx
+                    secondIdx
+            let expected = mrgReturn reorderable :: SymbolicContext SymBool
+            actual @?= expected
+          ],
+      testGroup "CanonicalOrderConstraint" $ do
+        CanonicalOrderConstraintTest name prog constrObj expected <-
+          [ CanonicalOrderConstraintTest
+              { canonicalOrderConstraintTestName = "good",
+                canonicalOrderConstraintTestProg = goodConcreteProg,
+                canonicalOrderConstraintTestConstraintObj = (),
+                canonicalOrderConstraintTestExpected = True
+              },
+            CanonicalOrderConstraintTest
+              { canonicalOrderConstraintTestName = "bad",
+                canonicalOrderConstraintTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" IntType, ProgArg "y" IntType]
+                    [ Stmt Add [0, 1] 2 [3] 1 (con False) [],
+                      Stmt Add [0, 1] 2 [2] 1 (con False) []
+                    ]
+                    [ProgRes 2 IntType, ProgRes 3 IntType],
+                canonicalOrderConstraintTestConstraintObj = (),
+                canonicalOrderConstraintTestExpected = False
+              },
+            CanonicalOrderConstraintTest
+              { canonicalOrderConstraintTestName = "unreorderable",
+                canonicalOrderConstraintTestProg =
+                  Prog
+                    "test"
+                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                    [ Stmt OpDef [0] 1 [4, 5] 2 (con False) [],
+                      Stmt OpDef [0] 1 [2, 3] 2 (con False) []
+                    ]
+                    [ProgRes 3 ConstrainedType, ProgRes 5 ConstrainedType],
+                canonicalOrderConstraintTestConstraintObj =
+                  Liveliness @SymBool (LivelinessOp @SymBool),
+                canonicalOrderConstraintTestExpected = True
+              }
+            ]
+        [ testCase name $ do
             let actual = do
-                  distanceMatrixConstraint stmtList mat
-                  canonicalOrderConstraint stmtList mat ::
+                  canonicalOrderConstraint constrObj prog ::
                     SymbolicContext ()
             r <- solveExcept (precise z3) (con . isRight) actual
             if expected

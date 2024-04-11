@@ -219,7 +219,7 @@ task spec gen sketch =
       synthesisWithFuzzerMatcherTaskConSemantics =
         WithConstraints TestSemanticsObj (),
       synthesisWithFuzzerMatcherTaskSymSemantics =
-        WithConstraints TestSemanticsObj ComponentSymmetryReduction,
+        WithConstraints TestSemanticsObj (ComponentSymmetryReduction ()),
       synthesisWithFuzzerMatcherTaskSymProg = sketch
     }
 

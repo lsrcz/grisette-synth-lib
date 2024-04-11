@@ -11,7 +11,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
-  ( livelinessTest,
+  ( Op (..),
+    Type (..),
+    LivelinessOp (..),
+    livelinessTest,
   )
 where
 
@@ -112,11 +115,11 @@ data Op
   | OpDef2
   | OpDefShareScope2
   | OpSubProg (Concrete.Prog Op (WordN 8) Type)
-  deriving (Generic)
+  deriving (Show, Generic)
   deriving (Mergeable, ToCon Op) via (Default Op)
 
 data Type = ConstrainedType | ConstrainedType2 | OtherType
-  deriving (Generic)
+  deriving (Show,Generic)
   deriving (Mergeable, ToCon Type) via (Default Type)
 
 data LivelinessOp bool = LivelinessOp
