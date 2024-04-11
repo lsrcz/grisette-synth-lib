@@ -48,6 +48,7 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
   )
 import Grisette.Lib.Synth.Program.ComponentSketch.Program (Stmt (stmtDisabled))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch.Program as Component
+import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( OpSubProgConstraints (constrainOpSubProg),
     ProgConstraints (constrainProg),
@@ -191,6 +192,19 @@ canonicalOrderConstraint obj prog = do
 
 newtype ComponentSymmetryReduction constrObj
   = ComponentSymmetryReduction constrObj
+
+instance
+  ( ProgConstraints constrObj (Concrete.Prog op conVarId ty) ctx,
+    OpSubProgConstraints (ComponentSymmetryReduction constrObj) op ctx
+  ) =>
+  ProgConstraints
+    (ComponentSymmetryReduction constrObj)
+    (Concrete.Prog op conVarId ty)
+    ctx
+  where
+  constrainProg obj prog =
+    mrgTraverse_ (constrainOpSubProg obj) $
+      Concrete.stmtOp <$> Concrete.progStmtList prog
 
 -- | Note that the program constraints imposed by the objects will also be
 -- enforced.
