@@ -119,7 +119,7 @@ data Op
   deriving (Mergeable, ToCon Op) via (Default Op)
 
 data Type = ConstrainedType | ConstrainedType2 | OtherType
-  deriving (Show,Generic)
+  deriving (Show, Generic)
   deriving (Mergeable, ToCon Type) via (Default Type)
 
 data LivelinessOp bool = LivelinessOp
