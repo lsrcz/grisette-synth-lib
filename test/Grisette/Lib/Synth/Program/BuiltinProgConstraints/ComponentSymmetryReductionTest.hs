@@ -311,13 +311,13 @@ componentSymmetryReductionTest =
         [ testCase name $ do
             let actual =
                   componentStatementUnreorderable
-                    (Liveliness @SymBool (LivelinessOp @SymBool))
+                    (Liveliness LivelinessOp)
                     prog
                     firstIdx
                     secondIdx
             let actual' =
                   componentStatementUnreorderable'
-                    (Liveliness @SymBool (LivelinessOp @SymBool))
+                    (Liveliness LivelinessOp)
                     prog
                     firstIdx
                     secondIdx
@@ -386,7 +386,7 @@ componentSymmetryReductionTest =
         [ testCase name $ do
             let actual =
                   componentStatementUnreorderable'
-                    (Liveliness @SymBool (LivelinessOp @SymBool))
+                    (Liveliness LivelinessOp)
                     prog
                     firstIdx
                     secondIdx
@@ -425,7 +425,7 @@ componentSymmetryReductionTest =
                     ]
                     [ProgRes 3 ConstrainedType, ProgRes 5 ConstrainedType],
                 canonicalOrderConstraintTestConstraintObj =
-                  Liveliness @SymBool (LivelinessOp @SymBool),
+                  Liveliness LivelinessOp,
                 canonicalOrderConstraintTestExpected = True
               }
             ]

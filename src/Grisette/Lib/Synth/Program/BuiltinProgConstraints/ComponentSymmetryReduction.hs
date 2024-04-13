@@ -232,13 +232,13 @@ instance
   componentStatementUnreorderable _ _ _ _ = mrgReturn $ con False
 
 instance
-  ( LivelinessConstraint livelinessObj SymBool op ty res ctx,
+  ( LivelinessConstraint livelinessObj op ty res ctx,
     SimpleMergeable res,
     Mergeable op,
     MonadUnion ctx
   ) =>
   ComponentStatementUnreorderable
-    (Liveliness SymBool livelinessObj)
+    (Liveliness livelinessObj)
     op
     ty
     ctx
