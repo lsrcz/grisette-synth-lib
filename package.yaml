@@ -27,6 +27,7 @@ dependencies:
   - ordered-containers >= 0.1.1 && < 0.3
   - deepseq
   - graphviz >= 2999.20.0.4 && < 3000
+  - extra
 
 ghc-options:
   - -Wextra

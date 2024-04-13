@@ -44,10 +44,13 @@ library
       Grisette.Lib.Synth.Program.Concrete.OpToDot
       Grisette.Lib.Synth.Program.Concrete.Program
       Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath
+      Grisette.Lib.Synth.Program.NullProg
       Grisette.Lib.Synth.Program.ProgConstraints
       Grisette.Lib.Synth.Program.ProgNaming
       Grisette.Lib.Synth.Program.ProgSemantics
       Grisette.Lib.Synth.Program.ProgTyping
+      Grisette.Lib.Synth.Program.SubProg
+      Grisette.Lib.Synth.Program.SumProg
       Grisette.Lib.Synth.Reasoning.Fuzzing
       Grisette.Lib.Synth.Reasoning.IOPair
       Grisette.Lib.Synth.Reasoning.Matcher
@@ -65,6 +68,7 @@ library
       QuickCheck ==2.14.*
     , base >=4.14 && <5
     , deepseq
+    , extra
     , graphviz >=2999.20.0.4 && <3000
     , grisette >=0.5.0.0 && <0.6
     , hashable >=1.3 && <1.5
@@ -89,6 +93,7 @@ executable arith
       QuickCheck ==2.14.*
     , base >=4.14 && <5
     , deepseq
+    , extra
     , graphviz >=2999.20.0.4 && <3000
     , grisette >=0.5.0.0 && <0.6
     , grisette-synth-lib
@@ -118,6 +123,7 @@ executable control
       QuickCheck ==2.14.*
     , base >=4.14 && <5
     , deepseq
+    , extra
     , graphviz >=2999.20.0.4 && <3000
     , grisette >=0.5.0.0 && <0.6
     , grisette-synth-lib
@@ -179,6 +185,7 @@ test-suite spec
     , QuickCheck ==2.14.*
     , base >=4.14 && <5
     , deepseq
+    , extra
     , graphviz >=2999.20.0.4 && <3000
     , grisette >=0.5.0.0 && <0.6
     , grisette-synth-lib

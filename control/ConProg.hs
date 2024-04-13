@@ -12,9 +12,7 @@ module ConProg (Op (..), Prog) where
 
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
-import Grisette
-  ( GPretty (gpretty),
-  )
+import Grisette (GPretty (gpretty), mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
@@ -23,12 +21,10 @@ import Grisette.Lib.Synth.Operator.OpTyping
 import Grisette.Lib.Synth.Program.Concrete
   ( OpPretty (describeArguments),
     PrefixByType (prefixByType),
-    topologicalGPrettyProg,
-    topologicalProgToDot,
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.Concrete.OpToDot (OpToDot (topologicalSubProgToDot))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
+import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
 import Grisette.Lib.Synth.Util.Pretty (parenCommaList)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 import Semantics
@@ -52,6 +48,13 @@ data Op varId intVal
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable)
 
+instance
+  (MonadContext ctx) =>
+  HasSubProg (Op varId intVal) (Prog varId intVal) ctx
+  where
+  getSubProg (If true false) = mrgReturn [true, false]
+  getSubProg _ = mrgReturn []
+
 type Prog varId intVal = Concrete.Prog (Op varId intVal) varId Type
 
 instance (GPretty intVal) => GPretty (Op varId intVal) where
@@ -72,17 +75,6 @@ instance
   describeArguments (IntConst _) = return []
   describeArguments (If true _) =
     return $ Just "cond" : (Nothing <$ Concrete.progArgList true)
-  topologicalGPrettySubProg (If true false) =
-    topologicalGPrettyProg true . topologicalGPrettyProg false
-  topologicalGPrettySubProg _ = id
-
-instance
-  (GPretty intVal, ConcreteVarId varId, Show intVal) =>
-  OpToDot (Op varId intVal)
-  where
-  topologicalSubProgToDot (If true false) =
-    topologicalProgToDot true . topologicalProgToDot false
-  topologicalSubProgToDot _ = id
 
 instance PrefixByType Type where
   prefixByType _ = "r"

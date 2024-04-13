@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- |
@@ -34,8 +35,8 @@ module Grisette.Lib.Synth.Program.Concrete.Program
     prettyProg,
     stmtToDot,
     progToDot,
-    topologicalGPrettyProg,
-    topologicalProgToDot,
+    ProgGPretty (..),
+    ProgToDot (..),
   )
 where
 
@@ -48,6 +49,7 @@ import Control.Monad.State
     StateT,
     evalStateT,
   )
+import Data.Either.Extra (mapLeft)
 import Data.Foldable (traverse_)
 import Data.GraphViz
   ( DotEdge (DotEdge),
@@ -86,24 +88,24 @@ import Grisette
     tryMerge,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
-import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Program.Concrete.OpPretty
-  ( OpPretty (topologicalGPrettySubProg),
+  ( OpPretty,
     OpPrettyError,
     VarIdMap,
     prettyArguments,
     prettyResults,
   )
 import Grisette.Lib.Synth.Program.Concrete.OpToDot
-  ( OpToDot (topologicalSubProgToDot),
-    VarIdToLabel,
+  ( VarIdToLabel,
     argumentsToFieldEdges,
     resultsToFieldEdges,
   )
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -216,6 +218,7 @@ instance Mergeable (Prog op varId ty) where
 data ProgPrettyError varId op
   = StmtPrettyError (Stmt op varId) Int (OpPrettyError varId op)
   | ResultUndefined Int varId
+  | ExtractSubProgError T.Text
   deriving (Show, Eq, Generic)
   deriving (Mergeable) via (Default (ProgPrettyError varId op))
 
@@ -246,6 +249,8 @@ instance
       <> ": the variable "
       <> gpretty (toInteger varId)
       <> " is undefined."
+  gpretty (ExtractSubProgError err) =
+    "Error while extracting sub-program: " <> gpretty err
 
 prettyStmt ::
   ( ConcreteVarId varId,
@@ -302,37 +307,49 @@ prettyProg (Prog name argList stmtList resList) = do
     return . nest 2 . concatWith (\x y -> x <> hardline <> y) $
       concat [[firstLine], stmtsPretty, [ret]]
 
-topologicalGPrettyProg ::
-  (OpPretty op, ConcreteVarId varId, GPretty ty, Show op, Show ty) =>
-  Prog op varId ty ->
-  OM.OMap T.Text (Doc ann) ->
-  OM.OMap T.Text (Doc ann)
-topologicalGPrettyProg prog map
-  | OM.member (progName prog) map = map
-  | otherwise =
-      allSub OM.>| (progName prog, progDoc)
+class ProgGPretty prog where
+  topologicalGPrettyProg ::
+    prog -> OM.OMap T.Text (Doc ann) -> OM.OMap T.Text (Doc ann)
+
+instance
+  ( OpPretty op,
+    ConcreteVarId varId,
+    GPretty ty,
+    Show op,
+    Show ty,
+    HasSubProg op sub ConcreteContext,
+    ProgGPretty sub
+  ) =>
+  ProgGPretty (Prog op varId ty)
   where
-    allSub =
-      foldl (flip topologicalGPrettySubProg) map $
-        stmtOp <$> progStmtList prog
-    progDoc = case prettyProg prog of
-      Left err ->
-        nest
-          2
-          ( "Error while pretty-printing program "
-              <> gpretty (progName prog)
-              <> hardline
-              <> gpretty err
-          )
-          <> hardline
-          <> nest 2 ("Raw program: " <> hardline <> gpretty (show prog))
-      Right doc -> doc
+  topologicalGPrettyProg prog map
+    | OM.member (progName prog) map = map
+    | otherwise = allSub map OM.>| (progName prog, progDoc)
+    where
+      allSubProgramTopologicalSorted ::
+        OM.OMap T.Text (Doc ann) ->
+        Either (ProgPrettyError varId op) (OM.OMap T.Text (Doc ann))
+      allSubProgramTopologicalSorted map = mapLeft ExtractSubProgError $ do
+        progs <- concat <$> traverse (getSubProg . stmtOp) (progStmtList prog)
+        return $ foldl (flip topologicalGPrettyProg) map progs
+      allSub map = case allSubProgramTopologicalSorted map of
+        Left _ -> OM.empty
+        Right r -> r
+      progDoc = case allSubProgramTopologicalSorted map >> prettyProg prog of
+        Left err ->
+          nest
+            2
+            ( "Error while pretty-printing program "
+                <> gpretty (progName prog)
+                <> hardline
+                <> gpretty err
+            )
+            <> hardline
+            <> nest 2 ("Raw program: " <> hardline <> gpretty (show prog))
+        Right doc -> doc
 
 stmtToDot ::
-  ( ConcreteVarId varId,
-    OpToDot op,
-    GPretty op
-  ) =>
+  (ConcreteVarId varId, OpPretty op, GPretty op) =>
   T.Text ->
   Int ->
   Stmt op varId ->
@@ -369,10 +386,7 @@ stmtToDot progName index stmt@(Stmt op argIds resIds) = do
     )
 
 progToDot ::
-  ( ConcreteVarId varId,
-    OpToDot op,
-    GPretty ty
-  ) =>
+  (ConcreteVarId varId, OpPretty op, GPretty ty) =>
   Prog op varId ty ->
   Either (ProgPrettyError varId op) (DotSubGraph T.Text)
 progToDot (Prog name argList stmtList resList) = do
@@ -453,47 +467,74 @@ progToDot (Prog name argList stmtList resList) = do
               }
         }
 
-topologicalProgToDot ::
-  (OpToDot op, ConcreteVarId varId, GPretty ty, Show op, Show ty) =>
-  Prog op varId ty ->
-  OM.OMap T.Text (DotSubGraph T.Text) ->
-  OM.OMap T.Text (DotSubGraph T.Text)
-topologicalProgToDot prog map
-  | OM.member (progName prog) map = map
-  | otherwise =
-      allSub OM.>| (progName prog, progSubGraph)
-  where
-    allSub =
-      foldl (flip topologicalSubProgToDot) map $
-        stmtOp <$> progStmtList prog
-    progSubGraph = case progToDot prog of
-      Left err ->
-        let errTxt =
-              renderDoc 80 $
-                nest
-                  2
-                  ( "Error while pretty-printing program "
-                      <> gpretty (progName prog)
-                      <> hardline
-                      <> gpretty err
-                  )
-                  <> hardline
-                  <> nest 2 ("Raw program: " <> hardline <> gpretty (show prog))
-         in DotSG
-              { isCluster = True,
-                subGraphID = Just $ Str $ TL.fromStrict $ progName prog,
-                subGraphStmts =
-                  DotStmts
-                    { attrStmts = [],
-                      subGraphs = [],
-                      nodeStmts = [DotNode errTxt []],
-                      edgeStmts = []
-                    }
-              }
-      Right graph -> graph
+class ProgToDot prog where
+  topologicalProgToDot ::
+    prog ->
+    OM.OMap T.Text (DotSubGraph T.Text) ->
+    OM.OMap T.Text (DotSubGraph T.Text)
 
 instance
-  (OpToDot op, ConcreteVarId varId, GPretty ty, Show op, Show ty) =>
+  ( OpPretty op,
+    ConcreteVarId varId,
+    GPretty ty,
+    Show op,
+    Show ty,
+    HasSubProg op sub ConcreteContext,
+    ProgToDot sub
+  ) =>
+  ProgToDot (Prog op varId ty)
+  where
+  topologicalProgToDot prog map
+    | OM.member (progName prog) map = map
+    | otherwise =
+        allSub map OM.>| (progName prog, progSubGraph)
+    where
+      allSubProgramTopologicalSorted ::
+        OM.OMap T.Text (DotSubGraph T.Text) ->
+        Either (ProgPrettyError varId op) (OM.OMap T.Text (DotSubGraph T.Text))
+      allSubProgramTopologicalSorted map = mapLeft ExtractSubProgError $ do
+        progs <- concat <$> traverse (getSubProg . stmtOp) (progStmtList prog)
+        return $ foldl (flip topologicalProgToDot) map progs
+      allSub map = case allSubProgramTopologicalSorted map of
+        Left _ -> OM.empty
+        Right r -> r
+      progSubGraph =
+        case allSubProgramTopologicalSorted map >> progToDot prog of
+          Left err ->
+            let errTxt =
+                  renderDoc 80 $
+                    nest
+                      2
+                      ( "Error while pretty-printing program "
+                          <> gpretty (progName prog)
+                          <> hardline
+                          <> gpretty err
+                      )
+                      <> hardline
+                      <> nest
+                        2
+                        ("Raw program: " <> hardline <> gpretty (show prog))
+             in DotSG
+                  { isCluster = True,
+                    subGraphID = Just $ Str $ TL.fromStrict $ progName prog,
+                    subGraphStmts =
+                      DotStmts
+                        { attrStmts = [],
+                          subGraphs = [],
+                          nodeStmts = [DotNode errTxt []],
+                          edgeStmts = []
+                        }
+                  }
+          Right graph -> graph
+
+instance
+  ( OpPretty op,
+    ConcreteVarId varId,
+    GPretty ty,
+    Show op,
+    Show ty,
+    ProgToDot (Prog op varId ty)
+  ) =>
   PrintDot (Prog op varId ty)
   where
   unqtDot prog = unqtDot dotGraph
@@ -518,7 +559,9 @@ instance
     ConcreteVarId varId,
     GPretty ty,
     Show op,
-    Show ty
+    Show ty,
+    HasSubProg op sub ConcreteContext,
+    ProgGPretty sub
   ) =>
   GPretty (Prog op varId ty)
   where

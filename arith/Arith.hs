@@ -40,10 +40,9 @@ import Grisette.Lib.Synth.Program.Concrete
   ( OpPretty (describeArguments),
     PrefixByType (prefixByType),
   )
-import Grisette.Lib.Synth.Program.Concrete.OpToDot (OpToDot)
-import Grisette.Lib.Synth.TypeSignature
-  ( TypeSignature (TypeSignature),
-  )
+import Grisette.Lib.Synth.Program.NullProg (NullProg)
+import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Util.Show (showText)
 
 -- * Operators
@@ -131,7 +130,8 @@ instance OpPretty OpCode where
   describeArguments Minus = Right [Just "lhs", Just "rhs"]
   describeArguments UMinus = Right [Nothing]
 
-instance OpToDot OpCode
-
 instance PrefixByType OpType where
   prefixByType IntegerType = "r"
+
+instance (MonadContext ctx) => HasSubProg OpCode NullProg ctx where
+  getSubProg _ = mrgReturn []

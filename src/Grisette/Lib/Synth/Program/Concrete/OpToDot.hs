@@ -2,8 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Grisette.Lib.Synth.Program.Concrete.OpToDot
-  ( OpToDot (..),
-    VarIdToLabel,
+  ( VarIdToLabel,
     argumentsToFieldEdges,
     resultsToFieldEdges,
   )
@@ -12,7 +11,7 @@ where
 import Control.Monad (when)
 import Control.Monad.Error.Class (MonadError (throwError))
 import Data.Foldable (traverse_)
-import Data.GraphViz (DotEdge (DotEdge), DotSubGraph)
+import Data.GraphViz (DotEdge (DotEdge))
 import Data.GraphViz.Attributes.Complete
   ( Attribute (HeadPort, TailPort),
     PortName (PN),
@@ -21,7 +20,6 @@ import Data.GraphViz.Attributes.Complete
     RecordFields,
   )
 import qualified Data.HashMap.Lazy as HM
-import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Grisette.Lib.Synth.Program.Concrete.OpPretty
@@ -36,17 +34,10 @@ import Grisette.Lib.Synth.Program.Concrete.OpPretty
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
-class (OpPretty op) => OpToDot op where
-  topologicalSubProgToDot ::
-    op ->
-    OM.OMap T.Text (DotSubGraph T.Text) ->
-    OM.OMap T.Text (DotSubGraph T.Text)
-  topologicalSubProgToDot _ = id
-
 type VarIdToLabel varId = HM.HashMap varId (T.Text, PortName)
 
 argumentsToFieldEdges ::
-  (ConcreteVarId varId, OpToDot op) =>
+  (ConcreteVarId varId, OpPretty op) =>
   T.Text ->
   op ->
   [varId] ->
@@ -78,7 +69,7 @@ argumentsToFieldEdges nodeId op argIds map = do
   return (argLabel, zipWith preLabelToEdge argPreLabels [0 ..])
 
 resultsToFieldEdges ::
-  (ConcreteVarId varId, OpToDot op) =>
+  (ConcreteVarId varId, OpPretty op) =>
   T.Text ->
   op ->
   [varId] ->
