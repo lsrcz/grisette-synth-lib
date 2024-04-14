@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Grisette.Lib.Synth.Program.ByteCodeSketch.Program
   ( Stmt (..),
@@ -16,6 +17,7 @@ module Grisette.Lib.Synth.Program.ByteCodeSketch.Program
 where
 
 import Control.Monad (when)
+import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.State (MonadState (get), MonadTrans (lift), StateT)
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
@@ -46,6 +48,22 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.ProgUtil
+  ( ProgUtil
+      ( ProgTypeType,
+        getProgArgIds,
+        getProgNumStmts,
+        getProgResIds,
+        getProgStmtAtIdx
+      ),
+    StmtUtil
+      ( StmtOpType,
+        getStmtArgIds,
+        getStmtDisabled,
+        getStmtOp,
+        getStmtResIds
+      ),
+  )
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -244,3 +262,28 @@ instance
 
 instance ProgNaming (Prog op conVarId symVarId ty) where
   nameProg = progName
+
+instance
+  (RelatedVarId conVarId symVarId) =>
+  StmtUtil (Stmt op conVarId symVarId) symVarId
+  where
+  type StmtOpType (Stmt op conVarId symVarId) = op
+  getStmtArgIds = stmtArgIds
+  getStmtResIds = toSym . stmtResIds
+  getStmtOp = stmtOp
+  getStmtDisabled _ = toSym False
+
+instance
+  (RelatedVarId conVarId symVarId) =>
+  ProgUtil
+    (Prog op conVarId symVarId ty)
+    (Stmt op conVarId symVarId)
+    symVarId
+  where
+  type ProgTypeType (Prog op conVarId symVarId ty) = ty
+  getProgArgIds = toSym . map progArgId . progArgList
+  getProgResIds = map progResId . progResList
+  getProgNumStmts = length . progStmtList
+  getProgStmtAtIdx prog idx
+    | idx >= getProgNumStmts prog = throwError "Statement index out of bounds."
+    | otherwise = return $ progStmtList prog !! idx

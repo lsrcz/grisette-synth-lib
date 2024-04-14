@@ -3,6 +3,7 @@ module Grisette.Lib.Synth.Program.ConcreteTest (concreteTest) where
 import Grisette.Lib.Synth.Program.Concrete.BuilderTest (builderTest)
 import Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest (mayMultiPathTest)
 import Grisette.Lib.Synth.Program.Concrete.PrettyTest (prettyTest)
+import Grisette.Lib.Synth.Program.Concrete.ProgUtilTest (progUtilTest)
 import Grisette.Lib.Synth.Program.Concrete.SemanticsTest (semanticsTest)
 import Grisette.Lib.Synth.Program.Concrete.ToDotTest (toDotTest)
 import Grisette.Lib.Synth.Program.Concrete.TopologicalSortTest
@@ -21,5 +22,6 @@ concreteTest =
       semanticsTest,
       typingTest,
       mayMultiPathTest,
-      builderTest
+      builderTest,
+      progUtilTest
     ]

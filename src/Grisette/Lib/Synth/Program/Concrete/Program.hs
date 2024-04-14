@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- |
@@ -105,6 +106,22 @@ import Grisette.Lib.Synth.Program.Concrete.OpToDot
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.ProgUtil
+  ( ProgUtil
+      ( ProgTypeType,
+        getProgArgIds,
+        getProgNumStmts,
+        getProgResIds,
+        getProgStmtAtIdx
+      ),
+    StmtUtil
+      ( StmtOpType,
+        getStmtArgIds,
+        getStmtDisabled,
+        getStmtOp,
+        getStmtResIds
+      ),
+  )
 import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
@@ -627,3 +644,19 @@ instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
 
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName
+
+instance StmtUtil (Stmt op varId) varId where
+  type StmtOpType (Stmt op varId) = op
+  getStmtArgIds = stmtArgIds
+  getStmtResIds = stmtResIds
+  getStmtOp = stmtOp
+  getStmtDisabled _ = toSym False
+
+instance ProgUtil (Prog op varId ty) (Stmt op varId) varId where
+  type ProgTypeType (Prog op varId ty) = ty
+  getProgArgIds = map progArgId . progArgList
+  getProgResIds = map progResId . progResList
+  getProgNumStmts = length . progStmtList
+  getProgStmtAtIdx prog idx
+    | idx >= getProgNumStmts prog = throwError "Statement index out of bounds."
+    | otherwise = return $ progStmtList prog !! idx

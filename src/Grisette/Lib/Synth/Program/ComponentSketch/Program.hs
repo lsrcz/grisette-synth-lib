@@ -3,10 +3,13 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch.Program
   ( Stmt (..),
@@ -18,6 +21,7 @@ where
 
 import Control.DeepSeq (NFData)
 import Control.Monad (join)
+import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.State
   ( MonadState (get, put),
     MonadTrans (lift),
@@ -73,6 +77,22 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.ProgUtil
+  ( ProgUtil
+      ( ProgTypeType,
+        getProgArgIds,
+        getProgNumStmts,
+        getProgResIds,
+        getProgStmtAtIdx
+      ),
+    StmtUtil
+      ( StmtOpType,
+        getStmtArgIds,
+        getStmtDisabled,
+        getStmtOp,
+        getStmtResIds
+      ),
+  )
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -92,6 +112,18 @@ data Stmt op symVarId = Stmt
   deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (Stmt op symVarId))
 
+deriving via
+  (Default (Stmt conOp symVarId))
+  instance
+    (ToCon symOp conOp, ToCon symVarId symVarId) =>
+    ToCon (Stmt symOp symVarId) (Stmt conOp symVarId)
+
+deriving via
+  (Default (Stmt symOp symVarId))
+  instance
+    (ToSym conOp symOp, ToSym symVarId symVarId) =>
+    ToSym (Stmt conOp symVarId) (Stmt symOp symVarId)
+
 instance Mergeable (Stmt op symVarId) where
   rootStrategy = NoStrategy
 
@@ -103,6 +135,18 @@ data ProgArg ty = ProgArg
   deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (ProgArg ty))
 
+deriving via
+  (Default (ProgArg conTy))
+  instance
+    (ToCon symTy conTy) =>
+    ToCon (ProgArg symTy) (ProgArg conTy)
+
+deriving via
+  (Default (ProgArg symTy))
+  instance
+    (ToSym conTy symTy) =>
+    ToSym (ProgArg conTy) (ProgArg symTy)
+
 instance Mergeable (ProgArg ty) where
   rootStrategy = NoStrategy
 
@@ -113,6 +157,18 @@ data ProgRes symVarId ty = ProgRes
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (ProgRes symVarId ty))
+
+deriving via
+  (Default (ProgRes symVarId conTy))
+  instance
+    (ToCon symTy conTy, ToCon symVarId symVarId) =>
+    ToCon (ProgRes symVarId symTy) (ProgRes symVarId conTy)
+
+deriving via
+  (Default (ProgRes symVarId symTy))
+  instance
+    (ToSym conTy symTy, ToSym symVarId symVarId) =>
+    ToSym (ProgRes symVarId conTy) (ProgRes symVarId symTy)
 
 instance Mergeable (ProgRes symVarId ty) where
   rootStrategy = NoStrategy
@@ -126,6 +182,18 @@ data Prog op symVarId ty = Prog
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
   deriving (EvaluateSym) via (Default (Prog op symVarId ty))
+
+deriving via
+  (Default (Prog conOp symVarId conTy))
+  instance
+    (ToCon symOp conOp, ToCon symTy conTy, ToCon symVarId symVarId) =>
+    ToCon (Prog symOp symVarId symTy) (Prog conOp symVarId conTy)
+
+deriving via
+  (Default (Prog symOp symVarId symTy))
+  instance
+    (ToSym conOp symOp, ToSym conTy symTy, ToSym symVarId symVarId) =>
+    ToSym (Prog conOp symVarId conTy) (Prog symOp symVarId symTy)
 
 instance Mergeable (Prog op symVarId ty) where
   rootStrategy = NoStrategy
@@ -452,3 +520,22 @@ instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
 
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName
+
+instance StmtUtil (Stmt op varId) varId where
+  type StmtOpType (Stmt op varId) = op
+  getStmtArgIds = stmtArgIds
+  getStmtResIds = stmtResIds
+  getStmtOp = stmtOp
+  getStmtDisabled = stmtDisabled
+
+instance
+  (SymbolicVarId varId) =>
+  ProgUtil (Prog op varId ty) (Stmt op varId) varId
+  where
+  type ProgTypeType (Prog op varId ty) = ty
+  getProgArgIds prog = fst <$> zip (fromIntegral <$> [0 ..]) (progArgList prog)
+  getProgResIds = map progResId . progResList
+  getProgNumStmts = length . progStmtList
+  getProgStmtAtIdx prog idx
+    | idx >= getProgNumStmts prog = throwError "Statement index out of bounds."
+    | otherwise = return $ progStmtList prog !! idx
