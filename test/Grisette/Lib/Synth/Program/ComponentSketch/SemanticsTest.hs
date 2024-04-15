@@ -8,8 +8,8 @@ where
 import Control.Monad.Error.Class (MonadError (catchError))
 import Grisette
   ( EvaluateSym (evaluateSym),
-    FreshIdent,
     ITEOp (symIte),
+    Identifier,
     LogicalOp (symImplies, symNot, (.&&), (.||)),
     SEq ((./=), (.==)),
     SOrd ((.<), (.>=)),
@@ -50,7 +50,7 @@ data SemanticsTestCase = SemanticsTestCase
       Prog (UnionM TestSemanticsOp) SymInteger TestSemanticsType,
     semanticsTestCaseArgs :: [SymInteger],
     semanticsTestCaseExpected :: ExpectedResult,
-    semanticsTestCaseFreshIdent :: FreshIdent
+    semanticsTestCaseIdentifier :: Identifier
   }
 
 semanticsTest :: Test
@@ -82,7 +82,7 @@ semanticsTest = testGroup "Semantics" $ do
                       .&& (progRes1Val .== 7)
                   )
                   [2, 7],
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName = "concrete excluded by num arg",
@@ -105,7 +105,7 @@ semanticsTest = testGroup "Semantics" $ do
                       .&& (progRes0Val .== 33)
                   )
                   [33],
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName = "concrete excluded by num res",
@@ -129,7 +129,7 @@ semanticsTest = testGroup "Semantics" $ do
                       .&& (progRes0Val .== 33)
                   )
                   [33],
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName =
@@ -143,7 +143,7 @@ semanticsTest = testGroup "Semantics" $ do
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName =
@@ -157,7 +157,7 @@ semanticsTest = testGroup "Semantics" $ do
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [13, 20],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName =
@@ -172,7 +172,7 @@ semanticsTest = testGroup "Semantics" $ do
               [ProgRes 4 IntType],
           semanticsTestCaseArgs = [13, 20],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName =
@@ -187,7 +187,7 @@ semanticsTest = testGroup "Semantics" $ do
               [ProgRes 4 IntType],
           semanticsTestCaseArgs = [13, 20],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName =
@@ -202,7 +202,7 @@ semanticsTest = testGroup "Semantics" $ do
               [ProgRes 4 IntType],
           semanticsTestCaseArgs = [13, 20],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName = "symbolic disable",
@@ -231,7 +231,7 @@ semanticsTest = testGroup "Semantics" $ do
                       .&& symNot "dis0"
                   )
                   [0, 1],
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName = "symbolic operator and arg/res num",
@@ -302,7 +302,7 @@ semanticsTest = testGroup "Semantics" $ do
                         )
                   )
                   [4, symIte "add" 14 (symIte "divmod" 2 11)],
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName = "symbolic result",
@@ -330,7 +330,7 @@ semanticsTest = testGroup "Semantics" $ do
                       .&& (resId .< 3)
                   )
                   [symIte (resId .== 0) 13 (symIte (resId .== 1) 20 33)],
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       let ident = "x"
           argInc = "argInc" :: SymInteger
@@ -401,7 +401,7 @@ semanticsTest = testGroup "Semantics" $ do
                       (symIte (argDouble .== 0) 26 28)
                       (symIte (argInc .== 0) 14 27)
                   ],
-              semanticsTestCaseFreshIdent = "x"
+              semanticsTestCaseIdentifier = "x"
             },
       let res00 = "res00"
           res01 = "res01"
@@ -461,21 +461,21 @@ semanticsTest = testGroup "Semantics" $ do
                       .&& (progRes1Val .== 7)
                   )
                   [1, 7],
-              semanticsTestCaseFreshIdent = "x"
+              semanticsTestCaseIdentifier = "x"
             },
       SemanticsTestCase
         { semanticsTestCaseName = "divByZero",
           semanticsTestCaseProg = goodConcreteProg,
           semanticsTestCaseArgs = [0, 20],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName = "incorrect number of arguments",
           semanticsTestCaseProg = goodConcreteProg,
           semanticsTestCaseArgs = [20],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName = "incorrect number of statement results",
@@ -487,7 +487,7 @@ semanticsTest = testGroup "Semantics" $ do
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [1, 2],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName = "use disabled values",
@@ -501,7 +501,7 @@ semanticsTest = testGroup "Semantics" $ do
               [ProgRes 0 IntType],
           semanticsTestCaseArgs = [1, 2],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName = "use disabled values in results",
@@ -515,7 +515,7 @@ semanticsTest = testGroup "Semantics" $ do
               [ProgRes 2 IntType],
           semanticsTestCaseArgs = [1, 2],
           semanticsTestCaseExpected = ErrorResult,
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         },
       SemanticsTestCase
         { semanticsTestCaseName =
@@ -532,7 +532,7 @@ semanticsTest = testGroup "Semantics" $ do
           semanticsTestCaseExpected =
             let progRes0Val = isym "x" 6 :: SymInteger
              in Result (progRes0Val .== 1) [1],
-          semanticsTestCaseFreshIdent = "x"
+          semanticsTestCaseIdentifier = "x"
         }
       ]
   return $ testCase name $ do

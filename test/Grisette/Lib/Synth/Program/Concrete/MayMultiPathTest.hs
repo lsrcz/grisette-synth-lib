@@ -18,6 +18,7 @@ import Grisette
     Solvable (ssym),
     SymBool,
     UnionM,
+    identifier,
     liftToMonadUnion,
     mrgIf,
   )
@@ -63,7 +64,12 @@ prog =
     "prog"
     [ProgArg "x" 0 IntType]
     ( fmap
-        (\i -> Stmt (MayAddOneOp $ ssym $ "s" <> showText i) [i] [i + 1])
+        ( \i ->
+            Stmt
+              (MayAddOneOp $ ssym $ identifier $ "s" <> showText i)
+              [i]
+              [i + 1]
+        )
         [0 .. 99]
     )
     [ProgRes 100 IntType]

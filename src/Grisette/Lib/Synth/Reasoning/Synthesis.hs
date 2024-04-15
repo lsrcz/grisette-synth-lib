@@ -19,11 +19,11 @@ where
 
 import Control.Monad.Except (runExceptT)
 import Data.Data (Proxy (Proxy))
+import qualified Data.Text as T
 import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
     EvaluateSym,
-    FreshIdent (FreshIdent),
     Mergeable,
     Solvable (con),
     SolvingFailure,
@@ -34,8 +34,10 @@ import Grisette
     ToSym (toSym),
     evaluateSymToCon,
     genericCEGIS,
+    identifier,
     runFreshT,
     simpleMerge,
+    withInfo,
   )
 import Grisette.Lib.Synth.Context (AngelicContext, SymbolicContext)
 import Grisette.Lib.Synth.Program.ProgConstraints
@@ -70,7 +72,10 @@ instance SynthesisContext AngelicContext where
     genSynthesisConstraint
       i
       matcher
-      (runFreshT actual (FreshIdent $ "::synth::[" <> showText i <> "]"))
+      ( runFreshT
+          actual
+          (withInfo (identifier $ showText i) ("synth" :: T.Text))
+      )
 
 synthesisConstraintFun ::
   forall semObj constObj symProg conVal symVal ctx matcher p q.

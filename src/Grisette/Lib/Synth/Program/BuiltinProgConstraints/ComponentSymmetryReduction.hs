@@ -18,6 +18,7 @@ where
 import Grisette
   ( LogicalOp (symImplies, symNot, (.&&), (.||)),
     Mergeable,
+    MonadFresh,
     MonadUnion,
     SEq ((.==)),
     SimpleMergeable,
@@ -31,20 +32,23 @@ import Grisette
     symAnd,
     symAny,
     symAssertWith,
+    symOr,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
-  ( ComponentUse (ComponentUse),
-    Def (defDisabled, defId, defResource),
+  ( ComponentProgDefUse (ComponentProgDefUse),
+    ComponentStmtDefUse
+      ( componentStmtDef,
+        componentStmtInvalidatingDef,
+        componentStmtUse
+      ),
+    ComponentUse (ComponentUse),
+    Def (Def),
     Liveliness (Liveliness),
     LivelinessConstraint,
     Resource (conflict),
-    componentProgDefs,
-    componentProgUses,
-    componentStmtDefs,
-    componentStmtInvalidatingDefs,
-    componentStmtUses,
+    livelinessComponentProgDefUses,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch.Program (Stmt (stmtDisabled))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch.Program as Component
@@ -52,6 +56,10 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( OpSubProgConstraints (constrainOpSubProg),
     ProgConstraints (constrainProg),
+    progStmtLocalIdent,
+  )
+import Grisette.Lib.Synth.Program.ProgUtil
+  ( ProgUtil (getProgNumStmts, getProgStmtAtIdx),
   )
 import Grisette.Lib.Synth.VarId (SymbolicVarId)
 
@@ -195,7 +203,8 @@ newtype ComponentSymmetryReduction constrObj
 
 instance
   ( ProgConstraints constrObj (Concrete.Prog op conVarId ty) ctx,
-    OpSubProgConstraints (ComponentSymmetryReduction constrObj) op ctx
+    OpSubProgConstraints (ComponentSymmetryReduction constrObj) op ctx,
+    MonadFresh ctx
   ) =>
   ProgConstraints
     (ComponentSymmetryReduction constrObj)
@@ -203,8 +212,12 @@ instance
     ctx
   where
   constrainProg obj prog =
-    mrgTraverse_ (constrainOpSubProg obj) $
-      Concrete.stmtOp <$> Concrete.progStmtList prog
+    mrgTraverse_
+      ( \i -> do
+          Concrete.Stmt op _ _ <- getProgStmtAtIdx prog i
+          progStmtLocalIdent prog i $ constrainOpSubProg obj op
+      )
+      [0 .. getProgNumStmts prog - 1]
 
 -- | Note that the program constraints imposed by the objects will also be
 -- enforced.
@@ -212,7 +225,9 @@ instance
   ( ProgConstraints constrObj (Component.Prog op symVarId ty) ctx,
     OpSubProgConstraints (ComponentSymmetryReduction constrObj) op ctx,
     ComponentStatementUnreorderable constrObj op ty ctx,
-    SymbolicVarId symVarId
+    SymbolicVarId symVarId,
+    Show op,
+    MonadFresh ctx
   ) =>
   ProgConstraints
     (ComponentSymmetryReduction constrObj)
@@ -222,8 +237,14 @@ instance
   constrainProg obj@(ComponentSymmetryReduction constrObj) prog = do
     constrainProg constrObj prog
     canonicalOrderConstraint constrObj prog
-    mrgTraverse_ (constrainOpSubProg obj) $
-      Component.stmtOp <$> Component.progStmtList prog
+    mrgTraverse_
+      ( \i -> do
+          Component.Stmt op _ _ _ _ stmtDisabled _ <-
+            getProgStmtAtIdx prog i
+          mrgIf stmtDisabled (return ()) $ do
+            progStmtLocalIdent prog i $ constrainOpSubProg obj op
+      )
+      [0 .. getProgNumStmts prog - 1]
 
 instance
   (MonadContext ctx, MonadUnion ctx, OpTyping op ty ctx) =>
@@ -235,7 +256,9 @@ instance
   ( LivelinessConstraint livelinessObj op ty res ctx,
     SimpleMergeable res,
     Mergeable op,
-    MonadUnion ctx
+    MonadUnion ctx,
+    Mergeable ty,
+    MonadFresh ctx
   ) =>
   ComponentStatementUnreorderable
     (Liveliness livelinessObj)
@@ -253,68 +276,53 @@ instance
           || firstStmtPos == secondStmtPos =
           mrgReturn $ con True
       | otherwise = do
-          let first = stmtList !! firstStmtPos
-              second = stmtList !! secondStmtPos
-              otherStmts =
-                fmap snd $
-                  filter (\(i, _) -> i /= firstStmtPos && i /= secondStmtPos) $
-                    zip [0 ..] stmtList
-              removedProg = prog {Component.progStmtList = otherStmts}
-          firstInvalidated <- componentStmtInvalidatingDefs obj first
-          secondInvalidated <- componentStmtInvalidatingDefs obj second
-          firstUses <- componentStmtUses obj first
-          secondDefs <- componentStmtDefs obj second
-          otherDefs <- componentProgDefs obj removedProg
-          otherUses <- componentProgUses obj removedProg
+          ComponentProgDefUse _ stmtDefUses _ <-
+            livelinessComponentProgDefUses obj prog (con False)
+          let firstStmtDefUse = stmtDefUses !! firstStmtPos
+          let firstInvalidated = componentStmtInvalidatingDef firstStmtDefUse
+          let firstUses = componentStmtUse firstStmtDefUse
+          let secondStmtDefUse = stmtDefUses !! secondStmtPos
+          let secondInvalidated = componentStmtInvalidatingDef secondStmtDefUse
+          let secondDefs = componentStmtDef secondStmtDefUse
           mrgReturn $
-            symAny
-              (firstUsedDefInvalidatedBySecond firstUses secondInvalidated)
-              otherDefs
-              .|| symAny
-                (usedSecondDefInvalidatedByFirst secondDefs firstInvalidated)
-                otherUses
+            firstUsesInvalidatedBySecond firstUses secondInvalidated
+              .|| secondDefsInvalidatedByFirst secondDefs firstInvalidated
       where
-        stmtList = Component.progStmtList prog
-        defInvalidated invalidatingDef def =
+        firstUsesInvalidatedBySecond'
+          (ComponentUse _ _ useResource useDisabled)
+          (Def _ defResource defDisabled) =
+            symNot useDisabled
+              .&& symNot defDisabled
+              .&& conflict useResource defResource
+        firstUsesInvalidatedBySecond firstUses secondInvalidated =
           simpleMerge $
-            symAny
-              ( \i ->
-                  symNot (defDisabled def)
-                    .&& symNot (defDisabled i)
-                    .&& conflict (defResource i) (defResource def)
-              )
-              <$> invalidatingDef
-        firstUsedDefInvalidatedBySecond' firstUses secondInvalidated otherDef =
-          simpleMerge $ do
-            uses <- firstUses
-            let defIsUsed =
-                  symAny
-                    ( \(ComponentUse useId _ disabled) ->
-                        symNot disabled .&& useId .== defId otherDef
-                    )
-                    uses
-            return $
-              defIsUsed .&& defInvalidated secondInvalidated otherDef
-        firstUsedDefInvalidatedBySecond firstUses secondInvalidated otherDef =
+            ( \useList invalidatedList ->
+                symOr $
+                  [ firstUsesInvalidatedBySecond' use invalidated
+                    | use <- useList,
+                      invalidated <- invalidatedList
+                  ]
+            )
+              <$> firstUses
+              <*> secondInvalidated
+        secondDefsInvalidatedByFirst'
+          (Def _ useResource useDisabled)
+          (Def _ invalidatedResource invalidatedDisabled) =
+            symNot useDisabled
+              .&& symNot invalidatedDisabled
+              .&& conflict useResource invalidatedResource
+        secondDefsInvalidatedByFirst secondDefs firstInvalidated =
           simpleMerge $
-            symAny
-              (firstUsedDefInvalidatedBySecond' firstUses secondInvalidated)
-              <$> otherDef
-        defUsed uses def =
-          simpleMerge $
-            symAny
-              ( \(ComponentUse useId _ disabled) ->
-                  symNot disabled .&& (useId .== defId def)
-              )
-              <$> uses
-        usedSecondDefInvalidatedByFirst secondDefs firstInvalidated otherUse =
-          simpleMerge $
-            symAny
-              ( \def ->
-                  defUsed otherUse def
-                    .&& defInvalidated firstInvalidated def
-              )
+            ( \defList invalidatedList ->
+                symOr $
+                  [ secondDefsInvalidatedByFirst' def invalidated
+                    | def <- defList,
+                      invalidated <- invalidatedList
+                  ]
+            )
               <$> secondDefs
+              <*> firstInvalidated
+        stmtList = Component.progStmtList prog
 
 instance
   ( ComponentStatementUnreorderable constrObj1 op ty ctx,

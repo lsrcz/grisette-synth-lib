@@ -28,6 +28,7 @@ dependencies:
   - deepseq
   - graphviz >= 2999.20.0.4 && < 3000
   - extra
+  - template-haskell
 
 ghc-options:
   - -Wextra

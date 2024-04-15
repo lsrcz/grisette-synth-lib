@@ -1,27 +1,29 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReductionTest
   ( componentSymmetryReductionTest,
   )
 where
 
-import Data.Either (isLeft, isRight)
 import Grisette
-  ( Solvable (con),
+  ( LogicalOp (symNot, (.||)),
+    SEq ((.==)),
+    Solvable (con, isym),
     SymBool,
     SymInteger,
+    SymWordN,
+    mrgIf,
     mrgReturn,
-    precise,
-    solveExcept,
-    z3,
+    runFreshT,
   )
-import Grisette.Lib.Synth.Context (SymbolicContext)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
+import Grisette.Lib.Synth.Context (AngelicContext, SymbolicContext)
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction
   ( ComponentStatementUnreorderable (componentStatementUnreorderable),
-    canonicalOrderConstraint,
+    ComponentSymmetryReduction (ComponentSymmetryReduction),
     componentStatementUnreorderable',
     statementsDirectDep,
   )
@@ -30,8 +32,21 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
   )
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
   ( LivelinessOp (LivelinessOp),
-    Op (OpDef, OpDef2, OpNone, OpUse, OpUse2),
-    Type (ConstrainedType, ConstrainedType2, OtherType),
+    Op
+      ( OpComponentSubProg,
+        OpDef,
+        OpDef2,
+        OpDefAny,
+        OpNone,
+        OpUse,
+        OpUse2,
+        OpUseAny,
+        OpUseDef,
+        OpUseDefAny
+      ),
+    Type (AnyType, ConstrainedType, ConstrainedType2, OtherType),
+    anyResource,
+    livelinessIdentifier,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog, progStmtList),
@@ -39,13 +54,17 @@ import Grisette.Lib.Synth.Program.ComponentSketch
     ProgRes (ProgRes),
     Stmt (Stmt),
   )
+import Grisette.Lib.Synth.Program.ProgConstraints
+  ( ProgConstraints (constrainProg),
+  )
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (Add),
     TestSemanticsType (IntType),
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit (assertBool, (@?=))
+import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 --     node0   node5
 --       |      /|
@@ -148,15 +167,15 @@ data ComponentStatementUnreorderableTest = ComponentStatementUnreorderableTest
     componentStatementUnreorderableTestExpected :: SymBool
   }
 
-data CanonicalOrderConstraintTest where
-  CanonicalOrderConstraintTest ::
-    (ComponentStatementUnreorderable constrObj op ty SymbolicContext) =>
-    { canonicalOrderConstraintTestName :: String,
-      canonicalOrderConstraintTestProg :: Prog op SymInteger ty,
-      canonicalOrderConstraintTestConstraintObj :: constrObj,
-      canonicalOrderConstraintTestExpected :: Bool
+data ProgConstraintsTest where
+  ProgConstraintsTest ::
+    (ProgConstraints constrObj prog AngelicContext) =>
+    { progConstraintsTestName :: String,
+      progConstraintsTestProg :: prog,
+      progConstraintsTestConstraintObj :: constrObj,
+      progConstraintsTestExpected :: SymbolicContext ()
     } ->
-    CanonicalOrderConstraintTest
+    ProgConstraintsTest
 
 componentSymmetryReductionTest :: Test
 componentSymmetryReductionTest =
@@ -198,7 +217,7 @@ componentSymmetryReductionTest =
               },
             ComponentStatementUnreorderableTest
               { componentStatementUnreorderableTestName =
-                  "firstUsedDefInvalidatedBySecond",
+                  "firstUsedDefInvalidatedBySecond, invalidated",
                 componentStatementUnreorderableTestProg =
                   Prog
                     "test"
@@ -213,7 +232,7 @@ componentSymmetryReductionTest =
               },
             ComponentStatementUnreorderableTest
               { componentStatementUnreorderableTestName =
-                  "firstUnusedDefInvalidatedBySecond",
+                  "firstUsesInvalidatedBySecond, not invalidated 1",
                 componentStatementUnreorderableTestProg =
                   Prog
                     "test"
@@ -231,7 +250,7 @@ componentSymmetryReductionTest =
               },
             ComponentStatementUnreorderableTest
               { componentStatementUnreorderableTestName =
-                  "firstUsedDefNotInvalidatedBySecond",
+                  "firstUsesInvalidatedBySecond, not invalidated 2",
                 componentStatementUnreorderableTestProg =
                   Prog
                     "test"
@@ -249,7 +268,7 @@ componentSymmetryReductionTest =
               },
             ComponentStatementUnreorderableTest
               { componentStatementUnreorderableTestName =
-                  "usedSecondDefInvalidatedByFirst",
+                  "secondDefsInvalidatedByFirst, invalidated",
                 componentStatementUnreorderableTestProg =
                   Prog
                     "test"
@@ -264,7 +283,7 @@ componentSymmetryReductionTest =
               },
             ComponentStatementUnreorderableTest
               { componentStatementUnreorderableTestName =
-                  "usedSecondDefInvalidatedByFirst'",
+                  "secondDefsInvalidatedByFirst, invalidated 2",
                 componentStatementUnreorderableTestProg =
                   Prog
                     "test"
@@ -279,7 +298,7 @@ componentSymmetryReductionTest =
               },
             ComponentStatementUnreorderableTest
               { componentStatementUnreorderableTestName =
-                  "usedSecondDefNotInvalidatedByFirst",
+                  "secondDefsInvalidatedByFirst, not invalidated",
                 componentStatementUnreorderableTestProg =
                   Prog
                     "test"
@@ -294,148 +313,292 @@ componentSymmetryReductionTest =
               },
             ComponentStatementUnreorderableTest
               { componentStatementUnreorderableTestName =
-                  "unusedSecondDefInvalidatedByFirst",
+                  "symbolic",
                 componentStatementUnreorderableTestProg =
-                  Prog
-                    "test"
-                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
-                    [ Stmt OpDef [0] 1 [2, 3] 2 (con False) [],
-                      Stmt OpDef [0] 1 [4, 5] 2 (con False) []
-                    ]
-                    [ProgRes 3 ConstrainedType],
+                  let inner =
+                        Prog
+                          "inner"
+                          [ProgArg "x" OtherType, ProgArg "y" AnyType]
+                          [ Stmt OpUseAny [0, 1] 2 [2] 1 (con False) [],
+                            Stmt OpDefAny [2] 2 [3, 4] 1 (con False) []
+                          ]
+                          [ProgRes 3 OtherType, ProgRes 4 AnyType]
+                   in Prog
+                        "test"
+                        [ProgArg "x" OtherType, ProgArg "y" AnyType]
+                        [ Stmt
+                            (OpComponentSubProg inner)
+                            [0, 1]
+                            2
+                            [2, 3]
+                            2
+                            (con False)
+                            [],
+                          Stmt
+                            (OpComponentSubProg inner)
+                            [0, 1]
+                            2
+                            [4, 5]
+                            2
+                            (con False)
+                            []
+                        ]
+                        [ProgRes 3 OtherType, ProgRes 5 AnyType],
                 componentStatementUnreorderableTestFirstIdx = 0,
                 componentStatementUnreorderableTestSecondIdx = 1,
-                componentStatementUnreorderableTestExpected = con False
+                componentStatementUnreorderableTestExpected =
+                  ( anyResource "x" ["test:stmt0", "inner:arg"] 0
+                      .== anyResource "x" ["test:stmt1", "inner:stmt1"] 0
+                  )
+                    .|| ( anyResource "x" ["test:stmt1", "inner:res"] 0
+                            .== anyResource "x" ["test:stmt0", "inner:stmt1"] 0
+                        )
               }
             ]
         [ testCase name $ do
             let actual =
-                  componentStatementUnreorderable
-                    (Liveliness LivelinessOp)
-                    prog
-                    firstIdx
-                    secondIdx
+                  flip runFreshT "x" $
+                    componentStatementUnreorderable
+                      (Liveliness LivelinessOp)
+                      prog
+                      firstIdx
+                      secondIdx
             let actual' =
-                  componentStatementUnreorderable'
-                    (Liveliness LivelinessOp)
-                    prog
-                    firstIdx
-                    secondIdx
+                  flip runFreshT "x" $
+                    componentStatementUnreorderable'
+                      (Liveliness LivelinessOp)
+                      prog
+                      firstIdx
+                      secondIdx
             let expected = mrgReturn reorderable :: SymbolicContext SymBool
             actual @?= expected
             actual' @?= expected
           ],
-      testGroup "ComponentStatementUnreorderable'" $ do
-        let simpleProg =
-              Prog
-                "test"
-                [ProgArg "x" OtherType, ProgArg "y" OtherType]
-                [ Stmt OpNone [0] 1 [2] 1 (con False) [],
-                  Stmt OpNone [0] 1 [3] 1 (con False) []
-                ]
-                [ProgRes 2 OtherType, ProgRes 3 OtherType]
-        ComponentStatementUnreorderableTest
-          name
-          prog
-          firstIdx
-          secondIdx
-          reorderable <-
-          [ ComponentStatementUnreorderableTest
-              { componentStatementUnreorderableTestName = "Same index",
-                componentStatementUnreorderableTestProg = simpleProg,
-                componentStatementUnreorderableTestFirstIdx = 0,
-                componentStatementUnreorderableTestSecondIdx = 0,
-                componentStatementUnreorderableTestExpected = con True
-              },
-            ComponentStatementUnreorderableTest
-              { componentStatementUnreorderableTestName = "Out of bound index",
-                componentStatementUnreorderableTestProg = simpleProg,
-                componentStatementUnreorderableTestFirstIdx = 0,
-                componentStatementUnreorderableTestSecondIdx = 2,
-                componentStatementUnreorderableTestExpected = con True
-              },
-            ComponentStatementUnreorderableTest
-              { componentStatementUnreorderableTestName = "Disabled statement",
-                componentStatementUnreorderableTestProg =
-                  Prog
-                    "test"
-                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
-                    [ Stmt OpNone [0] 1 [2] 1 (con True) [],
-                      Stmt OpNone [0] 1 [3] 1 (con False) []
-                    ]
-                    [ProgRes 3 OtherType],
-                componentStatementUnreorderableTestFirstIdx = 0,
-                componentStatementUnreorderableTestSecondIdx = 1,
-                componentStatementUnreorderableTestExpected = con False
-              },
-            ComponentStatementUnreorderableTest
-              { componentStatementUnreorderableTestName = "Direct dependency",
-                componentStatementUnreorderableTestProg =
-                  Prog
-                    "test"
-                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
-                    [ Stmt OpNone [0] 1 [2] 1 (con False) [],
-                      Stmt OpNone [2] 1 [3] 1 (con False) []
-                    ]
-                    [ProgRes 3 OtherType],
-                componentStatementUnreorderableTestFirstIdx = 0,
-                componentStatementUnreorderableTestSecondIdx = 1,
-                componentStatementUnreorderableTestExpected = con True
-              }
+      testGroup "ComponentStatementUnreorderable'" $
+        do
+          let simpleProg =
+                Prog
+                  "test"
+                  [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                  [ Stmt OpNone [0] 1 [2] 1 (con False) [],
+                    Stmt OpNone [0] 1 [3] 1 (con False) []
+                  ]
+                  [ProgRes 2 OtherType, ProgRes 3 OtherType]
+          ComponentStatementUnreorderableTest
+            name
+            prog
+            firstIdx
+            secondIdx
+            reorderable <-
+            [ ComponentStatementUnreorderableTest
+                { componentStatementUnreorderableTestName = "Same index",
+                  componentStatementUnreorderableTestProg = simpleProg,
+                  componentStatementUnreorderableTestFirstIdx = 0,
+                  componentStatementUnreorderableTestSecondIdx = 0,
+                  componentStatementUnreorderableTestExpected = con True
+                },
+              ComponentStatementUnreorderableTest
+                { componentStatementUnreorderableTestName =
+                    "Out of bound index",
+                  componentStatementUnreorderableTestProg = simpleProg,
+                  componentStatementUnreorderableTestFirstIdx = 0,
+                  componentStatementUnreorderableTestSecondIdx = 2,
+                  componentStatementUnreorderableTestExpected = con True
+                },
+              ComponentStatementUnreorderableTest
+                { componentStatementUnreorderableTestName =
+                    "Disabled statement",
+                  componentStatementUnreorderableTestProg =
+                    Prog
+                      "test"
+                      [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                      [ Stmt OpNone [0] 1 [2] 1 (con True) [],
+                        Stmt OpNone [0] 1 [3] 1 (con False) []
+                      ]
+                      [ProgRes 3 OtherType],
+                  componentStatementUnreorderableTestFirstIdx = 0,
+                  componentStatementUnreorderableTestSecondIdx = 1,
+                  componentStatementUnreorderableTestExpected = con False
+                },
+              ComponentStatementUnreorderableTest
+                { componentStatementUnreorderableTestName = "Direct dependency",
+                  componentStatementUnreorderableTestProg =
+                    Prog
+                      "test"
+                      [ProgArg "x" OtherType, ProgArg "y" OtherType]
+                      [ Stmt OpNone [0] 1 [2] 1 (con False) [],
+                        Stmt OpNone [2] 1 [3] 1 (con False) []
+                      ]
+                      [ProgRes 3 OtherType],
+                  componentStatementUnreorderableTestFirstIdx = 0,
+                  componentStatementUnreorderableTestSecondIdx = 1,
+                  componentStatementUnreorderableTestExpected = con True
+                }
+              ]
+          [ testCase name $ do
+              let actual =
+                    flip runFreshT "x" $
+                      componentStatementUnreorderable'
+                        (Liveliness LivelinessOp)
+                        prog
+                        firstIdx
+                        secondIdx
+              let expected = mrgReturn reorderable :: SymbolicContext SymBool
+              actual @?= expected
+            ],
+      testGroup
+        "CanonicalOrderConstraint"
+        $ do
+          ProgConstraintsTest name prog constrObj expected <-
+            [ ProgConstraintsTest
+                { progConstraintsTestName = "good",
+                  progConstraintsTestProg = goodConcreteProg,
+                  progConstraintsTestConstraintObj =
+                    ComponentSymmetryReduction (),
+                  progConstraintsTestExpected = mrgReturn ()
+                },
+              ProgConstraintsTest
+                { progConstraintsTestName = "bad",
+                  progConstraintsTestProg =
+                    Prog
+                      "test"
+                      [ProgArg "x" IntType, ProgArg "y" IntType]
+                      [ Stmt Add [0 :: SymInteger, 1] 2 [3] 1 (con False) [],
+                        Stmt Add [0, 1] 2 [2] 1 (con False) []
+                      ]
+                      [ProgRes 2 IntType, ProgRes 3 IntType],
+                  progConstraintsTestConstraintObj =
+                    ComponentSymmetryReduction (),
+                  progConstraintsTestExpected = mrgThrowError "Bad order"
+                },
+              ProgConstraintsTest
+                { progConstraintsTestName = "unreorderable",
+                  progConstraintsTestProg =
+                    Prog
+                      "test"
+                      [ProgArg "x" OtherType]
+                      [ Stmt OpDef [0 :: SymInteger] 1 [4, 5] 2 (con False) [],
+                        Stmt OpDef [0] 1 [2, 3] 2 (con False) []
+                      ]
+                      [ProgRes 3 ConstrainedType, ProgRes 4 OtherType],
+                  progConstraintsTestConstraintObj =
+                    ComponentSymmetryReduction (Liveliness LivelinessOp),
+                  progConstraintsTestExpected = mrgReturn ()
+                },
+              ProgConstraintsTest
+                { progConstraintsTestName = "symbolic",
+                  progConstraintsTestProg =
+                    Prog
+                      "test"
+                      [ ProgArg "x" ConstrainedType,
+                        ProgArg "y" ConstrainedType2
+                      ]
+                      [ Stmt OpUseDefAny [1] 1 [3] 1 (con False) [],
+                        Stmt OpUseDef [0] 1 [2] 1 (con False) []
+                      ]
+                      [ProgRes (2 :: SymInteger) ConstrainedType],
+                  progConstraintsTestConstraintObj =
+                    ComponentSymmetryReduction (Liveliness LivelinessOp),
+                  progConstraintsTestExpected =
+                    mrgIf
+                      -- Both false, means that OpUseDefAny is 2 -> 2,
+                      -- then we should reorder
+                      ( symNot $
+                          isym (livelinessIdentifier "x" ["test:stmt0"]) 0
+                            .|| isym (livelinessIdentifier "x" ["test:stmt0"]) 1
+                      )
+                      (mrgThrowError "Bad order")
+                      ( mrgIf
+                          -- ? -> 1
+                          (isym (livelinessIdentifier "x" ["test:stmt0"]) 0)
+                          ( mrgThrowError $
+                              "Cannot use invalidated resource for "
+                                <> "ConstrainedType"
+                          )
+                          -- 1 -> 2
+                          ( mrgThrowError $
+                              "Inconsistent use/def resources for "
+                                <> "ConstrainedType"
+                          )
+                      )
+                },
+              ProgConstraintsTest
+                { progConstraintsTestName = "symbolic/nested",
+                  progConstraintsTestProg =
+                    let inner =
+                          Prog
+                            "inner"
+                            [ ProgArg "x" ConstrainedType,
+                              ProgArg "y" ConstrainedType2
+                            ]
+                            [ Stmt OpUseDefAny [1] 1 [3] 1 (con False) [],
+                              Stmt OpUseDef [0] 1 [2] 1 (con False) []
+                            ]
+                            [ProgRes (2 :: SymWordN 8) ConstrainedType]
+                     in Prog
+                          "test"
+                          [ ProgArg "x" ConstrainedType,
+                            ProgArg "y" ConstrainedType2
+                          ]
+                          [ Stmt
+                              (OpComponentSubProg inner)
+                              [0 :: SymWordN 8, 1]
+                              2
+                              [2]
+                              1
+                              (con False)
+                              []
+                          ]
+                          [ProgRes 2 ConstrainedType],
+                  progConstraintsTestConstraintObj =
+                    ComponentSymmetryReduction (Liveliness LivelinessOp),
+                  progConstraintsTestExpected =
+                    mrgIf
+                      -- Both false, means that OpUseDefAny is 2 -> 2,
+                      -- then we should reorder
+                      ( symNot $
+                          isym
+                            ( livelinessIdentifier
+                                "x"
+                                ["test:stmt0", "inner:stmt0"]
+                            )
+                            0
+                            .|| isym
+                              ( livelinessIdentifier
+                                  "x"
+                                  ["test:stmt0", "inner:stmt0"]
+                              )
+                              1
+                      )
+                      (mrgThrowError "Bad order")
+                      ( mrgIf
+                          -- ? -> 1
+                          ( isym
+                              ( livelinessIdentifier
+                                  "x"
+                                  ["test:stmt0", "inner:stmt0"]
+                              )
+                              0
+                          )
+                          ( mrgThrowError $
+                              "Cannot use invalidated resource for "
+                                <> "ConstrainedType"
+                          )
+                          -- 1 -> 2
+                          ( mrgThrowError $
+                              "Inconsistent use/def resources for "
+                                <> "ConstrainedType"
+                          )
+                      )
+                }
+              ]
+          [ testCase name $ do
+              let actual =
+                    flip runFreshT "x" $
+                      constrainProg
+                        constrObj
+                        prog ::
+                      SymbolicContext ()
+              actual .@?= expected
             ]
-        [ testCase name $ do
-            let actual =
-                  componentStatementUnreorderable'
-                    (Liveliness LivelinessOp)
-                    prog
-                    firstIdx
-                    secondIdx
-            let expected = mrgReturn reorderable :: SymbolicContext SymBool
-            actual @?= expected
-          ],
-      testGroup "CanonicalOrderConstraint" $ do
-        CanonicalOrderConstraintTest name prog constrObj expected <-
-          [ CanonicalOrderConstraintTest
-              { canonicalOrderConstraintTestName = "good",
-                canonicalOrderConstraintTestProg = goodConcreteProg,
-                canonicalOrderConstraintTestConstraintObj = (),
-                canonicalOrderConstraintTestExpected = True
-              },
-            CanonicalOrderConstraintTest
-              { canonicalOrderConstraintTestName = "bad",
-                canonicalOrderConstraintTestProg =
-                  Prog
-                    "test"
-                    [ProgArg "x" IntType, ProgArg "y" IntType]
-                    [ Stmt Add [0, 1] 2 [3] 1 (con False) [],
-                      Stmt Add [0, 1] 2 [2] 1 (con False) []
-                    ]
-                    [ProgRes 2 IntType, ProgRes 3 IntType],
-                canonicalOrderConstraintTestConstraintObj = (),
-                canonicalOrderConstraintTestExpected = False
-              },
-            CanonicalOrderConstraintTest
-              { canonicalOrderConstraintTestName = "unreorderable",
-                canonicalOrderConstraintTestProg =
-                  Prog
-                    "test"
-                    [ProgArg "x" OtherType, ProgArg "y" OtherType]
-                    [ Stmt OpDef [0] 1 [4, 5] 2 (con False) [],
-                      Stmt OpDef [0] 1 [2, 3] 2 (con False) []
-                    ]
-                    [ProgRes 3 ConstrainedType, ProgRes 5 ConstrainedType],
-                canonicalOrderConstraintTestConstraintObj =
-                  Liveliness LivelinessOp,
-                canonicalOrderConstraintTestExpected = True
-              }
-            ]
-        [ testCase name $ do
-            let actual = do
-                  canonicalOrderConstraint constrObj prog ::
-                    SymbolicContext ()
-            r <- solveExcept (precise z3) (con . isRight) actual
-            if expected
-              then assertBool "Should be valid" $ isRight r
-              else assertBool "Should be invalid" $ isLeft r
-          ]
     ]

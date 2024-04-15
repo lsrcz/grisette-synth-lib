@@ -21,7 +21,9 @@ import Grisette
     z3,
   )
 import Grisette.Lib.Synth.Context (AngelicContext)
-import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction (ComponentSymmetryReduction (ComponentSymmetryReduction))
+import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction
+  ( ComponentSymmetryReduction (ComponentSymmetryReduction),
+  )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
