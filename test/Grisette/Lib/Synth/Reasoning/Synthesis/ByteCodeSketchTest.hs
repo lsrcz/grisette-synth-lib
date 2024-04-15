@@ -137,8 +137,7 @@ byteCodeSketchTest =
               synthesisWithFuzzerMatcherTaskSpec = spec,
               synthesisWithFuzzerMatcherTaskMaxTests = 100,
               synthesisWithFuzzerMatcherTaskGenerators = [gen],
-              synthesisWithFuzzerMatcherTaskConSemantics =
-                WithConstraints TestSemanticsObj (),
+              synthesisWithFuzzerMatcherTaskConSemantics = TestSemanticsObj,
               synthesisWithFuzzerMatcherTaskSymSemantics =
                 WithConstraints TestSemanticsObj (),
               synthesisWithFuzzerMatcherTaskSymProg = sketch
@@ -150,6 +149,6 @@ byteCodeSketchTest =
           gen
           spec
           100
-          (WithConstraints TestSemanticsObj ())
+          TestSemanticsObj
           prog
       fst <$> fuzzingResult @?= Nothing

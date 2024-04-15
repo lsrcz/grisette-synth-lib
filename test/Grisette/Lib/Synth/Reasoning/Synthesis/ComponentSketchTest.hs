@@ -218,8 +218,7 @@ task spec gen sketch =
       synthesisWithFuzzerMatcherTaskSpec = spec,
       synthesisWithFuzzerMatcherTaskMaxTests = 100,
       synthesisWithFuzzerMatcherTaskGenerators = [gen],
-      synthesisWithFuzzerMatcherTaskConSemantics =
-        WithConstraints TestSemanticsObj (),
+      synthesisWithFuzzerMatcherTaskConSemantics = TestSemanticsObj,
       synthesisWithFuzzerMatcherTaskSymSemantics =
         WithConstraints TestSemanticsObj (ComponentSymmetryReduction ()),
       synthesisWithFuzzerMatcherTaskSymProg = sketch
@@ -264,7 +263,7 @@ componentSketchTest =
                   gen
                   spec
                   100
-                  (WithConstraints TestSemanticsObj ())
+                  TestSemanticsObj
                   prog
               fst <$> fuzzingResult @?= Nothing
             r -> fail $ "Unexpected result: " <> show r
@@ -278,7 +277,7 @@ componentSketchTest =
                  addThenDivModGen
                  addThenDivModSpec
                  100
-                 (WithConstraints TestSemanticsObj ())
+                 TestSemanticsObj
                  prog
              fst <$> fuzzingResult @?= Nothing,
            testCase "Add then DivMod with bad must be after constraint" $ do

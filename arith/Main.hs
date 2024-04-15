@@ -87,7 +87,7 @@ main = do
             synthesisWithFuzzerTaskSpec = spec,
             -- You need a working z3 installation available in your PATH.
             synthesisWithFuzzerTaskSolverConfig = precise z3,
-            synthesisWithFuzzerTaskConSemantics = WithConstraints Sem (),
+            synthesisWithFuzzerTaskConSemantics = Sem,
             synthesisWithFuzzerTaskSymSemantics = WithConstraints Sem (),
             synthesisWithFuzzerTaskMaxTests = 100,
             synthesisWithFuzzerTaskGenerators = [gen]

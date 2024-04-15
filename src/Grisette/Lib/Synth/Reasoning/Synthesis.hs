@@ -127,7 +127,6 @@ data SynthesisTask conVal conProg matcher exception where
       matcher
       conSemObj
       symSemObj
-      conConstObj
       symConstObj.
     ( ConfigurableSolver config h,
       ProgSemantics symSemObj symProg symVal ctx,
@@ -147,10 +146,10 @@ data SynthesisTask conVal conProg matcher exception where
       synthesisTaskVerifier ::
         forall p.
         p conProg ->
-        WithConstraints conSemObj conConstObj ->
+        conSemObj ->
         symProg ->
         StatefulVerifierFun state (IOPair conVal, matcher) exception,
-      synthesisTaskConSemantics :: WithConstraints conSemObj conConstObj,
+      synthesisTaskConSemantics :: conSemObj,
       synthesisTaskSymSemantics :: WithConstraints symSemObj symConstObj,
       synthesisTaskSymProg :: symProg
     } ->
