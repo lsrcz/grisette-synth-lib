@@ -243,15 +243,15 @@ packages:
   original:
     hackage: dlist-0.8.0.8
 - completed:
-    commit: 699151e8327da62cbf47bdf666352ae5e917f7f8
+    commit: 03e96d08c1d4680025d475dd8a0fcca004ca85e4
     git: https://github.com/lsrcz/grisette.git
     name: grisette
     pantry-tree:
-      sha256: d33a23b75953b8451ede5a69ed343ac7a48629ad03103a7470f5fb8037b90c31
-      size: 14950
+      sha256: 30a1b16b935d5eea177c7fa87c46c90993f013712ac5f5a5cdf0e3dbff1ca106
+      size: 15664
     version: 0.5.0.0
   original:
-    commit: 699151e8327da62cbf47bdf666352ae5e917f7f8
+    commit: 03e96d08c1d4680025d475dd8a0fcca004ca85e4
     git: https://github.com/lsrcz/grisette.git
 snapshots:
 - completed:

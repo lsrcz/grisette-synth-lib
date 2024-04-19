@@ -13,8 +13,7 @@ module Grisette.Lib.Synth.TestOperator.TestPrettyOperator
 where
 
 import GHC.Generics (Generic)
-import Grisette (Default (Default), GPretty, Mergeable, mrgReturn)
-import Grisette.Core.Data.Class.GPretty (GPretty (gpretty))
+import Grisette (Default (Default), GPretty (gpretty), Mergeable, mrgReturn)
 import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
 import Grisette.Lib.Synth.Program.Concrete
