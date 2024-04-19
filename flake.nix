@@ -8,11 +8,11 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        hPkgs = pkgs.haskell.packages."ghc981";
+        hPkgs = pkgs.haskell.packages."ghc982";
 
         myDevTools = [
           hPkgs.ghc # GHC compiler in the desired version (will be available on PATH)
-          hPkgs.ghcid # Continuous terminal Haskell compile checker
+          # hPkgs.ghcid # Continuous terminal Haskell compile checker
           # hPkgs.ormolu # Haskell formatter
           # hPkgs.hlint # Haskell codestyle checker
           # hPkgs.haskell-language-server # LSP server for editor
@@ -20,7 +20,7 @@
           stack-wrapped
           pkgs.zlib # External C library needed by some Haskell packages
           pkgs.boolector
-          pkgs.z3
+          pkgs.z3_4_12
           pkgs.nixpkgs-fmt
         ];
         # Wrap Stack to work with our Nix integration. We don't want to modify

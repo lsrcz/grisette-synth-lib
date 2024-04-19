@@ -5,12 +5,12 @@
 
 packages:
 - completed:
-    hackage: grisette-0.5.0.0@sha256:e1091a58bf003c36576998225744c6839177e2cd3ceb98df585b85d151f788f1,11965
+    hackage: grisette-0.5.0.1@sha256:5ce3bad4ceb520b1fd657696601a2b35af95a58f71125fbecb2e2d571e81d92d,11965
     pantry-tree:
-      sha256: e4fe7b13c3b162564eadfafb0493409e5844c4585b3139d7a4aca40fb92f3e74
+      sha256: c55f7e6fa04c57d9127c32f1061d6eddb59f79a912121c8c40fc6cc6b5f23342
       size: 13935
   original:
-    hackage: grisette-0.5.0.0
+    hackage: grisette-0.5.0.1
 - completed:
     hackage: quickcheck-with-counterexamples-1.2@sha256:d322d79008602df26f5eb4e1379e5b58bf1a92604df8601e71e200cfc3e847a3,1688
     pantry-tree:
@@ -20,7 +20,7 @@ packages:
     hackage: quickcheck-with-counterexamples-1.2
 snapshots:
 - completed:
-    sha256: 3bd28268c130639f18abdebbf6caa353f8564c2b2da60b30a41558dab66781fa
-    size: 604200
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2024/2/19.yaml
-  original: nightly-2024-02-19
+    sha256: 413ab640cd718361cd4fe949e5cb174b673bdf38b860b62effd8bfbe10cf689e
+    size: 624921
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2024/4/18.yaml
+  original: nightly-2024-04-18

@@ -41,7 +41,7 @@ packages:
 #
 # extra-deps: []
 extra-deps:
-  - grisette-0.5.0.0
+  - grisette-0.5.0.1
   - quickcheck-with-counterexamples-1.2
 # Override default flag values for local packages and extra-deps
 # flags: {}

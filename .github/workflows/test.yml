@@ -62,24 +62,24 @@ jobs:
               arg: "",
               ismain: true,
               experimental: false,
-              ghc: "963",
-              cachekey: "stack-963",
+              ghc: "964",
+              cachekey: "stack-964",
             }
           - {
               build: stack,
               arg: "--stack-yaml stack-nightly.yaml",
               ismain: false,
               experimental: false,
-              ghc: "981",
-              cachekey: "stack-981",
+              ghc: "982",
+              cachekey: "stack-982",
             }
           - {
               build: cabal,
               arg: "",
               ismain: false,
               experimental: false,
-              ghc: "963",
-              cachekey: "cabal-963",
+              ghc: "964",
+              cachekey: "cabal-964",
             }
         include:
           - os: macOS-latest
