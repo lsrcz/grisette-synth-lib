@@ -77,7 +77,7 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
     livelinessOpDefUsesByType,
     livelinessProgDefUses,
     livelinessProgStmtDefUses,
-    livelinessSubProgUseDefs,
+    livelinessSubProgDefUses,
     livelinessTypeDefs,
     livelinessTypeUses,
   )
@@ -204,14 +204,14 @@ instance
     uses <- livelinessTypeUses LivelinessOp (argTypes ty) argIds disabled
     mrgReturn $ StmtDefUse defs (mrgReturn []) uses
   livelinessOpDefUses LivelinessOp (OpSubProg prog) argIds resIds disabled =
-    livelinessSubProgUseDefs LivelinessOp prog argIds resIds disabled
+    livelinessSubProgDefUses LivelinessOp prog argIds resIds disabled
   livelinessOpDefUses
     LivelinessOp
     (OpComponentSubProg prog)
     argIds
     resIds
     disabled =
-      livelinessSubProgUseDefs LivelinessOp prog argIds resIds disabled
+      livelinessSubProgDefUses LivelinessOp prog argIds resIds disabled
   livelinessOpDefUses LivelinessOp op argIds resIds disabled =
     livelinessOpDefUsesByType LivelinessOp op argIds resIds disabled
 

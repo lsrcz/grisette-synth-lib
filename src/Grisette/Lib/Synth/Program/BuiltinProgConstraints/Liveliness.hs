@@ -30,7 +30,7 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
     livelinessSubProgInvalidatingDefs,
     livelinessSubProgArgUses,
     livelinessSubProgResDefs,
-    livelinessSubProgUseDefs,
+    livelinessSubProgDefUses,
     livelinessProgArgDefs,
     livelinessProgResUses,
     livelinessProgStmtDefUses,
@@ -467,7 +467,7 @@ livelinessSubProgInvalidatingDefs livelinessObj prog varId disabled = do
           mergeResourceListFromDefList . stmtInvalidatingDef <$> stmtDefUses
   mrgReturn $ mrgReturn $ uncurry (Def $ head varId) <$> lst
 
-livelinessSubProgUseDefs ::
+livelinessSubProgDefUses ::
   ( Mergeable outerVarId,
     ProgNaming prog,
     ProgTyping prog (ProgTypeType prog),
@@ -485,7 +485,7 @@ livelinessSubProgUseDefs ::
   [outerVarId] ->
   SymBool ->
   ctx (StmtDefUse outerVarId res)
-livelinessSubProgUseDefs livelinessObj prog argIds resIds disabled = do
+livelinessSubProgDefUses livelinessObj prog argIds resIds disabled = do
   resDefs <- livelinessSubProgResDefs livelinessObj prog resIds disabled
   invalidatingDefs <-
     livelinessSubProgInvalidatingDefs livelinessObj prog resIds disabled
