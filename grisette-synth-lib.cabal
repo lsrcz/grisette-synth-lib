@@ -40,6 +40,7 @@ library
       Grisette.Lib.Synth.Program.ComponentSketch.Program
       Grisette.Lib.Synth.Program.Concrete
       Grisette.Lib.Synth.Program.Concrete.Builder
+      Grisette.Lib.Synth.Program.Concrete.Flatten
       Grisette.Lib.Synth.Program.Concrete.OpPretty
       Grisette.Lib.Synth.Program.Concrete.OpToDot
       Grisette.Lib.Synth.Program.Concrete.Program
@@ -167,6 +168,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.ComponentSketch.TypingTest
       Grisette.Lib.Synth.Program.ComponentSketchTest
       Grisette.Lib.Synth.Program.Concrete.BuilderTest
+      Grisette.Lib.Synth.Program.Concrete.FlattenTest
       Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest
       Grisette.Lib.Synth.Program.Concrete.PrettyTest
       Grisette.Lib.Synth.Program.Concrete.ProgUtilTest

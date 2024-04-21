@@ -24,6 +24,7 @@ import Grisette.Lib.Synth.Program.Concrete
     ProgRes (progResType),
     allPrefixesByTypes,
   )
+import Grisette.Lib.Synth.Program.Concrete.Flatten (OpFlatten (opForwardedSubProg))
 import Grisette.Lib.Synth.Program.NullProg (NullProg)
 import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
 import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
@@ -68,6 +69,10 @@ instance
   getSubProg (PrettyInvokeOp prog) = mrgReturn [SumProgL prog]
   getSubProg (PrettyInvokeExtOp prog) = mrgReturn [SumProgR prog]
   getSubProg _ = mrgReturn []
+
+instance OpFlatten TestPrettyOp Int TestPrettyType where
+  opForwardedSubProg (PrettyInvokeOp prog) = return $ Just prog
+  opForwardedSubProg _ = return Nothing
 
 instance GPretty TestPrettyOp where
   gpretty PrettyOp0 = "op0"
