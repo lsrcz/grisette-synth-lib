@@ -57,6 +57,9 @@ library
       Grisette.Lib.Synth.Reasoning.IOPair
       Grisette.Lib.Synth.Reasoning.Matcher
       Grisette.Lib.Synth.Reasoning.Synthesis
+      Grisette.Lib.Synth.Reasoning.SynthesisServer
+      Grisette.Lib.Synth.Reasoning.SynthesisServer.Exception
+      Grisette.Lib.Synth.Reasoning.SynthesisServer.TaskQueue
       Grisette.Lib.Synth.TypeSignature
       Grisette.Lib.Synth.Util.Pretty
       Grisette.Lib.Synth.Util.Show
@@ -68,7 +71,9 @@ library
   ghc-options: -Wextra -Wcompat -Widentities -Wincomplete-record-updates -Wmissing-export-lists -Wmissing-home-modules -Wmissing-import-lists -Wpartial-fields -Wunused-type-patterns
   build-depends:
       QuickCheck ==2.14.*
+    , async
     , base >=4.14 && <5
+    , containers
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
@@ -79,6 +84,7 @@ library
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.11 && <11
+    , stm
     , template-haskell
     , text >=1.2.4.1 && <2.2
     , unordered-containers >=0.2.11 && <0.3
@@ -94,7 +100,9 @@ executable arith
   ghc-options: -Wextra -Wcompat -Widentities -Wincomplete-record-updates -Wmissing-export-lists -Wmissing-home-modules -Wmissing-import-lists -Wpartial-fields -Wunused-type-patterns
   build-depends:
       QuickCheck ==2.14.*
+    , async
     , base >=4.14 && <5
+    , containers
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
@@ -106,6 +114,7 @@ executable arith
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.11 && <11
+    , stm
     , template-haskell
     , text >=1.2.4.1 && <2.2
     , unordered-containers >=0.2.11 && <0.3
@@ -125,7 +134,9 @@ executable control
   ghc-options: -Wextra -Wcompat -Widentities -Wincomplete-record-updates -Wmissing-export-lists -Wmissing-home-modules -Wmissing-import-lists -Wpartial-fields -Wunused-type-patterns
   build-depends:
       QuickCheck ==2.14.*
+    , async
     , base >=4.14 && <5
+    , containers
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
@@ -137,6 +148,7 @@ executable control
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.11 && <11
+    , stm
     , template-haskell
     , text >=1.2.4.1 && <2.2
     , unordered-containers >=0.2.11 && <0.3
@@ -182,6 +194,8 @@ test-suite spec
       Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
       Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
       Grisette.Lib.Synth.Reasoning.Synthesis.Problem
+      Grisette.Lib.Synth.Reasoning.SynthesisServer.TaskQueueTest
+      Grisette.Lib.Synth.Reasoning.SynthesisServerTest
       Grisette.Lib.Synth.Reasoning.SynthesisTest
       Grisette.Lib.Synth.TestOperator.TestPrettyOperator
       Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
@@ -195,7 +209,9 @@ test-suite spec
   build-depends:
       HUnit >=1.6
     , QuickCheck ==2.14.*
+    , async
     , base >=4.14 && <5
+    , containers
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
@@ -207,6 +223,7 @@ test-suite spec
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.11 && <11
+    , stm
     , template-haskell
     , test-framework >=0.8.2 && <0.9
     , test-framework-hunit >=0.3.0.2 && <0.4

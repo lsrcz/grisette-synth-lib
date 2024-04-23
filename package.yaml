@@ -29,6 +29,9 @@ dependencies:
   - graphviz >= 2999.20.0.4 && < 3000
   - extra
   - template-haskell
+  - stm
+  - containers
+  - async
 
 ghc-options:
   - -Wextra
