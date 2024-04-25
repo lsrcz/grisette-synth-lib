@@ -6,6 +6,8 @@ module Grisette.Lib.Synth.Reasoning.SynthesisServer
   ( SynthesisServer,
     TaskException (..),
     newSynthesisServer,
+    endSynthesisServer,
+    withSynthesisServer,
     TaskHandle (taskId, taskStartTime),
     taskEndTime,
     taskElapsedTime,
@@ -21,7 +23,7 @@ module Grisette.Lib.Synth.Reasoning.SynthesisServer
 where
 
 import Control.Concurrent (threadDelay)
-import Control.Concurrent.Async (Async, async)
+import Control.Concurrent.Async (Async, async, cancel)
 import qualified Control.Concurrent.Async.Pool as Pool
 import Control.Concurrent.STM
   ( STM,
@@ -70,6 +72,15 @@ newSynthesisServer numOfTasks = do
   mainThread <- async $ Pool.runTaskGroup taskGroup
   nextTaskId <- newTVarIO 0
   return $ SynthesisServer pool taskGroup nextTaskId mainThread
+
+endSynthesisServer :: SynthesisServer -> IO ()
+endSynthesisServer (SynthesisServer _ taskGroup _ mainThread) = do
+  Pool.cancelAll taskGroup
+  cancel mainThread
+
+withSynthesisServer :: Int -> (SynthesisServer -> IO a) -> IO a
+withSynthesisServer numOfTasks =
+  C.bracket (newSynthesisServer numOfTasks) endSynthesisServer
 
 data TaskHandle conVal conProg matcher exception = TaskHandle
   { _taskAsync ::

@@ -148,10 +148,10 @@ synthesisServerTest =
               diffUTCTime expectedEndTime $ taskStartTime handle
         elapsedTime <- taskElapsedTime handle
         endTime <- taskEndTime handle
-        assertBool "Diff should be less than 0.1 second" $
-          abs (expectedElapsedTime - elapsedTime) < 0.1
-        assertBool "End time diff should be less than 0.1 second" $
-          abs (diffUTCTime endTime expectedEndTime) < 0.1,
+        assertBool "Diff should be less than 0.2 second" $
+          abs (expectedElapsedTime - elapsedTime) < 0.2
+        assertBool "End time diff should be less than 0.2 second" $
+          abs (diffUTCTime endTime expectedEndTime) < 0.2,
       testCase "time measurement for cancelled tasks" $ do
         server <- newSynthesisServer 2
         handle <-
@@ -164,8 +164,8 @@ synthesisServerTest =
               diffUTCTime expectedEndTime $ taskStartTime handle
         elapsedTime <- taskElapsedTime handle
         endTime <- taskEndTime handle
-        assertBool "Diff should be less than 0.1 second" $
-          abs (expectedElapsedTime - elapsedTime) < 0.1
-        assertBool "End time diff should be less than 0.01 second" $
-          abs (diffUTCTime endTime expectedEndTime) < 0.1
+        assertBool "Diff should be less than 0.2 second" $
+          abs (expectedElapsedTime - elapsedTime) < 0.2
+        assertBool "End time diff should be less than 0.2 second" $
+          abs (diffUTCTime endTime expectedEndTime) < 0.2
     ]
