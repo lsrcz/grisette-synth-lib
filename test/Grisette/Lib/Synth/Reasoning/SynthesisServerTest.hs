@@ -32,6 +32,7 @@ import Grisette.Lib.Synth.Reasoning.SynthesisServer
     pollTasks,
     submitTask,
     submitTaskWithTimeout,
+    waitCatchTask,
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
@@ -84,6 +85,8 @@ synthesisServerTest =
         Right r0 <- pollUntilFinished handle0
         Right r1 <- pollUntilFinished handle1
         Right r2 <- pollUntilFinished handle2
+        Right r0 <- waitCatchTask handle0
+        Right r0 <- waitCatchTask handle0
         fuzzResult r0 addThenDoubleGen addThenDoubleSpec
         fuzzResult r1 divModTwiceGen divModTwiceSpec
         fuzzResult r2 addThenDoubleGen addThenDoubleReverseSpec,

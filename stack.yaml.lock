@@ -5,16 +5,27 @@
 
 packages:
 - completed:
-    commit: 71a5fce9865202b0574dc4aebec567743882f584
+    commit: f15322d92514151aac8d72d0d674ae8d61d3640b
     git: https://github.com/lsrcz/grisette.git
     name: grisette
     pantry-tree:
-      sha256: 329b900842b259246f148357c922bd439ef78331cb07497910a8877bc1d02108
+      sha256: e33a7813bccb10c29cf2b02275308028c55402004b28a36d17bf4f051fcb9511
       size: 15665
     version: 0.5.0.1
   original:
-    commit: 71a5fce9865202b0574dc4aebec567743882f584
+    commit: f15322d92514151aac8d72d0d674ae8d61d3640b
     git: https://github.com/lsrcz/grisette.git
+- completed:
+    commit: 2b25b54d9531bafff930520e7bd923277700a501
+    git: https://github.com/lsrcz/sbv.git
+    name: sbv
+    pantry-tree:
+      sha256: fee881031058a4fa7a20d5d83a058f09db23236c17eae6149e03ebc243a7f50b
+      size: 73472
+    version: '10.9'
+  original:
+    commit: 2b25b54d9531bafff930520e7bd923277700a501
+    git: https://github.com/lsrcz/sbv.git
 - completed:
     hackage: quickcheck-with-counterexamples-1.2@sha256:d322d79008602df26f5eb4e1379e5b58bf1a92604df8601e71e200cfc3e847a3,1688
     pantry-tree:

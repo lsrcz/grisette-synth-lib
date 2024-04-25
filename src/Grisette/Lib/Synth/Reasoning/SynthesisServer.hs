@@ -12,6 +12,7 @@ module Grisette.Lib.Synth.Reasoning.SynthesisServer
     submitTask,
     submitTaskWithTimeout,
     pollTask,
+    waitCatchTask,
     pollTasks,
     cancelTask,
     cancelTaskWith,
@@ -93,6 +94,14 @@ submitTask (SynthesisServer _ taskGroup nextVarId _) task = do
     return taskId
   return $ TaskHandle handle taskId
 
+-- | Add a task to the synthesis server with a timeout.
+--
+-- This function may result in zombie processes with sbv-10.9 or earlier.
+-- See https://github.com/LeventErkok/sbv/pull/691.
+--
+-- This function should not be called with a very short timeout, e.g., fewer
+-- than 10ms due to a bug in async-pool.
+-- See https://github.com/jwiegley/async-pool/issues/31.
 submitTaskWithTimeout ::
   ( ToSynthesisTask task,
     matcher ~ MatcherType task,
@@ -120,6 +129,15 @@ pollTask ::
     )
 pollTask (TaskHandle handle _) = Pool.poll handle
 
+waitCatchTask ::
+  TaskHandle conVal conProg matcher exception ->
+  IO
+    ( Either
+        C.SomeException
+        ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
+    )
+waitCatchTask (TaskHandle handle _) = Pool.waitCatch handle
+
 pollTasks ::
   TaskSet conVal conProg matcher exception ->
   IO
@@ -140,6 +158,13 @@ pollTasks tasks = go (HS.toList tasks) HS.empty HM.empty
         Nothing -> go tasks (HS.insert task nonFinished) finished
         Just r -> go tasks nonFinished (HM.insert task r finished)
 
+-- | Cancel a task.
+--
+-- This function may result in zombie processes with sbv-10.9 or earlier.
+-- See https://github.com/LeventErkok/sbv/pull/691.
+--
+-- This function should not be called immediately after submitting a task due to
+-- a bug in async-pool. See https://github.com/jwiegley/async-pool/issues/31.
 cancelTask ::
   TaskHandle conVal conProg matcher exception -> IO ()
 cancelTask handle = cancelTaskWith handle TaskCancelled
