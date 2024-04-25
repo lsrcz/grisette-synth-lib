@@ -89,8 +89,8 @@ jobs:
                 arg: "",
                 ismain: true,
                 experimental: false,
-                ghc: "963",
-                cachekey: "stack-963",
+                ghc: "964",
+                cachekey: "stack-964",
               }
 
 
