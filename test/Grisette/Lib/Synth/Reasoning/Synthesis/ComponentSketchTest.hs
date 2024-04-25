@@ -6,6 +6,10 @@
 
 module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( componentSketchTest,
+    ComponentSynthesisTestCase (..),
+    task,
+    sharedSketch,
+    fuzzResult,
   )
 where
 
@@ -20,7 +24,7 @@ import Grisette
     precise,
     z3,
   )
-import Grisette.Lib.Synth.Context (AngelicContext)
+import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction
   ( ComponentSymmetryReduction (ComponentSymmetryReduction),
   )
@@ -34,6 +38,7 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( WithConstraints (WithConstraints),
   )
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics)
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( SynthesisWithFuzzerMatcherTask
       ( SynthesisWithFuzzerMatcherTask,
@@ -203,6 +208,29 @@ data ComponentSynthesisTestCase where
     } ->
     ComponentSynthesisTestCase
 
+fuzzResult ::
+  ( Matcher b Bool conVal,
+    ProgSemantics TestSemanticsObj conProg conVal ConcreteContext,
+    Eq conVal,
+    Show conVal,
+    Show conProg,
+    Show exception
+  ) =>
+  (a, SynthesisResult conProg exception) ->
+  Gen [conVal] ->
+  ([conVal] -> ([conVal], b)) ->
+  IO ()
+fuzzResult (_, SynthesisSuccess prog) gen spec = do
+  fuzzingResult <-
+    fuzzingTestProg
+      gen
+      spec
+      100
+      TestSemanticsObj
+      prog
+  fst <$> fuzzingResult @?= Nothing
+fuzzResult (_, r) _ _ = fail $ "Unexpected result: " <> show r
+
 task ::
   (Matcher matcher Bool Integer, Matcher matcher SymBool SymInteger) =>
   ([Integer] -> ([Integer], matcher)) ->
@@ -254,19 +282,8 @@ componentSketchTest =
             ]
 
         return $ testCase (name <> namePostFix) $ do
-          (_, r) <-
-            synthesizeProgWithVerifier $ task spec gen sketch
-          case r of
-            SynthesisSuccess prog -> do
-              fuzzingResult <-
-                fuzzingTestProg
-                  gen
-                  spec
-                  100
-                  TestSemanticsObj
-                  prog
-              fst <$> fuzzingResult @?= Nothing
-            r -> fail $ "Unexpected result: " <> show r
+          result <- synthesizeProgWithVerifier $ task spec gen sketch
+          fuzzResult result gen spec
     )
       ++ [ testCase "Add then DivMod with must be after constraint" $ do
              (_, SynthesisSuccess prog) <-

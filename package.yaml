@@ -32,6 +32,7 @@ dependencies:
   - stm
   - containers
   - async
+  - async-pool
 
 ghc-options:
   - -Wextra
