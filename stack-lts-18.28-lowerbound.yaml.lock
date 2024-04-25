@@ -250,12 +250,12 @@ packages:
   original:
     hackage: grisette-0.5.0.1
 - completed:
-    hackage: async-pool-0.9.0@sha256:173aee308a34417c99261245fe76b4de2462e08630ef2a5d00ec3acef2163a86,1706
+    hackage: async-pool-0.9.2@sha256:532b356a3a2d3e6ec848ca266b566f8cf60c52a107f4b2c7e690cdd2b1ae67b2,1605
     pantry-tree:
-      sha256: 8712890d6869efba3897e02e63904742d503169b729e899a350efee84aa42c82
+      sha256: 292aaab710c67c190ef87703f7a300a3cad71ee71d2cdf2a9e89d242e866d174
       size: 443
   original:
-    hackage: async-pool-0.9.0
+    hackage: async-pool-0.9.2
 snapshots:
 - completed:
     sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68
