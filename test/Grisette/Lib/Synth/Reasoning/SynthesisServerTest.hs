@@ -157,7 +157,7 @@ synthesisServerTest =
         handle <-
           submitTask server $
             task divModTwiceSpec divModTwiceGen sharedSketch
-        threadDelay 500000
+        threadDelay 100000
         cancelTask handle
         expectedEndTime <- getCurrentTime
         let expectedElapsedTime =
