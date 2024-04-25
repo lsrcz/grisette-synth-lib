@@ -6,9 +6,10 @@ module Grisette.Lib.Synth.Reasoning.SynthesisServer
   ( SynthesisServer,
     TaskException (..),
     newSynthesisServer,
-    TaskHandle,
+    TaskHandle (taskId, taskStartTime),
+    taskEndTime,
+    taskElapsedTime,
     TaskSet,
-    taskId,
     submitTask,
     submitTaskWithTimeout,
     pollTask,
@@ -22,11 +23,23 @@ where
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (Async, async)
 import qualified Control.Concurrent.Async.Pool as Pool
-import Control.Concurrent.STM (TVar, atomically, newTVarIO, readTVar, writeTVar)
+import Control.Concurrent.STM
+  ( STM,
+    TVar,
+    atomically,
+    newEmptyTMVarIO,
+    newTVarIO,
+    putTMVar,
+    readTMVar,
+    readTVar,
+    writeTVar,
+  )
+import Control.Exception (finally)
 import qualified Control.Exception as C
-import qualified Data.HashMap.Internal.Strict as HM
+import qualified Data.HashMap.Lazy as HM
 import qualified Data.HashSet as HS
 import Data.Hashable (Hashable (hashWithSalt))
+import Data.Time (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult,
@@ -58,19 +71,33 @@ newSynthesisServer numOfTasks = do
   nextTaskId <- newTVarIO 0
   return $ SynthesisServer pool taskGroup nextTaskId mainThread
 
-data TaskHandle conVal conProg matcher exception
-  = TaskHandle
-      ( Pool.Async
-          ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
-      )
-      Int
-  deriving (Eq)
+data TaskHandle conVal conProg matcher exception = TaskHandle
+  { _taskAsync ::
+      Pool.Async
+        ([(IOPair conVal, matcher)], SynthesisResult conProg exception),
+    taskId :: Int,
+    taskStartTime :: UTCTime,
+    _taskEndTime :: STM UTCTime
+  }
 
-taskId :: TaskHandle conVal conProg matcher exception -> Int
-taskId (TaskHandle _ tid) = tid
+-- | Get the end time of a task. This function blocks until the task is
+-- finished.
+taskEndTime :: TaskHandle conVal conProg matcher exception -> IO UTCTime
+taskEndTime (TaskHandle _ _ _ endTime) = atomically endTime
+
+-- | Get the elapsed time of a task. This function blocks until the task is
+-- finished.
+taskElapsedTime ::
+  TaskHandle conVal conProg matcher exception -> IO NominalDiffTime
+taskElapsedTime task = do
+  endTime <- taskEndTime task
+  return $ endTime `diffUTCTime` taskStartTime task
+
+instance Eq (TaskHandle conVal conProg matcher exception) where
+  TaskHandle _ taskId1 _ _ == TaskHandle _ taskId2 _ _ = taskId1 == taskId2
 
 instance Hashable (TaskHandle conVal conProg matcher exception) where
-  hashWithSalt salt (TaskHandle _ taskId) = hashWithSalt salt taskId
+  hashWithSalt salt (TaskHandle _ taskId _ _) = hashWithSalt salt taskId
 
 type TaskSet conVal conProg matcher exception =
   HS.HashSet (TaskHandle conVal conProg matcher exception)
@@ -87,12 +114,19 @@ submitTask ::
   task ->
   IO (TaskHandle conVal conProg matcher exception)
 submitTask (SynthesisServer _ taskGroup nextVarId _) task = do
-  handle <- Pool.async taskGroup $ synthesizeProgWithVerifier task
+  endTimeTMVar <- newEmptyTMVarIO
+  handle <-
+    Pool.async taskGroup $
+      synthesizeProgWithVerifier task
+        `finally` ( getCurrentTime >>= \currentTime ->
+                      atomically (putTMVar endTimeTMVar currentTime)
+                  )
   taskId <- atomically $ do
     taskId <- readTVar nextVarId
     writeTVar nextVarId (taskId + 1)
     return taskId
-  return $ TaskHandle handle taskId
+  startTime <- getCurrentTime
+  return $ TaskHandle handle taskId startTime (readTMVar endTimeTMVar)
 
 -- | Add a task to the synthesis server with a timeout.
 --
@@ -127,7 +161,7 @@ pollTask ::
             ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
         )
     )
-pollTask (TaskHandle handle _) = Pool.poll handle
+pollTask (TaskHandle handle _ _ _) = Pool.poll handle
 
 waitCatchTask ::
   TaskHandle conVal conProg matcher exception ->
@@ -136,7 +170,7 @@ waitCatchTask ::
         C.SomeException
         ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
     )
-waitCatchTask (TaskHandle handle _) = Pool.waitCatch handle
+waitCatchTask (TaskHandle handle _ _ _) = Pool.waitCatch handle
 
 pollTasks ::
   TaskSet conVal conProg matcher exception ->
@@ -174,4 +208,4 @@ cancelTaskWith ::
   TaskHandle conVal conProg matcher exception ->
   e ->
   IO ()
-cancelTaskWith (TaskHandle handle _) = Pool.cancelWith handle
+cancelTaskWith (TaskHandle handle _ _ _) = Pool.cancelWith handle

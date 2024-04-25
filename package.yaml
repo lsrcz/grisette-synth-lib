@@ -32,7 +32,8 @@ dependencies:
   - stm
   - containers
   - async
-  - async-pool
+  - async-pool >= 0.9 && < 0.10
+  - time
 
 ghc-options:
   - -Wextra

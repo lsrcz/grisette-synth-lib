@@ -70,7 +70,7 @@ library
   build-depends:
       QuickCheck ==2.14.*
     , async
-    , async-pool
+    , async-pool ==0.9.*
     , base >=4.14 && <5
     , containers
     , deepseq
@@ -86,6 +86,7 @@ library
     , stm
     , template-haskell
     , text >=1.2.4.1 && <2.2
+    , time
     , unordered-containers >=0.2.11 && <0.3
   default-language: Haskell2010
 
@@ -100,7 +101,7 @@ executable arith
   build-depends:
       QuickCheck ==2.14.*
     , async
-    , async-pool
+    , async-pool ==0.9.*
     , base >=4.14 && <5
     , containers
     , deepseq
@@ -117,6 +118,7 @@ executable arith
     , stm
     , template-haskell
     , text >=1.2.4.1 && <2.2
+    , time
     , unordered-containers >=0.2.11 && <0.3
   default-language: Haskell2010
 
@@ -135,7 +137,7 @@ executable control
   build-depends:
       QuickCheck ==2.14.*
     , async
-    , async-pool
+    , async-pool ==0.9.*
     , base >=4.14 && <5
     , containers
     , deepseq
@@ -152,6 +154,7 @@ executable control
     , stm
     , template-haskell
     , text >=1.2.4.1 && <2.2
+    , time
     , unordered-containers >=0.2.11 && <0.3
   default-language: Haskell2010
 
@@ -210,7 +213,7 @@ test-suite spec
       HUnit >=1.6
     , QuickCheck ==2.14.*
     , async
-    , async-pool
+    , async-pool ==0.9.*
     , base >=4.14 && <5
     , containers
     , deepseq
@@ -230,5 +233,6 @@ test-suite spec
     , test-framework-hunit >=0.3.0.2 && <0.4
     , test-framework-quickcheck2 >=0.3.0.5 && <0.4
     , text >=1.2.4.1 && <2.2
+    , time
     , unordered-containers >=0.2.11 && <0.3
   default-language: Haskell2010
