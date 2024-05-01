@@ -6,6 +6,7 @@ module Grisette.Lib.Synth.Program.ComponentSketch.ProgUtilTest
 where
 
 import qualified Data.Text as T
+import Grisette (SymInteger)
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -20,7 +21,7 @@ import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
 
-prog :: Prog T.Text Int T.Text
+prog :: Prog T.Text SymInteger T.Text
 prog =
   Prog
     "test"

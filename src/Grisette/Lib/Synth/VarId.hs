@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Grisette.Lib.Synth.VarId
   ( ConcreteVarId,
@@ -9,7 +10,7 @@ where
 
 import Data.Hashable (Hashable)
 import Data.Typeable (Typeable)
-import Grisette (GPretty, Mergeable, SOrd, ToCon, ToSym)
+import Grisette (GPretty, GenSymSimple, Mergeable, SOrd, ToCon, ToSym)
 
 type ConcreteVarId varId =
   ( GPretty varId,
@@ -27,7 +28,8 @@ type SymbolicVarId varId =
     Num varId,
     SOrd varId,
     Mergeable varId,
-    Typeable varId
+    Typeable varId,
+    GenSymSimple () varId
   )
 
 type RelatedVarId conVarId symVarId =
