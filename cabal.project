@@ -3,4 +3,4 @@ packages: grisette-synth-lib.cabal
 source-repository-package
   type: git
   location: https://github.com/lsrcz/grisette.git
-  tag: 699151e8327da62cbf47bdf666352ae5e917f7f8
+  tag: 8961abdf7692a113cb010e4f5c805cbc126b3c18
