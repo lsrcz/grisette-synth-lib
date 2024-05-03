@@ -8,14 +8,12 @@ import Grisette
     ModelRep (buildModel),
     ModelValuePair ((::=)),
     SymInteger,
-    VerifierResult (CEGISVerifierFoundCex),
   )
 import qualified Grisette.Lib.Synth.Program.ByteCodeSketch as ByteCodeSketch
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( fuzzingTestProg,
-    fuzzingTestStatefulVerifierFun,
     fuzzingTestSymProgWithModel,
   )
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
@@ -131,19 +129,5 @@ fuzzingTest =
             fst (badSpec i) @?= o
             (runProg TestSemanticsObj conProg i /= Right o)
               @? "Should fail the test."
-        ],
-      testCase "fuzzingTestStatefulVerifierFun" $ do
-        (newState, CEGISVerifierFoundCex (IOPair i o, _)) <-
-          fuzzingTestStatefulVerifierFun
-            badSpec
-            100
-            TestSemanticsObj
-            (Proxy :: Proxy ConProgType)
-            symProg
-            [return [1, -1], gen]
-            model
-        length newState @?= 1
-        fst (badSpec i) @?= o
-        (runProg TestSemanticsObj conProg i /= Right o)
-          @? "Should fail the test."
+        ]
     ]

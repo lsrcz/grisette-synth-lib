@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main (main) where
 
 import Arith (OpCode (Minus, Mul, Plus), OpType (IntegerType), Sem (Sem))
 import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
-import Data.Proxy (Proxy (Proxy))
 import qualified Data.Text.Lazy as TL
 import Grisette (GPretty (gpretty), SymInteger, precise, runFresh, z3)
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
@@ -16,22 +16,21 @@ import Grisette.Lib.Synth.Program.ProgConstraints
   )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
-  ( SynthesisWithFuzzerTask
-      ( SynthesisWithFuzzerTask,
-        synthesisWithFuzzerTaskConSemantics,
-        synthesisWithFuzzerTaskContextType,
-        synthesisWithFuzzerTaskGenerators,
-        synthesisWithFuzzerTaskMaxTests,
-        synthesisWithFuzzerTaskSolverConfig,
-        synthesisWithFuzzerTaskSpec,
-        synthesisWithFuzzerTaskSymProg,
-        synthesisWithFuzzerTaskSymSemantics,
-        synthesisWithFuzzerTaskSymValType
+  ( QuickCheckFuzzer
+      ( QuickCheckFuzzer,
+        quickCheckFuzzerConSemantics,
+        quickCheckFuzzerGenerator,
+        quickCheckFuzzerMaxTests,
+        quickCheckFuzzerSpec,
+        quickCheckFuzzerSymSemantics
       ),
   )
+import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher))
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisResult (SynthesisSuccess),
-    synthesizeProgWithVerifier,
+  ( SomeVerifier (SomeVerifier),
+    SynthesisResult (SynthesisSuccess),
+    SynthesisTask (SynthesisTask, synthesisTaskSymProg, synthesisTaskVerifiers),
+    runSynthesisTask,
   )
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, vectorOf)
 
@@ -79,21 +78,22 @@ gen = vectorOf 2 arbitrary
 
 main :: IO ()
 main = do
+  let verifier =
+        QuickCheckFuzzer
+          { quickCheckFuzzerSymSemantics = WithConstraints Sem (),
+            quickCheckFuzzerConSemantics = Sem,
+            quickCheckFuzzerMaxTests = 100,
+            quickCheckFuzzerGenerator = gen,
+            quickCheckFuzzerSpec = (,EqMatcher) . spec
+          } ::
+          QuickCheckFuzzer Sketch ConProg SymInteger Integer AngelicContext
   let task =
-        SynthesisWithFuzzerTask
-          { synthesisWithFuzzerTaskContextType = Proxy :: Proxy AngelicContext,
-            synthesisWithFuzzerTaskSymValType = Proxy :: Proxy SymInteger,
-            synthesisWithFuzzerTaskSymProg = sketch,
-            synthesisWithFuzzerTaskSpec = spec,
-            -- You need a working z3 installation available in your PATH.
-            synthesisWithFuzzerTaskSolverConfig = precise z3,
-            synthesisWithFuzzerTaskConSemantics = Sem,
-            synthesisWithFuzzerTaskSymSemantics = WithConstraints Sem (),
-            synthesisWithFuzzerTaskMaxTests = 100,
-            synthesisWithFuzzerTaskGenerators = [gen]
+        SynthesisTask
+          { synthesisTaskVerifiers = [SomeVerifier verifier],
+            synthesisTaskSymProg = sketch
           }
   print sketch
-  (_, r) <- synthesizeProgWithVerifier task
+  r <- runSynthesisTask (precise z3) task
   case r of
     SynthesisSuccess (prog :: ConProg) -> do
       -- def test(x: int, y: int):

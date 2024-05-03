@@ -13,7 +13,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   )
 where
 
-import Data.Proxy (Proxy (Proxy))
+import Data.Data (Typeable)
 import Grisette
   ( SolvingFailure (Unsat),
     SymBool,
@@ -40,24 +40,22 @@ import Grisette.Lib.Synth.Program.ProgConstraints
   )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics)
 import Grisette.Lib.Synth.Reasoning.Fuzzing
-  ( SynthesisWithFuzzerMatcherTask
-      ( SynthesisWithFuzzerMatcherTask,
-        synthesisWithFuzzerMatcherTaskConSemantics,
-        synthesisWithFuzzerMatcherTaskContextType,
-        synthesisWithFuzzerMatcherTaskGenerators,
-        synthesisWithFuzzerMatcherTaskMaxTests,
-        synthesisWithFuzzerMatcherTaskSolverConfig,
-        synthesisWithFuzzerMatcherTaskSpec,
-        synthesisWithFuzzerMatcherTaskSymProg,
-        synthesisWithFuzzerMatcherTaskSymSemantics,
-        synthesisWithFuzzerMatcherTaskSymValType
+  ( QuickCheckFuzzer
+      ( QuickCheckFuzzer,
+        quickCheckFuzzerConSemantics,
+        quickCheckFuzzerGenerator,
+        quickCheckFuzzerMaxTests,
+        quickCheckFuzzerSpec,
+        quickCheckFuzzerSymSemantics
       ),
     fuzzingTestProg,
   )
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
-    synthesizeProgWithVerifier,
+  ( SomeVerifier (SomeVerifier),
+    SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
+    SynthesisTask (SynthesisTask, synthesisTaskSymProg, synthesisTaskVerifiers),
+    runSynthesisTask,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
   ( addThenDivModGen,
@@ -201,7 +199,10 @@ addThenDivModSketchBadMustBeAfter =
 data ComponentSynthesisTestCase where
   ComponentSynthesisTestCase ::
     forall matcher.
-    (Matcher matcher Bool Integer, Matcher matcher SymBool SymInteger) =>
+    ( Matcher matcher Bool Integer,
+      Matcher matcher SymBool SymInteger,
+      Typeable matcher
+    ) =>
     { componentSynthesisTestCaseName :: String,
       componentSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
       componentSynthesisTestCaseGen :: Gen [Integer]
@@ -213,14 +214,13 @@ fuzzResult ::
     ProgSemantics TestSemanticsObj conProg conVal ConcreteContext,
     Eq conVal,
     Show conVal,
-    Show conProg,
-    Show exception
+    Show conProg
   ) =>
-  (a, SynthesisResult conProg exception) ->
+  SynthesisResult conProg ->
   Gen [conVal] ->
   ([conVal] -> ([conVal], b)) ->
   IO ()
-fuzzResult (_, SynthesisSuccess prog) gen spec = do
+fuzzResult (SynthesisSuccess prog) gen spec = do
   fuzzingResult <-
     fuzzingTestProg
       gen
@@ -229,27 +229,37 @@ fuzzResult (_, SynthesisSuccess prog) gen spec = do
       TestSemanticsObj
       prog
   fst <$> fuzzingResult @?= Nothing
-fuzzResult (_, r) _ _ = fail $ "Unexpected result: " <> show r
+fuzzResult r _ _ = fail $ "Unexpected result: " <> show r
+
+verifier ::
+  (Matcher matcher SymBool SymVal, Matcher matcher Bool ConVal, Typeable matcher) =>
+  ([ConVal] -> ([ConVal], matcher)) ->
+  Gen [ConVal] ->
+  QuickCheckFuzzer SymProg ConProg SymVal ConVal AngelicContext
+verifier spec gen =
+  QuickCheckFuzzer
+    { quickCheckFuzzerSymSemantics =
+        WithConstraints TestSemanticsObj (ComponentSymmetryReduction ()),
+      quickCheckFuzzerConSemantics = TestSemanticsObj,
+      quickCheckFuzzerMaxTests = 100,
+      quickCheckFuzzerGenerator = gen,
+      quickCheckFuzzerSpec = spec
+    } ::
+    QuickCheckFuzzer SymProg ConProg SymVal ConVal AngelicContext
 
 task ::
-  (Matcher matcher Bool Integer, Matcher matcher SymBool SymInteger) =>
-  ([Integer] -> ([Integer], matcher)) ->
-  Gen [Integer] ->
+  ( Matcher matcher SymBool SymVal,
+    Matcher matcher Bool ConVal,
+    Typeable matcher
+  ) =>
+  ([ConVal] -> ([ConVal], matcher)) ->
+  Gen [ConVal] ->
   SymProg ->
-  SynthesisWithFuzzerMatcherTask ConVal ConProg matcher
+  SynthesisTask SymProg ConProg
 task spec gen sketch =
-  SynthesisWithFuzzerMatcherTask
-    { synthesisWithFuzzerMatcherTaskContextType =
-        Proxy :: Proxy AngelicContext,
-      synthesisWithFuzzerMatcherTaskSymValType = Proxy :: Proxy SymVal,
-      synthesisWithFuzzerMatcherTaskSolverConfig = precise z3,
-      synthesisWithFuzzerMatcherTaskSpec = spec,
-      synthesisWithFuzzerMatcherTaskMaxTests = 100,
-      synthesisWithFuzzerMatcherTaskGenerators = [gen],
-      synthesisWithFuzzerMatcherTaskConSemantics = TestSemanticsObj,
-      synthesisWithFuzzerMatcherTaskSymSemantics =
-        WithConstraints TestSemanticsObj (ComponentSymmetryReduction ()),
-      synthesisWithFuzzerMatcherTaskSymProg = sketch
+  SynthesisTask
+    { synthesisTaskVerifiers = [SomeVerifier $ verifier spec gen],
+      synthesisTaskSymProg = sketch
     }
 
 componentSketchTest :: Test
@@ -282,12 +292,12 @@ componentSketchTest =
             ]
 
         return $ testCase (name <> namePostFix) $ do
-          result <- synthesizeProgWithVerifier $ task spec gen sketch
+          result <- runSynthesisTask (precise z3) $ task spec gen sketch
           fuzzResult result gen spec
     )
       ++ [ testCase "Add then DivMod with must be after constraint" $ do
-             (_, SynthesisSuccess prog) <-
-               synthesizeProgWithVerifier $
+             SynthesisSuccess prog <-
+               runSynthesisTask (precise z3) $
                  task addThenDivModSpec addThenDivModGen addThenDivModSketch
              fuzzingResult <-
                fuzzingTestProg
@@ -298,8 +308,8 @@ componentSketchTest =
                  prog
              fst <$> fuzzingResult @?= Nothing,
            testCase "Add then DivMod with bad must be after constraint" $ do
-             (_, SynthesisSolverFailure Unsat) <-
-               synthesizeProgWithVerifier $
+             SynthesisSolverFailure Unsat <-
+               runSynthesisTask (precise z3) $
                  task
                    addThenDivModSpec
                    addThenDivModGen

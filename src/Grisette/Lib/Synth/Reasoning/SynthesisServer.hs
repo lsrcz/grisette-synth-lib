@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Reasoning.SynthesisServer
   ( SynthesisServer,
@@ -42,11 +41,11 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.HashSet as HS
 import Data.Hashable (Hashable (hashWithSalt))
 import Data.Time (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
-import Grisette.Lib.Synth.Reasoning.IOPair (IOPair)
+import Grisette (ConfigurableSolver)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult,
-    ToSynthesisTask (ConProgType, ConValType, ExceptionType, MatcherType),
-    synthesizeProgWithVerifier,
+    SynthesisTask,
+    runSynthesisTask,
   )
 
 data TaskException = TaskCancelled | TaskTimeout
@@ -82,10 +81,9 @@ withSynthesisServer :: Int -> (SynthesisServer -> IO a) -> IO a
 withSynthesisServer numOfTasks =
   C.bracket (newSynthesisServer numOfTasks) endSynthesisServer
 
-data TaskHandle conVal conProg matcher exception = TaskHandle
+data TaskHandle conProg = TaskHandle
   { _taskAsync ::
-      Pool.Async
-        ([(IOPair conVal, matcher)], SynthesisResult conProg exception),
+      Pool.Async (SynthesisResult conProg),
     taskId :: Int,
     taskStartTime :: UTCTime,
     _taskEndTime :: STM UTCTime
@@ -93,42 +91,36 @@ data TaskHandle conVal conProg matcher exception = TaskHandle
 
 -- | Get the end time of a task. This function blocks until the task is
 -- finished.
-taskEndTime :: TaskHandle conVal conProg matcher exception -> IO UTCTime
+taskEndTime :: TaskHandle conProg -> IO UTCTime
 taskEndTime (TaskHandle _ _ _ endTime) = atomically endTime
 
 -- | Get the elapsed time of a task. This function blocks until the task is
 -- finished.
-taskElapsedTime ::
-  TaskHandle conVal conProg matcher exception -> IO NominalDiffTime
+taskElapsedTime :: TaskHandle conProg -> IO NominalDiffTime
 taskElapsedTime task = do
   endTime <- taskEndTime task
   return $ endTime `diffUTCTime` taskStartTime task
 
-instance Eq (TaskHandle conVal conProg matcher exception) where
+instance Eq (TaskHandle conProg) where
   TaskHandle _ taskId1 _ _ == TaskHandle _ taskId2 _ _ = taskId1 == taskId2
 
-instance Hashable (TaskHandle conVal conProg matcher exception) where
+instance Hashable (TaskHandle conProg) where
   hashWithSalt salt (TaskHandle _ taskId _ _) = hashWithSalt salt taskId
 
-type TaskSet conVal conProg matcher exception =
-  HS.HashSet (TaskHandle conVal conProg matcher exception)
+type TaskSet conProg = HS.HashSet (TaskHandle conProg)
 
 -- | Add a task to the synthesis server.
 submitTask ::
-  ( ToSynthesisTask task,
-    matcher ~ MatcherType task,
-    conVal ~ ConValType task,
-    conProg ~ ConProgType task,
-    exception ~ ExceptionType task
-  ) =>
+  (ConfigurableSolver config h) =>
   SynthesisServer ->
-  task ->
-  IO (TaskHandle conVal conProg matcher exception)
-submitTask (SynthesisServer _ taskGroup nextVarId _) task = do
+  config ->
+  SynthesisTask symProg conProg ->
+  IO (TaskHandle conProg)
+submitTask (SynthesisServer _ taskGroup nextVarId _) config task = do
   endTimeTMVar <- newEmptyTMVarIO
   handle <-
     Pool.async taskGroup $
-      synthesizeProgWithVerifier task
+      runSynthesisTask config task
         `finally` ( getCurrentTime >>= \currentTime ->
                       atomically (putTMVar endTimeTMVar currentTime)
                   )
@@ -148,51 +140,33 @@ submitTask (SynthesisServer _ taskGroup nextVarId _) task = do
 -- than 10ms due to a bug in async-pool.
 -- See https://github.com/jwiegley/async-pool/issues/31.
 submitTaskWithTimeout ::
-  ( ToSynthesisTask task,
-    matcher ~ MatcherType task,
-    conVal ~ ConValType task,
-    conProg ~ ConProgType task,
-    exception ~ ExceptionType task
-  ) =>
+  (ConfigurableSolver config h) =>
   SynthesisServer ->
+  config ->
   Int ->
-  task ->
-  IO (TaskHandle conVal conProg matcher exception)
-submitTaskWithTimeout server timeout task = do
-  handle <- submitTask server task
+  SynthesisTask symProg conProg ->
+  IO (TaskHandle conProg)
+submitTaskWithTimeout server config timeout task = do
+  handle <- submitTask server config task
   _ <- async $ threadDelay timeout >> cancelTaskWith handle TaskTimeout
   return handle
 
 pollTask ::
-  TaskHandle conVal conProg matcher exception ->
-  IO
-    ( Maybe
-        ( Either
-            C.SomeException
-            ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
-        )
-    )
+  TaskHandle conProg ->
+  IO (Maybe (Either C.SomeException (SynthesisResult conProg)))
 pollTask (TaskHandle handle _ _ _) = Pool.poll handle
 
 waitCatchTask ::
-  TaskHandle conVal conProg matcher exception ->
-  IO
-    ( Either
-        C.SomeException
-        ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
-    )
+  TaskHandle conProg -> IO (Either C.SomeException (SynthesisResult conProg))
 waitCatchTask (TaskHandle handle _ _ _) = Pool.waitCatch handle
 
 pollTasks ::
-  TaskSet conVal conProg matcher exception ->
+  TaskSet conProg ->
   IO
-    ( TaskSet conVal conProg matcher exception,
+    ( TaskSet conProg,
       HM.HashMap
-        (TaskHandle conVal conProg matcher exception)
-        ( Either
-            C.SomeException
-            ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
-        )
+        (TaskHandle conProg)
+        (Either C.SomeException (SynthesisResult conProg))
     )
 pollTasks tasks = go (HS.toList tasks) HS.empty HM.empty
   where
@@ -211,12 +185,12 @@ pollTasks tasks = go (HS.toList tasks) HS.empty HM.empty
 -- This function should not be called immediately after submitting a task due to
 -- a bug in async-pool. See https://github.com/jwiegley/async-pool/issues/31.
 cancelTask ::
-  TaskHandle conVal conProg matcher exception -> IO ()
+  TaskHandle conProg -> IO ()
 cancelTask handle = cancelTaskWith handle TaskCancelled
 
 cancelTaskWith ::
   (C.Exception e) =>
-  TaskHandle conVal conProg matcher exception ->
+  TaskHandle conProg ->
   e ->
   IO ()
 cancelTaskWith (TaskHandle handle _ _ _) = Pool.cancelWith handle

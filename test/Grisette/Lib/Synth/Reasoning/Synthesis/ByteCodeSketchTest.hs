@@ -9,7 +9,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
   )
 where
 
-import Data.Proxy (Proxy (Proxy))
+import Data.Data (Typeable)
 import Grisette (SymBool, SymInteger, UnionM, mrgIf, precise, z3)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.ByteCodeSketch
@@ -23,24 +23,22 @@ import Grisette.Lib.Synth.Program.ProgConstraints
   ( WithConstraints (WithConstraints),
   )
 import Grisette.Lib.Synth.Reasoning.Fuzzing
-  ( SynthesisWithFuzzerMatcherTask
-      ( SynthesisWithFuzzerMatcherTask,
-        synthesisWithFuzzerMatcherTaskConSemantics,
-        synthesisWithFuzzerMatcherTaskContextType,
-        synthesisWithFuzzerMatcherTaskGenerators,
-        synthesisWithFuzzerMatcherTaskMaxTests,
-        synthesisWithFuzzerMatcherTaskSolverConfig,
-        synthesisWithFuzzerMatcherTaskSpec,
-        synthesisWithFuzzerMatcherTaskSymProg,
-        synthesisWithFuzzerMatcherTaskSymSemantics,
-        synthesisWithFuzzerMatcherTaskSymValType
+  ( QuickCheckFuzzer
+      ( QuickCheckFuzzer,
+        quickCheckFuzzerConSemantics,
+        quickCheckFuzzerGenerator,
+        quickCheckFuzzerMaxTests,
+        quickCheckFuzzerSpec,
+        quickCheckFuzzerSymSemantics
       ),
     fuzzingTestProg,
   )
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisResult (SynthesisSuccess),
-    synthesizeProgWithVerifier,
+  ( SomeVerifier (SomeVerifier),
+    SynthesisResult (SynthesisSuccess),
+    SynthesisTask (SynthesisTask, synthesisTaskSymProg, synthesisTaskVerifiers),
+    runSynthesisTask,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
   ( addThenDoubleGen,
@@ -91,7 +89,10 @@ sharedSketch =
 data ByteCodeSynthesisTestCase where
   ByteCodeSynthesisTestCase ::
     forall matcher.
-    (Matcher matcher Bool Integer, Matcher matcher SymBool SymInteger) =>
+    ( Matcher matcher Bool Integer,
+      Matcher matcher SymBool SymInteger,
+      Typeable matcher
+    ) =>
     { byteCodeSynthesisTestCaseName :: String,
       byteCodeSynthesisTestCaseSketch :: SymProg,
       byteCodeSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
@@ -126,24 +127,23 @@ byteCodeSketchTest =
             byteCodeSynthesisTestCaseGen = divModTwiceGen
           }
         ]
-    let task ::
-          SynthesisWithFuzzerMatcherTask ConVal ConProg matcher
-        task =
-          SynthesisWithFuzzerMatcherTask
-            { synthesisWithFuzzerMatcherTaskContextType =
-                Proxy :: Proxy SymbolicContext,
-              synthesisWithFuzzerMatcherTaskSymValType = Proxy :: Proxy SymVal,
-              synthesisWithFuzzerMatcherTaskSolverConfig = precise z3,
-              synthesisWithFuzzerMatcherTaskSpec = spec,
-              synthesisWithFuzzerMatcherTaskMaxTests = 100,
-              synthesisWithFuzzerMatcherTaskGenerators = [gen],
-              synthesisWithFuzzerMatcherTaskConSemantics = TestSemanticsObj,
-              synthesisWithFuzzerMatcherTaskSymSemantics =
+    let verifier =
+          QuickCheckFuzzer
+            { quickCheckFuzzerSymSemantics =
                 WithConstraints TestSemanticsObj (),
-              synthesisWithFuzzerMatcherTaskSymProg = sketch
+              quickCheckFuzzerConSemantics = TestSemanticsObj,
+              quickCheckFuzzerMaxTests = 100,
+              quickCheckFuzzerGenerator = gen,
+              quickCheckFuzzerSpec = spec
+            } ::
+            QuickCheckFuzzer SymProg ConProg SymVal ConVal SymbolicContext
+    let task =
+          SynthesisTask
+            { synthesisTaskVerifiers = [SomeVerifier verifier],
+              synthesisTaskSymProg = sketch
             }
     return $ testCase name $ do
-      (_, SynthesisSuccess prog) <- synthesizeProgWithVerifier task
+      SynthesisSuccess (prog :: ConProg) <- runSynthesisTask (precise z3) task
       fuzzingResult <-
         fuzzingTestProg
           gen

@@ -1,24 +1,27 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisContext (..),
     SynthesisResult (..),
     SynthesisTask (..),
-    synthesizeProgWithVerifier,
-    ToSynthesisTask (..),
+    runSynthesisTask,
+    IsVerifier (..),
+    SomeVerifier (..),
+    VerificationCex (..),
+    runSynthesisTaskExtractCex,
   )
 where
 
 import Control.Monad.Except (runExceptT)
-import Data.Data (Proxy (Proxy))
+import Data.Data (Typeable)
+import Data.Proxy (Proxy)
 import qualified Data.Text as T
 import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
@@ -27,11 +30,10 @@ import Grisette
     Mergeable,
     Solvable (con),
     SolvingFailure,
-    StatefulVerifierFun,
     SymBool,
     SynthesisConstraintFun,
     ToCon,
-    ToSym (toSym),
+    VerifierFun,
     evaluateSymToCon,
     genericCEGIS,
     identifier,
@@ -46,13 +48,15 @@ import Grisette.Lib.Synth.Program.ProgConstraints
     runProgWithConstraints,
   )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics)
-import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
+import Grisette.Lib.Synth.Reasoning.IOPair
+  ( IOPair (ioPairInputs, ioPairOutputs),
+  )
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher (match))
 import Grisette.Lib.Synth.Util.Show (showText)
 
 class SynthesisContext ctx where
   genSynthesisConstraint ::
-    (Matcher matcher SymBool val, Show val, Mergeable val) =>
+    (Matcher matcher SymBool val, Mergeable val) =>
     Int ->
     matcher ->
     ctx [val] ->
@@ -77,136 +81,112 @@ instance SynthesisContext AngelicContext where
           (withInfo (identifier $ showText i) ("synth" :: T.Text))
       )
 
+data VerificationCex symProg where
+  VerificationCex ::
+    forall symSemObj symConstObj symProg symVal ctx matcher.
+    ( ProgSemantics symSemObj symProg symVal ctx,
+      ProgConstraints symConstObj symProg ctx,
+      SynthesisContext ctx,
+      Matcher matcher SymBool symVal,
+      Mergeable symVal,
+      Typeable symSemObj,
+      Typeable symConstObj,
+      Typeable symVal,
+      Typeable matcher
+    ) =>
+    { verificationCexContext :: Proxy ctx,
+      verificationCexSymSemantics :: WithConstraints symSemObj symConstObj,
+      verificationCexIOPair :: IOPair symVal,
+      verificationCexMatcher :: matcher
+    } ->
+    VerificationCex symProg
+
+class
+  IsVerifier verifier symProg
+    | verifier -> symProg
+  where
+  toVerifierFun ::
+    verifier -> symProg -> VerifierFun (VerificationCex symProg) ()
+
+data SomeVerifier symProg where
+  SomeVerifier ::
+    forall verifier symProg.
+    (IsVerifier verifier symProg) =>
+    verifier ->
+    SomeVerifier symProg
+
+data SynthesisTask symProg conProg where
+  SynthesisTask ::
+    forall symProg conProg.
+    ( EvaluateSym symProg,
+      ToCon symProg conProg
+    ) =>
+    { synthesisTaskVerifiers :: [SomeVerifier symProg],
+      synthesisTaskSymProg :: symProg
+    } ->
+    SynthesisTask symProg conProg
+
 synthesisConstraintFun ::
-  forall semObj constObj symProg conVal symVal ctx matcher p q.
-  ( ProgSemantics semObj symProg symVal ctx,
-    ProgConstraints constObj symProg ctx,
-    SynthesisContext ctx,
-    Matcher matcher SymBool symVal,
-    ToSym conVal symVal,
-    Show symVal,
-    Mergeable symVal
-  ) =>
-  p ctx ->
-  q symVal ->
-  WithConstraints semObj constObj ->
+  forall symProg.
   symProg ->
-  SynthesisConstraintFun (IOPair conVal, matcher)
+  SynthesisConstraintFun (VerificationCex symProg)
 synthesisConstraintFun
-  _
-  _
-  sem
   prog
   i
-  (IOPair inputs expectedOutputs, matcher) =
+  (VerificationCex (_ :: Proxy ctx) symSem (iop :: IOPair symVal) matcher) =
     return $
       genSynthesisConstraint
         i
         matcher
-        (runProgWithConstraints sem prog (toSym inputs) :: ctx [symVal])
-        (toSym expectedOutputs)
+        (runProgWithConstraints symSem prog (ioPairInputs iop) :: ctx [symVal])
+        (ioPairOutputs iop)
 
-data SynthesisResult conProg exception
+data SynthesisResult conProg
   = SynthesisSuccess conProg
-  | SynthesisVerifierFailure exception
+  | SynthesisVerifierFailure
   | SynthesisSolverFailure SolvingFailure
   deriving (Show)
 
-data SynthesisTask conVal conProg matcher exception where
-  SynthesisTask ::
-    forall
-      config
-      h
-      conVal
-      symVal
-      state
-      exception
-      ctx
-      conProg
-      symProg
-      matcher
-      symSemObj
-      symConstObj.
-    ( ConfigurableSolver config h,
-      ProgSemantics symSemObj symProg symVal ctx,
-      ProgConstraints symConstObj symProg ctx,
-      SynthesisContext ctx,
-      Matcher matcher SymBool symVal,
-      ToSym conVal symVal,
-      EvaluateSym symProg,
-      ToCon symProg conProg,
-      Show symVal,
-      Mergeable symVal
-    ) =>
-    { synthesisTaskContextType :: Proxy ctx,
-      synthesisTaskSymValType :: Proxy symVal,
-      synthesisTaskSolverConfig :: config,
-      synthesisTaskInitialVerifierState :: state,
-      synthesisTaskVerifier ::
-        forall p.
-        p conProg ->
-        symProg ->
-        StatefulVerifierFun state (IOPair conVal, matcher) exception,
-      synthesisTaskSymSemantics :: WithConstraints symSemObj symConstObj,
-      synthesisTaskSymProg :: symProg
-    } ->
-    SynthesisTask conVal conProg matcher exception
-
-class ToSynthesisTask task where
-  type ConValType task
-  type ConProgType task
-  type MatcherType task
-  type ExceptionType task
-  toSynthesisTask ::
-    task ->
-    SynthesisTask
-      (ConValType task)
-      (ConProgType task)
-      (MatcherType task)
-      (ExceptionType task)
-
-instance ToSynthesisTask (SynthesisTask conVal conProg matcher exception) where
-  type ConValType (SynthesisTask conVal conProg matcher exception) = conVal
-  type ConProgType (SynthesisTask conVal conProg matcher exception) = conProg
-  type MatcherType (SynthesisTask conVal conProg matcher exception) = matcher
-  type ExceptionType (SynthesisTask conVal conProg matcher exception) = exception
-  toSynthesisTask = id
-
-synthesizeProgWithVerifier ::
-  forall task conVal conProg matcher exception.
-  ( ToSynthesisTask task,
-    matcher ~ MatcherType task,
-    conVal ~ ConValType task,
-    conProg ~ ConProgType task,
-    exception ~ ExceptionType task
+runSynthesisTask ::
+  ( ConfigurableSolver config h
   ) =>
-  task ->
-  IO ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
-synthesizeProgWithVerifier task =
-  case toSynthesisTask task of
-    SynthesisTask
-      pctx
-      psymVal
+  config ->
+  SynthesisTask symProg conProg ->
+  IO (SynthesisResult conProg)
+runSynthesisTask config (SynthesisTask verifiers symProg) = do
+  (_, r) <-
+    genericCEGIS
       config
-      initialState
-      verifier
-      symSem
-      prog -> do
-        (ioPairs, r) <-
-          genericCEGIS
-            config
-            (con True)
-            ( synthesisConstraintFun
-                pctx
-                psymVal
-                symSem
-                prog
-            )
-            initialState
-            (verifier (Proxy :: Proxy conProg) prog)
-        case r of
-          CEGISSuccess model ->
-            return (ioPairs, SynthesisSuccess $ evaluateSymToCon model prog)
-          CEGISVerifierFailure ex -> return (ioPairs, SynthesisVerifierFailure ex)
-          CEGISSolverFailure failure ->
-            return (ioPairs, SynthesisSolverFailure failure)
+      True
+      (con True)
+      (synthesisConstraintFun symProg)
+      ( (\(SomeVerifier verifier) -> toVerifierFun verifier symProg)
+          <$> verifiers
+      )
+  case r of
+    CEGISSuccess model ->
+      return $ SynthesisSuccess $ evaluateSymToCon model symProg
+    CEGISVerifierFailure () -> return SynthesisVerifierFailure
+    CEGISSolverFailure failure -> return $ SynthesisSolverFailure failure
+
+runSynthesisTaskExtractCex ::
+  ( ConfigurableSolver config h
+  ) =>
+  config ->
+  SynthesisTask symProg conProg ->
+  IO ([VerificationCex symProg], SynthesisResult conProg)
+runSynthesisTaskExtractCex config (SynthesisTask verifiers symProg) = do
+  (cex, r) <-
+    genericCEGIS
+      config
+      True
+      (con True)
+      (synthesisConstraintFun symProg)
+      ( (\(SomeVerifier verifier) -> toVerifierFun verifier symProg)
+          <$> verifiers
+      )
+  case r of
+    CEGISSuccess model ->
+      return (cex, SynthesisSuccess $ evaluateSymToCon model symProg)
+    CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
+    CEGISSolverFailure failure -> return (cex, SynthesisSolverFailure failure)

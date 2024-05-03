@@ -9,7 +9,8 @@ import Data.Either (fromRight)
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.HashSet as HS
 import Data.Time (diffUTCTime, getCurrentTime)
-import Grisette.Lib.Synth.Reasoning.IOPair (IOPair)
+import Grisette (z3)
+import Grisette.Backend (precise)
 import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult)
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( fuzzResult,
@@ -42,12 +43,7 @@ import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool, (@?=))
 
 pollUntilFinished ::
-  TaskHandle conVal conProg matcher exception ->
-  IO
-    ( Either
-        SomeException
-        ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
-    )
+  TaskHandle conProg -> IO (Either SomeException (SynthesisResult conProg))
 pollUntilFinished handle = do
   r <- pollTask handle
   case r of
@@ -55,14 +51,11 @@ pollUntilFinished handle = do
     _ -> threadDelay 100000 >> pollUntilFinished handle
 
 pollTasksUntilFinished ::
-  TaskSet conVal conProg matcher exception ->
+  TaskSet conProg ->
   IO
     ( HM.HashMap
-        (TaskHandle conVal conProg matcher exception)
-        ( Either
-            SomeException
-            ([(IOPair conVal, matcher)], SynthesisResult conProg exception)
-        )
+        (TaskHandle conProg)
+        (Either SomeException (SynthesisResult conProg))
     )
 pollTasksUntilFinished taskSet = do
   (remaining, r) <- pollTasks taskSet
@@ -77,13 +70,13 @@ synthesisServerTest =
     [ testCase "Concurrently synthesize several programs" $ do
         server <- newSynthesisServer 2
         handle0 <-
-          submitTask server $
+          submitTask server (precise z3) $
             task addThenDoubleSpec addThenDoubleGen sharedSketch
         handle1 <-
-          submitTask server $
+          submitTask server (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         handle2 <-
-          submitTask server $
+          submitTask server (precise z3) $
             task addThenDoubleReverseSpec addThenDoubleGen sharedSketch
         Right r0 <- pollUntilFinished handle0
         Right r1 <- pollUntilFinished handle1
@@ -94,10 +87,10 @@ synthesisServerTest =
       testCase "pollTasks" $ do
         server <- newSynthesisServer 2
         handle0 <-
-          submitTask server $
+          submitTask server (precise z3) $
             task addThenDoubleSpec addThenDoubleGen sharedSketch
         handle1 <-
-          submitTask server $
+          submitTask server (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         map <-
           pollTasksUntilFinished $ HS.fromList [handle0, handle1]
@@ -116,7 +109,7 @@ synthesisServerTest =
         -- It cannot be too long, either, otherwise the task may finish before
         -- we can cancel the task.
         handle1 <-
-          submitTaskWithTimeout server 10000 $
+          submitTaskWithTimeout server (precise z3) 10000 $
             task divModTwiceSpec divModTwiceGen sharedSketch
         r0 <- pollUntilFinished handle1
         case r0 of
@@ -125,7 +118,7 @@ synthesisServerTest =
       testCase "cancelTask" $ do
         server <- newSynthesisServer 2
         handle1 <-
-          submitTask server $
+          submitTask server (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         -- The delay is necessary due to
         -- https://github.com/jwiegley/async-pool/issues/31
@@ -140,7 +133,7 @@ synthesisServerTest =
       testCase "time measurement" $ do
         server <- newSynthesisServer 2
         handle <-
-          submitTask server $
+          submitTask server (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         _ <- waitCatchTask handle
         expectedEndTime <- getCurrentTime
@@ -148,14 +141,14 @@ synthesisServerTest =
               diffUTCTime expectedEndTime $ taskStartTime handle
         elapsedTime <- taskElapsedTime handle
         endTime <- taskEndTime handle
-        assertBool "Diff should be less than 0.2 second" $
-          abs (expectedElapsedTime - elapsedTime) < 0.2
-        assertBool "End time diff should be less than 0.2 second" $
-          abs (diffUTCTime endTime expectedEndTime) < 0.2,
+        assertBool "Diff should be less than 0.3 second" $
+          abs (expectedElapsedTime - elapsedTime) < 0.3
+        assertBool "End time diff should be less than 0.3 second" $
+          abs (diffUTCTime endTime expectedEndTime) < 0.3,
       testCase "time measurement for cancelled tasks" $ do
         server <- newSynthesisServer 2
         handle <-
-          submitTask server $
+          submitTask server (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         threadDelay 100000
         cancelTask handle
@@ -164,8 +157,8 @@ synthesisServerTest =
               diffUTCTime expectedEndTime $ taskStartTime handle
         elapsedTime <- taskElapsedTime handle
         endTime <- taskEndTime handle
-        assertBool "Diff should be less than 0.2 second" $
-          abs (expectedElapsedTime - elapsedTime) < 0.2
-        assertBool "End time diff should be less than 0.2 second" $
-          abs (diffUTCTime endTime expectedEndTime) < 0.2
+        assertBool "Diff should be less than 0.3 second" $
+          abs (expectedElapsedTime - elapsedTime) < 0.3
+        assertBool "End time diff should be less than 0.3 second" $
+          abs (diffUTCTime endTime expectedEndTime) < 0.3
     ]

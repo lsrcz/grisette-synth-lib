@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -7,23 +9,19 @@
 module Grisette.Lib.Synth.Reasoning.Fuzzing
   ( fuzzingTestProg,
     fuzzingTestSymProgWithModel,
-    fuzzingTestStatefulVerifierFun,
-    SynthesisWithFuzzerTask (..),
-    SynthesisWithFuzzerMatcherTask (..),
+    QuickCheckFuzzer (..),
   )
 where
 
-import Data.Proxy (Proxy)
+import Data.Data (Typeable)
+import Data.Proxy (Proxy (Proxy))
 import Grisette
-  ( ConfigurableSolver,
-    EvaluateSym,
+  ( EvaluateSym,
     Mergeable,
     Model,
-    SEq,
-    StatefulVerifierFun,
     SymBool,
     ToCon,
-    ToSym,
+    ToSym (toSym),
     VerifierResult (CEGISVerifierFoundCex, CEGISVerifierNoCex),
     evaluateSymToCon,
   )
@@ -34,20 +32,11 @@ import Grisette.Lib.Synth.Program.ProgConstraints
   )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
-import Grisette.Lib.Synth.Reasoning.Matcher
-  ( EqMatcher (EqMatcher),
-    Matcher (match),
-  )
+import Grisette.Lib.Synth.Reasoning.Matcher (Matcher (match))
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisContext,
-    SynthesisTask (SynthesisTask),
-    ToSynthesisTask
-      ( ConProgType,
-        ConValType,
-        ExceptionType,
-        MatcherType,
-        toSynthesisTask
-      ),
+  ( IsVerifier (toVerifierFun),
+    SynthesisContext,
+    VerificationCex (VerificationCex),
   )
 import Test.QuickCheck.Counterexamples
   ( Args (chatty, maxSuccess),
@@ -61,12 +50,12 @@ import Test.QuickCheck.Counterexamples
 fuzzingTestProg ::
   ( Matcher matcher Bool conVal,
     Show conVal,
-    ProgSemantics semObj conProg conVal ConcreteContext
+    ProgSemantics conSemObj conProg conVal ConcreteContext
   ) =>
   Gen [conVal] ->
   ([conVal] -> ([conVal], matcher)) ->
   Int ->
-  semObj ->
+  conSemObj ->
   conProg ->
   IO (Maybe (IOPair conVal, matcher))
 fuzzingTestProg gen spec maxTests sem prog = do
@@ -87,10 +76,10 @@ fuzzingTestProg gen spec maxTests sem prog = do
       return $ Just (IOPair cex outputs, matcher)
 
 fuzzingTestSymProgWithModel ::
-  forall conVal conProg symProg matcher semObj p.
+  forall conVal conProg symProg matcher conSemObj p.
   ( Matcher matcher Bool conVal,
     Show conVal,
-    ProgSemantics semObj conProg conVal ConcreteContext,
+    ProgSemantics conSemObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
     EvaluateSym symProg
   ) =>
@@ -98,7 +87,7 @@ fuzzingTestSymProgWithModel ::
   ([conVal] -> ([conVal], matcher)) ->
   Int ->
   p conProg ->
-  semObj ->
+  conSemObj ->
   symProg ->
   Model ->
   IO (Maybe (IOPair conVal, matcher))
@@ -110,163 +99,64 @@ fuzzingTestSymProgWithModel gen spec maxTests _ sem prog model = do
     sem
     (evaluateSymToCon model prog :: conProg)
 
-fuzzingTestStatefulVerifierFun ::
-  ( Matcher matcher Bool conVal,
-    Show conVal,
-    ProgSemantics semObj conProg conVal ConcreteContext,
-    ToCon symProg conProg,
-    EvaluateSym symProg
-  ) =>
-  ([conVal] -> ([conVal], matcher)) ->
-  Int ->
-  semObj ->
-  p conProg ->
-  symProg ->
-  StatefulVerifierFun [Gen [conVal]] (IOPair conVal, matcher) ()
-fuzzingTestStatefulVerifierFun spec maxTests p sem prog = go
-  where
-    go [] _ = return ([], CEGISVerifierNoCex)
-    go (g : gs) model = do
-      fuzzingResult <-
-        fuzzingTestSymProgWithModel g spec maxTests sem p prog model
-      case fuzzingResult of
-        Just cex ->
-          return (g : gs, CEGISVerifierFoundCex cex)
-        Nothing -> go gs model
-
-data SynthesisWithFuzzerMatcherTask conVal conProg matcher where
-  SynthesisWithFuzzerMatcherTask ::
-    forall
-      config
-      h
-      conVal
-      symVal
-      ctx
-      conProg
-      symProg
-      matcher
-      conSemObj
-      symSemObj
-      symConstObj.
-    ( ConfigurableSolver config h,
-      ProgSemantics symSemObj symProg symVal ctx,
-      ProgConstraints symConstObj symProg ctx,
+data QuickCheckFuzzer symProg conProg symVal conVal symCtx where
+  QuickCheckFuzzer ::
+    ( ProgSemantics symSemObj symProg symVal symCtx,
+      ProgConstraints symConstObj symProg symCtx,
       ProgSemantics conSemObj conProg conVal ConcreteContext,
-      SynthesisContext ctx,
+      ToCon symProg conProg,
       ToSym conVal symVal,
       EvaluateSym symProg,
-      ToCon symProg conProg,
+      SynthesisContext symCtx,
       Matcher matcher SymBool symVal,
       Matcher matcher Bool conVal,
       Show conVal,
-      Show symVal,
-      Mergeable symVal
+      Mergeable symVal,
+      Typeable symSemObj,
+      Typeable symConstObj,
+      Typeable symVal,
+      Typeable matcher
     ) =>
-    { synthesisWithFuzzerMatcherTaskContextType :: Proxy ctx,
-      synthesisWithFuzzerMatcherTaskSymValType :: Proxy symVal,
-      synthesisWithFuzzerMatcherTaskSolverConfig :: config,
-      synthesisWithFuzzerMatcherTaskSpec :: [conVal] -> ([conVal], matcher),
-      synthesisWithFuzzerMatcherTaskMaxTests :: Int,
-      synthesisWithFuzzerMatcherTaskGenerators :: [Gen [conVal]],
-      synthesisWithFuzzerMatcherTaskConSemantics :: conSemObj,
-      synthesisWithFuzzerMatcherTaskSymSemantics ::
-        WithConstraints symSemObj symConstObj,
-      synthesisWithFuzzerMatcherTaskSymProg :: symProg
+    { quickCheckFuzzerSymSemantics :: WithConstraints symSemObj symConstObj,
+      quickCheckFuzzerConSemantics :: conSemObj,
+      quickCheckFuzzerMaxTests :: Int,
+      quickCheckFuzzerGenerator :: Gen [conVal],
+      quickCheckFuzzerSpec :: [conVal] -> ([conVal], matcher)
     } ->
-    SynthesisWithFuzzerMatcherTask conVal conProg matcher
-
-data SynthesisWithFuzzerTask conVal conProg where
-  SynthesisWithFuzzerTask ::
-    ( ConfigurableSolver config h,
-      ProgSemantics symSemObj symProg symVal ctx,
-      ProgConstraints symConstObj symProg ctx,
-      ProgSemantics conSemObj conProg conVal ConcreteContext,
-      SynthesisContext ctx,
-      ToSym conVal symVal,
-      EvaluateSym symProg,
-      ToCon symProg conProg,
-      SEq symVal,
-      Eq conVal,
-      Show conVal,
-      Show symVal,
-      Mergeable symVal
-    ) =>
-    { synthesisWithFuzzerTaskContextType :: Proxy ctx,
-      synthesisWithFuzzerTaskSymValType :: Proxy symVal,
-      synthesisWithFuzzerTaskSolverConfig :: config,
-      synthesisWithFuzzerTaskSpec :: [conVal] -> [conVal],
-      synthesisWithFuzzerTaskMaxTests :: Int,
-      synthesisWithFuzzerTaskGenerators :: [Gen [conVal]],
-      synthesisWithFuzzerTaskConSemantics :: conSemObj,
-      synthesisWithFuzzerTaskSymSemantics ::
-        WithConstraints symSemObj symConstObj,
-      synthesisWithFuzzerTaskSymProg :: symProg
-    } ->
-    SynthesisWithFuzzerTask conVal conProg
+    QuickCheckFuzzer symProg conProg symVal conVal symCtx
 
 instance
-  ToSynthesisTask
-    (SynthesisWithFuzzerMatcherTask conVal conProg matcher)
+  IsVerifier
+    (QuickCheckFuzzer symProg conProg symVal conVal symCtx)
+    symProg
   where
-  type
-    ConValType (SynthesisWithFuzzerMatcherTask conVal conProg matcher) =
-      conVal
-  type
-    ConProgType (SynthesisWithFuzzerMatcherTask conVal conProg matcher) =
-      conProg
-  type
-    MatcherType (SynthesisWithFuzzerMatcherTask conVal conProg matcher) =
-      matcher
-  type
-    ExceptionType (SynthesisWithFuzzerMatcherTask conVal conProg matcher) =
-      ()
-  toSynthesisTask
-    ( SynthesisWithFuzzerMatcherTask
-        pctx
-        psymVal
-        config
-        spec
-        maxTests
-        gens
+  toVerifierFun
+    ( QuickCheckFuzzer
+        symSem
         conSem
-        symSem
-        prog
-      ) =
-      SynthesisTask
-        pctx
-        psymVal
-        config
-        gens
-        (fuzzingTestStatefulVerifierFun spec maxTests conSem)
-        symSem
-        prog
-
-instance ToSynthesisTask (SynthesisWithFuzzerTask conVal conProg) where
-  type ConValType (SynthesisWithFuzzerTask conVal conProg) = conVal
-  type ConProgType (SynthesisWithFuzzerTask conVal conProg) = conProg
-  type MatcherType (SynthesisWithFuzzerTask conVal conProg) = EqMatcher
-  type ExceptionType (SynthesisWithFuzzerTask conVal conProg) = ()
-  toSynthesisTask
-    ( SynthesisWithFuzzerTask
-        pctx
-        psymVal
-        config
-        spec
         maxTests
-        gens
-        conSem
-        symSem
-        prog
-      ) =
-      SynthesisTask
-        pctx
-        psymVal
-        config
-        gens
-        ( fuzzingTestStatefulVerifierFun
-            (\inputs -> (spec inputs, EqMatcher))
-            maxTests
-            conSem
-        )
-        symSem
-        prog
+        gen
+        spec
+      )
+    prog
+    model = do
+      fuzzingResult <-
+        fuzzingTestSymProgWithModel
+          gen
+          spec
+          maxTests
+          (Proxy :: Proxy conProg)
+          conSem
+          prog
+          model
+      case fuzzingResult of
+        Just (ioPair, matcher) ->
+          return
+            ( CEGISVerifierFoundCex $
+                VerificationCex
+                  (Proxy :: Proxy symCtx)
+                  symSem
+                  (toSym ioPair :: IOPair symVal)
+                  matcher
+            )
+        Nothing -> return CEGISVerifierNoCex
