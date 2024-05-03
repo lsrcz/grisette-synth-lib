@@ -125,7 +125,6 @@ data SynthesisTask conVal conProg matcher exception where
       conProg
       symProg
       matcher
-      conSemObj
       symSemObj
       symConstObj.
     ( ConfigurableSolver config h,
@@ -146,10 +145,8 @@ data SynthesisTask conVal conProg matcher exception where
       synthesisTaskVerifier ::
         forall p.
         p conProg ->
-        conSemObj ->
         symProg ->
         StatefulVerifierFun state (IOPair conVal, matcher) exception,
-      synthesisTaskConSemantics :: conSemObj,
       synthesisTaskSymSemantics :: WithConstraints symSemObj symConstObj,
       synthesisTaskSymProg :: symProg
     } ->
@@ -193,7 +190,6 @@ synthesizeProgWithVerifier task =
       config
       initialState
       verifier
-      conSem
       symSem
       prog -> do
         (ioPairs, r) <-
@@ -207,7 +203,7 @@ synthesizeProgWithVerifier task =
                 prog
             )
             initialState
-            (verifier (Proxy :: Proxy conProg) conSem prog)
+            (verifier (Proxy :: Proxy conProg) prog)
         case r of
           CEGISSuccess model ->
             return (ioPairs, SynthesisSuccess $ evaluateSymToCon model prog)

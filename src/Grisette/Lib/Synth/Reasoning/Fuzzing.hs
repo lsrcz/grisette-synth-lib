@@ -119,8 +119,8 @@ fuzzingTestStatefulVerifierFun ::
   ) =>
   ([conVal] -> ([conVal], matcher)) ->
   Int ->
-  p conProg ->
   semObj ->
+  p conProg ->
   symProg ->
   StatefulVerifierFun [Gen [conVal]] (IOPair conVal, matcher) ()
 fuzzingTestStatefulVerifierFun spec maxTests p sem prog = go
@@ -128,7 +128,7 @@ fuzzingTestStatefulVerifierFun spec maxTests p sem prog = go
     go [] _ = return ([], CEGISVerifierNoCex)
     go (g : gs) model = do
       fuzzingResult <-
-        fuzzingTestSymProgWithModel g spec maxTests p sem prog model
+        fuzzingTestSymProgWithModel g spec maxTests sem p prog model
       case fuzzingResult of
         Just cex ->
           return (g : gs, CEGISVerifierFoundCex cex)
@@ -237,8 +237,7 @@ instance
         psymVal
         config
         gens
-        (fuzzingTestStatefulVerifierFun spec maxTests)
-        conSem
+        (fuzzingTestStatefulVerifierFun spec maxTests conSem)
         symSem
         prog
 
@@ -267,7 +266,7 @@ instance ToSynthesisTask (SynthesisWithFuzzerTask conVal conProg) where
         ( fuzzingTestStatefulVerifierFun
             (\inputs -> (spec inputs, EqMatcher))
             maxTests
+            conSem
         )
-        conSem
         symSem
         prog

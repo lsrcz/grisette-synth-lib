@@ -137,8 +137,8 @@ fuzzingTest =
           fuzzingTestStatefulVerifierFun
             badSpec
             100
-            (Proxy :: Proxy ConProgType)
             TestSemanticsObj
+            (Proxy :: Proxy ConProgType)
             symProg
             [return [1, -1], gen]
             model
