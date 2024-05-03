@@ -102,18 +102,18 @@ data VerificationCex symProg where
     VerificationCex symProg
 
 class
-  IsVerifier verifier symProg
-    | verifier -> symProg
+  IsVerifier verifier symProg conProg
+    | verifier -> symProg conProg
   where
   toVerifierFuns ::
     verifier -> symProg -> [VerifierFun (VerificationCex symProg) ()]
 
-data SomeVerifier symProg where
+data SomeVerifier symProg conProg where
   SomeVerifier ::
-    forall verifier symProg.
-    (IsVerifier verifier symProg) =>
+    forall verifier symProg conProg.
+    (IsVerifier verifier symProg conProg) =>
     verifier ->
-    SomeVerifier symProg
+    SomeVerifier symProg conProg
 
 data SynthesisTask symProg conProg where
   SynthesisTask ::
@@ -121,7 +121,7 @@ data SynthesisTask symProg conProg where
     ( EvaluateSym symProg,
       ToCon symProg conProg
     ) =>
-    { synthesisTaskVerifiers :: [SomeVerifier symProg],
+    { synthesisTaskVerifiers :: [SomeVerifier symProg conProg],
       synthesisTaskSymProg :: symProg
     } ->
     SynthesisTask symProg conProg

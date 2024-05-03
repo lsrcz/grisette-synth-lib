@@ -129,6 +129,7 @@ instance
   IsVerifier
     (QuickCheckFuzzer symProg conProg symVal conVal symCtx)
     symProg
+    conProg
   where
   toVerifierFuns (QuickCheckFuzzer symSem conSem maxTests gens spec) prog =
     flip fmap gens $ \gen model -> do
