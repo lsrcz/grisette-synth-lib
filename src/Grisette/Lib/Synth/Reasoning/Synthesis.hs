@@ -105,8 +105,8 @@ class
   IsVerifier verifier symProg
     | verifier -> symProg
   where
-  toVerifierFun ::
-    verifier -> symProg -> VerifierFun (VerificationCex symProg) ()
+  toVerifierFuns ::
+    verifier -> symProg -> [VerifierFun (VerificationCex symProg) ()]
 
 data SomeVerifier symProg where
   SomeVerifier ::
@@ -160,8 +160,9 @@ runSynthesisTask config (SynthesisTask verifiers symProg) = do
       True
       (con True)
       (synthesisConstraintFun symProg)
-      ( (\(SomeVerifier verifier) -> toVerifierFun verifier symProg)
-          <$> verifiers
+      ( concatMap
+          (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
+          verifiers
       )
   case r of
     CEGISSuccess model ->
@@ -182,8 +183,9 @@ runSynthesisTaskExtractCex config (SynthesisTask verifiers symProg) = do
       True
       (con True)
       (synthesisConstraintFun symProg)
-      ( (\(SomeVerifier verifier) -> toVerifierFun verifier symProg)
-          <$> verifiers
+      ( concatMap
+          (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
+          verifiers
       )
   case r of
     CEGISSuccess model ->

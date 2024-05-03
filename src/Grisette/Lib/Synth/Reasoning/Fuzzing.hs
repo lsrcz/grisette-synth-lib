@@ -34,7 +34,7 @@ import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher (match))
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( IsVerifier (toVerifierFun),
+  ( IsVerifier (toVerifierFuns),
     SynthesisContext,
     VerificationCex (VerificationCex),
   )
@@ -120,7 +120,7 @@ data QuickCheckFuzzer symProg conProg symVal conVal symCtx where
     { quickCheckFuzzerSymSemantics :: WithConstraints symSemObj symConstObj,
       quickCheckFuzzerConSemantics :: conSemObj,
       quickCheckFuzzerMaxTests :: Int,
-      quickCheckFuzzerGenerator :: Gen [conVal],
+      quickCheckFuzzerGenerators :: [Gen [conVal]],
       quickCheckFuzzerSpec :: [conVal] -> ([conVal], matcher)
     } ->
     QuickCheckFuzzer symProg conProg symVal conVal symCtx
@@ -130,16 +130,8 @@ instance
     (QuickCheckFuzzer symProg conProg symVal conVal symCtx)
     symProg
   where
-  toVerifierFun
-    ( QuickCheckFuzzer
-        symSem
-        conSem
-        maxTests
-        gen
-        spec
-      )
-    prog
-    model = do
+  toVerifierFuns (QuickCheckFuzzer symSem conSem maxTests gens spec) prog =
+    flip fmap gens $ \gen model -> do
       fuzzingResult <-
         fuzzingTestSymProgWithModel
           gen

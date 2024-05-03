@@ -27,7 +27,7 @@ import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( QuickCheckFuzzer
       ( QuickCheckFuzzer,
         quickCheckFuzzerConSemantics,
-        quickCheckFuzzerGenerator,
+        quickCheckFuzzerGenerators,
         quickCheckFuzzerMaxTests,
         quickCheckFuzzerSpec,
         quickCheckFuzzerSymSemantics
@@ -151,7 +151,7 @@ main = do
           { quickCheckFuzzerSymSemantics = WithConstraints Sem (),
             quickCheckFuzzerConSemantics = Sem,
             quickCheckFuzzerMaxTests = 100,
-            quickCheckFuzzerGenerator = gen,
+            quickCheckFuzzerGenerators = [gen],
             quickCheckFuzzerSpec = (,EqMatcher) . spec
           } ::
           QuickCheckFuzzer Sketch ConProg SymVal ConVal AngelicContext

@@ -26,7 +26,7 @@ import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( QuickCheckFuzzer
       ( QuickCheckFuzzer,
         quickCheckFuzzerConSemantics,
-        quickCheckFuzzerGenerator,
+        quickCheckFuzzerGenerators,
         quickCheckFuzzerMaxTests,
         quickCheckFuzzerSpec,
         quickCheckFuzzerSymSemantics
@@ -133,7 +133,7 @@ byteCodeSketchTest =
                 WithConstraints TestSemanticsObj (),
               quickCheckFuzzerConSemantics = TestSemanticsObj,
               quickCheckFuzzerMaxTests = 100,
-              quickCheckFuzzerGenerator = gen,
+              quickCheckFuzzerGenerators = [gen],
               quickCheckFuzzerSpec = spec
             } ::
             QuickCheckFuzzer SymProg ConProg SymVal ConVal SymbolicContext
