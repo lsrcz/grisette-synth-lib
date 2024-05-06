@@ -255,7 +255,7 @@ task ::
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->
   SymProg ->
-  SynthesisTask SymProg ConProg
+  SynthesisTask ConProg
 task spec gen sketch =
   SynthesisTask
     { synthesisTaskVerifiers = [SomeVerifier $ verifier spec gen],

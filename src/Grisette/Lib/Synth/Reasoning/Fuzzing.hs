@@ -112,6 +112,7 @@ data QuickCheckFuzzer symProg conProg symVal conVal symCtx where
       Matcher matcher Bool conVal,
       Show conVal,
       Mergeable symVal,
+      Typeable symProg,
       Typeable symSemObj,
       Typeable symConstObj,
       Typeable symVal,
@@ -148,6 +149,7 @@ instance
             ( CEGISVerifierFoundCex $
                 VerificationCex
                   (Proxy :: Proxy symCtx)
+                  (Proxy :: Proxy symProg)
                   symSem
                   (toSym ioPair :: IOPair symVal)
                   matcher

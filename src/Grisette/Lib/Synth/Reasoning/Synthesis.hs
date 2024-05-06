@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Grisette.Lib.Synth.Reasoning.Synthesis
@@ -20,7 +21,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
 where
 
 import Control.Monad.Except (runExceptT)
-import Data.Data (Typeable)
+import Data.Data (Typeable, eqT, type (:~:) (Refl))
 import Data.Proxy (Proxy)
 import qualified Data.Text as T
 import Grisette
@@ -81,7 +82,7 @@ instance SynthesisContext AngelicContext where
           (withInfo (identifier $ showText i) ("synth" :: T.Text))
       )
 
-data VerificationCex symProg where
+data VerificationCex where
   VerificationCex ::
     forall symSemObj symConstObj symProg symVal ctx matcher.
     ( ProgSemantics symSemObj symProg symVal ctx,
@@ -89,24 +90,26 @@ data VerificationCex symProg where
       SynthesisContext ctx,
       Matcher matcher SymBool symVal,
       Mergeable symVal,
+      Typeable symProg,
       Typeable symSemObj,
       Typeable symConstObj,
       Typeable symVal,
       Typeable matcher
     ) =>
     { verificationCexContext :: Proxy ctx,
+      verificationCexSymProg :: Proxy symProg,
       verificationCexSymSemantics :: WithConstraints symSemObj symConstObj,
       verificationCexIOPair :: IOPair symVal,
       verificationCexMatcher :: matcher
     } ->
-    VerificationCex symProg
+    VerificationCex
 
 class
   IsVerifier verifier symProg conProg
     | verifier -> symProg conProg
   where
   toVerifierFuns ::
-    verifier -> symProg -> [VerifierFun (VerificationCex symProg) ()]
+    verifier -> symProg -> [VerifierFun VerificationCex ()]
 
 data SomeVerifier symProg conProg where
   SomeVerifier ::
@@ -115,31 +118,44 @@ data SomeVerifier symProg conProg where
     verifier ->
     SomeVerifier symProg conProg
 
-data SynthesisTask symProg conProg where
+data SynthesisTask conProg where
   SynthesisTask ::
     forall symProg conProg.
     ( EvaluateSym symProg,
-      ToCon symProg conProg
+      ToCon symProg conProg,
+      Typeable symProg
     ) =>
     { synthesisTaskVerifiers :: [SomeVerifier symProg conProg],
       synthesisTaskSymProg :: symProg
     } ->
-    SynthesisTask symProg conProg
+    SynthesisTask conProg
 
 synthesisConstraintFun ::
   forall symProg.
+  (Typeable symProg) =>
   symProg ->
-  SynthesisConstraintFun (VerificationCex symProg)
+  SynthesisConstraintFun VerificationCex
 synthesisConstraintFun
   prog
   i
-  (VerificationCex (_ :: Proxy ctx) symSem (iop :: IOPair symVal) matcher) =
-    return $
-      genSynthesisConstraint
-        i
-        matcher
-        (runProgWithConstraints symSem prog (ioPairInputs iop) :: ctx [symVal])
-        (ioPairOutputs iop)
+  ( VerificationCex
+      (_ :: Proxy ctx)
+      (_ :: Proxy symProg')
+      symSem
+      (iop :: IOPair symVal)
+      matcher
+    ) =
+    case eqT @symProg @symProg' of
+      Just Refl ->
+        return $
+          genSynthesisConstraint
+            i
+            matcher
+            ( runProgWithConstraints symSem prog (ioPairInputs iop) ::
+                ctx [symVal]
+            )
+            (ioPairOutputs iop)
+      Nothing -> error "Should not happen"
 
 data SynthesisResult conProg
   = SynthesisSuccess conProg
@@ -151,7 +167,7 @@ runSynthesisTask ::
   ( ConfigurableSolver config h
   ) =>
   config ->
-  SynthesisTask symProg conProg ->
+  SynthesisTask conProg ->
   IO (SynthesisResult conProg)
 runSynthesisTask config (SynthesisTask verifiers symProg) = do
   (_, r) <-
@@ -174,8 +190,8 @@ runSynthesisTaskExtractCex ::
   ( ConfigurableSolver config h
   ) =>
   config ->
-  SynthesisTask symProg conProg ->
-  IO ([VerificationCex symProg], SynthesisResult conProg)
+  SynthesisTask conProg ->
+  IO ([VerificationCex], SynthesisResult conProg)
 runSynthesisTaskExtractCex config (SynthesisTask verifiers symProg) = do
   (cex, r) <-
     genericCEGIS

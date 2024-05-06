@@ -114,7 +114,7 @@ submitTask ::
   (ConfigurableSolver config h) =>
   SynthesisServer ->
   config ->
-  SynthesisTask symProg conProg ->
+  SynthesisTask conProg ->
   IO (TaskHandle conProg)
 submitTask (SynthesisServer _ taskGroup nextVarId _) config task = do
   endTimeTMVar <- newEmptyTMVarIO
@@ -144,7 +144,7 @@ submitTaskWithTimeout ::
   SynthesisServer ->
   config ->
   Int ->
-  SynthesisTask symProg conProg ->
+  SynthesisTask conProg ->
   IO (TaskHandle conProg)
 submitTaskWithTimeout server config timeout task = do
   handle <- submitTask server config task
