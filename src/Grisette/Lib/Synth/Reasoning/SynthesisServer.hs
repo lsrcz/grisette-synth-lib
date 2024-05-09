@@ -38,7 +38,6 @@ import Control.Concurrent.STM
     putTMVar,
     readTMVar,
     readTVar,
-    writeTMVar,
     writeTVar,
   )
 import Control.Exception (finally)
@@ -163,7 +162,7 @@ submitTaskImpl
             async $ threadDelay timeout >> cancelTaskWith selfHandle TaskTimeout
             return ()
           Nothing -> return ()
-        getCurrentTime >>= atomically . writeTMVar startTimeTMVar
+        getCurrentTime >>= atomically . putTMVar startTimeTMVar
         runSynthesisTask config task
           `finally` (getCurrentTime >>= atomically . putTMVar endTimeTMVar)
     taskId <- atomically $ do
@@ -176,7 +175,7 @@ submitTaskImpl
             taskId
             (readTMVar startTimeTMVar)
             (readTMVar endTimeTMVar)
-    atomically $ writeTMVar taskHandleTMVar taskHandle
+    atomically $ putTMVar taskHandleTMVar taskHandle
     return taskHandle
 
 -- | Add a task to the synthesis server.
