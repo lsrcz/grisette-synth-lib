@@ -26,7 +26,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
   )
 import Grisette.Lib.Synth.Reasoning.SynthesisServer
   ( TaskException (TaskCancelled, TaskTimeout),
-    TaskHandle (taskStartTime),
+    TaskHandle,
     TaskSet,
     cancelTask,
     newSynthesisServer,
@@ -36,6 +36,7 @@ import Grisette.Lib.Synth.Reasoning.SynthesisServer
     submitTaskWithTimeout,
     taskElapsedTime,
     taskEndTime,
+    taskStartTime,
     waitCatchTask,
   )
 import Test.Framework (Test, testGroup)
@@ -136,9 +137,9 @@ synthesisServerTest =
           submitTask server (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         _ <- waitCatchTask handle
+        startTime <- taskStartTime handle
         expectedEndTime <- getCurrentTime
-        let expectedElapsedTime =
-              diffUTCTime expectedEndTime $ taskStartTime handle
+        let expectedElapsedTime = diffUTCTime expectedEndTime startTime
         elapsedTime <- taskElapsedTime handle
         endTime <- taskEndTime handle
         assertBool "Diff should be less than 0.3 second" $
@@ -152,9 +153,9 @@ synthesisServerTest =
             task divModTwiceSpec divModTwiceGen sharedSketch
         threadDelay 100000
         cancelTask handle
+        startTime <- taskStartTime handle
         expectedEndTime <- getCurrentTime
-        let expectedElapsedTime =
-              diffUTCTime expectedEndTime $ taskStartTime handle
+        let expectedElapsedTime = diffUTCTime expectedEndTime startTime
         elapsedTime <- taskElapsedTime handle
         endTime <- taskEndTime handle
         assertBool "Diff should be less than 0.3 second" $

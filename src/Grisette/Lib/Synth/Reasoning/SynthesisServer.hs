@@ -7,7 +7,8 @@ module Grisette.Lib.Synth.Reasoning.SynthesisServer
     newSynthesisServer,
     endSynthesisServer,
     withSynthesisServer,
-    TaskHandle (taskId, taskStartTime),
+    TaskHandle (taskId),
+    taskStartTime,
     taskEndTime,
     taskElapsedTime,
     TaskSet,
@@ -33,6 +34,7 @@ import Control.Concurrent.STM
     putTMVar,
     readTMVar,
     readTVar,
+    writeTMVar,
     writeTVar,
   )
 import Control.Exception (finally)
@@ -82,12 +84,16 @@ withSynthesisServer numOfTasks =
   C.bracket (newSynthesisServer numOfTasks) endSynthesisServer
 
 data TaskHandle conProg = TaskHandle
-  { _taskAsync ::
-      Pool.Async (SynthesisResult conProg),
+  { _taskAsync :: Pool.Async (SynthesisResult conProg),
     taskId :: Int,
-    taskStartTime :: UTCTime,
+    _taskStartTime :: STM UTCTime,
     _taskEndTime :: STM UTCTime
   }
+
+-- | Get the end time of a task. This function blocks until the task is
+-- really started.
+taskStartTime :: TaskHandle conProg -> IO UTCTime
+taskStartTime (TaskHandle _ _ startTime _) = atomically startTime
 
 -- | Get the end time of a task. This function blocks until the task is
 -- finished.
@@ -98,8 +104,9 @@ taskEndTime (TaskHandle _ _ _ endTime) = atomically endTime
 -- finished.
 taskElapsedTime :: TaskHandle conProg -> IO NominalDiffTime
 taskElapsedTime task = do
+  startTime <- taskStartTime task
   endTime <- taskEndTime task
-  return $ endTime `diffUTCTime` taskStartTime task
+  return $ endTime `diffUTCTime` startTime
 
 instance Eq (TaskHandle conProg) where
   TaskHandle _ taskId1 _ _ == TaskHandle _ taskId2 _ _ = taskId1 == taskId2
@@ -109,6 +116,45 @@ instance Hashable (TaskHandle conProg) where
 
 type TaskSet conProg = HS.HashSet (TaskHandle conProg)
 
+submitTaskImpl ::
+  (ConfigurableSolver config h) =>
+  Maybe Int ->
+  SynthesisServer ->
+  config ->
+  SynthesisTask conProg ->
+  IO (TaskHandle conProg)
+submitTaskImpl
+  maybeTimeout
+  (SynthesisServer _ taskGroup nextVarId _)
+  config
+  task = do
+    startTimeTMVar <- newEmptyTMVarIO
+    endTimeTMVar <- newEmptyTMVarIO
+    taskHandleTMVar <- newEmptyTMVarIO
+    handle <-
+      Pool.async taskGroup $ do
+        selfHandle <- atomically $ readTMVar taskHandleTMVar
+        case maybeTimeout of
+          Just timeout -> do
+            async $ threadDelay timeout >> cancelTaskWith selfHandle TaskTimeout
+            return ()
+          Nothing -> return ()
+        getCurrentTime >>= atomically . writeTMVar startTimeTMVar
+        runSynthesisTask config task
+          `finally` (getCurrentTime >>= atomically . putTMVar endTimeTMVar)
+    taskId <- atomically $ do
+      taskId <- readTVar nextVarId
+      writeTVar nextVarId (taskId + 1)
+      return taskId
+    let taskHandle =
+          TaskHandle
+            handle
+            taskId
+            (readTMVar startTimeTMVar)
+            (readTMVar endTimeTMVar)
+    atomically $ writeTMVar taskHandleTMVar taskHandle
+    return taskHandle
+
 -- | Add a task to the synthesis server.
 submitTask ::
   (ConfigurableSolver config h) =>
@@ -116,20 +162,7 @@ submitTask ::
   config ->
   SynthesisTask conProg ->
   IO (TaskHandle conProg)
-submitTask (SynthesisServer _ taskGroup nextVarId _) config task = do
-  endTimeTMVar <- newEmptyTMVarIO
-  handle <-
-    Pool.async taskGroup $
-      runSynthesisTask config task
-        `finally` ( getCurrentTime >>= \currentTime ->
-                      atomically (putTMVar endTimeTMVar currentTime)
-                  )
-  taskId <- atomically $ do
-    taskId <- readTVar nextVarId
-    writeTVar nextVarId (taskId + 1)
-    return taskId
-  startTime <- getCurrentTime
-  return $ TaskHandle handle taskId startTime (readTMVar endTimeTMVar)
+submitTask = submitTaskImpl Nothing
 
 -- | Add a task to the synthesis server with a timeout.
 --
@@ -146,10 +179,8 @@ submitTaskWithTimeout ::
   Int ->
   SynthesisTask conProg ->
   IO (TaskHandle conProg)
-submitTaskWithTimeout server config timeout task = do
-  handle <- submitTask server config task
-  _ <- async $ threadDelay timeout >> cancelTaskWith handle TaskTimeout
-  return handle
+submitTaskWithTimeout server config timeout =
+  submitTaskImpl (Just timeout) server config
 
 pollTask ::
   TaskHandle conProg ->
