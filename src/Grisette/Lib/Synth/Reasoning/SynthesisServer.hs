@@ -8,6 +8,9 @@ module Grisette.Lib.Synth.Reasoning.SynthesisServer
     endSynthesisServer,
     withSynthesisServer,
     TaskHandle (taskId),
+    maybeTaskStartTime,
+    maybeTaskEndTime,
+    maybeTaskElapsedTime,
     taskStartTime,
     taskEndTime,
     taskElapsedTime,
@@ -31,6 +34,7 @@ import Control.Concurrent.STM
     atomically,
     newEmptyTMVarIO,
     newTVarIO,
+    orElse,
     putTMVar,
     readTMVar,
     readTVar,
@@ -90,15 +94,35 @@ data TaskHandle conProg = TaskHandle
     _taskEndTime :: STM UTCTime
   }
 
--- | Get the end time of a task. This function blocks until the task is
+-- | Get the start time of a task. This function return Nothing if the task
+-- haven't really started.
+maybeTaskStartTime :: TaskHandle conProg -> IO (Maybe UTCTime)
+maybeTaskStartTime (TaskHandle _ _ startTime _) =
+  atomically $ (Just <$> startTime) `orElse` return Nothing
+
+-- | Get the start time of a task. This function blocks until the task is
 -- really started.
 taskStartTime :: TaskHandle conProg -> IO UTCTime
 taskStartTime (TaskHandle _ _ startTime _) = atomically startTime
+
+-- | Get the end time of a task. This function return Nothing if the task
+-- haven't finished.
+maybeTaskEndTime :: TaskHandle conProg -> IO (Maybe UTCTime)
+maybeTaskEndTime (TaskHandle _ _ _ endTime) =
+  atomically $ (Just <$> endTime) `orElse` return Nothing
 
 -- | Get the end time of a task. This function blocks until the task is
 -- finished.
 taskEndTime :: TaskHandle conProg -> IO UTCTime
 taskEndTime (TaskHandle _ _ _ endTime) = atomically endTime
+
+-- | Get the elapsed time of a task. This function returns Nothing if the task
+-- haven't finished.
+maybeTaskElapsedTime :: TaskHandle conProg -> IO (Maybe NominalDiffTime)
+maybeTaskElapsedTime task = do
+  startTime <- maybeTaskStartTime task
+  endTime <- maybeTaskEndTime task
+  return $ diffUTCTime <$> endTime <*> startTime
 
 -- | Get the elapsed time of a task. This function blocks until the task is
 -- finished.
