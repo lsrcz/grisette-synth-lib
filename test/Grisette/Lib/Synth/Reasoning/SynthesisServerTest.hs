@@ -29,6 +29,7 @@ import Grisette.Lib.Synth.Reasoning.SynthesisServer
     TaskHandle,
     TaskSet,
     cancelTask,
+    endSynthesisServer,
     newSynthesisServer,
     pollTask,
     pollTasks,
@@ -37,7 +38,7 @@ import Grisette.Lib.Synth.Reasoning.SynthesisServer
     taskElapsedTime,
     taskEndTime,
     taskStartTime,
-    waitCatchTask, endSynthesisServer,
+    waitCatchTask,
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
