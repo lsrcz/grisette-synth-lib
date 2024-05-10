@@ -37,7 +37,7 @@ import Grisette.Lib.Synth.Reasoning.SynthesisServer
     taskElapsedTime,
     taskEndTime,
     taskStartTime,
-    waitCatchTask,
+    waitCatchTask, endSynthesisServer,
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
@@ -84,7 +84,8 @@ synthesisServerTest =
         Right r2 <- pollUntilFinished handle2
         fuzzResult r0 addThenDoubleGen addThenDoubleSpec
         fuzzResult r1 divModTwiceGen divModTwiceSpec
-        fuzzResult r2 addThenDoubleGen addThenDoubleReverseSpec,
+        fuzzResult r2 addThenDoubleGen addThenDoubleReverseSpec
+        endSynthesisServer server,
       testCase "pollTasks" $ do
         server <- newSynthesisServer 2
         handle0 <-
@@ -102,7 +103,8 @@ synthesisServerTest =
         fuzzResult
           (fromRight undefined $ map HM.! handle1)
           divModTwiceGen
-          divModTwiceSpec,
+          divModTwiceSpec
+        endSynthesisServer server,
       testCase "submitTaskWithTimeout" $ do
         server <- newSynthesisServer 2
         -- The timeout cannot be too short due to
@@ -115,7 +117,8 @@ synthesisServerTest =
         r0 <- pollUntilFinished handle1
         case r0 of
           Left e -> fromException e @?= Just TaskTimeout
-          _ -> fail "Expected TaskTimeout exception.",
+          _ -> fail "Expected TaskTimeout exception."
+        endSynthesisServer server,
       testCase "cancelTask" $ do
         server <- newSynthesisServer 2
         handle1 <-
@@ -130,7 +133,8 @@ synthesisServerTest =
         r0 <- pollUntilFinished handle1
         case r0 of
           Left e -> fromException e @?= Just TaskCancelled
-          _ -> fail "Expected TaskCancelled exception.",
+          _ -> fail "Expected TaskCancelled exception."
+        endSynthesisServer server,
       testCase "time measurement" $ do
         server <- newSynthesisServer 2
         handle <-
@@ -145,7 +149,8 @@ synthesisServerTest =
         assertBool "Diff should be less than 0.3 second" $
           abs (expectedElapsedTime - elapsedTime) < 0.3
         assertBool "End time diff should be less than 0.3 second" $
-          abs (diffUTCTime endTime expectedEndTime) < 0.3,
+          abs (diffUTCTime endTime expectedEndTime) < 0.3
+        endSynthesisServer server,
       testCase "time measurement for cancelled tasks" $ do
         server <- newSynthesisServer 2
         handle <-
@@ -162,4 +167,5 @@ synthesisServerTest =
           abs (expectedElapsedTime - elapsedTime) < 0.3
         assertBool "End time diff should be less than 0.3 second" $
           abs (diffUTCTime endTime expectedEndTime) < 0.3
+        endSynthesisServer server
     ]
