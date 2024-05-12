@@ -136,14 +136,16 @@ prettyArguments op varIds map = do
           (HM.lookup varId map)
   argNames <- traverse lookupVarId $ zip [0 ..] varIds
   argDescriptions <- describeArguments op
-  when (length argNames /= length argDescriptions) $
-    throwError $
-      IncorrectNumberOfArguments op (length argDescriptions) (length argNames)
-
+  when
+    (length argNames /= length argDescriptions && not (null argDescriptions))
+    $ throwError
+    $ IncorrectNumberOfArguments op (length argDescriptions) (length argNames)
+  let finalArgDescriptions =
+        if null argDescriptions then Nothing <$ argNames else argDescriptions
   let describe argName Nothing = gpretty argName
       describe argName (Just argDesc) =
         gpretty argDesc <> "=" <> gpretty argName
-  let argPretty = zipWith describe argNames argDescriptions
+  let argPretty = zipWith describe argNames finalArgDescriptions
   return $ parenCommaList argPretty
 
 prettyResults ::
@@ -159,13 +161,14 @@ prettyResults op varIds map = do
         when (HM.member varId map) $ throwError $ RedefinedResult idx varId
   traverse_ ensureNotRedefined $ zip [0 ..] varIds
   prefixes <- prefixResults op
-  when (length varIds /= length prefixes) $
+  when (length varIds /= length prefixes && not (null prefixes)) $
     throwError $
       IncorrectNumberOfResults op (length prefixes) (length varIds)
+  let finalPrefixes = if null prefixes then "r" <$ varIds else prefixes
   let names =
         zipWith
           (\prefix varId -> prefix <> showText (toInteger varId))
-          prefixes
+          finalPrefixes
           varIds
   let newMap = HM.union map $ HM.fromList $ zip varIds names
   return (newMap, parenCommaListIfNotSingle $ gpretty <$> names)

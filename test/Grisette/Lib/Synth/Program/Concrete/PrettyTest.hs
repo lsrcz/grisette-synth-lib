@@ -21,7 +21,7 @@ import Grisette.Lib.Synth.Program.Concrete
   )
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   ( TestPrettyExtOp (TestPrettyExtOp),
-    TestPrettyOp (PrettyInvokeExtOp, PrettyInvokeOp, PrettyOp1, PrettyOp2),
+    TestPrettyOp (PrettyInvokeExtOp, PrettyInvokeOp, PrettyOp1, PrettyOp2, PrettyOp2NoDescNoPrefix),
     TestPrettyType (PrettyType1, PrettyType2),
   )
 import Grisette.Lib.Synth.Util.Pretty (renderDoc)
@@ -87,6 +87,27 @@ prettyTest =
                       ],
                 testStmtNewMap =
                   HM.union env $ HM.fromList [(2, "op2_2"), (3, "op2'_3")]
+              },
+            PrettyStmtTestCase
+              { testStmtGroupName = "2 ret, 2 arg, no desc/prefix",
+                testStmt = Stmt PrettyOp2NoDescNoPrefix [0, 1] [2, 3],
+                testStmtIndex = 3,
+                testStmtLooseExpectedResult =
+                  Right "(r2, r3) = op2NoDescNoPrefix(x, y)",
+                testStmtCompactExpectedResult =
+                  Right $
+                    T.intercalate
+                      "\n"
+                      [ "(",
+                        "  r2,",
+                        "  r3",
+                        ") = op2NoDescNoPrefix(",
+                        "  x,",
+                        "  y",
+                        ")"
+                      ],
+                testStmtNewMap =
+                  HM.union env $ HM.fromList [(2, "r2"), (3, "r3")]
               },
             PrettyStmtTestCase
               { testStmtGroupName = "arg error",

@@ -59,6 +59,7 @@ data TestPrettyOp
   = PrettyOp0
   | PrettyOp1
   | PrettyOp2
+  | PrettyOp2NoDescNoPrefix
   | PrettyInvokeOp (Prog TestPrettyOp Int TestPrettyType)
   | PrettyInvokeExtOp (Prog TestPrettyExtOp Int TestPrettyType)
   deriving (Show, Generic, Eq)
@@ -98,6 +99,7 @@ instance GPretty TestPrettyOp where
   gpretty PrettyOp0 = "op0"
   gpretty PrettyOp1 = "op1"
   gpretty PrettyOp2 = "op2"
+  gpretty PrettyOp2NoDescNoPrefix = "op2NoDescNoPrefix"
   gpretty (PrettyInvokeOp prog) = "invoke(" <> gpretty (progName prog) <> ")"
   gpretty (PrettyInvokeExtOp prog) =
     "invoke_ext(" <> gpretty (progName prog) <> ")"
@@ -106,11 +108,13 @@ instance OpPretty TestPrettyOp where
   describeArguments PrettyOp0 = Right []
   describeArguments PrettyOp1 = Right [Just "op1"]
   describeArguments PrettyOp2 = Right [Just "op2'2'0'arg", Nothing]
+  describeArguments PrettyOp2NoDescNoPrefix = Right []
   describeArguments (PrettyInvokeOp prog) =
     Right $ replicate (length $ progArgList prog) Nothing
   describeArguments (PrettyInvokeExtOp prog) =
     Right $ replicate (length $ progArgList prog) Nothing
   prefixResults PrettyOp2 = return ["op2_", "op2'_"]
+  prefixResults PrettyOp2NoDescNoPrefix = return []
   prefixResults op = allPrefixesByTypes op
 
 data TestPrettyType = PrettyType1 | PrettyType2
@@ -125,6 +129,8 @@ instance OpTyping TestPrettyOp TestPrettyType ConcreteContext where
   typeOp PrettyOp0 = return $ TypeSignature [] [PrettyType1]
   typeOp PrettyOp1 = return $ TypeSignature [PrettyType1] [PrettyType1]
   typeOp PrettyOp2 =
+    return $ TypeSignature [PrettyType1, PrettyType2] [PrettyType2, PrettyType1]
+  typeOp PrettyOp2NoDescNoPrefix =
     return $ TypeSignature [PrettyType1, PrettyType2] [PrettyType2, PrettyType1]
   typeOp (PrettyInvokeOp prog) =
     return $
