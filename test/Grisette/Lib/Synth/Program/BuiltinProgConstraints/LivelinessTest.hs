@@ -88,7 +88,7 @@ import Grisette.Lib.Synth.Program.ProgConstraints
     OpSubProgConstraints (constrainOpSubProg),
     ProgConstraints (constrainProg),
   )
-import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
+import Grisette.Lib.Synth.Program.SubProg (HasSubProgs (getSubProgs))
 import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature, argTypes, resTypes),
@@ -133,7 +133,7 @@ data Op
 
 instance
   (MonadContext ctx) =>
-  HasSubProg
+  HasSubProgs
     Op
     ( SumProg
         (Concrete.Prog Op (WordN 8) Type)
@@ -141,9 +141,9 @@ instance
     )
     ctx
   where
-  getSubProg (OpSubProg prog) = mrgReturn [SumProgL prog]
-  getSubProg (OpComponentSubProg prog) = mrgReturn [SumProgR prog]
-  getSubProg _ = mrgReturn []
+  getSubProgs (OpSubProg prog) = mrgReturn [SumProgL prog]
+  getSubProgs (OpComponentSubProg prog) = mrgReturn [SumProgR prog]
+  getSubProgs _ = mrgReturn []
 
 data Type = ConstrainedType | ConstrainedType2 | OtherType | AnyType
   deriving (Show, Generic)

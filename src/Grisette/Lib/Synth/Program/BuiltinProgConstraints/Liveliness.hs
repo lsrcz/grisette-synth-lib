@@ -111,7 +111,7 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getStmtResIds
       ),
   )
-import Grisette.Lib.Synth.Program.SubProg (HasSubProg)
+import Grisette.Lib.Synth.Program.SubProg (HasSubProgs)
 import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature, argTypes, resTypes),
@@ -240,7 +240,7 @@ data ProgDefUse varId res = ProgDefUse
 livelinessOpDefUsesByType ::
   ( Mergeable varId,
     OpTyping op ty ctx,
-    HasSubProg op subProg ctx,
+    HasSubProgs op subProg ctx,
     LivelinessTypeResource livelinessObj res ty ctx
   ) =>
   livelinessObj ->
@@ -278,7 +278,7 @@ class
   default livelinessOpDefUses ::
     ( Mergeable varId,
       OpTyping op ty ctx,
-      HasSubProg op NullProg ctx,
+      HasSubProgs op NullProg ctx,
       LivelinessTypeResource livelinessObj res ty ctx
     ) =>
     livelinessObj ->
@@ -500,7 +500,7 @@ instance
     MonadFresh ctx,
     Mergeable ty,
     MonadUnion ctx,
-    HasSubProg op subProg ctx,
+    HasSubProgs op subProg ctx,
     ProgConstraints (Liveliness livelinessObj) subProg ctx
   ) =>
   ProgConstraints (Liveliness livelinessObj) (Concrete.Prog op conVarId ty) ctx

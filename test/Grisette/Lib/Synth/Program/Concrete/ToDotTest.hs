@@ -30,8 +30,8 @@ import Grisette.Lib.Synth.Program.Concrete
     ProgPrettyError (StmtPrettyError),
     ProgRes (ProgRes),
     Stmt (Stmt),
-    progToDot,
-    stmtToDot,
+    progToDotSubGraph,
+    stmtToDotNode,
   )
 import Grisette.Lib.Synth.Program.Concrete.OpToDot (VarIdToLabel)
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
@@ -73,7 +73,7 @@ toDotTest :: Test
 toDotTest =
   testGroup
     "ToDot"
-    [ testGroup "stmtToDot" $ do
+    [ testGroup "stmtToDotNode" $ do
         (StmtToDotTestCase name stmt index expected newMap) <-
           [ StmtToDotTestCase
               { testStmtName = "1 ret, 1 arg",
@@ -175,9 +175,9 @@ toDotTest =
               }
             ]
         return $ testCase name $ do
-          let actual = flip runStateT env $ stmtToDot "prog" index stmt
+          let actual = flip runStateT env $ stmtToDotNode "prog" index stmt
           actual @?= (,newMap) <$> expected,
-      testGroup "progToDot" $ do
+      testGroup "progToDotSubGraph" $ do
         ProgToDotTestCase name prog expected <-
           [ ProgToDotTestCase
               { testProgName = "2 stmt",
@@ -308,6 +308,6 @@ toDotTest =
               }
             ]
         return $ testCase name $ do
-          let actual = progToDot prog
+          let actual = progToDotSubGraph prog
           actual @?= expected
     ]

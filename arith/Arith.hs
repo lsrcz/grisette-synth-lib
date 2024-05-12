@@ -41,7 +41,10 @@ import Grisette.Lib.Synth.Program.Concrete
     PrefixByType (prefixByType),
   )
 import Grisette.Lib.Synth.Program.NullProg (NullProg)
-import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
+import Grisette.Lib.Synth.Program.SubProg
+  ( HasAnyPathSubProgs (getAnyPathSubProgs),
+    HasSubProgs (getSubProgs),
+  )
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Util.Show (showText)
 
@@ -133,5 +136,8 @@ instance OpPretty OpCode where
 instance PrefixByType OpType where
   prefixByType IntegerType = "r"
 
-instance (MonadContext ctx) => HasSubProg OpCode NullProg ctx where
-  getSubProg _ = mrgReturn []
+instance (MonadContext ctx) => HasSubProgs OpCode NullProg ctx where
+  getSubProgs _ = mrgReturn []
+
+instance HasAnyPathSubProgs OpCode NullProg where
+  getAnyPathSubProgs _ = []

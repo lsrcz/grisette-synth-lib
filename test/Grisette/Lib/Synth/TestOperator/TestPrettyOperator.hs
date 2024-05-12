@@ -24,9 +24,14 @@ import Grisette.Lib.Synth.Program.Concrete
     ProgRes (progResType),
     allPrefixesByTypes,
   )
-import Grisette.Lib.Synth.Program.Concrete.Flatten (OpFlatten (opForwardedSubProg))
+import Grisette.Lib.Synth.Program.Concrete.Flatten
+  ( OpFlatten (opForwardedSubProg),
+  )
 import Grisette.Lib.Synth.Program.NullProg (NullProg)
-import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
+import Grisette.Lib.Synth.Program.SubProg
+  ( HasAnyPathSubProgs (getAnyPathSubProgs),
+    HasSubProgs (getSubProgs),
+  )
 import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 
@@ -34,8 +39,11 @@ data TestPrettyExtOp = TestPrettyExtOp
   deriving (Show, Generic, Eq)
   deriving (Mergeable) via (Default TestPrettyExtOp)
 
-instance (MonadContext ctx) => HasSubProg TestPrettyExtOp NullProg ctx where
-  getSubProg _ = mrgReturn []
+instance (MonadContext ctx) => HasSubProgs TestPrettyExtOp NullProg ctx where
+  getSubProgs _ = mrgReturn []
+
+instance HasAnyPathSubProgs TestPrettyExtOp NullProg where
+  getAnyPathSubProgs _ = []
 
 instance GPretty TestPrettyExtOp where
   gpretty TestPrettyExtOp = "ext"
@@ -58,7 +66,7 @@ data TestPrettyOp
 
 instance
   (MonadContext ctx) =>
-  HasSubProg
+  HasSubProgs
     TestPrettyOp
     ( SumProg
         (Prog TestPrettyOp Int TestPrettyType)
@@ -66,9 +74,21 @@ instance
     )
     ctx
   where
-  getSubProg (PrettyInvokeOp prog) = mrgReturn [SumProgL prog]
-  getSubProg (PrettyInvokeExtOp prog) = mrgReturn [SumProgR prog]
-  getSubProg _ = mrgReturn []
+  getSubProgs (PrettyInvokeOp prog) = mrgReturn [SumProgL prog]
+  getSubProgs (PrettyInvokeExtOp prog) = mrgReturn [SumProgR prog]
+  getSubProgs _ = mrgReturn []
+
+instance
+  HasAnyPathSubProgs
+    TestPrettyOp
+    ( SumProg
+        (Prog TestPrettyOp Int TestPrettyType)
+        (Prog TestPrettyExtOp Int TestPrettyType)
+    )
+  where
+  getAnyPathSubProgs (PrettyInvokeOp prog) = [SumProgL prog]
+  getAnyPathSubProgs (PrettyInvokeExtOp prog) = [SumProgR prog]
+  getAnyPathSubProgs _ = []
 
 instance OpFlatten TestPrettyOp Int TestPrettyType where
   opForwardedSubProg (PrettyInvokeOp prog) = return $ Just prog

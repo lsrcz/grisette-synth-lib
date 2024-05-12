@@ -24,7 +24,10 @@ import Grisette.Lib.Synth.Program.Concrete
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
-import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
+import Grisette.Lib.Synth.Program.SubProg
+  ( HasAnyPathSubProgs (getAnyPathSubProgs),
+    HasSubProgs (getSubProgs),
+  )
 import Grisette.Lib.Synth.Util.Pretty (parenCommaList)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 import Semantics
@@ -50,10 +53,14 @@ data Op varId intVal
 
 instance
   (MonadContext ctx) =>
-  HasSubProg (Op varId intVal) (Prog varId intVal) ctx
+  HasSubProgs (Op varId intVal) (Prog varId intVal) ctx
   where
-  getSubProg (If true false) = mrgReturn [true, false]
-  getSubProg _ = mrgReturn []
+  getSubProgs (If true false) = mrgReturn [true, false]
+  getSubProgs _ = mrgReturn []
+
+instance HasAnyPathSubProgs (Op varId intVal) (Prog varId intVal) where
+  getAnyPathSubProgs (If true false) = [true, false]
+  getAnyPathSubProgs _ = []
 
 type Prog varId intVal = Concrete.Prog (Op varId intVal) varId Type
 

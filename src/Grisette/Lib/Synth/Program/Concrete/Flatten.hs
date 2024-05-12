@@ -28,17 +28,17 @@ import Grisette.Lib.Synth.Program.Concrete.Program
     ProgRes (ProgRes, progResId),
     Stmt (Stmt),
   )
-import Grisette.Lib.Synth.Program.SubProg (HasSubProg (getSubProg))
+import Grisette.Lib.Synth.Program.SubProg (HasSubProgs (getSubProgs))
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 class (ConcreteVarId varId) => OpFlatten op varId ty | op -> ty where
   opForwardedSubProg :: op -> ConcreteContext (Maybe (Prog op varId ty))
   default opForwardedSubProg ::
-    (HasSubProg op (Prog op varId ty) ConcreteContext) =>
+    (HasSubProgs op (Prog op varId ty) ConcreteContext) =>
     op ->
     ConcreteContext (Maybe (Prog op varId ty))
   opForwardedSubProg op = do
-    subProgs <- getSubProg op
+    subProgs <- getSubProgs op
     case subProgs of
       [] -> return Nothing
       [prog] -> return $ Just prog
