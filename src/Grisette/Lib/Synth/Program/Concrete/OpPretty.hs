@@ -47,12 +47,12 @@ data OpPrettyError varId op
   deriving (Mergeable) via (Default (OpPrettyError varId op))
 
 instance
-  (GPretty op, ConcreteVarId varId) =>
+  (OpPretty op, ConcreteVarId varId) =>
   GPretty (OpPrettyError varId op)
   where
   gpretty (IncorrectNumberOfArguments op expectedNumArguments numArguments) =
     "Incorrect number of arguments for "
-      <> gpretty op
+      <> prettyOp op
       <> ": expected "
       <> gpretty expectedNumArguments
       <> " arguments, but got"
@@ -65,7 +65,7 @@ instance
       <> " is undefined."
   gpretty (IncorrectNumberOfResults op expectedNumResults numResults) =
     "Incorrect number of result for "
-      <> gpretty op
+      <> prettyOp op
       <> ": expected "
       <> gpretty expectedNumResults
       <> " results, but got"
@@ -79,7 +79,7 @@ instance
       <> " is redefined."
   gpretty (PrettyTypingError op err) =
     "Error while typing "
-      <> gpretty op
+      <> prettyOp op
       <> ": "
       <> gpretty err
 
@@ -104,7 +104,7 @@ noArgumentsDescription op = case typeOp op of
     return $ Nothing <$ argTypes
   Left err -> throwError $ PrettyTypingError op err
 
-class (GPretty op) => OpPretty op where
+class OpPretty op where
   prefixResults :: op -> Either (OpPrettyError varId op) [T.Text]
   default prefixResults ::
     (OpTyping op ty ConcreteContext, PrefixByType ty) =>
@@ -117,6 +117,9 @@ class (GPretty op) => OpPretty op where
     op ->
     Either (OpPrettyError varId op) [Maybe T.Text]
   describeArguments = noArgumentsDescription
+  prettyOp :: op -> Doc ann
+  default prettyOp :: (GPretty op) => op -> Doc ann
+  prettyOp = gpretty
 
 type VarIdMap varId = HM.HashMap varId T.Text
 

@@ -91,7 +91,7 @@ import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Program.Concrete.OpPretty
-  ( OpPretty,
+  ( OpPretty (prettyOp),
     OpPrettyError,
     VarIdMap,
     prettyArguments,
@@ -243,7 +243,7 @@ data ProgPrettyError varId op
   deriving (Mergeable) via (Default (ProgPrettyError varId op))
 
 instance
-  (GPretty op, Show op, ConcreteVarId varId) =>
+  (OpPretty op, Show op, ConcreteVarId varId) =>
   GPretty (ProgPrettyError varId op)
   where
   gpretty (StmtPrettyError stmt index err) =
@@ -273,10 +273,7 @@ instance
     "Error while extracting sub-program: " <> gpretty err
 
 prettyStmt ::
-  ( ConcreteVarId varId,
-    OpPretty op,
-    GPretty op
-  ) =>
+  (ConcreteVarId varId, OpPretty op) =>
   Int ->
   Stmt op varId ->
   StateT (VarIdMap varId) (Either (ProgPrettyError varId op)) (Doc ann)
@@ -285,7 +282,7 @@ prettyStmt index stmt@(Stmt op argIds resIds) = do
   argPretty <- case prettyArguments op argIds map of
     Left err -> throwError $ StmtPrettyError stmt index err
     Right argPretty -> pure argPretty
-  let opPretty = gpretty op
+  let opPretty = prettyOp op
   (newMap, resPretty) <- case prettyResults op resIds map of
     Left err -> throwError $ StmtPrettyError stmt index err
     Right resPretty -> pure resPretty
@@ -293,10 +290,7 @@ prettyStmt index stmt@(Stmt op argIds resIds) = do
   return $ resPretty <> " = " <> opPretty <> argPretty
 
 prettyProg ::
-  ( ConcreteVarId varId,
-    OpPretty op,
-    GPretty ty
-  ) =>
+  (ConcreteVarId varId, OpPretty op, GPretty ty) =>
   Prog op varId ty ->
   Either (ProgPrettyError varId op) (Doc ann)
 prettyProg (Prog name argList stmtList resList) = do
@@ -364,7 +358,7 @@ instance
         Right doc -> doc
 
 stmtToDotNode ::
-  (ConcreteVarId varId, OpPretty op, GPretty op) =>
+  (ConcreteVarId varId, OpPretty op) =>
   T.Text ->
   Int ->
   Stmt op varId ->
@@ -379,7 +373,7 @@ stmtToDotNode progName index stmt@(Stmt op argIds resIds) = do
     case argumentsToFieldEdges nodeId op argIds map of
       Left err -> throwError $ StmtPrettyError stmt index err
       Right argFieldEdges -> pure argFieldEdges
-  let opPretty = TL.fromStrict $ renderDoc 80 $ gpretty op
+  let opPretty = TL.fromStrict $ renderDoc 80 $ prettyOp op
   (newMap, resFields) <-
     case resultsToFieldEdges nodeId op resIds map of
       Left err -> throwError $ StmtPrettyError stmt index err
