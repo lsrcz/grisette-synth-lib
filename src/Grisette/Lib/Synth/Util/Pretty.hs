@@ -12,6 +12,8 @@ module Grisette.Lib.Synth.Util.Pretty
     hardline,
     parenCommaListIfNotSingle,
     parenCommaList,
+    vsep,
+    vcat,
   )
 where
 
@@ -29,6 +31,7 @@ import Prettyprinter
     nest,
     unAnnotate,
     vcat,
+    vsep,
     (<+>),
     concatWith,
     hardline,
@@ -46,6 +49,7 @@ import Data.Text.Prettyprint.Doc
     nest,
     unAnnotate,
     vcat,
+    vsep,
     (<+>),
     concatWith,
     hardline,
