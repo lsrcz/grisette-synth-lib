@@ -317,6 +317,8 @@ prettyProg (Prog name argList stmtList resList) = do
                     )
                     argList
                 )
+              <> " -> "
+              <> parenCommaListIfNotSingle (gpretty . progResType <$> resList)
               <> ":"
     allMap <- get
     let lookupVarId (idx, varId) =
@@ -340,18 +342,15 @@ instance
   where
   topologicalGPrettyProg prog map
     | OM.member (progName prog) map = map
-    | otherwise = allSub map OM.>| (progName prog, progDoc)
+    | otherwise =
+        allSubProgramTopologicalSorted map OM.>| (progName prog, progDoc)
     where
       allSubProgramTopologicalSorted ::
-        OM.OMap T.Text (Doc ann) ->
-        Either (ProgPrettyError varId op) (OM.OMap T.Text (Doc ann))
-      allSubProgramTopologicalSorted map = mapLeft ExtractSubProgError $ do
+        OM.OMap T.Text (Doc ann) -> OM.OMap T.Text (Doc ann)
+      allSubProgramTopologicalSorted map = do
         let progs = concatMap (getAnyPathSubProgs . stmtOp) (progStmtList prog)
-        return $ foldl (flip topologicalGPrettyProg) map progs
-      allSub map = case allSubProgramTopologicalSorted map of
-        Left _ -> OM.empty
-        Right r -> r
-      progDoc = case allSubProgramTopologicalSorted map >> prettyProg prog of
+         in foldl (flip topologicalGPrettyProg) map progs
+      progDoc = case prettyProg prog of
         Left err ->
           nest
             2

@@ -125,9 +125,10 @@ prettyTest =
           [ PrettyProgTestCase
               { testProgGroupName = "0 stmt",
                 testProg = Prog "prog1" [] [] [],
-                testProgLooseExpectedResult = Right "def prog1():\n  return ()",
+                testProgLooseExpectedResult =
+                  Right "def prog1() -> ():\n  return ()",
                 testProgCompactExpectedResult =
-                  Right "def prog1():\n  return ()"
+                  Right "def prog1() -> ():\n  return ()"
               },
             PrettyProgTestCase
               { testProgGroupName = "1 stmt",
@@ -141,7 +142,7 @@ prettyTest =
                   Right $
                     T.intercalate
                       "\n"
-                      [ "def prog2(x: PrettyType1):",
+                      [ "def prog2(x: PrettyType1) -> PrettyType2:",
                         "  t1_1 = op1(op1=x)",
                         "  return t1_1"
                       ],
@@ -151,7 +152,7 @@ prettyTest =
                       "\n"
                       [ "def prog2(",
                         "  x: PrettyType1",
-                        "):",
+                        ") -> PrettyType2:",
                         "  t1_1 = op1(",
                         "    op1=x",
                         "  )",
@@ -172,7 +173,8 @@ prettyTest =
                   Right $
                     T.intercalate
                       "\n"
-                      [ "def prog3(x: PrettyType1, y: PrettyType2):",
+                      [ "def prog3(x: PrettyType1, y: PrettyType2) -> "
+                          <> "(PrettyType1, PrettyType2):",
                         "  (op2_2, op2'_3) = op2(op2'2'0'arg=x, y)",
                         "  t1_4 = op1(op1=op2'_3)",
                         "  return (t1_4, op2_2)"
@@ -184,6 +186,9 @@ prettyTest =
                       [ "def prog3(",
                         "  x: PrettyType1,",
                         "  y: PrettyType2",
+                        ") -> (",
+                        "  PrettyType1,",
+                        "  PrettyType2",
                         "):",
                         "  (",
                         "    op2_2,",
@@ -260,13 +265,13 @@ prettyTest =
             let expected =
                   T.intercalate
                     "\n"
-                    [ "def ext(x: PrettyType1):",
+                    [ "def ext(x: PrettyType1) -> PrettyType1:",
                       "  (t1_1, t2_2) = ext(x)",
                       "  return t1_1",
-                      "def prog1(x: PrettyType1):",
+                      "def prog1(x: PrettyType1) -> PrettyType1:",
                       "  t1_1 = invoke_ext(ext)(x)",
                       "  return t1_1",
-                      "def prog2(x: PrettyType1):",
+                      "def prog2(x: PrettyType1) -> PrettyType1:",
                       "  t1_1 = invoke_ext(ext)(x)",
                       "  t1_2 = invoke(prog1)(t1_1)",
                       "  return t1_2"
