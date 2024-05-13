@@ -9,6 +9,8 @@ module Grisette.Lib.Synth.Reasoning.Server.ThreadPool
     Pool,
     newPool,
     addNewTask,
+    pollTaskSTM,
+    waitCatchTaskSTM,
     pollTask,
     waitCatchTask,
     cancelTaskWith,
@@ -20,10 +22,16 @@ where
 import Control.Concurrent (MVar, newMVar, putMVar, takeMVar)
 import Control.Concurrent.Async (Async, async, cancelWith)
 import Control.Concurrent.STM
-  ( TMVar,
+  ( STM,
+    TMVar,
+    TVar,
     atomically,
+    modifyTVar',
     newEmptyTMVarIO,
+    newTVarIO,
     readTMVar,
+    readTVar,
+    readTVarIO,
     tryPutTMVar,
     tryReadTMVar,
   )
@@ -39,7 +47,7 @@ import Data.Dynamic (Dynamic, Typeable, fromDyn, toDyn)
 import Data.Foldable (Foldable (toList))
 import qualified Data.HashMap.Lazy as HM
 import Data.Hashable (Hashable (hashWithSalt))
-import Data.IORef (IORef, modifyIORef', newIORef, readIORef, writeIORef)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Sequence (Seq ((:<|), (:|>)))
 
 data PendingTask = PendingTask
@@ -54,7 +62,7 @@ data Pool = Pool
     poolSize :: Int,
     running :: IORef (HM.HashMap TaskId (Async Dynamic)),
     queue :: IORef (Seq PendingTask),
-    results :: IORef (HM.HashMap TaskId (TMVar (Either SomeException Dynamic))),
+    results :: TVar (HM.HashMap TaskId (TMVar (Either SomeException Dynamic))),
     nextTaskId :: IORef TaskId
   }
 
@@ -95,7 +103,7 @@ newPool :: Int -> IO Pool
 newPool poolSize = do
   lock <- newMVar ()
   running <- newIORef HM.empty
-  results <- newIORef HM.empty
+  results <- newTVarIO HM.empty
   queue <- newIORef mempty
   nextTaskId <- newIORef 0
   return Pool {..}
@@ -105,7 +113,7 @@ taskFun pool@Pool {..} taskId task = mask $ \restore -> do
   let writeResult result = withLockedPool pool True $ do
         oldRunning <- readIORef running
         writeIORef running $ HM.delete taskId oldRunning
-        oldResults <- readIORef results
+        oldResults <- readTVarIO results
         atomically $ tryPutTMVar (oldResults HM.! taskId) result
   result <-
     restore task `catch` \(e :: SomeException) -> do
@@ -120,7 +128,7 @@ startIfHaveSpaceImpl pool@Pool {..} = do
     oldQueue <- readIORef queue
     case oldQueue of
       (PendingTask {..} :<| rest) -> do
-        oldResults <- readIORef results
+        oldResults <- readTVarIO results
         result <- atomically $ tryReadTMVar (oldResults HM.! taskId)
         writeIORef queue rest
         case result of
@@ -139,14 +147,14 @@ addNewTask pool@Pool {..} taskBase = withLockedPool pool True $ do
   let task = toDyn <$> taskBase
   writeIORef queue $ oldQueue :|> PendingTask {..}
   result <- newEmptyTMVarIO
-  modifyIORef' results $ HM.insert taskId result
+  atomically $ modifyTVar' results $ HM.insert taskId result
   startIfHaveSpaceImpl pool
   return $ TaskHandle taskId pool
 
 cancelTaskWithImpl :: (Exception e) => Pool -> e -> TaskId -> IO ()
 cancelTaskWithImpl Pool {..} e taskId = do
   oldRunning <- readIORef running
-  oldResults <- readIORef results
+  oldResults <- readTVarIO results
   atomically $ tryPutTMVar (oldResults HM.! taskId) (Left $ toException e)
   case HM.lookup taskId oldRunning of
     Just taskAsync ->
@@ -168,14 +176,21 @@ cancelAllTasksWith pool@Pool {..} e = withLockedPool pool True $ do
   mapM_ (cancelTaskWithImpl pool e) $
     HM.keys oldRunning <> (taskId <$> toList oldPending)
 
-pollTask :: (Typeable a) => TaskHandle a -> IO (Maybe (Either SomeException a))
-pollTask taskHandle@TaskHandle {taskPool = pool@Pool {..}} = do
-  oldResults <- withLockedPool pool False $ readIORef results
-  r <- atomically $ tryReadTMVar (oldResults HM.! taskHandleId taskHandle)
+pollTaskSTM ::
+  (Typeable a) => TaskHandle a -> STM (Maybe (Either SomeException a))
+pollTaskSTM taskHandle@TaskHandle {taskPool = Pool {..}} = do
+  oldResults <- readTVar results
+  r <- tryReadTMVar (oldResults HM.! taskHandleId taskHandle)
   return $ fmap (fmap $ flip fromDyn (error "BUG: bad type")) r
 
-waitCatchTask :: (Typeable a) => TaskHandle a -> IO (Either SomeException a)
-waitCatchTask taskHandle@TaskHandle {taskPool = pool@Pool {..}} = do
-  oldResults <- withLockedPool pool False $ readIORef results
-  r <- atomically $ readTMVar (oldResults HM.! taskHandleId taskHandle)
+pollTask :: (Typeable a) => TaskHandle a -> IO (Maybe (Either SomeException a))
+pollTask = atomically . pollTaskSTM
+
+waitCatchTaskSTM :: (Typeable a) => TaskHandle a -> STM (Either SomeException a)
+waitCatchTaskSTM taskHandle@TaskHandle {taskPool = Pool {..}} = do
+  oldResults <- readTVar results
+  r <- readTMVar (oldResults HM.! taskHandleId taskHandle)
   return $ fmap (`fromDyn` error "BUG: bad type") r
+
+waitCatchTask :: (Typeable a) => TaskHandle a -> IO (Either SomeException a)
+waitCatchTask = atomically . waitCatchTaskSTM
