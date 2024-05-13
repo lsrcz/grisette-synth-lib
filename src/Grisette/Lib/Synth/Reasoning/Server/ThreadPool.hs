@@ -1,7 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -39,7 +38,7 @@ import Control.Monad (void, when)
 import Data.Dynamic (Dynamic, Typeable, fromDyn, toDyn)
 import Data.Foldable (Foldable (toList))
 import qualified Data.HashMap.Lazy as HM
-import Data.Hashable (Hashable)
+import Data.Hashable (Hashable (hashWithSalt))
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef, writeIORef)
 import Data.Sequence (Seq ((:<|), (:|>)))
 
@@ -62,8 +61,17 @@ data Pool = Pool
 numOfRunningTasks :: Pool -> IO Int
 numOfRunningTasks Pool {..} = HM.size <$> readIORef running
 
-newtype TaskHandle a = TaskHandle {taskHandleId :: TaskId}
-  deriving newtype (Eq, Ord, Show, Hashable)
+data TaskHandle a = TaskHandle {taskHandleId :: TaskId, taskPool :: Pool}
+
+instance Eq (TaskHandle a) where
+  TaskHandle {taskHandleId = a} == TaskHandle {taskHandleId = b} = a == b
+
+instance Hashable (TaskHandle a) where
+  hashWithSalt salt TaskHandle {taskHandleId = taskId} =
+    hashWithSalt salt taskId
+
+instance Show (TaskHandle a) where
+  show TaskHandle {taskHandleId = taskId} = "TaskHandle " ++ show taskId
 
 lockPool :: Pool -> IO ()
 lockPool Pool {..} = takeMVar lock
@@ -133,7 +141,7 @@ addNewTask pool@Pool {..} taskBase = withLockedPool pool True $ do
   result <- newEmptyTMVarIO
   modifyIORef' results $ HM.insert taskId result
   startIfHaveSpaceImpl pool
-  return $ TaskHandle taskId
+  return $ TaskHandle taskId pool
 
 cancelTaskWithImpl :: (Exception e) => Pool -> e -> TaskId -> IO ()
 cancelTaskWithImpl Pool {..} e taskId = do
@@ -149,8 +157,8 @@ cancelTaskWithImpl Pool {..} e taskId = do
       void $ async $ cancelWith taskAsync e
     Nothing -> return ()
 
-cancelTaskWith :: (Exception e) => Pool -> e -> TaskHandle a -> IO ()
-cancelTaskWith pool e taskHandle =
+cancelTaskWith :: (Exception e) => e -> TaskHandle a -> IO ()
+cancelTaskWith e taskHandle@TaskHandle {taskPool = pool@Pool {..}} =
   withLockedPool pool True $ cancelTaskWithImpl pool e $ taskHandleId taskHandle
 
 cancelAllTasksWith :: (Exception e) => Pool -> e -> IO ()
@@ -160,16 +168,14 @@ cancelAllTasksWith pool@Pool {..} e = withLockedPool pool True $ do
   mapM_ (cancelTaskWithImpl pool e) $
     HM.keys oldRunning <> (taskId <$> toList oldPending)
 
-pollTask ::
-  (Typeable a) => Pool -> TaskHandle a -> IO (Maybe (Either SomeException a))
-pollTask pool@Pool {..} taskHandle = do
+pollTask :: (Typeable a) => TaskHandle a -> IO (Maybe (Either SomeException a))
+pollTask taskHandle@TaskHandle {taskPool = pool@Pool {..}} = do
   oldResults <- withLockedPool pool False $ readIORef results
   r <- atomically $ tryReadTMVar (oldResults HM.! taskHandleId taskHandle)
   return $ fmap (fmap $ flip fromDyn (error "BUG: bad type")) r
 
-waitCatchTask ::
-  (Typeable a) => Pool -> TaskHandle a -> IO (Either SomeException a)
-waitCatchTask pool@Pool {..} taskHandle = do
+waitCatchTask :: (Typeable a) => TaskHandle a -> IO (Either SomeException a)
+waitCatchTask taskHandle@TaskHandle {taskPool = pool@Pool {..}} = do
   oldResults <- withLockedPool pool False $ readIORef results
   r <- atomically $ readTMVar (oldResults HM.! taskHandleId taskHandle)
   return $ fmap (`fromDyn` error "BUG: bad type") r

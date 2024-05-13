@@ -33,8 +33,8 @@ threadPoolTest =
       [ testCase "pollTask" $ do
           mvar <- newEmptyMVar
           pool <- newPool 2
-          tid <- addNewTask pool (takeMVar mvar >> return (42 :: Int))
-          r0 <- pollTask pool tid
+          handle <- addNewTask pool (takeMVar mvar >> return (42 :: Int))
+          r0 <- pollTask handle
           assertBool "Poll before finishing" $ isNothing r0
           let wait = do
                 r <- numOfRunningTasks pool
@@ -42,21 +42,21 @@ threadPoolTest =
                 unless (r == 0) wait
           putMVar mvar ()
           wait
-          r1 <- pollTask pool tid
+          r1 <- pollTask handle
           case r1 of
             Just (Right v) -> v @?= 42
             _ -> fail "Expected Right 42",
         testCase "waitCatchTask" $ do
           pool <- newPool 2
-          tid <- addNewTask pool (return (42 :: Int))
-          r1 <- waitCatchTask pool tid
+          handle <- addNewTask pool (return (42 :: Int))
+          r1 <- waitCatchTask handle
           case r1 of
             Right v -> v @?= 42
             _ -> fail "Expected Right 42",
         testCase "more tasks than parallelism" $ do
           mvar <- newEmptyMVar
           pool <- newPool 2
-          tid <-
+          handle <-
             traverse
               (\n -> addNewTask pool $ takeMVar mvar >> return n)
               [0 .. 20 :: Int]
@@ -68,24 +68,24 @@ threadPoolTest =
           replicateM_ 2 (putMVar mvar ())
           wait
           replicateM_ 19 (putMVar mvar ())
-          Right 15 <- waitCatchTask pool (tid !! 15)
-          results <- traverse (waitCatchTask pool) tid
+          Right 15 <- waitCatchTask (handle !! 15)
+          results <- traverse waitCatchTask handle
           traverse_ (\(i, Right v) -> i @?= v) $ zip [0 .. 20 :: Int] results,
         testCase "cancelTaskWith running" $ do
           mvar <- newEmptyMVar
           pool <- newPool 2
-          tid <-
+          handle <-
             traverse
               (\n -> addNewTask pool $ takeMVar mvar >> return n)
               [0 .. 1 :: Int]
-          cancelTaskWith pool TaskCancelled (head tid)
+          cancelTaskWith TaskCancelled (head handle)
           let wait = do
                 r <- numOfRunningTasks pool
                 threadDelay 100000
                 unless (r == 1) wait
           wait
           replicateM_ 1 (putMVar mvar ())
-          results <- traverse (waitCatchTask pool) tid
+          results <- traverse waitCatchTask handle
           assertBool "Should be cancelled task" $ case head results of
             Left _ -> True
             _ -> False
@@ -95,13 +95,13 @@ threadPoolTest =
         testCase "cancelTaskWith pending" $ do
           mvar <- newEmptyMVar
           pool <- newPool 2
-          tid <-
+          handle <-
             traverse
               (\n -> addNewTask pool $ takeMVar mvar >> return n)
               [0 .. 3 :: Int]
-          cancelTaskWith pool TaskCancelled (last tid)
+          cancelTaskWith TaskCancelled (last handle)
           replicateM_ 3 (putMVar mvar ())
-          results <- traverse (waitCatchTask pool) tid
+          results <- traverse waitCatchTask handle
           assertBool "Should be cancelled task" $ case last results of
             Left _ -> True
             _ -> False
@@ -109,11 +109,11 @@ threadPoolTest =
         testCase "cancelAllTasksWith" $ do
           mvar <- newEmptyMVar
           pool <- newPool 2
-          tid <-
+          handle <-
             traverse
               (\n -> addNewTask pool $ takeMVar mvar >> return n)
               [0 .. 3 :: Int]
           cancelAllTasksWith pool TaskCancelled
-          results <- traverse (waitCatchTask pool) tid
+          results <- traverse waitCatchTask handle
           traverse_ (\(Left _) -> return ()) results
       ]
