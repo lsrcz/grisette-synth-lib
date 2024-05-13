@@ -29,7 +29,7 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (Async, async, cancel)
 import qualified Control.Concurrent.Async.Pool as Pool
 import Control.Concurrent.STM
-  ( STM,
+  ( TMVar,
     TVar,
     atomically,
     newEmptyTMVarIO,
@@ -38,9 +38,10 @@ import Control.Concurrent.STM
     putTMVar,
     readTMVar,
     readTVar,
+    tryPutTMVar,
     writeTVar,
   )
-import Control.Exception (finally)
+import Control.Exception (finally, mask)
 import qualified Control.Exception as C
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.HashSet as HS
@@ -89,31 +90,31 @@ withSynthesisServer numOfTasks =
 data TaskHandle conProg = TaskHandle
   { _taskAsync :: Pool.Async (SynthesisResult conProg),
     taskId :: Int,
-    _taskStartTime :: STM UTCTime,
-    _taskEndTime :: STM UTCTime
+    _taskStartTime :: TMVar UTCTime,
+    _taskEndTime :: TMVar UTCTime
   }
 
 -- | Get the start time of a task. This function return Nothing if the task
 -- haven't really started.
 maybeTaskStartTime :: TaskHandle conProg -> IO (Maybe UTCTime)
 maybeTaskStartTime (TaskHandle _ _ startTime _) =
-  atomically $ (Just <$> startTime) `orElse` return Nothing
+  atomically $ (Just <$> readTMVar startTime) `orElse` return Nothing
 
 -- | Get the start time of a task. This function blocks until the task is
 -- really started.
 taskStartTime :: TaskHandle conProg -> IO UTCTime
-taskStartTime (TaskHandle _ _ startTime _) = atomically startTime
+taskStartTime (TaskHandle _ _ startTime _) = atomically $ readTMVar startTime
 
 -- | Get the end time of a task. This function return Nothing if the task
 -- haven't finished.
 maybeTaskEndTime :: TaskHandle conProg -> IO (Maybe UTCTime)
 maybeTaskEndTime (TaskHandle _ _ _ endTime) =
-  atomically $ (Just <$> endTime) `orElse` return Nothing
+  atomically $ (Just <$> readTMVar endTime) `orElse` return Nothing
 
 -- | Get the end time of a task. This function blocks until the task is
 -- finished.
 taskEndTime :: TaskHandle conProg -> IO UTCTime
-taskEndTime (TaskHandle _ _ _ endTime) = atomically endTime
+taskEndTime (TaskHandle _ _ _ endTime) = atomically $ readTMVar endTime
 
 -- | Get the elapsed time of a task. This function returns Nothing if the task
 -- haven't finished.
@@ -155,26 +156,21 @@ submitTaskImpl
     endTimeTMVar <- newEmptyTMVarIO
     taskHandleTMVar <- newEmptyTMVarIO
     handle <-
-      Pool.async taskGroup $ do
+      Pool.async taskGroup $ mask $ \restore -> do
         selfHandle <- atomically $ readTMVar taskHandleTMVar
         case maybeTimeout of
           Just timeout -> do
             async $ threadDelay timeout >> cancelTaskWith selfHandle TaskTimeout
             return ()
           Nothing -> return ()
-        getCurrentTime >>= atomically . putTMVar startTimeTMVar
-        runSynthesisTask config task
-          `finally` (getCurrentTime >>= atomically . putTMVar endTimeTMVar)
+        getCurrentTime >>= atomically . tryPutTMVar startTimeTMVar
+        restore (runSynthesisTask config task)
+          `finally` (getCurrentTime >>= atomically . tryPutTMVar endTimeTMVar)
     taskId <- atomically $ do
       taskId <- readTVar nextVarId
       writeTVar nextVarId (taskId + 1)
       return taskId
-    let taskHandle =
-          TaskHandle
-            handle
-            taskId
-            (readTMVar startTimeTMVar)
-            (readTMVar endTimeTMVar)
+    let taskHandle = TaskHandle handle taskId startTimeTMVar endTimeTMVar
     atomically $ putTMVar taskHandleTMVar taskHandle
     return taskHandle
 
@@ -247,4 +243,9 @@ cancelTaskWith ::
   TaskHandle conProg ->
   e ->
   IO ()
-cancelTaskWith (TaskHandle handle _ _ _) = Pool.cancelWith handle
+cancelTaskWith (TaskHandle handle _ startTime endTime) e = do
+  Pool.cancelWith handle e
+  currentTime <- getCurrentTime
+  atomically $ tryPutTMVar startTime currentTime
+  atomically $ tryPutTMVar endTime currentTime
+  return ()
