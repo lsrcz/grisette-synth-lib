@@ -91,30 +91,31 @@ data TaskHandle conProg = TaskHandle
   { _taskAsync :: Pool.Async (SynthesisResult conProg),
     taskId :: Int,
     _taskStartTime :: TMVar UTCTime,
-    _taskEndTime :: TMVar UTCTime
+    _taskEndTime :: TMVar UTCTime,
+    _cancelledResult :: TMVar (Either C.SomeException (SynthesisResult conProg))
   }
 
 -- | Get the start time of a task. This function return Nothing if the task
 -- haven't really started.
 maybeTaskStartTime :: TaskHandle conProg -> IO (Maybe UTCTime)
-maybeTaskStartTime (TaskHandle _ _ startTime _) =
+maybeTaskStartTime (TaskHandle _ _ startTime _ _) =
   atomically $ (Just <$> readTMVar startTime) `orElse` return Nothing
 
 -- | Get the start time of a task. This function blocks until the task is
 -- really started.
 taskStartTime :: TaskHandle conProg -> IO UTCTime
-taskStartTime (TaskHandle _ _ startTime _) = atomically $ readTMVar startTime
+taskStartTime (TaskHandle _ _ startTime _ _) = atomically $ readTMVar startTime
 
 -- | Get the end time of a task. This function return Nothing if the task
 -- haven't finished.
 maybeTaskEndTime :: TaskHandle conProg -> IO (Maybe UTCTime)
-maybeTaskEndTime (TaskHandle _ _ _ endTime) =
+maybeTaskEndTime (TaskHandle _ _ _ endTime _) =
   atomically $ (Just <$> readTMVar endTime) `orElse` return Nothing
 
 -- | Get the end time of a task. This function blocks until the task is
 -- finished.
 taskEndTime :: TaskHandle conProg -> IO UTCTime
-taskEndTime (TaskHandle _ _ _ endTime) = atomically $ readTMVar endTime
+taskEndTime (TaskHandle _ _ _ endTime _) = atomically $ readTMVar endTime
 
 -- | Get the elapsed time of a task. This function returns Nothing if the task
 -- haven't finished.
@@ -133,10 +134,10 @@ taskElapsedTime task = do
   return $ endTime `diffUTCTime` startTime
 
 instance Eq (TaskHandle conProg) where
-  TaskHandle _ taskId1 _ _ == TaskHandle _ taskId2 _ _ = taskId1 == taskId2
+  TaskHandle _ taskId1 _ _ _ == TaskHandle _ taskId2 _ _ _ = taskId1 == taskId2
 
 instance Hashable (TaskHandle conProg) where
-  hashWithSalt salt (TaskHandle _ taskId _ _) = hashWithSalt salt taskId
+  hashWithSalt salt (TaskHandle _ taskId _ _ _) = hashWithSalt salt taskId
 
 type TaskSet conProg = HS.HashSet (TaskHandle conProg)
 
@@ -155,6 +156,7 @@ submitTaskImpl
     startTimeTMVar <- newEmptyTMVarIO
     endTimeTMVar <- newEmptyTMVarIO
     taskHandleTMVar <- newEmptyTMVarIO
+    cancelledResultTMVar <- newEmptyTMVarIO
     handle <-
       Pool.async taskGroup $ mask $ \restore -> do
         selfHandle <- atomically $ readTMVar taskHandleTMVar
@@ -170,7 +172,13 @@ submitTaskImpl
       taskId <- readTVar nextVarId
       writeTVar nextVarId (taskId + 1)
       return taskId
-    let taskHandle = TaskHandle handle taskId startTimeTMVar endTimeTMVar
+    let taskHandle =
+          TaskHandle
+            handle
+            taskId
+            startTimeTMVar
+            endTimeTMVar
+            cancelledResultTMVar
     atomically $ putTMVar taskHandleTMVar taskHandle
     return taskHandle
 
@@ -204,11 +212,12 @@ submitTaskWithTimeout server config timeout =
 pollTask ::
   TaskHandle conProg ->
   IO (Maybe (Either C.SomeException (SynthesisResult conProg)))
-pollTask (TaskHandle handle _ _ _) = Pool.poll handle
+pollTask (TaskHandle handle _ _ _ _) = Pool.poll handle
 
 waitCatchTask ::
   TaskHandle conProg -> IO (Either C.SomeException (SynthesisResult conProg))
-waitCatchTask (TaskHandle handle _ _ _) = Pool.waitCatch handle
+waitCatchTask (TaskHandle handle _ _ _ cancelledResult) =
+  atomically $ Pool.waitCatchSTM handle `orElse` readTMVar cancelledResult
 
 pollTasks ::
   TaskSet conProg ->
@@ -243,9 +252,13 @@ cancelTaskWith ::
   TaskHandle conProg ->
   e ->
   IO ()
-cancelTaskWith (TaskHandle handle _ startTime endTime) e = do
+cancelTaskWith (TaskHandle handle _ startTime endTime cancelledResult) e = do
   Pool.cancelWith handle e
   currentTime <- getCurrentTime
   atomically $ tryPutTMVar startTime currentTime
   atomically $ tryPutTMVar endTime currentTime
+  atomically $
+    tryPutTMVar cancelledResult $
+      Left $
+        C.SomeException TaskCancelled
   return ()
