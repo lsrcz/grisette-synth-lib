@@ -1,11 +1,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Reasoning.Server.ThreadPool
-  ( TaskId,
+  ( TaskHandle,
     Pool,
     newPool,
     addNewTask,
@@ -35,39 +36,42 @@ import Control.Exception
     throwIO,
   )
 import Control.Monad (void, when)
+import Data.Dynamic (Dynamic, Typeable, fromDyn, toDyn)
 import Data.Foldable (Foldable (toList))
 import qualified Data.HashMap.Lazy as HM
 import Data.Hashable (Hashable)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef, writeIORef)
 import Data.Sequence (Seq ((:<|), (:|>)))
 
-data PendingTask a = PendingTask
+data PendingTask = PendingTask
   { taskId :: TaskId,
-    task :: IO a
+    task :: IO Dynamic
   }
 
-newtype TaskId = TaskId {unTaskId :: Int}
-  deriving newtype (Eq, Ord, Show, Hashable)
+type TaskId = Int
 
-data Pool a = Pool
+data Pool = Pool
   { lock :: MVar (),
     poolSize :: Int,
-    running :: IORef (HM.HashMap TaskId (Async a)),
-    queue :: IORef (Seq (PendingTask a)),
-    results :: IORef (HM.HashMap TaskId (TMVar (Either SomeException a))),
+    running :: IORef (HM.HashMap TaskId (Async Dynamic)),
+    queue :: IORef (Seq PendingTask),
+    results :: IORef (HM.HashMap TaskId (TMVar (Either SomeException Dynamic))),
     nextTaskId :: IORef TaskId
   }
 
-numOfRunningTasks :: Pool a -> IO Int
+numOfRunningTasks :: Pool -> IO Int
 numOfRunningTasks Pool {..} = HM.size <$> readIORef running
 
-lockPool :: Pool a -> IO ()
+newtype TaskHandle a = TaskHandle {taskHandleId :: TaskId}
+  deriving newtype (Eq, Ord, Show, Hashable)
+
+lockPool :: Pool -> IO ()
 lockPool Pool {..} = takeMVar lock
 
-unlockPool :: Pool a -> IO ()
+unlockPool :: Pool -> IO ()
 unlockPool Pool {..} = putMVar lock ()
 
-withLockedPool :: Pool a -> Bool -> IO b -> IO b
+withLockedPool :: Pool -> Bool -> IO b -> IO b
 withLockedPool pool shouldCheckForStarts action = do
   lockPool pool
   result <-
@@ -79,16 +83,16 @@ withLockedPool pool shouldCheckForStarts action = do
   unlockPool pool
   return result
 
-newPool :: Int -> IO (Pool a)
+newPool :: Int -> IO Pool
 newPool poolSize = do
   lock <- newMVar ()
   running <- newIORef HM.empty
   results <- newIORef HM.empty
   queue <- newIORef mempty
-  nextTaskId <- newIORef $ TaskId 0
+  nextTaskId <- newIORef 0
   return Pool {..}
 
-taskFun :: Pool a -> TaskId -> IO a -> IO a
+taskFun :: Pool -> TaskId -> IO Dynamic -> IO Dynamic
 taskFun pool@Pool {..} taskId task = mask $ \restore -> do
   let writeResult result = withLockedPool pool True $ do
         oldRunning <- readIORef running
@@ -101,7 +105,7 @@ taskFun pool@Pool {..} taskId task = mask $ \restore -> do
   writeResult (Right result)
   return result
 
-startIfHaveSpaceImpl :: Pool a -> IO ()
+startIfHaveSpaceImpl :: Pool -> IO ()
 startIfHaveSpaceImpl pool@Pool {..} = do
   oldRunning <- readIORef running
   when (HM.size oldRunning < poolSize) $ do
@@ -119,18 +123,19 @@ startIfHaveSpaceImpl pool@Pool {..} = do
         startIfHaveSpaceImpl pool
       _ -> return ()
 
-addNewTask :: Pool a -> IO a -> IO TaskId
-addNewTask pool@Pool {..} task = withLockedPool pool True $ do
+addNewTask :: (Typeable a) => Pool -> IO a -> IO (TaskHandle a)
+addNewTask pool@Pool {..} taskBase = withLockedPool pool True $ do
   taskId <- readIORef nextTaskId
   oldQueue <- readIORef queue
-  writeIORef nextTaskId (TaskId $ unTaskId taskId + 1)
+  writeIORef nextTaskId (taskId + 1)
+  let task = toDyn <$> taskBase
   writeIORef queue $ oldQueue :|> PendingTask {..}
   result <- newEmptyTMVarIO
   modifyIORef' results $ HM.insert taskId result
   startIfHaveSpaceImpl pool
-  return taskId
+  return $ TaskHandle taskId
 
-cancelTaskWithImpl :: (Exception e) => Pool a -> e -> TaskId -> IO ()
+cancelTaskWithImpl :: (Exception e) => Pool -> e -> TaskId -> IO ()
 cancelTaskWithImpl Pool {..} e taskId = do
   oldRunning <- readIORef running
   oldResults <- readIORef results
@@ -144,24 +149,27 @@ cancelTaskWithImpl Pool {..} e taskId = do
       void $ async $ cancelWith taskAsync e
     Nothing -> return ()
 
-cancelTaskWith :: (Exception e) => Pool a -> e -> TaskId -> IO ()
-cancelTaskWith pool e taskId =
-  withLockedPool pool True $ cancelTaskWithImpl pool e taskId
+cancelTaskWith :: (Exception e) => Pool -> e -> TaskHandle a -> IO ()
+cancelTaskWith pool e taskHandle =
+  withLockedPool pool True $ cancelTaskWithImpl pool e $ taskHandleId taskHandle
 
-cancelAllTasksWith :: (Exception e) => Pool a -> e -> IO ()
+cancelAllTasksWith :: (Exception e) => Pool -> e -> IO ()
 cancelAllTasksWith pool@Pool {..} e = withLockedPool pool True $ do
   oldRunning <- readIORef running
   oldPending <- readIORef queue
   mapM_ (cancelTaskWithImpl pool e) $
-    HM.keys oldRunning
-      <> (taskId <$> toList oldPending)
+    HM.keys oldRunning <> (taskId <$> toList oldPending)
 
-pollTask :: Pool a -> TaskId -> IO (Maybe (Either SomeException a))
-pollTask pool@Pool {..} taskId = do
+pollTask ::
+  (Typeable a) => Pool -> TaskHandle a -> IO (Maybe (Either SomeException a))
+pollTask pool@Pool {..} taskHandle = do
   oldResults <- withLockedPool pool False $ readIORef results
-  atomically $ tryReadTMVar (oldResults HM.! taskId)
+  r <- atomically $ tryReadTMVar (oldResults HM.! taskHandleId taskHandle)
+  return $ fmap (fmap $ flip fromDyn (error "BUG: bad type")) r
 
-waitCatchTask :: Pool a -> TaskId -> IO (Either SomeException a)
-waitCatchTask pool@Pool {..} taskId = do
+waitCatchTask ::
+  (Typeable a) => Pool -> TaskHandle a -> IO (Either SomeException a)
+waitCatchTask pool@Pool {..} taskHandle = do
   oldResults <- withLockedPool pool False $ readIORef results
-  atomically $ readTMVar (oldResults HM.! taskId)
+  r <- atomically $ readTMVar (oldResults HM.! taskHandleId taskHandle)
+  return $ fmap (`fromDyn` error "BUG: bad type") r
