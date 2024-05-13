@@ -11,6 +11,7 @@ import Grisette.Lib.Synth.Program.ByteCodeSketchTest (byteCodeSketchTest)
 import Grisette.Lib.Synth.Program.ComponentSketchTest (componentSketchTest)
 import Grisette.Lib.Synth.Program.ConcreteTest (concreteTest)
 import Grisette.Lib.Synth.Reasoning.FuzzingTest (fuzzingTest)
+import Grisette.Lib.Synth.Reasoning.Server.ThreadPoolTest (threadPoolTest)
 import Grisette.Lib.Synth.Reasoning.SynthesisServerTest (synthesisServerTest)
 import Grisette.Lib.Synth.Reasoning.SynthesisTest (synthesisTest)
 import Grisette.Lib.Synth.Util.PrettyTest (prettyTest)
@@ -33,6 +34,7 @@ tests =
     componentSketchTest,
     fuzzingTest,
     synthesisTest,
+    threadPoolTest,
     synthesisServerTest,
     builtinProgConstraintsTest
   ]

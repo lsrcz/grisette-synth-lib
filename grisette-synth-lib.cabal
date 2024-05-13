@@ -58,6 +58,7 @@ library
       Grisette.Lib.Synth.Reasoning.Fuzzing
       Grisette.Lib.Synth.Reasoning.IOPair
       Grisette.Lib.Synth.Reasoning.Matcher
+      Grisette.Lib.Synth.Reasoning.Server.ThreadPool
       Grisette.Lib.Synth.Reasoning.Synthesis
       Grisette.Lib.Synth.Reasoning.SynthesisServer
       Grisette.Lib.Synth.TypeSignature
@@ -197,6 +198,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.ConcreteTest
       Grisette.Lib.Synth.Reasoning.FuzzingTest
       Grisette.Lib.Synth.Reasoning.ReverseMatcher
+      Grisette.Lib.Synth.Reasoning.Server.ThreadPoolTest
       Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
       Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
       Grisette.Lib.Synth.Reasoning.Synthesis.Problem
