@@ -7,7 +7,7 @@ module Grisette.Lib.Synth.Reasoning.Server.SynthesisServer
     newSynthesisServer,
     endSynthesisServer,
     withSynthesisServer,
-    SynthesisTaskHandle (taskId),
+    SynthesisTaskHandle,
     maybeTaskStartTime,
     maybeTaskEndTime,
     maybeTaskElapsedTime,
@@ -29,16 +29,12 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async)
 import Control.Concurrent.STM
   ( TMVar,
-    TVar,
     atomically,
     newEmptyTMVarIO,
-    newTVarIO,
     orElse,
     putTMVar,
     readTMVar,
-    readTVar,
     tryPutTMVar,
-    writeTVar,
   )
 import Control.Exception (finally, mask)
 import qualified Control.Exception as C
@@ -67,11 +63,8 @@ data SynthesisTaskException = SynthesisTaskCancelled | SynthesisTaskTimeout
 
 instance C.Exception SynthesisTaskException
 
-type TaskId = Int
-
-data SynthesisServer = SynthesisServer
-  { _threadPool :: Pool,
-    _nextTaskId :: TVar TaskId
+newtype SynthesisServer = SynthesisServer
+  { _threadPool :: Pool
   }
 
 -- | Create a new synthesis server.
@@ -79,11 +72,10 @@ newSynthesisServer ::
   Int -> IO SynthesisServer
 newSynthesisServer numOfTasks = do
   pool <- newPool numOfTasks
-  nextTaskId <- newTVarIO 0
-  return $ SynthesisServer pool nextTaskId
+  return $ SynthesisServer pool
 
 endSynthesisServer :: SynthesisServer -> IO ()
-endSynthesisServer (SynthesisServer pool _) = do
+endSynthesisServer (SynthesisServer pool) = do
   cancelAllTasksWith pool SynthesisTaskCancelled
 
 withSynthesisServer :: Int -> (SynthesisServer -> IO a) -> IO a
@@ -94,7 +86,6 @@ data SynthesisTaskHandle conProg where
   SynthesisTaskHandle ::
     (Typeable conProg) =>
     { _underlyingHandle :: TaskHandle (SynthesisResult conProg),
-      taskId :: Int,
       _taskStartTime :: TMVar UTCTime,
       _taskEndTime :: TMVar UTCTime,
       _cancelledResult ::
@@ -105,25 +96,25 @@ data SynthesisTaskHandle conProg where
 -- | Get the start time of a task. This function return Nothing if the task
 -- haven't really started.
 maybeTaskStartTime :: SynthesisTaskHandle conProg -> IO (Maybe UTCTime)
-maybeTaskStartTime (SynthesisTaskHandle _ _ startTime _ _) =
+maybeTaskStartTime (SynthesisTaskHandle _ startTime _ _) =
   atomically $ (Just <$> readTMVar startTime) `orElse` return Nothing
 
 -- | Get the start time of a task. This function blocks until the task is
 -- really started.
 taskStartTime :: SynthesisTaskHandle conProg -> IO UTCTime
-taskStartTime (SynthesisTaskHandle _ _ startTime _ _) =
+taskStartTime (SynthesisTaskHandle _ startTime _ _) =
   atomically $ readTMVar startTime
 
 -- | Get the end time of a task. This function return Nothing if the task
 -- haven't finished.
 maybeTaskEndTime :: SynthesisTaskHandle conProg -> IO (Maybe UTCTime)
-maybeTaskEndTime (SynthesisTaskHandle _ _ _ endTime _) =
+maybeTaskEndTime (SynthesisTaskHandle _ _ endTime _) =
   atomically $ (Just <$> readTMVar endTime) `orElse` return Nothing
 
 -- | Get the end time of a task. This function blocks until the task is
 -- finished.
 taskEndTime :: SynthesisTaskHandle conProg -> IO UTCTime
-taskEndTime (SynthesisTaskHandle _ _ _ endTime _) =
+taskEndTime (SynthesisTaskHandle _ _ endTime _) =
   atomically $ readTMVar endTime
 
 -- | Get the elapsed time of a task. This function returns Nothing if the task
@@ -144,12 +135,12 @@ taskElapsedTime task = do
   return $ endTime `diffUTCTime` startTime
 
 instance Eq (SynthesisTaskHandle conProg) where
-  SynthesisTaskHandle _ taskId1 _ _ _ == SynthesisTaskHandle _ taskId2 _ _ _ =
-    taskId1 == taskId2
+  SynthesisTaskHandle handle1 _ _ _ == SynthesisTaskHandle handle2 _ _ _ =
+    handle1 == handle2
 
 instance Hashable (SynthesisTaskHandle conProg) where
-  hashWithSalt salt (SynthesisTaskHandle _ taskId _ _ _) =
-    hashWithSalt salt taskId
+  hashWithSalt salt (SynthesisTaskHandle handle _ _ _) =
+    hashWithSalt salt handle
 
 type TaskSet conProg = HS.HashSet (SynthesisTaskHandle conProg)
 
@@ -162,7 +153,7 @@ submitTaskImpl ::
   IO (SynthesisTaskHandle conProg)
 submitTaskImpl
   maybeTimeout
-  (SynthesisServer pool nextVarId)
+  (SynthesisServer pool)
   config
   task = do
     startTimeTMVar <- newEmptyTMVarIO
@@ -182,14 +173,9 @@ submitTaskImpl
         getCurrentTime >>= atomically . tryPutTMVar startTimeTMVar
         restore (runSynthesisTask config task)
           `finally` (getCurrentTime >>= atomically . tryPutTMVar endTimeTMVar)
-    taskId <- atomically $ do
-      taskId <- readTVar nextVarId
-      writeTVar nextVarId (taskId + 1)
-      return taskId
     let taskHandle =
           SynthesisTaskHandle
             handle
-            taskId
             startTimeTMVar
             endTimeTMVar
             cancelledResultTMVar
@@ -222,12 +208,12 @@ submitTaskWithTimeout server config timeout =
 pollTask ::
   SynthesisTaskHandle conProg ->
   IO (Maybe (Either C.SomeException (SynthesisResult conProg)))
-pollTask (SynthesisTaskHandle handle _ _ _ _) = Pool.pollTask handle
+pollTask (SynthesisTaskHandle handle _ _ _) = Pool.pollTask handle
 
 waitCatchTask ::
   SynthesisTaskHandle conProg ->
   IO (Either C.SomeException (SynthesisResult conProg))
-waitCatchTask (SynthesisTaskHandle handle _ _ _ cancelledResult) =
+waitCatchTask (SynthesisTaskHandle handle _ _ cancelledResult) =
   atomically $ Pool.waitCatchTaskSTM handle `orElse` readTMVar cancelledResult
 
 pollTasks ::
@@ -264,7 +250,7 @@ cancelTaskWith ::
   e ->
   IO ()
 cancelTaskWith
-  (SynthesisTaskHandle handle _ startTime endTime cancelledResult)
+  (SynthesisTaskHandle handle startTime endTime cancelledResult)
   e = do
     Pool.cancelTaskWith e handle
     currentTime <- getCurrentTime
