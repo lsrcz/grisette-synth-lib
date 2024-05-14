@@ -74,6 +74,8 @@ import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
     genOpIntermediates,
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost), PerStmtCostObj)
+import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
@@ -539,3 +541,19 @@ instance
   getProgStmtAtIdx prog idx
     | idx >= getProgNumStmts prog = throwError "Statement index out of bounds."
     | otherwise = return $ progStmtList prog !! idx
+
+instance
+  ( MonadContext ctx,
+    MonadUnion ctx,
+    OpCost op cost ctx,
+    Num cost,
+    Mergeable cost
+  ) =>
+  ProgCost PerStmtCostObj (Prog op varId ty) cost ctx
+  where
+  progCost _ prog = do
+    stmtCosts <-
+      traverse
+        (\stmt -> mrgIf (stmtDisabled stmt) (return 0) $ opCost $ stmtOp stmt)
+        (progStmtList prog)
+    return $ sum stmtCosts

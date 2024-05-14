@@ -102,6 +102,8 @@ import Grisette.Lib.Synth.Program.Concrete.OpToDot
     argumentsToFieldEdges,
     resultsToFieldEdges,
   )
+import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost), PerStmtCostObj)
+import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgGPretty (ProgGPretty (topologicalGPrettyProg), gprettyProg)
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
@@ -609,3 +611,11 @@ instance ProgUtil (Prog op varId ty) (Stmt op varId) varId where
   getProgStmtAtIdx prog idx
     | idx >= getProgNumStmts prog = throwError "Statement index out of bounds."
     | otherwise = return $ progStmtList prog !! idx
+
+instance
+  (MonadContext ctx, OpCost op cost ctx, Num cost) =>
+  ProgCost PerStmtCostObj (Prog op varId ty) cost ctx
+  where
+  progCost _ (Prog _ _ stmts _) = do
+    stmtCosts <- traverse (opCost . stmtOp) stmts
+    return $ sum stmtCosts

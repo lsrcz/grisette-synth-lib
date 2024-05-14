@@ -4,6 +4,7 @@ import Grisette.Lib.Synth.Program.Concrete.BuilderTest (builderTest)
 import Grisette.Lib.Synth.Program.Concrete.FlattenTest (flattenTest)
 import Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest (mayMultiPathTest)
 import Grisette.Lib.Synth.Program.Concrete.PrettyTest (prettyTest)
+import Grisette.Lib.Synth.Program.Concrete.ProgCostTest (progCostTest)
 import Grisette.Lib.Synth.Program.Concrete.ProgUtilTest (progUtilTest)
 import Grisette.Lib.Synth.Program.Concrete.SemanticsTest (semanticsTest)
 import Grisette.Lib.Synth.Program.Concrete.ToDotTest (toDotTest)
@@ -25,5 +26,6 @@ concreteTest =
       mayMultiPathTest,
       builderTest,
       progUtilTest,
-      flattenTest
+      flattenTest,
+      progCostTest
     ]

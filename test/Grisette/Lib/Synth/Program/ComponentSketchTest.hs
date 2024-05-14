@@ -11,6 +11,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch.BuilderTest (builderTest)
 import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediateTest
   ( genIntermediateTest,
   )
+import Grisette.Lib.Synth.Program.ComponentSketch.ProgCostTest (progCostTest)
 import Grisette.Lib.Synth.Program.ComponentSketch.ProgUtilTest (progUtilTest)
 import Grisette.Lib.Synth.Program.ComponentSketch.SemanticsTest (semanticsTest)
 import Grisette.Lib.Synth.Program.ComponentSketch.ToConTest (toConTest)
@@ -32,6 +33,7 @@ componentSketchTest =
       typingTest,
       builderTest,
       progUtilTest,
+      progCostTest,
       testGroup
         "Misc"
         [ testCase "ProgNaming" $

@@ -45,8 +45,10 @@ library
       Grisette.Lib.Synth.Program.Concrete.OpToDot
       Grisette.Lib.Synth.Program.Concrete.Program
       Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath
+      Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
       Grisette.Lib.Synth.Program.NullProg
       Grisette.Lib.Synth.Program.ProgConstraints
+      Grisette.Lib.Synth.Program.ProgCost
       Grisette.Lib.Synth.Program.ProgGPretty
       Grisette.Lib.Synth.Program.ProgNaming
       Grisette.Lib.Synth.Program.ProgSemantics
@@ -176,6 +178,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.ByteCodeSketchTest
       Grisette.Lib.Synth.Program.ComponentSketch.BuilderTest
       Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediateTest
+      Grisette.Lib.Synth.Program.ComponentSketch.ProgCostTest
       Grisette.Lib.Synth.Program.ComponentSketch.ProgUtilTest
       Grisette.Lib.Synth.Program.ComponentSketch.SemanticsTest
       Grisette.Lib.Synth.Program.ComponentSketch.TestProgram
@@ -187,6 +190,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.Concrete.FlattenTest
       Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest
       Grisette.Lib.Synth.Program.Concrete.PrettyTest
+      Grisette.Lib.Synth.Program.Concrete.ProgCostTest
       Grisette.Lib.Synth.Program.Concrete.ProgUtilTest
       Grisette.Lib.Synth.Program.Concrete.SemanticsTest
       Grisette.Lib.Synth.Program.Concrete.ToDotTest
@@ -201,6 +205,7 @@ test-suite spec
       Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
       Grisette.Lib.Synth.Reasoning.Synthesis.Problem
       Grisette.Lib.Synth.Reasoning.SynthesisTest
+      Grisette.Lib.Synth.TestOperator.TestCostOperator
       Grisette.Lib.Synth.TestOperator.TestPrettyOperator
       Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
       Grisette.Lib.Synth.Util.PrettyTest
