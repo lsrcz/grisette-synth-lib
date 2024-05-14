@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -16,6 +17,7 @@ module Grisette.Lib.Synth.Reasoning.Server.ThreadPool
     cancelTaskWith,
     numOfRunningTasks,
     cancelAllTasksWith,
+    alterTaskIfPending,
   )
 where
 
@@ -190,3 +192,19 @@ waitCatchTaskSTM taskHandle@TaskHandle {taskPool = Pool {..}} = do
 
 waitCatchTask :: (Typeable a) => TaskHandle a -> IO (Either SomeException a)
 waitCatchTask = atomically . waitCatchTaskSTM
+
+alterTaskIfPending :: (Typeable a) => TaskHandle a -> IO a -> IO ()
+alterTaskIfPending
+  TaskHandle {taskHandleId, taskPool = pool@Pool {..}}
+  newAction =
+    withLockedPool pool False $ do
+      oldQueue <- readIORef queue
+      case OM.lookup taskHandleId oldQueue of
+        Just PendingTask {..} -> do
+          writeIORef queue $
+            OM.alter
+              (const $ Just $ PendingTask {task = toDyn <$> newAction})
+              taskHandleId
+              oldQueue
+          startIfHaveSpaceImpl pool
+        Nothing -> return ()

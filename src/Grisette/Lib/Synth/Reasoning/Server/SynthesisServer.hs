@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Reasoning.Server.SynthesisServer
@@ -22,6 +23,8 @@ module Grisette.Lib.Synth.Reasoning.Server.SynthesisServer
     pollTasks,
     cancelTask,
     cancelTaskWith,
+    alterTaskIfPending,
+    alterTaskIfPendingWithTimeout,
   )
 where
 
@@ -144,6 +147,28 @@ instance Hashable (SynthesisTaskHandle conProg) where
 
 type TaskSet conProg = HS.HashSet (SynthesisTaskHandle conProg)
 
+taskFun ::
+  (ConfigurableSolver config h, Typeable conProg) =>
+  Maybe Int ->
+  TMVar UTCTime ->
+  TMVar UTCTime ->
+  TMVar (SynthesisTaskHandle conProg) ->
+  config ->
+  SynthesisTask conProg ->
+  IO (SynthesisResult conProg)
+taskFun maybeTimeout startTimeTMVar endTimeTMVar taskHandleTMVar config task =
+  mask $ \restore -> do
+    selfHandle <- atomically $ readTMVar taskHandleTMVar
+    case maybeTimeout of
+      Just timeout -> do
+        async $
+          threadDelay timeout >> cancelTaskWith selfHandle SynthesisTaskTimeout
+        return ()
+      Nothing -> return ()
+    getCurrentTime >>= atomically . tryPutTMVar startTimeTMVar
+    restore (runSynthesisTask config task)
+      `finally` (getCurrentTime >>= atomically . tryPutTMVar endTimeTMVar)
+
 submitTaskImpl ::
   (ConfigurableSolver config h, Typeable conProg) =>
   Maybe Int ->
@@ -156,29 +181,15 @@ submitTaskImpl
   (SynthesisServer pool)
   config
   task = do
-    startTimeTMVar <- newEmptyTMVarIO
-    endTimeTMVar <- newEmptyTMVarIO
+    startTime <- newEmptyTMVarIO
+    endTime <- newEmptyTMVarIO
     taskHandleTMVar <- newEmptyTMVarIO
-    cancelledResultTMVar <- newEmptyTMVarIO
+    cancelledResult <- newEmptyTMVarIO
     handle <-
-      addNewTask pool $ mask $ \restore -> do
-        selfHandle <- atomically $ readTMVar taskHandleTMVar
-        case maybeTimeout of
-          Just timeout -> do
-            async $
-              threadDelay timeout
-                >> cancelTaskWith selfHandle SynthesisTaskTimeout
-            return ()
-          Nothing -> return ()
-        getCurrentTime >>= atomically . tryPutTMVar startTimeTMVar
-        restore (runSynthesisTask config task)
-          `finally` (getCurrentTime >>= atomically . tryPutTMVar endTimeTMVar)
+      addNewTask pool $
+        taskFun maybeTimeout startTime endTime taskHandleTMVar config task
     let taskHandle =
-          SynthesisTaskHandle
-            handle
-            startTimeTMVar
-            endTimeTMVar
-            cancelledResultTMVar
+          SynthesisTaskHandle handle startTime endTime cancelledResult
     atomically $ putTMVar taskHandleTMVar taskHandle
     return taskHandle
 
@@ -261,3 +272,44 @@ cancelTaskWith
         Left $
           C.SomeException SynthesisTaskCancelled
     return ()
+
+alterTaskIfPendingImpl ::
+  (ConfigurableSolver config h, Typeable conProg) =>
+  Maybe Int ->
+  SynthesisTaskHandle conProg ->
+  config ->
+  SynthesisTask conProg ->
+  IO ()
+alterTaskIfPendingImpl
+  maybeTimeout
+  taskHandle@SynthesisTaskHandle {..}
+  config
+  task = do
+    taskHandleTMVar <- newEmptyTMVarIO
+    Pool.alterTaskIfPending _underlyingHandle $
+      taskFun
+        maybeTimeout
+        _taskStartTime
+        _taskEndTime
+        taskHandleTMVar
+        config
+        task
+    atomically $ putTMVar taskHandleTMVar taskHandle
+
+alterTaskIfPending ::
+  (ConfigurableSolver config h, Typeable conProg) =>
+  SynthesisTaskHandle conProg ->
+  config ->
+  SynthesisTask conProg ->
+  IO ()
+alterTaskIfPending = alterTaskIfPendingImpl Nothing
+
+alterTaskIfPendingWithTimeout ::
+  (ConfigurableSolver config h, Typeable conProg) =>
+  SynthesisTaskHandle conProg ->
+  config ->
+  SynthesisTask conProg ->
+  Int ->
+  IO ()
+alterTaskIfPendingWithTimeout handle config task timeout =
+  alterTaskIfPendingImpl (Just timeout) handle config task

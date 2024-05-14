@@ -1,7 +1,7 @@
 module Grisette.Lib.Synth.Reasoning.Server.ThreadPoolTest (threadPoolTest) where
 
 import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
-import Control.Monad (replicateM_, unless)
+import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
 import Data.Maybe (isNothing)
 import Grisette.Lib.Synth.Reasoning.Server.SynthesisServer
@@ -9,6 +9,7 @@ import Grisette.Lib.Synth.Reasoning.Server.SynthesisServer
   )
 import Grisette.Lib.Synth.Reasoning.Server.ThreadPool
   ( addNewTask,
+    alterTaskIfPending,
     cancelAllTasksWith,
     cancelTaskWith,
     newPool,
@@ -115,5 +116,25 @@ threadPoolTest =
               [0 .. 3 :: Int]
           cancelAllTasksWith pool SynthesisTaskCancelled
           results <- traverse waitCatchTask handle
-          traverse_ (\(Left _) -> return ()) results
+          traverse_ (\(Left _) -> return ()) results,
+        testCase "alterTaskIfPending" $ do
+          mvars <- replicateM 4 newEmptyMVar
+          mvar1 <- newEmptyMVar
+          pool <- newPool 2
+          handles <-
+            traverse
+              ( \n ->
+                  addNewTask pool $
+                    takeMVar (mvars !! n)
+                      >> when (n == 0) (putMVar mvar1 ())
+                      >> return n
+              )
+              [0 .. 3 :: Int]
+          putMVar (head mvars) ()
+          takeMVar mvar1
+          traverse_ (`alterTaskIfPending` return 42) handles
+          putMVar (mvars !! 1) ()
+          putMVar (mvars !! 2) ()
+          results <- traverse waitCatchTask handles
+          traverse_ (\(i, Right v) -> i @?= v) $ zip [0, 1, 2, 42] results
       ]
