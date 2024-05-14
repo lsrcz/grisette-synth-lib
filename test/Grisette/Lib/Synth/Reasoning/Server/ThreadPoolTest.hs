@@ -4,6 +4,9 @@ import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
 import Control.Monad (replicateM_, unless)
 import Data.Foldable (traverse_)
 import Data.Maybe (isNothing)
+import Grisette.Lib.Synth.Reasoning.Server.SynthesisServer
+  ( SynthesisTaskException (SynthesisTaskCancelled),
+  )
 import Grisette.Lib.Synth.Reasoning.Server.ThreadPool
   ( addNewTask,
     cancelAllTasksWith,
@@ -12,9 +15,6 @@ import Grisette.Lib.Synth.Reasoning.Server.ThreadPool
     numOfRunningTasks,
     pollTask,
     waitCatchTask,
-  )
-import Grisette.Lib.Synth.Reasoning.SynthesisServer
-  ( TaskException (TaskCancelled),
   )
 import Test.Framework
   ( Test,
@@ -78,7 +78,7 @@ threadPoolTest =
             traverse
               (\n -> addNewTask pool $ takeMVar mvar >> return n)
               [0 .. 1 :: Int]
-          cancelTaskWith TaskCancelled (head handle)
+          cancelTaskWith SynthesisTaskCancelled (head handle)
           let wait = do
                 r <- numOfRunningTasks pool
                 threadDelay 100000
@@ -99,7 +99,7 @@ threadPoolTest =
             traverse
               (\n -> addNewTask pool $ takeMVar mvar >> return n)
               [0 .. 3 :: Int]
-          cancelTaskWith TaskCancelled (last handle)
+          cancelTaskWith SynthesisTaskCancelled (last handle)
           replicateM_ 3 (putMVar mvar ())
           results <- traverse waitCatchTask handle
           assertBool "Should be cancelled task" $ case last results of
@@ -113,7 +113,7 @@ threadPoolTest =
             traverse
               (\n -> addNewTask pool $ takeMVar mvar >> return n)
               [0 .. 3 :: Int]
-          cancelAllTasksWith pool TaskCancelled
+          cancelAllTasksWith pool SynthesisTaskCancelled
           results <- traverse waitCatchTask handle
           traverse_ (\(Left _) -> return ()) results
       ]

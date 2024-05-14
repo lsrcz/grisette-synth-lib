@@ -1,4 +1,4 @@
-module Grisette.Lib.Synth.Reasoning.SynthesisServerTest
+module Grisette.Lib.Synth.Reasoning.Server.SynthesisServerTest
   ( synthesisServerTest,
   )
 where
@@ -11,22 +11,9 @@ import qualified Data.HashSet as HS
 import Data.Time (diffUTCTime, getCurrentTime)
 import Grisette (z3)
 import Grisette.Backend (precise)
-import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult)
-import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
-  ( fuzzResult,
-    sharedSketch,
-    task,
-  )
-import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
-  ( addThenDoubleGen,
-    addThenDoubleReverseSpec,
-    addThenDoubleSpec,
-    divModTwiceGen,
-    divModTwiceSpec,
-  )
-import Grisette.Lib.Synth.Reasoning.SynthesisServer
-  ( TaskException (TaskCancelled, TaskTimeout),
-    TaskHandle,
+import Grisette.Lib.Synth.Reasoning.Server.SynthesisServer
+  ( SynthesisTaskException (SynthesisTaskCancelled, SynthesisTaskTimeout),
+    SynthesisTaskHandle,
     TaskSet,
     cancelTask,
     endSynthesisServer,
@@ -40,12 +27,26 @@ import Grisette.Lib.Synth.Reasoning.SynthesisServer
     taskStartTime,
     waitCatchTask,
   )
+import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult)
+import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
+  ( fuzzResult,
+    sharedSketch,
+    task,
+  )
+import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
+  ( addThenDoubleGen,
+    addThenDoubleReverseSpec,
+    addThenDoubleSpec,
+    divModTwiceGen,
+    divModTwiceSpec,
+  )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool, (@?=))
 
 pollUntilFinished ::
-  TaskHandle conProg -> IO (Either SomeException (SynthesisResult conProg))
+  SynthesisTaskHandle conProg ->
+  IO (Either SomeException (SynthesisResult conProg))
 pollUntilFinished handle = do
   r <- pollTask handle
   case r of
@@ -56,7 +57,7 @@ pollTasksUntilFinished ::
   TaskSet conProg ->
   IO
     ( HM.HashMap
-        (TaskHandle conProg)
+        (SynthesisTaskHandle conProg)
         (Either SomeException (SynthesisResult conProg))
     )
 pollTasksUntilFinished taskSet = do
@@ -117,7 +118,7 @@ synthesisServerTest =
             task divModTwiceSpec divModTwiceGen sharedSketch
         r0 <- pollUntilFinished handle1
         case r0 of
-          Left e -> fromException e @?= Just TaskTimeout
+          Left e -> fromException e @?= Just SynthesisTaskTimeout
           _ -> fail "Expected TaskTimeout exception."
         endSynthesisServer server,
       testCase "cancelTask" $ do
@@ -133,7 +134,7 @@ synthesisServerTest =
         cancelTask handle1
         r0 <- pollUntilFinished handle1
         case r0 of
-          Left e -> fromException e @?= Just TaskCancelled
+          Left e -> fromException e @?= Just SynthesisTaskCancelled
           _ -> fail "Expected TaskCancelled exception."
         endSynthesisServer server,
       testCase "time measurement" $ do
