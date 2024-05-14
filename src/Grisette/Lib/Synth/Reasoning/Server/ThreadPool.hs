@@ -44,16 +44,12 @@ import Control.Exception
   )
 import Control.Monad (void, when)
 import Data.Dynamic (Dynamic, Typeable, fromDyn, toDyn)
-import Data.Foldable (Foldable (toList))
 import qualified Data.HashMap.Lazy as HM
 import Data.Hashable (Hashable (hashWithSalt))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import Data.Sequence (Seq ((:<|), (:|>)))
+import qualified Data.Map.Ordered as OM
 
-data PendingTask = PendingTask
-  { taskId :: TaskId,
-    task :: IO Dynamic
-  }
+newtype PendingTask = PendingTask {task :: IO Dynamic}
 
 type TaskId = Int
 
@@ -61,7 +57,7 @@ data Pool = Pool
   { lock :: MVar (),
     poolSize :: Int,
     running :: IORef (HM.HashMap TaskId (Async Dynamic)),
-    queue :: IORef (Seq PendingTask),
+    queue :: IORef (OM.OMap TaskId PendingTask),
     results :: TVar (HM.HashMap TaskId (TMVar (Either SomeException Dynamic))),
     nextTaskId :: IORef TaskId
   }
@@ -104,7 +100,7 @@ newPool poolSize = do
   lock <- newMVar ()
   running <- newIORef HM.empty
   results <- newTVarIO HM.empty
-  queue <- newIORef mempty
+  queue <- newIORef OM.empty
   nextTaskId <- newIORef 0
   return Pool {..}
 
@@ -126,11 +122,11 @@ startIfHaveSpaceImpl pool@Pool {..} = do
   oldRunning <- readIORef running
   when (HM.size oldRunning < poolSize) $ do
     oldQueue <- readIORef queue
-    case oldQueue of
-      (PendingTask {..} :<| rest) -> do
+    case OM.elemAt oldQueue 0 of
+      Just (taskId, PendingTask {..}) -> do
         oldResults <- readTVarIO results
         result <- atomically $ tryReadTMVar (oldResults HM.! taskId)
-        writeIORef queue rest
+        writeIORef queue $ OM.delete taskId oldQueue
         case result of
           Just _ -> return ()
           Nothing -> do
@@ -145,7 +141,7 @@ addNewTask pool@Pool {..} taskBase = withLockedPool pool True $ do
   oldQueue <- readIORef queue
   writeIORef nextTaskId (taskId + 1)
   let task = toDyn <$> taskBase
-  writeIORef queue $ oldQueue :|> PendingTask {..}
+  writeIORef queue $ oldQueue OM.>| (taskId, PendingTask {..})
   result <- newEmptyTMVarIO
   atomically $ modifyTVar' results $ HM.insert taskId result
   startIfHaveSpaceImpl pool
@@ -174,7 +170,7 @@ cancelAllTasksWith pool@Pool {..} e = withLockedPool pool True $ do
   oldRunning <- readIORef running
   oldPending <- readIORef queue
   mapM_ (cancelTaskWithImpl pool e) $
-    HM.keys oldRunning <> (taskId <$> toList oldPending)
+    HM.keys oldRunning <> (fst <$> OM.assocs oldPending)
 
 pollTaskSTM ::
   (Typeable a) => TaskHandle a -> STM (Maybe (Either SomeException a))
