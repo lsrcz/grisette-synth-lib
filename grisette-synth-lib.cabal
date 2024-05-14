@@ -45,6 +45,7 @@ library
       Grisette.Lib.Synth.Program.Concrete.OpToDot
       Grisette.Lib.Synth.Program.Concrete.Program
       Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath
+      Grisette.Lib.Synth.Program.CostModel.NoCostModel
       Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
       Grisette.Lib.Synth.Program.NullProg
       Grisette.Lib.Synth.Program.ProgConstraints
