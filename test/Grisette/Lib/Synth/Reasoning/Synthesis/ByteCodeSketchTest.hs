@@ -19,6 +19,7 @@ import Grisette.Lib.Synth.Program.ByteCodeSketch
     Stmt (Stmt),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.CostModel.NoCostModel (NoCostObj (NoCostObj))
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( WithConstraints (WithConstraints),
   )
@@ -37,7 +38,14 @@ import Grisette.Lib.Synth.Reasoning.Matcher (Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SomeVerifier (SomeVerifier),
     SynthesisResult (SynthesisSuccess),
-    SynthesisTask (SynthesisTask, synthesisTaskSymProg, synthesisTaskVerifiers),
+    SynthesisTask
+      ( SynthesisTask,
+        synthesisTaskConCostObj,
+        synthesisTaskInitialMaxCost,
+        synthesisTaskSymCostObj,
+        synthesisTaskSymProg,
+        synthesisTaskVerifiers
+      ),
     runSynthesisTask,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
@@ -140,7 +148,10 @@ byteCodeSketchTest =
     let task =
           SynthesisTask
             { synthesisTaskVerifiers = [SomeVerifier verifier],
-              synthesisTaskSymProg = sketch
+              synthesisTaskSymProg = sketch,
+              synthesisTaskInitialMaxCost = Nothing :: Maybe SymInteger,
+              synthesisTaskConCostObj = NoCostObj,
+              synthesisTaskSymCostObj = NoCostObj
             }
     return $ testCase name $ do
       SynthesisSuccess (prog :: ConProg) <- runSynthesisTask (precise z3) task

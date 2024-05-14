@@ -6,6 +6,8 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.Problem
     addThenDoubleReverseSpec,
     addThenDivModSpec,
     addThenDivModGen,
+    times4Spec,
+    times4Gen,
   )
 where
 
@@ -53,3 +55,10 @@ divModTwiceGen = flip suchThat noException $ vectorOf 2 arbitrary
   where
     noException [a, b] = b /= 0 && a `mod` b /= 0
     noException _ = False
+
+times4Spec :: [Integer] -> ([Integer], EqMatcher)
+times4Spec [x] = ([4 * x], EqMatcher)
+times4Spec _ = error "Error"
+
+times4Gen :: Gen [Integer]
+times4Gen = vectorOf 1 arbitrary

@@ -35,6 +35,9 @@ import Grisette.Lib.Synth.Program.ComponentSketch
     Stmt (Stmt),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.Concrete.Flatten (flattenProg)
+import Grisette.Lib.Synth.Program.CostModel.NoCostModel (NoCostObj (NoCostObj))
+import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (PerStmtCostObj (PerStmtCostObj))
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( WithConstraints (WithConstraints),
   )
@@ -54,7 +57,14 @@ import Grisette.Lib.Synth.Reasoning.Matcher (Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SomeVerifier (SomeVerifier),
     SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
-    SynthesisTask (SynthesisTask, synthesisTaskSymProg, synthesisTaskVerifiers),
+    SynthesisTask
+      ( SynthesisTask,
+        synthesisTaskConCostObj,
+        synthesisTaskInitialMaxCost,
+        synthesisTaskSymCostObj,
+        synthesisTaskSymProg,
+        synthesisTaskVerifiers
+      ),
     runSynthesisTask,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
@@ -65,10 +75,12 @@ import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
     addThenDoubleSpec,
     divModTwiceGen,
     divModTwiceSpec,
+    times4Gen,
+    times4Spec,
   )
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsObj (TestSemanticsObj),
-    TestSemanticsOp (Add, DivMod),
+    TestSemanticsOp (Add, DivMod, Double),
     TestSemanticsType (IntType),
   )
 import Test.Framework (Test, testGroup)
@@ -259,60 +271,148 @@ task ::
 task spec gen sketch =
   SynthesisTask
     { synthesisTaskVerifiers = [SomeVerifier $ verifier spec gen],
-      synthesisTaskSymProg = sketch
+      synthesisTaskSymProg = sketch,
+      synthesisTaskInitialMaxCost = Nothing :: Maybe SymInteger,
+      synthesisTaskConCostObj = NoCostObj,
+      synthesisTaskSymCostObj = NoCostObj
     }
 
 componentSketchTest :: Test
 componentSketchTest =
-  testGroup "ComponentSketch" $
-    ( do
-        (sketch, namePostFix) <-
-          [ (sharedSketch, ""),
-            (sharedSketchUnion, "/union")
-            ]
-        ComponentSynthesisTestCase
-          name
-          (spec :: [Integer] -> ([Integer], matcher))
-          gen <-
-          [ ComponentSynthesisTestCase
-              { componentSynthesisTestCaseName = "Add then double",
-                componentSynthesisTestCaseSpec = addThenDoubleSpec,
-                componentSynthesisTestCaseGen = addThenDoubleGen
-              },
+  testGroup
+    "ComponentSketch"
+    [ testGroup "general" $
+        ( do
+            (sketch, namePostFix) <-
+              [ (sharedSketch, ""),
+                (sharedSketchUnion, "/union")
+                ]
             ComponentSynthesisTestCase
-              { componentSynthesisTestCaseName = "Add then double/reverse",
-                componentSynthesisTestCaseSpec = addThenDoubleReverseSpec,
-                componentSynthesisTestCaseGen = addThenDoubleGen
-              },
-            ComponentSynthesisTestCase
-              { componentSynthesisTestCaseName = "DivMod twice",
-                componentSynthesisTestCaseSpec = divModTwiceSpec,
-                componentSynthesisTestCaseGen = divModTwiceGen
-              }
-            ]
+              name
+              (spec :: [Integer] -> ([Integer], matcher))
+              gen <-
+              [ ComponentSynthesisTestCase
+                  { componentSynthesisTestCaseName = "Add then double",
+                    componentSynthesisTestCaseSpec = addThenDoubleSpec,
+                    componentSynthesisTestCaseGen = addThenDoubleGen
+                  },
+                ComponentSynthesisTestCase
+                  { componentSynthesisTestCaseName = "Add then double/reverse",
+                    componentSynthesisTestCaseSpec = addThenDoubleReverseSpec,
+                    componentSynthesisTestCaseGen = addThenDoubleGen
+                  },
+                ComponentSynthesisTestCase
+                  { componentSynthesisTestCaseName = "DivMod twice",
+                    componentSynthesisTestCaseSpec = divModTwiceSpec,
+                    componentSynthesisTestCaseGen = divModTwiceGen
+                  }
+                ]
 
-        return $ testCase (name <> namePostFix) $ do
-          result <- runSynthesisTask (precise z3) $ task spec gen sketch
-          fuzzResult result gen spec
-    )
-      ++ [ testCase "Add then DivMod with must be after constraint" $ do
-             SynthesisSuccess prog <-
-               runSynthesisTask (precise z3) $
-                 task addThenDivModSpec addThenDivModGen addThenDivModSketch
-             fuzzingResult <-
-               fuzzingTestProg
-                 addThenDivModGen
-                 addThenDivModSpec
-                 100
-                 TestSemanticsObj
-                 prog
-             fst <$> fuzzingResult @?= Nothing,
-           testCase "Add then DivMod with bad must be after constraint" $ do
-             SynthesisSolverFailure Unsat <-
-               runSynthesisTask (precise z3) $
-                 task
-                   addThenDivModSpec
-                   addThenDivModGen
-                   addThenDivModSketchBadMustBeAfter
-             return ()
-         ]
+            return $ testCase (name <> namePostFix) $ do
+              result <- runSynthesisTask (precise z3) $ task spec gen sketch
+              fuzzResult result gen spec
+        )
+          ++ [ testCase "Add then DivMod with must be after constraint" $ do
+                 SynthesisSuccess prog <-
+                   runSynthesisTask (precise z3) $
+                     task addThenDivModSpec addThenDivModGen addThenDivModSketch
+                 fuzzingResult <-
+                   fuzzingTestProg
+                     addThenDivModGen
+                     addThenDivModSpec
+                     100
+                     TestSemanticsObj
+                     prog
+                 fst <$> fuzzingResult @?= Nothing,
+               testCase "Add then DivMod with bad must be after constraint" $ do
+                 SynthesisSolverFailure Unsat <-
+                   runSynthesisTask (precise z3) $
+                     task
+                       addThenDivModSpec
+                       addThenDivModGen
+                       addThenDivModSketchBadMustBeAfter
+                 return ()
+             ],
+      testGroup
+        "With cost model"
+        [ testCase "refinement" $ do
+            let task =
+                  SynthesisTask
+                    { synthesisTaskVerifiers =
+                        [SomeVerifier $ verifier times4Spec times4Gen],
+                      synthesisTaskSymProg = times4Sketch,
+                      synthesisTaskInitialMaxCost =
+                        Nothing :: Maybe SymInteger,
+                      synthesisTaskConCostObj = PerStmtCostObj,
+                      synthesisTaskSymCostObj = PerStmtCostObj
+                    }
+            let expectedSynthesizedProg =
+                  Concrete.Prog
+                    "test"
+                    [Concrete.ProgArg "x" (0 :: Int) IntType]
+                    [ Concrete.Stmt Double [0] [1],
+                      Concrete.Stmt Double [1] [2]
+                    ]
+                    [Concrete.ProgRes 2 IntType]
+            result <- runSynthesisTask (precise z3) task
+            case result of
+              SynthesisSuccess prog ->
+                flattenProg prog @?= Right expectedSynthesizedProg
+              _ -> fail "Unexpected result",
+          testCase "initial" $ do
+            let task =
+                  SynthesisTask
+                    { synthesisTaskVerifiers =
+                        [SomeVerifier $ verifier times4Spec times4Gen],
+                      synthesisTaskSymProg = times4Sketch,
+                      synthesisTaskInitialMaxCost =
+                        Just 2 :: Maybe SymInteger,
+                      synthesisTaskConCostObj = PerStmtCostObj,
+                      synthesisTaskSymCostObj = PerStmtCostObj
+                    }
+            result <- runSynthesisTask (precise z3) task
+            case result of
+              SynthesisSolverFailure Unsat -> return ()
+              _ -> fail "Unexpected result"
+        ]
+    ]
+
+times4Sketch :: SymProg
+times4Sketch =
+  Prog
+    "test"
+    [ProgArg "x" IntType]
+    [ Stmt
+        (mrgReturn Add)
+        ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
+        "stmt0'arg_num"
+        ["stmt0'ret0", "stmt0'ret1"]
+        "stmt0'ret_num"
+        "stmt0'dis"
+        [],
+      Stmt
+        (mrgReturn Add)
+        ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
+        "stmt1'arg_num"
+        ["stmt1'ret0"]
+        "stmt1'ret_num"
+        "stmt1'dis"
+        [],
+      Stmt
+        (mrgReturn Double)
+        ["stmt2'arg0", "stmt2'arg1"]
+        "stmt2'arg_num"
+        ["stmt2'ret0", "stmt2'ret1", "stmt2'ret2"]
+        "stmt2'ret_num"
+        "stmt2'dis"
+        [],
+      Stmt
+        (mrgReturn Double)
+        ["stmt3'arg0", "stmt3'arg1"]
+        "stmt3'arg_num"
+        ["stmt3'ret0", "stmt3'ret1"]
+        "stmt3'ret_num"
+        "stmt3'dis"
+        []
+    ]
+    [ProgRes "res0" IntType]

@@ -44,11 +44,16 @@ import Grisette.Lib.Synth.Operator.OpTyping
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
   )
+import Grisette.Lib.Synth.Program.Concrete.Flatten (OpFlatten (opForwardedSubProg))
+import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost))
+import Grisette.Lib.Synth.Program.NullProg (NullProg)
 import Grisette.Lib.Synth.Program.ProgConstraints (OpSubProgConstraints)
+import Grisette.Lib.Synth.Program.SubProg (HasSubProgs (getSubProgs))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
 import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving (Show, Generic, Eq)
@@ -149,3 +154,18 @@ instance
   GenIntermediate TestSemanticsObj TestSemanticsType SymInteger ctx
   where
   genIntermediate _ _ = simpleFresh ()
+
+instance (MonadContext ctx) => OpCost TestSemanticsOp SymInteger ctx where
+  opCost Add = return 2
+  opCost Double = return 1
+  opCost Inc = return 1
+  opCost DivMod = return 5
+
+instance (MonadContext ctx) => HasSubProgs TestSemanticsOp NullProg ctx where
+  getSubProgs _ = return []
+
+instance
+  (ConcreteVarId conVarId) =>
+  OpFlatten TestSemanticsOp conVarId TestSemanticsType
+  where
+  opForwardedSubProg _ = return Nothing
