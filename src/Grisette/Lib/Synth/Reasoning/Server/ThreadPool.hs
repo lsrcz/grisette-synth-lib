@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Reasoning.Server.ThreadPool
-  ( TaskHandle,
+  ( TaskHandle (taskHandleId),
     Pool,
     newPool,
     addNewTask,
@@ -48,20 +48,27 @@ import Control.Monad (void, when)
 import Data.Dynamic (Dynamic, Typeable, fromDyn, toDyn)
 import qualified Data.HashMap.Lazy as HM
 import Data.Hashable (Hashable (hashWithSalt))
-import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef, writeIORef)
 import qualified Data.Map.Ordered as OM
+import GHC.IO (unsafePerformIO)
 
 newtype PendingTask = PendingTask {task :: IO Dynamic}
 
+taskIdCounter :: IORef Int
+taskIdCounter = unsafePerformIO $ newIORef 0
+{-# NOINLINE taskIdCounter #-}
+
 type TaskId = Int
+
+freshTaskId :: IO TaskId
+freshTaskId = atomicModifyIORef' taskIdCounter (\x -> (x + 1, x))
 
 data Pool = Pool
   { lock :: MVar (),
     poolSize :: Int,
     running :: IORef (HM.HashMap TaskId (Async Dynamic)),
     queue :: IORef (OM.OMap TaskId PendingTask),
-    results :: TVar (HM.HashMap TaskId (TMVar (Either SomeException Dynamic))),
-    nextTaskId :: IORef TaskId
+    results :: TVar (HM.HashMap TaskId (TMVar (Either SomeException Dynamic)))
   }
 
 numOfRunningTasks :: Pool -> IO Int
@@ -103,7 +110,6 @@ newPool poolSize = do
   running <- newIORef HM.empty
   results <- newTVarIO HM.empty
   queue <- newIORef OM.empty
-  nextTaskId <- newIORef 0
   return Pool {..}
 
 taskFun :: Pool -> TaskId -> IO Dynamic -> IO Dynamic
@@ -139,9 +145,8 @@ startIfHaveSpaceImpl pool@Pool {..} = do
 
 addNewTask :: (Typeable a) => Pool -> IO a -> IO (TaskHandle a)
 addNewTask pool@Pool {..} taskBase = withLockedPool pool True $ do
-  taskId <- readIORef nextTaskId
+  taskId <- freshTaskId
   oldQueue <- readIORef queue
-  writeIORef nextTaskId (taskId + 1)
   let task = toDyn <$> taskBase
   writeIORef queue $ oldQueue OM.>| (taskId, PendingTask {..})
   result <- newEmptyTMVarIO
