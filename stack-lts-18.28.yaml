@@ -44,7 +44,7 @@ packages:
 # extra-deps: []
 extra-deps:
   - git: https://github.com/lsrcz/grisette.git
-    commit: 133996cf84c4b277f9f18443962f4e78e1652d57
+    commit: 76ea9660ab1ba8f5e3bbf73ae22a5c72fbddb38d
   - doctest-0.18.2
   - quickcheck-with-counterexamples-1.2
   - ordered-containers-0.2.3

@@ -4,7 +4,7 @@ import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
 import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
 import Data.Maybe (isNothing)
-import Grisette.Lib.Synth.Reasoning.Server.SynthesisServer
+import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
 import Grisette.Lib.Synth.Reasoning.Server.ThreadPool

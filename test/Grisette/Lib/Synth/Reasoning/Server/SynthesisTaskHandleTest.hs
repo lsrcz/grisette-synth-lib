@@ -1,5 +1,5 @@
-module Grisette.Lib.Synth.Reasoning.Server.SynthesisServerTest
-  ( synthesisServerTest,
+module Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandleTest
+  ( synthesisTaskHandleTest,
   )
 where
 
@@ -7,26 +7,26 @@ import Control.Concurrent (threadDelay)
 import Control.Exception (Exception (fromException), SomeException)
 import Data.Either (fromRight)
 import qualified Data.HashMap.Lazy as HM
-import qualified Data.HashSet as HS
 import Data.Time (diffUTCTime, getCurrentTime)
+import Data.Typeable (Typeable)
 import Grisette (z3)
 import Grisette.Backend (precise)
-import Grisette.Lib.Synth.Reasoning.Server.SynthesisServer
+import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
   ( SynthesisTaskException (SynthesisTaskCancelled, SynthesisTaskTimeout),
-    SynthesisTaskHandle,
-    TaskSet,
-    cancelTask,
-    endSynthesisServer,
-    newSynthesisServer,
-    pollTask,
-    pollTasks,
-    submitTask,
-    submitTaskWithTimeout,
-    taskElapsedTime,
-    taskEndTime,
-    taskStartTime,
-    waitCatchTask,
+    cancel,
+    elapsedTime,
+    endTime,
+    poll,
+    pollAny,
+    startTime,
+    waitCatch,
   )
+import Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandle
+  ( SynthesisTaskHandle,
+    enqueueTask,
+    enqueueTaskWithTimeout,
+  )
+import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (newPool)
 import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult)
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( fuzzResult,
@@ -45,59 +45,59 @@ import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool, (@?=))
 
 pollUntilFinished ::
+  (Typeable conProg) =>
   SynthesisTaskHandle conProg ->
   IO (Either SomeException (SynthesisResult conProg))
 pollUntilFinished handle = do
-  r <- pollTask handle
+  r <- poll handle
   case r of
     Just v -> return v
     _ -> threadDelay 100000 >> pollUntilFinished handle
 
 pollTasksUntilFinished ::
-  TaskSet conProg ->
+  (Typeable conProg) =>
+  [SynthesisTaskHandle conProg] ->
   IO
-    ( HM.HashMap
-        (SynthesisTaskHandle conProg)
-        (Either SomeException (SynthesisResult conProg))
-    )
+    [ ( SynthesisTaskHandle conProg,
+        Either SomeException (SynthesisResult conProg)
+      )
+    ]
 pollTasksUntilFinished taskSet = do
-  (remaining, r) <- pollTasks taskSet
-  if HS.null remaining
+  (remaining, r) <- pollAny taskSet
+  if null remaining
     then return r
-    else threadDelay 100000 >> HM.union r <$> pollTasksUntilFinished remaining
+    else threadDelay 100000 >> (r ++) <$> pollTasksUntilFinished remaining
 
-synthesisServerTest :: Test
-synthesisServerTest =
+synthesisTaskHandleTest :: Test
+synthesisTaskHandleTest =
   testGroup
-    "SynthesisServer"
+    "SynthesisTaskHandle"
     [ testCase "Concurrently synthesize several programs" $ do
-        server <- newSynthesisServer 2
+        pool <- newPool 2
         handle0 <-
-          submitTask server (precise z3) $
+          enqueueTask pool (precise z3) $
             task addThenDoubleSpec addThenDoubleGen sharedSketch
         handle1 <-
-          submitTask server (precise z3) $
+          enqueueTask pool (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         handle2 <-
-          submitTask server (precise z3) $
+          enqueueTask pool (precise z3) $
             task addThenDoubleReverseSpec addThenDoubleGen sharedSketch
         Right r0 <- pollUntilFinished handle0
         Right r1 <- pollUntilFinished handle1
         Right r2 <- pollUntilFinished handle2
         fuzzResult r0 addThenDoubleGen addThenDoubleSpec
         fuzzResult r1 divModTwiceGen divModTwiceSpec
-        fuzzResult r2 addThenDoubleGen addThenDoubleReverseSpec
-        endSynthesisServer server,
+        fuzzResult r2 addThenDoubleGen addThenDoubleReverseSpec,
       testCase "pollTasks" $ do
-        server <- newSynthesisServer 2
+        pool <- newPool 2
         handle0 <-
-          submitTask server (precise z3) $
+          enqueueTask pool (precise z3) $
             task addThenDoubleSpec addThenDoubleGen sharedSketch
         handle1 <-
-          submitTask server (precise z3) $
+          enqueueTask pool (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
-        map <-
-          pollTasksUntilFinished $ HS.fromList [handle0, handle1]
+        map <- HM.fromList <$> pollTasksUntilFinished [handle0, handle1]
         fuzzResult
           (fromRight undefined $ map HM.! handle0)
           addThenDoubleGen
@@ -105,69 +105,64 @@ synthesisServerTest =
         fuzzResult
           (fromRight undefined $ map HM.! handle1)
           divModTwiceGen
-          divModTwiceSpec
-        endSynthesisServer server,
-      testCase "submitTaskWithTimeout" $ do
-        server <- newSynthesisServer 2
+          divModTwiceSpec,
+      testCase "enqueueTaskWithTimeout" $ do
+        pool <- newPool 2
         -- The timeout cannot be too short due to
         -- https://github.com/jwiegley/async-pool/issues/31
         -- It cannot be too long, either, otherwise the task may finish before
         -- we can cancel the task.
         handle1 <-
-          submitTaskWithTimeout server (precise z3) 10000 $
+          enqueueTaskWithTimeout pool (precise z3) 10000 $
             task divModTwiceSpec divModTwiceGen sharedSketch
         r0 <- pollUntilFinished handle1
         case r0 of
           Left e -> fromException e @?= Just SynthesisTaskTimeout
-          _ -> fail "Expected TaskTimeout exception."
-        endSynthesisServer server,
+          _ -> fail "Expected TaskTimeout exception.",
       testCase "cancelTask" $ do
-        server <- newSynthesisServer 2
+        pool <- newPool 2
         handle1 <-
-          submitTask server (precise z3) $
+          enqueueTask pool (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         -- The delay is necessary due to
         -- https://github.com/jwiegley/async-pool/issues/31
         -- It cannot be too long, either, otherwise the task may finish before
         -- we can cancel the task.
         threadDelay 10000
-        cancelTask handle1
+        cancel handle1
         r0 <- pollUntilFinished handle1
         case r0 of
           Left e -> fromException e @?= Just SynthesisTaskCancelled
-          _ -> fail "Expected TaskCancelled exception."
-        endSynthesisServer server,
+          _ -> fail "Expected TaskCancelled exception.",
       testCase "time measurement" $ do
-        server <- newSynthesisServer 2
+        pool <- newPool 2
         handle <-
-          submitTask server (precise z3) $
+          enqueueTask pool (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
-        _ <- waitCatchTask handle
-        startTime <- taskStartTime handle
+        _ <- waitCatch handle
+        startTime <- startTime handle
         expectedEndTime <- getCurrentTime
         let expectedElapsedTime = diffUTCTime expectedEndTime startTime
-        elapsedTime <- taskElapsedTime handle
-        endTime <- taskEndTime handle
+        elapsedTime <- elapsedTime handle
+        endTime <- endTime handle
         assertBool "Diff should be less than 0.3 second" $
           abs (expectedElapsedTime - elapsedTime) < 0.3
         assertBool "End time diff should be less than 0.3 second" $
-          abs (diffUTCTime endTime expectedEndTime) < 0.3
-        endSynthesisServer server,
+          abs (diffUTCTime endTime expectedEndTime) < 0.3,
       testCase "time measurement for cancelled tasks" $ do
-        server <- newSynthesisServer 2
+        pool <- newPool 2
         handle <-
-          submitTask server (precise z3) $
+          enqueueTask pool (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         threadDelay 100000
-        cancelTask handle
-        startTime <- taskStartTime handle
+        cancel handle
+        startTime <- startTime handle
         expectedEndTime <- getCurrentTime
         let expectedElapsedTime = diffUTCTime expectedEndTime startTime
-        elapsedTime <- taskElapsedTime handle
-        endTime <- taskEndTime handle
+        elapsedTime <- elapsedTime handle
+        endTime <- endTime handle
         assertBool "Diff should be less than 0.3 second" $
           abs (expectedElapsedTime - elapsedTime) < 0.3
         assertBool "End time diff should be less than 0.3 second" $
           abs (diffUTCTime endTime expectedEndTime) < 0.3
-        endSynthesisServer server
     ]

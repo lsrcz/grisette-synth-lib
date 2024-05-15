@@ -37,7 +37,7 @@ import Grisette
     ToCon,
     VerifierFun,
     evaluateSymToCon,
-    genericCEGIS,
+    genericCEGISWithRefinement,
     identifier,
     runFreshT,
     simpleMerge,
@@ -194,7 +194,7 @@ runSynthesisTaskExtractCex
       symCostObj
     ) = do
     (cex, r) <-
-      genericCEGIS
+      genericCEGISWithRefinement
         config
         True
         ( case initialMaxCost of

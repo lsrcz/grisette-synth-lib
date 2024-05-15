@@ -78,7 +78,7 @@ extra-deps:
   - graphviz-2999.20.0.4
   - dlist-0.8.0.8
   - git: https://github.com/lsrcz/grisette.git
-    commit: 133996cf84c4b277f9f18443962f4e78e1652d57
+    commit: 76ea9660ab1ba8f5e3bbf73ae22a5c72fbddb38d
 
 
 # Override default flag values for local packages and extra-deps
