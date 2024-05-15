@@ -58,18 +58,28 @@ endTime = atomically . endTimeSTM
 elapsedTime :: (BaseTaskHandle task conProg) => task -> IO NominalDiffTime
 elapsedTime = atomically . elapsedTimeSTM
 
+maybeStartTimeSTM :: (BaseTaskHandle task conProg) => task -> STM (Maybe UTCTime)
+maybeStartTimeSTM task =
+  (Just <$> startTimeSTM task) `orElse` return Nothing
+
+maybeEndTimeSTM :: (BaseTaskHandle task conProg) => task -> STM (Maybe UTCTime)
+maybeEndTimeSTM task =
+  (Just <$> endTimeSTM task) `orElse` return Nothing
+
+maybeElapsedTimeSTM ::
+  (BaseTaskHandle task conProg) => task -> STM (Maybe NominalDiffTime)
+maybeElapsedTimeSTM task =
+  (Just <$> elapsedTimeSTM task) `orElse` return Nothing
+
 maybeStartTime :: (BaseTaskHandle task conProg) => task -> IO (Maybe UTCTime)
-maybeStartTime task =
-  atomically $ (Just <$> startTimeSTM task) `orElse` return Nothing
+maybeStartTime = atomically . maybeStartTimeSTM
 
 maybeEndTime :: (BaseTaskHandle task conProg) => task -> IO (Maybe UTCTime)
-maybeEndTime task =
-  atomically $ (Just <$> endTimeSTM task) `orElse` return Nothing
+maybeEndTime = atomically . maybeEndTimeSTM
 
 maybeElapsedTime ::
   (BaseTaskHandle task conProg) => task -> IO (Maybe NominalDiffTime)
-maybeElapsedTime task =
-  atomically $ (Just <$> elapsedTimeSTM task) `orElse` return Nothing
+maybeElapsedTime = atomically . maybeElapsedTimeSTM
 
 poll ::
   (BaseTaskHandle task conProg) =>

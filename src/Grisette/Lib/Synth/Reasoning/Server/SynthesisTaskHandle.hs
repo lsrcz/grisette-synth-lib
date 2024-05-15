@@ -1,5 +1,7 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -20,11 +22,9 @@ import Control.Concurrent.STM
     newEmptyTMVarIO,
     putTMVar,
     readTMVar,
-    tryPutTMVar,
   )
 import qualified Control.Exception as C
-import Data.Hashable (Hashable (hashWithSalt))
-import Data.Time (UTCTime, getCurrentTime)
+import Data.Hashable (Hashable)
 import Data.Typeable (Typeable)
 import Grisette (ConfigurableSolver)
 import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
@@ -45,50 +45,29 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     runSynthesisTask,
   )
 
-data SynthesisTaskHandle conProg where
-  SynthesisTaskHandle ::
-    { _underlyingHandle :: TaskHandle (SynthesisResult conProg),
-      _taskStartTime :: TMVar UTCTime,
-      _taskEndTime :: TMVar UTCTime
-    } ->
-    SynthesisTaskHandle conProg
-
-instance Eq (SynthesisTaskHandle conProg) where
-  SynthesisTaskHandle handle1 _ _ == SynthesisTaskHandle handle2 _ _ =
-    handle1 == handle2
-
-instance Hashable (SynthesisTaskHandle conProg) where
-  hashWithSalt salt (SynthesisTaskHandle handle _ _) =
-    hashWithSalt salt handle
+newtype SynthesisTaskHandle conProg = SynthesisTaskHandle
+  { _underlyingHandle :: TaskHandle (SynthesisResult conProg)
+  }
+  deriving newtype (Eq, Hashable)
 
 instance
   (Typeable conProg) =>
   BaseTaskHandle (SynthesisTaskHandle conProg) conProg
   where
-  startTimeSTM = readTMVar . _taskStartTime
-  endTimeSTM = readTMVar . _taskEndTime
+  startTimeSTM = Pool.startTimeSTM . _underlyingHandle
+  endTimeSTM = Pool.endTimeSTM . _underlyingHandle
   pollSTM = Pool.pollTaskSTM . _underlyingHandle
   waitCatchSTM = Pool.waitCatchTaskSTM . _underlyingHandle
-  cancelWith
-    (SynthesisTaskHandle handle startTime endTime)
-    e = do
-      Pool.cancelTaskWith e handle
-      currentTime <- getCurrentTime
-      atomically $ do
-        tryPutTMVar startTime currentTime
-        tryPutTMVar endTime currentTime
-      return ()
+  cancelWith (SynthesisTaskHandle handle) e = do Pool.cancelTaskWith e handle
 
 taskFun ::
   (ConfigurableSolver config h, Typeable conProg) =>
   Maybe Int ->
-  TMVar UTCTime ->
-  TMVar UTCTime ->
   TMVar (SynthesisTaskHandle conProg) ->
   config ->
   SynthesisTask conProg ->
   IO (SynthesisResult conProg)
-taskFun maybeTimeout startTimeTMVar endTimeTMVar taskHandleTMVar config task =
+taskFun maybeTimeout taskHandleTMVar config task =
   C.mask $ \restore -> do
     selfHandle <- atomically $ readTMVar taskHandleTMVar
     case maybeTimeout of
@@ -98,9 +77,7 @@ taskFun maybeTimeout startTimeTMVar endTimeTMVar taskHandleTMVar config task =
             >> cancelWith selfHandle SynthesisTaskTimeout
         return ()
       Nothing -> return ()
-    getCurrentTime >>= atomically . tryPutTMVar startTimeTMVar
     restore (runSynthesisTask config task)
-      `C.finally` (getCurrentTime >>= atomically . tryPutTMVar endTimeTMVar)
 
 enqueueTaskImpl ::
   (ConfigurableSolver config h, Typeable conProg) =>
@@ -114,13 +91,11 @@ enqueueTaskImpl
   pool
   config
   task = do
-    startTime <- newEmptyTMVarIO
-    endTime <- newEmptyTMVarIO
     taskHandleTMVar <- newEmptyTMVarIO
     handle <-
       Pool.addNewTask pool $
-        taskFun maybeTimeout startTime endTime taskHandleTMVar config task
-    let taskHandle = SynthesisTaskHandle handle startTime endTime
+        taskFun maybeTimeout taskHandleTMVar config task
+    let taskHandle = SynthesisTaskHandle handle
     atomically $ putTMVar taskHandleTMVar taskHandle
     return taskHandle
 
@@ -163,8 +138,6 @@ alterTaskIfPendingImpl
     Pool.alterTaskIfPending _underlyingHandle $
       taskFun
         maybeTimeout
-        _taskStartTime
-        _taskEndTime
         taskHandleTMVar
         config
         task
