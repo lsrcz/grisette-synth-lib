@@ -47,12 +47,12 @@ packages:
   original:
     hackage: unordered-containers-0.2.11.0
 - completed:
-    hackage: ordered-containers-0.1.1@sha256:74d1550a2e4443c69dece6b33931a1c1c83fe69086e88f36f0c36d435f8d77d5,996
+    hackage: ordered-containers-0.2.3@sha256:89e2aca36de1335c3464c0f4893cbf791cadf9df36b2fb5e07a0e2d92f1e0cb6,810
     pantry-tree:
-      sha256: e7f42caa7525d148b3cd7fe91cbb7564a1b4c0c64fef76e914af19f311bb4bb2
-      size: 390
+      sha256: 7b3cafa50f564930339d8839bf8a7dcee7fb0e1590b8421f145e0150a3972c38
+      size: 526
   original:
-    hackage: ordered-containers-0.1.1
+    hackage: ordered-containers-0.2.3
 - completed:
     hackage: template-haskell-2.16.0.0@sha256:71d8c2e92b712695cb4fd0be9cd1a41b05c25315e9748cfef1132bf4d02b6556,1917
     pantry-tree:

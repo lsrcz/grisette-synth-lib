@@ -84,7 +84,7 @@ library
     , grisette ==0.6.*
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
-    , ordered-containers >=0.1.1 && <0.3
+    , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.11 && <11
@@ -115,7 +115,7 @@ executable arith
     , grisette-synth-lib
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
-    , ordered-containers >=0.1.1 && <0.3
+    , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.11 && <11
@@ -150,7 +150,7 @@ executable control
     , grisette-synth-lib
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
-    , ordered-containers >=0.1.1 && <0.3
+    , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.11 && <11
@@ -229,7 +229,7 @@ test-suite spec
     , grisette-synth-lib
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
-    , ordered-containers >=0.1.1 && <0.3
+    , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.11 && <11

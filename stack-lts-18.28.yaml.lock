@@ -29,6 +29,13 @@ packages:
       size: 724
   original:
     hackage: quickcheck-with-counterexamples-1.2
+- completed:
+    hackage: ordered-containers-0.2.3@sha256:89e2aca36de1335c3464c0f4893cbf791cadf9df36b2fb5e07a0e2d92f1e0cb6,810
+    pantry-tree:
+      sha256: 7b3cafa50f564930339d8839bf8a7dcee7fb0e1590b8421f145e0150a3972c38
+      size: 526
+  original:
+    hackage: ordered-containers-0.2.3
 snapshots:
 - completed:
     sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68
