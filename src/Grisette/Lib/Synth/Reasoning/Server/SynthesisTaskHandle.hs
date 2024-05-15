@@ -18,7 +18,6 @@ import Control.Concurrent.STM
   ( TMVar,
     atomically,
     newEmptyTMVarIO,
-    orElse,
     putTMVar,
     readTMVar,
     tryPutTMVar,
@@ -36,7 +35,7 @@ import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
         startTimeSTM,
         waitCatchSTM
       ),
-    SynthesisTaskException (SynthesisTaskCancelled, SynthesisTaskTimeout),
+    SynthesisTaskException (SynthesisTaskTimeout),
   )
 import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (TaskHandle)
 import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
@@ -50,18 +49,16 @@ data SynthesisTaskHandle conProg where
   SynthesisTaskHandle ::
     { _underlyingHandle :: TaskHandle (SynthesisResult conProg),
       _taskStartTime :: TMVar UTCTime,
-      _taskEndTime :: TMVar UTCTime,
-      _cancelledResult ::
-        TMVar (Either C.SomeException (SynthesisResult conProg))
+      _taskEndTime :: TMVar UTCTime
     } ->
     SynthesisTaskHandle conProg
 
 instance Eq (SynthesisTaskHandle conProg) where
-  SynthesisTaskHandle handle1 _ _ _ == SynthesisTaskHandle handle2 _ _ _ =
+  SynthesisTaskHandle handle1 _ _ == SynthesisTaskHandle handle2 _ _ =
     handle1 == handle2
 
 instance Hashable (SynthesisTaskHandle conProg) where
-  hashWithSalt salt (SynthesisTaskHandle handle _ _ _) =
+  hashWithSalt salt (SynthesisTaskHandle handle _ _) =
     hashWithSalt salt handle
 
 instance
@@ -71,19 +68,15 @@ instance
   startTimeSTM = readTMVar . _taskStartTime
   endTimeSTM = readTMVar . _taskEndTime
   pollSTM = Pool.pollTaskSTM . _underlyingHandle
-  waitCatchSTM (SynthesisTaskHandle handle _ _ cancelledResult) =
-    Pool.waitCatchTaskSTM handle `orElse` readTMVar cancelledResult
+  waitCatchSTM = Pool.waitCatchTaskSTM . _underlyingHandle
   cancelWith
-    (SynthesisTaskHandle handle startTime endTime cancelledResult)
+    (SynthesisTaskHandle handle startTime endTime)
     e = do
       Pool.cancelTaskWith e handle
       currentTime <- getCurrentTime
       atomically $ do
         tryPutTMVar startTime currentTime
         tryPutTMVar endTime currentTime
-        tryPutTMVar cancelledResult $
-          Left $
-            C.SomeException SynthesisTaskCancelled
       return ()
 
 taskFun ::
@@ -124,12 +117,10 @@ enqueueTaskImpl
     startTime <- newEmptyTMVarIO
     endTime <- newEmptyTMVarIO
     taskHandleTMVar <- newEmptyTMVarIO
-    cancelledResult <- newEmptyTMVarIO
     handle <-
       Pool.addNewTask pool $
         taskFun maybeTimeout startTime endTime taskHandleTMVar config task
-    let taskHandle =
-          SynthesisTaskHandle handle startTime endTime cancelledResult
+    let taskHandle = SynthesisTaskHandle handle startTime endTime
     atomically $ putTMVar taskHandleTMVar taskHandle
     return taskHandle
 
