@@ -4,19 +4,11 @@ import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
 import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
 import Data.Maybe (isNothing)
+import Data.Time (diffUTCTime, getCurrentTime)
 import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
-import Grisette.Lib.Synth.Reasoning.Server.ThreadPool
-  ( addNewTask,
-    alterTaskIfPending,
-    cancelAllTasksWith,
-    cancelTaskWith,
-    newPool,
-    numOfRunningTasks,
-    pollTask,
-    waitCatchTask,
-  )
+import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (addNewTask, alterTaskIfPending, cancelAllTasksWith, cancelTaskWith, elapsedTime, endTime, maybeElapsedTime, maybeEndTime, maybeStartTime, newPool, numOfRunningTasks, pollTask, startTime, waitCatchTask)
 import Test.Framework
   ( Test,
     TestOptions' (topt_timeout),
@@ -79,12 +71,12 @@ threadPoolTest =
             traverse
               (\n -> addNewTask pool $ takeMVar mvar >> return n)
               [0 .. 1 :: Int]
-          cancelTaskWith SynthesisTaskCancelled (head handle)
           let wait = do
                 r <- numOfRunningTasks pool
                 threadDelay 100000
-                unless (r == 1) wait
+                unless (r == 2) wait
           wait
+          cancelTaskWith SynthesisTaskCancelled (head handle)
           replicateM_ 1 (putMVar mvar ())
           results <- traverse waitCatchTask handle
           assertBool "Should be cancelled task" $ case head results of
@@ -136,5 +128,29 @@ threadPoolTest =
           putMVar (mvars !! 1) ()
           putMVar (mvars !! 2) ()
           results <- traverse waitCatchTask handles
-          traverse_ (\(i, Right v) -> i @?= v) $ zip [0, 1, 2, 42] results
+          traverse_ (\(i, Right v) -> i @?= v) $ zip [0, 1, 2, 42] results,
+        testCase "timing test" $ do
+          mvars <- replicateM 3 newEmptyMVar
+          pool <- newPool 2
+          handle <-
+            traverse
+              (\n -> addNewTask pool $ takeMVar (mvars !! n) >> return n)
+              [0 .. 2 :: Int]
+          currentTime <- getCurrentTime
+          startTime2 <- maybeStartTime (handle !! 2)
+          startTime2 @?= Nothing
+          endTime2 <- maybeEndTime (handle !! 2)
+          endTime2 @?= Nothing
+          elapsedTime2 <- maybeElapsedTime (handle !! 2)
+          elapsedTime2 @?= Nothing
+          mapM_ (`putMVar` 0) mvars
+          startTime2' <- startTime (handle !! 2)
+          assertBool "The time must be after the current time" $
+            currentTime <= startTime2'
+          endTime2' <- endTime (handle !! 2)
+          assertBool "The time must be after the current time" $
+            startTime2' <= endTime2'
+          elapsedTime2' <- elapsedTime (handle !! 2)
+          assertBool "The time must be after the current time" $
+            elapsedTime2' == endTime2' `diffUTCTime` startTime2'
       ]
