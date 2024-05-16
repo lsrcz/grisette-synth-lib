@@ -2,7 +2,6 @@
 
 module Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
   ( BaseTaskHandle (..),
-    elapsedTimeSTM,
     startTime,
     endTime,
     elapsedTime,
@@ -45,17 +44,16 @@ class
     IO handle
   startTimeSTM :: handle -> STM UTCTime
   endTimeSTM :: handle -> STM UTCTime
+  elapsedTimeSTM :: handle -> STM NominalDiffTime
+  elapsedTimeSTM task = do
+    startTime <- startTimeSTM task
+    endTime <- endTimeSTM task
+    return $ endTime `diffUTCTime` startTime
   pollSTM ::
     handle -> STM (Maybe (Either C.SomeException (SynthesisResult conProg)))
   waitCatchSTM ::
     handle -> STM (Either C.SomeException (SynthesisResult conProg))
   cancelWith :: (C.Exception e) => handle -> e -> IO ()
-
-elapsedTimeSTM :: (BaseTaskHandle task conProg) => task -> STM NominalDiffTime
-elapsedTimeSTM task = do
-  startTime <- startTimeSTM task
-  endTime <- endTimeSTM task
-  return $ endTime `diffUTCTime` startTime
 
 startTime :: (BaseTaskHandle task conProg) => task -> IO UTCTime
 startTime = atomically . startTimeSTM

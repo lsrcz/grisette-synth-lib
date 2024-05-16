@@ -9,6 +9,8 @@ module Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandle
   ( SynthesisTaskHandle,
     enqueueAction,
     enqueueActionWithTimeout,
+    enqueueMinimalCostTask,
+    enqueueMinimalCostTaskWithTimeout,
     alterTaskIfPending,
     alterTaskIfPendingWithTimeout,
   )
@@ -43,8 +45,10 @@ import Grisette.Lib.Synth.Reasoning.Server.Exception
 import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (ThreadHandle)
 import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisResult,
+  ( SynthesisMinimalCostTask,
+    SynthesisResult,
     SynthesisTask,
+    runSynthesisMinimalCostTask,
     runSynthesisTask,
   )
 
@@ -117,6 +121,28 @@ enqueueActionWithTimeout ::
   IO (SynthesisResult conProg) ->
   IO (SynthesisTaskHandle conProg)
 enqueueActionWithTimeout timeout = enqueueActionImpl (Just timeout)
+
+enqueueMinimalCostTask ::
+  (ConfigurableSolver config solver, Typeable conProg) =>
+  Pool.ThreadPool ->
+  config ->
+  SynthesisMinimalCostTask conProg ->
+  IO (SynthesisTaskHandle conProg)
+enqueueMinimalCostTask pool config task =
+  enqueueAction pool (runSynthesisMinimalCostTask config task)
+
+enqueueMinimalCostTaskWithTimeout ::
+  (ConfigurableSolver config solver, Typeable conProg) =>
+  Int ->
+  Pool.ThreadPool ->
+  config ->
+  SynthesisMinimalCostTask conProg ->
+  IO (SynthesisTaskHandle conProg)
+enqueueMinimalCostTaskWithTimeout timeout pool config task =
+  enqueueActionWithTimeout
+    timeout
+    pool
+    (runSynthesisMinimalCostTask config task)
 
 alterTaskIfPendingImpl ::
   (ConfigurableSolver config h, Typeable conProg) =>

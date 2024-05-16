@@ -12,6 +12,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
     task,
     sharedSketch,
     fuzzResult,
+    times4Sketch,
   )
 where
 
@@ -38,7 +39,6 @@ import Grisette.Lib.Synth.Program.ComponentSketch
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.Concrete.Flatten (flattenProg)
-import Grisette.Lib.Synth.Program.CostModel.NoCostModel (NoCostObj (NoCostObj))
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (PerStmtCostObj (PerStmtCostObj))
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( WithConstraints (WithConstraints),
@@ -58,15 +58,14 @@ import Grisette.Lib.Synth.Reasoning.Fuzzing
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SomeVerifier (SomeVerifier),
+    SynthesisMinimalCostTask (SynthesisMinimalCostTask, synthesisMinimalCostTaskConCostObj, synthesisMinimalCostTaskInitialMaxCost, synthesisMinimalCostTaskSymCostObj, synthesisMinimalCostTaskSymProg, synthesisMinimalCostTaskVerifiers),
     SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
-        synthesisTaskConCostObj,
-        synthesisTaskInitialMaxCost,
-        synthesisTaskSymCostObj,
         synthesisTaskSymProg,
         synthesisTaskVerifiers
       ),
+    runSynthesisMinimalCostTask,
     runSynthesisTask,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
@@ -273,10 +272,7 @@ task ::
 task spec gen sketch =
   SynthesisTask
     { synthesisTaskVerifiers = [SomeVerifier $ verifier spec gen],
-      synthesisTaskSymProg = sketch,
-      synthesisTaskInitialMaxCost = Nothing :: Maybe SymInteger,
-      synthesisTaskConCostObj = NoCostObj,
-      synthesisTaskSymCostObj = NoCostObj
+      synthesisTaskSymProg = sketch
     }
 
 componentSketchTest :: Test
@@ -339,14 +335,14 @@ componentSketchTest =
         "With cost model"
         [ testCase "refinement" $ do
             let task =
-                  SynthesisTask
-                    { synthesisTaskVerifiers =
+                  SynthesisMinimalCostTask
+                    { synthesisMinimalCostTaskVerifiers =
                         [SomeVerifier $ verifier times4Spec times4Gen],
-                      synthesisTaskSymProg = times4Sketch,
-                      synthesisTaskInitialMaxCost =
+                      synthesisMinimalCostTaskSymProg = times4Sketch,
+                      synthesisMinimalCostTaskInitialMaxCost =
                         Nothing :: Maybe SymInteger,
-                      synthesisTaskConCostObj = PerStmtCostObj,
-                      synthesisTaskSymCostObj = PerStmtCostObj
+                      synthesisMinimalCostTaskConCostObj = PerStmtCostObj,
+                      synthesisMinimalCostTaskSymCostObj = PerStmtCostObj
                     }
             let expectedSynthesizedProg =
                   Concrete.Prog
@@ -356,23 +352,23 @@ componentSketchTest =
                       Concrete.Stmt Double [1] [2]
                     ]
                     [Concrete.ProgRes 2 IntType]
-            result <- runSynthesisTask (precise z3) task
+            result <- runSynthesisMinimalCostTask (precise z3) task
             case result of
               SynthesisSuccess prog ->
                 flattenProg prog @?= Right expectedSynthesizedProg
               _ -> fail "Unexpected result",
           testCase "initial" $ do
             let task =
-                  SynthesisTask
-                    { synthesisTaskVerifiers =
+                  SynthesisMinimalCostTask
+                    { synthesisMinimalCostTaskVerifiers =
                         [SomeVerifier $ verifier times4Spec times4Gen],
-                      synthesisTaskSymProg = times4Sketch,
-                      synthesisTaskInitialMaxCost =
+                      synthesisMinimalCostTaskSymProg = times4Sketch,
+                      synthesisMinimalCostTaskInitialMaxCost =
                         Just 2 :: Maybe SymInteger,
-                      synthesisTaskConCostObj = PerStmtCostObj,
-                      synthesisTaskSymCostObj = PerStmtCostObj
+                      synthesisMinimalCostTaskConCostObj = PerStmtCostObj,
+                      synthesisMinimalCostTaskSymCostObj = PerStmtCostObj
                     }
-            result <- runSynthesisTask (precise z3) task
+            result <- runSynthesisMinimalCostTask (precise z3) task
             case result of
               SynthesisSolverFailure Unsat -> return ()
               _ -> fail "Unexpected result"

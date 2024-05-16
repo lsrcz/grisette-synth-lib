@@ -1,11 +1,17 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandle
   ( RefinableTaskHandle,
+    pollAtIndexSTM,
+    pollAtIndex,
+    waitCatchAtIndexSTM,
+    waitCatchAtIndex,
+    checkRefinableSolverAlive,
     enqueueRefineableAction,
     enqueueRefineableActionWithTimeout,
     enqueueRefineAction,
@@ -16,7 +22,8 @@ where
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async)
 import Control.Concurrent.STM
-  ( TMVar,
+  ( STM,
+    TMVar,
     TVar,
     atomically,
     newEmptyTMVarIO,
@@ -30,15 +37,20 @@ import Control.Concurrent.STM
     tryTakeTMVar,
     writeTVar,
   )
-import Control.Exception (mask, throwIO)
+import Control.Exception (Exception (toException), mask, throwIO)
 import qualified Control.Exception as C
 import Data.Foldable (traverse_)
 import Data.Hashable (Hashable (hashWithSalt))
 import Data.Typeable (Typeable)
-import Grisette (ConfigurableSolver (newSolver), Solver (solverForceTerminate))
+import Grisette
+  ( ConfigurableSolver (newSolver),
+    Solvable (con),
+    Solver (solverForceTerminate, solverSolve),
+  )
 import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
   ( BaseTaskHandle
       ( cancelWith,
+        elapsedTimeSTM,
         endTimeSTM,
         enqueueTaskMaybeTimeout,
         pollSTM,
@@ -47,7 +59,11 @@ import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
       ),
   )
 import Grisette.Lib.Synth.Reasoning.Server.Exception
-  ( SynthesisTaskException (SynthesisTaskCancelled, SynthesisTaskTimeout),
+  ( SynthesisTaskException
+      ( SynthesisTaskIndexOutOfBounds,
+        SynthesisTaskSolverDead,
+        SynthesisTaskTimeout
+      ),
   )
 import Grisette.Lib.Synth.Reasoning.Server.ThreadPool
   ( ThreadHandle,
@@ -56,25 +72,26 @@ import Grisette.Lib.Synth.Reasoning.Server.ThreadPool
   )
 import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisResult,
-    solverRunSynthesisTask,
+  ( SynthesisResult (SynthesisSuccess),
+    solverRunRefinableSynthesisTask,
   )
 
 data RefinableTaskHandle conProg where
   RefinableTaskHandle ::
     (Solver solver) =>
     { _initialThreadHandleId :: Int,
-      _underlyingHandle :: TVar (ThreadHandle (SynthesisResult conProg)),
+      _underlyingHandles :: TVar [ThreadHandle (SynthesisResult conProg)],
+      _maxSucceedIndex :: TVar Int,
       _solverHandle :: TMVar solver
     } ->
     RefinableTaskHandle conProg
 
 instance Eq (RefinableTaskHandle conProg) where
-  RefinableTaskHandle id1 _ _ == RefinableTaskHandle id2 _ _ =
+  RefinableTaskHandle id1 _ _ _ == RefinableTaskHandle id2 _ _ _ =
     id1 == id2
 
 instance Hashable (RefinableTaskHandle conProg) where
-  hashWithSalt salt (RefinableTaskHandle id _ _) = hashWithSalt salt id
+  hashWithSalt salt (RefinableTaskHandle id _ _ _) = hashWithSalt salt id
 
 instance
   (Typeable conProg) =>
@@ -85,39 +102,126 @@ instance
       timeout
       pool
       config
-      (`solverRunSynthesisTask` task)
+      (`solverRunRefinableSynthesisTask` task)
   startTimeSTM RefinableTaskHandle {..} =
-    readTVar _underlyingHandle >>= Pool.startTimeSTM
+    readTVar _underlyingHandles >>= Pool.startTimeSTM . head
   endTimeSTM RefinableTaskHandle {..} =
-    readTVar _underlyingHandle >>= Pool.endTimeSTM
-  pollSTM RefinableTaskHandle {..} =
-    readTVar _underlyingHandle >>= Pool.pollSTM
-  waitCatchSTM RefinableTaskHandle {..} =
-    readTVar _underlyingHandle >>= Pool.waitCatchSTM
+    readTVar _underlyingHandles >>= Pool.endTimeSTM . last
+  elapsedTimeSTM RefinableTaskHandle {..} =
+    sum <$> (readTVar _underlyingHandles >>= mapM Pool.elapsedTimeSTM)
+  pollSTM RefinableTaskHandle {..} = do
+    lastFinished <- Pool.pollSTM . last =<< readTVar _underlyingHandles
+    case lastFinished of
+      Nothing -> return Nothing
+      _ -> do
+        bestIndex <- max 0 <$> readTVar _maxSucceedIndex
+        Pool.pollSTM . (!! bestIndex) =<< readTVar _underlyingHandles
+  waitCatchSTM RefinableTaskHandle {..} = do
+    Pool.waitCatchSTM . last =<< readTVar _underlyingHandles
+    bestIndex <- max 0 <$> readTVar _maxSucceedIndex
+    Pool.waitCatchSTM . (!! bestIndex) =<< readTVar _underlyingHandles
   cancelWith RefinableTaskHandle {..} e = mask $ \_ -> do
-    handle <- readTVarIO _underlyingHandle
+    handles <- readTVarIO _underlyingHandles
     solverHandle <- atomically $ tryTakeTMVar _solverHandle
-    Pool.cancelWith e handle
+    mapM_ (Pool.cancelWith e) handles
     traverse_ solverForceTerminate solverHandle
+
+pollAtIndexSTM ::
+  (Typeable conProg) =>
+  RefinableTaskHandle conProg ->
+  Int ->
+  STM (Maybe (Either C.SomeException (SynthesisResult conProg)))
+pollAtIndexSTM RefinableTaskHandle {..} index = do
+  handles <- readTVar _underlyingHandles
+  if index >= length handles || index < 0
+    then return $ Just $ Left $ toException SynthesisTaskIndexOutOfBounds
+    else Pool.pollSTM (handles !! index)
+
+pollAtIndex ::
+  (Typeable conProg) =>
+  RefinableTaskHandle conProg ->
+  Int ->
+  IO (Maybe (Either C.SomeException (SynthesisResult conProg)))
+pollAtIndex handle index = atomically $ pollAtIndexSTM handle index
+
+waitCatchAtIndexSTM ::
+  (Typeable conProg) =>
+  RefinableTaskHandle conProg ->
+  Int ->
+  STM (Either C.SomeException (SynthesisResult conProg))
+waitCatchAtIndexSTM RefinableTaskHandle {..} index = do
+  handles <- readTVar _underlyingHandles
+  if index >= length handles || index < 0
+    then return $ Left $ toException SynthesisTaskIndexOutOfBounds
+    else Pool.waitCatchSTM (handles !! index)
+
+waitCatchAtIndex ::
+  (Typeable conProg) =>
+  RefinableTaskHandle conProg ->
+  Int ->
+  IO (Either C.SomeException (SynthesisResult conProg))
+waitCatchAtIndex handle index = atomically $ waitCatchAtIndexSTM handle index
+
+checkRefinableSolverAlive ::
+  RefinableTaskHandle conProg ->
+  IO Bool
+checkRefinableSolverAlive RefinableTaskHandle {..} = do
+  solverHandle <- atomically $ tryReadTMVar _solverHandle
+  case solverHandle of
+    Just solver -> do
+      r <- solverSolve solver (con True)
+      case r of
+        Right _ -> return True
+        _ -> do
+          solverForceTerminate solver
+          atomically $ tryTakeTMVar _solverHandle
+          return False
+    Nothing -> return False
+
+withAliveSolver ::
+  RefinableTaskHandle conProg ->
+  (forall solver. (Solver solver) => solver -> IO a) ->
+  IO a
+withAliveSolver handle@RefinableTaskHandle {..} action = do
+  checkRefinableSolverAlive handle
+  atomically (tryReadTMVar _solverHandle) >>= \case
+    Just solver -> do
+      res <- action solver
+      checkRefinableSolverAlive handle
+      return res
+    Nothing -> throwIO SynthesisTaskSolverDead
 
 actionWithTimeout ::
   (Solver solver, Typeable conProg) =>
   Maybe Int ->
   TMVar (RefinableTaskHandle conProg) ->
+  Int ->
+  TVar Int ->
   solver ->
   (solver -> IO (SynthesisResult conProg)) ->
   IO (SynthesisResult conProg)
-actionWithTimeout maybeTimeout taskHandleTMVar solver action =
-  C.mask $ \restore -> do
-    selfHandle <- atomically $ readTMVar taskHandleTMVar
-    case maybeTimeout of
-      Just timeout -> do
-        async $
-          threadDelay timeout
-            >> cancelWith selfHandle SynthesisTaskTimeout
-        return ()
-      Nothing -> return ()
-    restore (action solver)
+actionWithTimeout
+  maybeTimeout
+  taskHandleTMVar
+  currentIndex
+  maxFinishedIndex
+  solver
+  action =
+    C.mask $ \restore -> do
+      selfHandle <- atomically $ readTMVar taskHandleTMVar
+      case maybeTimeout of
+        Just timeout -> do
+          async $
+            threadDelay timeout
+              >> cancelWith selfHandle SynthesisTaskTimeout
+          return ()
+        Nothing -> return ()
+      r <- restore (action solver)
+      case r of
+        SynthesisSuccess _ ->
+          atomically $ writeTVar maxFinishedIndex currentIndex
+        _ -> return ()
+      return r
 
 enqueueRefinableActionMaybeTimeout ::
   (ConfigurableSolver config solver, Typeable conProg) =>
@@ -130,11 +234,22 @@ enqueueRefinableActionMaybeTimeout maybeTimeout pool config action = do
   solverHandle <- newSolver config
   _solverHandle <- newTMVarIO solverHandle
   taskHandleTMVar <- newEmptyTMVarIO
+  _maxSucceedIndex <- newTVarIO (-1)
   handle <-
     Pool.newThread pool $
-      actionWithTimeout maybeTimeout taskHandleTMVar solverHandle action
-  _handle <- newTVarIO handle
-  let taskHandle = RefinableTaskHandle (threadId handle) _handle _solverHandle
+      actionWithTimeout
+        maybeTimeout
+        taskHandleTMVar
+        0
+        _maxSucceedIndex
+        solverHandle
+        action
+  _underlyingHandles <- newTVarIO [handle]
+  let taskHandle =
+        RefinableTaskHandle
+          { _initialThreadHandleId = threadId handle,
+            ..
+          }
   atomically $ putTMVar taskHandleTMVar taskHandle
   return taskHandle
 
@@ -166,16 +281,21 @@ enqueueRefineActionMaybeTimeout
   maybeTimeout
   taskHandle@RefinableTaskHandle {..}
   action = do
-    oldHandle <- readTVarIO _underlyingHandle
+    oldHandles <- readTVarIO _underlyingHandles
+    let lastHandle = last oldHandles
     taskHandleTMVar <- newEmptyTMVarIO
     handle <-
-      Pool.newThread (threadPool oldHandle) $ do
-        solverHandle <- atomically $ tryReadTMVar _solverHandle
-        case solverHandle of
-          Just solver ->
-            actionWithTimeout maybeTimeout taskHandleTMVar solver action
-          Nothing -> throwIO SynthesisTaskCancelled
-    atomically $ writeTVar _underlyingHandle handle
+      Pool.newThread (threadPool lastHandle) $ do
+        Pool.waitCatch lastHandle
+        withAliveSolver taskHandle $ \solver ->
+          actionWithTimeout
+            maybeTimeout
+            taskHandleTMVar
+            (length oldHandles)
+            _maxSucceedIndex
+            solver
+            action
+    atomically $ writeTVar _underlyingHandles $ oldHandles ++ [handle]
     atomically $ putTMVar taskHandleTMVar taskHandle
 
 enqueueRefineAction ::

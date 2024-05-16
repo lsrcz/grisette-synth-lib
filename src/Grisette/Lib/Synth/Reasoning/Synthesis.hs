@@ -11,14 +11,19 @@
 module Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisContext (..),
     SynthesisResult (..),
-    SynthesisTask (..),
-    runSynthesisTask,
     IsVerifier (..),
     SomeVerifier (..),
     VerificationCex (..),
+    SynthesisTask (..),
+    runSynthesisTask,
     runSynthesisTaskExtractCex,
-    solverRunSynthesisTask,
-    solverRunSynthesisTaskExtractCex,
+    solverRunRefinableSynthesisTask,
+    solverRunRefinableSynthesisTaskExtractCex,
+    SynthesisMinimalCostTask (..),
+    runSynthesisMinimalCostTask,
+    runSynthesisMinimalCostTaskExtractCex,
+    solverRunSynthesisMinimalCostTask,
+    solverRunSynthesisMinimalCostTaskExtractCex,
   )
 where
 
@@ -47,7 +52,11 @@ import Grisette
     withInfo,
     withSolver,
   )
-import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext, SymbolicContext)
+import Grisette.Lib.Synth.Context
+  ( AngelicContext,
+    ConcreteContext,
+    SymbolicContext,
+  )
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( ProgConstraints,
     WithConstraints,
@@ -126,6 +135,18 @@ data SomeVerifier symProg conProg where
 
 data SynthesisTask conProg where
   SynthesisTask ::
+    forall symProg conProg.
+    ( EvaluateSym symProg,
+      ToCon symProg conProg,
+      Typeable symProg
+    ) =>
+    { synthesisTaskVerifiers :: [SomeVerifier symProg conProg],
+      synthesisTaskSymProg :: symProg
+    } ->
+    SynthesisTask conProg
+
+data SynthesisMinimalCostTask conProg where
+  SynthesisMinimalCostTask ::
     forall symProg conProg cost conCostObj symCostObj.
     ( EvaluateSym symProg,
       ToCon symProg conProg,
@@ -134,13 +155,13 @@ data SynthesisTask conProg where
       ProgCost symCostObj symProg cost AngelicContext,
       SOrd cost
     ) =>
-    { synthesisTaskVerifiers :: [SomeVerifier symProg conProg],
-      synthesisTaskSymProg :: symProg,
-      synthesisTaskInitialMaxCost :: Maybe cost,
-      synthesisTaskConCostObj :: conCostObj,
-      synthesisTaskSymCostObj :: symCostObj
+    { synthesisMinimalCostTaskVerifiers :: [SomeVerifier symProg conProg],
+      synthesisMinimalCostTaskSymProg :: symProg,
+      synthesisMinimalCostTaskInitialMaxCost :: Maybe cost,
+      synthesisMinimalCostTaskConCostObj :: conCostObj,
+      synthesisMinimalCostTaskSymCostObj :: symCostObj
     } ->
-    SynthesisTask conProg
+    SynthesisMinimalCostTask conProg
 
 synthesisConstraintFun ::
   forall symProg.
@@ -175,39 +196,40 @@ data SynthesisResult conProg
   | SynthesisSolverFailure SolvingFailure
   deriving (Show)
 
-runSynthesisTask ::
+runSynthesisMinimalCostTask ::
   (ConfigurableSolver config h) =>
   config ->
-  SynthesisTask conProg ->
+  SynthesisMinimalCostTask conProg ->
   IO (SynthesisResult conProg)
-runSynthesisTask config task = snd <$> runSynthesisTaskExtractCex config task
+runSynthesisMinimalCostTask config task =
+  snd <$> runSynthesisMinimalCostTaskExtractCex config task
 
-runSynthesisTaskExtractCex ::
+runSynthesisMinimalCostTaskExtractCex ::
   forall config h conProg.
   (ConfigurableSolver config h) =>
   config ->
-  SynthesisTask conProg ->
+  SynthesisMinimalCostTask conProg ->
   IO ([VerificationCex], SynthesisResult conProg)
-runSynthesisTaskExtractCex config task = withSolver config $ \solver ->
-  solverRunSynthesisTaskExtractCex solver task
+runSynthesisMinimalCostTaskExtractCex config task = withSolver config $ \solver ->
+  solverRunSynthesisMinimalCostTaskExtractCex solver task
 
-solverRunSynthesisTask ::
+solverRunSynthesisMinimalCostTask ::
   (Solver solver) =>
   solver ->
-  SynthesisTask conProg ->
+  SynthesisMinimalCostTask conProg ->
   IO (SynthesisResult conProg)
-solverRunSynthesisTask solver task =
-  snd <$> solverRunSynthesisTaskExtractCex solver task
+solverRunSynthesisMinimalCostTask solver task =
+  snd <$> solverRunSynthesisMinimalCostTaskExtractCex solver task
 
-solverRunSynthesisTaskExtractCex ::
+solverRunSynthesisMinimalCostTaskExtractCex ::
   forall solver conProg.
   (Solver solver) =>
   solver ->
-  SynthesisTask conProg ->
+  SynthesisMinimalCostTask conProg ->
   IO ([VerificationCex], SynthesisResult conProg)
-solverRunSynthesisTaskExtractCex
+solverRunSynthesisMinimalCostTaskExtractCex
   solver
-  ( SynthesisTask
+  ( SynthesisMinimalCostTask
       verifiers
       symProg
       (initialMaxCost :: Maybe cost)
@@ -249,3 +271,71 @@ solverRunSynthesisTaskExtractCex
         case conCost of
           Left _ -> return $ con False
           Right cost -> return $ symProgCostLessThanMaxCost cost
+
+runSynthesisTask ::
+  (ConfigurableSolver config h) =>
+  config ->
+  SynthesisTask conProg ->
+  IO (SynthesisResult conProg)
+runSynthesisTask config task = snd <$> runSynthesisTaskExtractCex config task
+
+runSynthesisTaskExtractCex ::
+  forall config h conProg.
+  (ConfigurableSolver config h) =>
+  config ->
+  SynthesisTask conProg ->
+  IO ([VerificationCex], SynthesisResult conProg)
+runSynthesisTaskExtractCex config task = withSolver config $ \solver ->
+  solverRunRefinableSynthesisTaskExtractCex solver task
+
+solverRunRefinableSynthesisTask ::
+  (Solver solver) =>
+  solver ->
+  SynthesisTask conProg ->
+  IO (SynthesisResult conProg)
+solverRunRefinableSynthesisTask solver task =
+  snd <$> solverRunRefinableSynthesisTaskExtractCex solver task
+
+solverRunRefinableSynthesisTaskExtractCex ::
+  forall solver conProg.
+  (Solver solver) =>
+  solver ->
+  SynthesisTask conProg ->
+  IO ([VerificationCex], SynthesisResult conProg)
+solverRunRefinableSynthesisTaskExtractCex
+  solver
+  (SynthesisTask verifiers symProg) = do
+    (cex, r) <-
+      solverGenericCEGISWithRefinement
+        solver
+        True
+        (con True)
+        (synthesisConstraintFun symProg)
+        Nothing
+        ( concatMap
+            (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
+            verifiers
+        )
+    case r of
+      CEGISSuccess model ->
+        return (cex, SynthesisSuccess $ evaluateSymToCon model symProg)
+      CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
+      CEGISSolverFailure failure -> return (cex, SynthesisSolverFailure failure)
+
+--  where
+--    symProgCost =
+--      flip runFreshT "cost" $ progCost symCostObj symProg ::
+--        SymbolicContext cost
+--    symProgCostLessThanMaxCost :: cost -> SymBool
+--    symProgCostLessThanMaxCost maxCost = simpleMerge $ do
+--      eitherCost <- runExceptT symProgCost
+--      case eitherCost of
+--        Left _ -> return $ con False
+--        Right cost -> return $ cost .< maxCost
+--    refineFun model = do
+--      let conProg = evaluateSymToCon model symProg :: conProg
+--      let conCost = progCost conCostObj conProg :: ConcreteContext cost
+--      case conCost of
+--        Left _ -> return $ con False
+--        Right cost -> return $ symProgCostLessThanMaxCost cost
+--
