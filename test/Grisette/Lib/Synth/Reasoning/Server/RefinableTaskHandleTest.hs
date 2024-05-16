@@ -13,10 +13,8 @@ import GHC.Stack (HasCallStack)
 import Grisette
   ( ITEOp (symIte),
     SEq ((.==)),
-    Solver (solverSolve),
     SolvingFailure (Unsat),
     SymInteger,
-    evaluateSymToCon,
     precise,
     z3,
   )
@@ -37,7 +35,7 @@ import Grisette.Lib.Synth.Reasoning.Server.Exception (SynthesisTaskException (Sy
 import Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandle
   ( RefinableTaskHandle,
     checkRefinableSolverAlive,
-    enqueueRefineAction,
+    enqueueRefineCond,
     pollAtIndex,
     waitCatchAtIndex,
   )
@@ -103,17 +101,15 @@ refinableTaskHandleTest =
             let Right cost =
                   progCost PerStmtCostObj prog ::
                     ConcreteContext SymInteger
-            enqueueRefineAction handle $ \solver -> do
+            enqueueRefineCond handle $ do
               let newCost =
                     progCost PerStmtCostObj times4Sketch ::
                       SymbolicContext SymInteger
-              r <-
-                solverSolve solver $
-                  newCost .== return (symIte (cost .== 2) 3 2)
-              case r of
-                Left err -> return $ SynthesisSolverFailure err
-                Right m ->
-                  return $ SynthesisSuccess $ evaluateSymToCon m times4Sketch
+              return $ newCost .== return (symIte (cost .== 2) 3 2)
+            -- case r of
+            --   Left err -> return $ SynthesisSolverFailure err
+            --   Right m ->
+            --     return $ SynthesisSuccess $ evaluateSymToCon m times4Sketch
             r <- waitCatch handle
             shouldHaveCost r $ symIte (cost .== 2) 3 2
             checkRefinableSolverAlive handle >>= (@?= True)
@@ -127,15 +123,9 @@ refinableTaskHandleTest =
         let newCost =
               progCost PerStmtCostObj times4Sketch ::
                 SymbolicContext SymInteger
-        let refineWithCost solver cost = do
-              r <- solverSolve solver $ newCost .== return cost
-              case r of
-                Left err -> return $ SynthesisSolverFailure err
-                Right m ->
-                  return $ SynthesisSuccess $ evaluateSymToCon m times4Sketch
-        enqueueRefineAction handle $ \solver -> refineWithCost solver 2
-        enqueueRefineAction handle $ \solver -> refineWithCost solver 3
-        enqueueRefineAction handle $ \solver -> refineWithCost solver 2
+        enqueueRefineCond handle $ return $ newCost .== return 2
+        enqueueRefineCond handle $ return $ newCost .== return 3
+        enqueueRefineCond handle $ return $ newCost .== return 2
 
         r <- waitCatch handle
         shouldHaveCost r 2

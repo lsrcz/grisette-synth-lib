@@ -12,10 +12,8 @@ module Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandle
     waitCatchAtIndexSTM,
     waitCatchAtIndex,
     checkRefinableSolverAlive,
-    enqueueRefineableAction,
-    enqueueRefineableActionWithTimeout,
-    enqueueRefineAction,
-    enqueueRefineActionWithTimeout,
+    enqueueRefineCond,
+    enqueueRefineCondWithTimeout,
   )
 where
 
@@ -45,8 +43,10 @@ import Data.Typeable (Typeable)
 import Grisette
   ( ConfigurableSolver (newSolver),
     Solvable (con),
-    Solver (solverForceTerminate, solverSolve),
+    Solver (solverAssert, solverForceTerminate),
+    solverSolve,
   )
+import Grisette.Internal.SymPrim.SymBool (SymBool)
 import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
   ( BaseTaskHandle
       ( cancelWith,
@@ -73,6 +73,7 @@ import Grisette.Lib.Synth.Reasoning.Server.ThreadPool
 import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
+    SynthesisTask,
     solverRunRefinableSynthesisTask,
   )
 
@@ -80,6 +81,7 @@ data RefinableTaskHandle conProg where
   RefinableTaskHandle ::
     (Solver solver) =>
     { _initialThreadHandleId :: Int,
+      _initialSynthesisTask :: SynthesisTask conProg,
       _underlyingHandles :: TVar [ThreadHandle (SynthesisResult conProg)],
       _maxSucceedIndex :: TVar Int,
       _solverHandle :: TMVar solver
@@ -87,22 +89,38 @@ data RefinableTaskHandle conProg where
     RefinableTaskHandle conProg
 
 instance Eq (RefinableTaskHandle conProg) where
-  RefinableTaskHandle id1 _ _ _ == RefinableTaskHandle id2 _ _ _ =
+  RefinableTaskHandle id1 _ _ _ _ == RefinableTaskHandle id2 _ _ _ _ =
     id1 == id2
 
 instance Hashable (RefinableTaskHandle conProg) where
-  hashWithSalt salt (RefinableTaskHandle id _ _ _) = hashWithSalt salt id
+  hashWithSalt salt (RefinableTaskHandle id _ _ _ _) = hashWithSalt salt id
 
 instance
   (Typeable conProg) =>
   BaseTaskHandle (RefinableTaskHandle conProg) conProg
   where
-  enqueueTaskMaybeTimeout timeout pool config task =
-    enqueueRefinableActionMaybeTimeout
-      timeout
-      pool
-      config
-      (`solverRunRefinableSynthesisTask` task)
+  enqueueTaskMaybeTimeout maybeTimeout pool config _initialSynthesisTask = do
+    solverHandle <- newSolver config
+    _solverHandle <- newTMVarIO solverHandle
+    taskHandleTMVar <- newEmptyTMVarIO
+    _maxSucceedIndex <- newTVarIO (-1)
+    handle <-
+      Pool.newThread pool $
+        actionWithTimeout
+          maybeTimeout
+          taskHandleTMVar
+          0
+          _maxSucceedIndex
+          solverHandle
+          (`solverRunRefinableSynthesisTask` _initialSynthesisTask)
+    _underlyingHandles <- newTVarIO [handle]
+    let taskHandle =
+          RefinableTaskHandle
+            { _initialThreadHandleId = threadId handle,
+              ..
+            }
+    atomically $ putTMVar taskHandleTMVar taskHandle
+    return taskHandle
   startTimeSTM RefinableTaskHandle {..} =
     readTVar _underlyingHandles >>= Pool.startTimeSTM . head
   endTimeSTM RefinableTaskHandle {..} =
@@ -223,64 +241,16 @@ actionWithTimeout
         _ -> return ()
       return r
 
-enqueueRefinableActionMaybeTimeout ::
-  (ConfigurableSolver config solver, Typeable conProg) =>
-  Maybe Int ->
-  Pool.ThreadPool ->
-  config ->
-  (solver -> IO (SynthesisResult conProg)) ->
-  IO (RefinableTaskHandle conProg)
-enqueueRefinableActionMaybeTimeout maybeTimeout pool config action = do
-  solverHandle <- newSolver config
-  _solverHandle <- newTMVarIO solverHandle
-  taskHandleTMVar <- newEmptyTMVarIO
-  _maxSucceedIndex <- newTVarIO (-1)
-  handle <-
-    Pool.newThread pool $
-      actionWithTimeout
-        maybeTimeout
-        taskHandleTMVar
-        0
-        _maxSucceedIndex
-        solverHandle
-        action
-  _underlyingHandles <- newTVarIO [handle]
-  let taskHandle =
-        RefinableTaskHandle
-          { _initialThreadHandleId = threadId handle,
-            ..
-          }
-  atomically $ putTMVar taskHandleTMVar taskHandle
-  return taskHandle
-
-enqueueRefineableAction ::
-  (ConfigurableSolver config solver, Typeable conProg) =>
-  Pool.ThreadPool ->
-  config ->
-  (solver -> IO (SynthesisResult conProg)) ->
-  IO (RefinableTaskHandle conProg)
-enqueueRefineableAction = enqueueRefinableActionMaybeTimeout Nothing
-
-enqueueRefineableActionWithTimeout ::
-  (ConfigurableSolver config solver, Typeable conProg) =>
-  Int ->
-  Pool.ThreadPool ->
-  config ->
-  (solver -> IO (SynthesisResult conProg)) ->
-  IO (RefinableTaskHandle conProg)
-enqueueRefineableActionWithTimeout timeout =
-  enqueueRefinableActionMaybeTimeout (Just timeout)
-
-enqueueRefineActionMaybeTimeout ::
+enqueueRefineCondMaybeTimeout ::
   (Typeable conProg) =>
   Maybe Int ->
   RefinableTaskHandle conProg ->
-  (forall solver. (Solver solver) => solver -> IO (SynthesisResult conProg)) ->
+  IO SymBool ->
   IO ()
-enqueueRefineActionMaybeTimeout
+enqueueRefineCondMaybeTimeout
   maybeTimeout
   taskHandle@RefinableTaskHandle {..}
-  action = do
+  cond = do
     oldHandles <- readTVarIO _underlyingHandles
     let lastHandle = last oldHandles
     taskHandleTMVar <- newEmptyTMVarIO
@@ -294,22 +264,25 @@ enqueueRefineActionMaybeTimeout
             (length oldHandles)
             _maxSucceedIndex
             solver
-            action
+            ( \solver -> do
+                solverAssert solver =<< cond
+                solverRunRefinableSynthesisTask solver _initialSynthesisTask
+            )
     atomically $ writeTVar _underlyingHandles $ oldHandles ++ [handle]
     atomically $ putTMVar taskHandleTMVar taskHandle
 
-enqueueRefineAction ::
+enqueueRefineCond ::
   (Typeable conProg) =>
   RefinableTaskHandle conProg ->
-  (forall solver. (Solver solver) => solver -> IO (SynthesisResult conProg)) ->
+  IO SymBool ->
   IO ()
-enqueueRefineAction = enqueueRefineActionMaybeTimeout Nothing
+enqueueRefineCond = enqueueRefineCondMaybeTimeout Nothing
 
-enqueueRefineActionWithTimeout ::
+enqueueRefineCondWithTimeout ::
   (Typeable conProg) =>
   Int ->
   RefinableTaskHandle conProg ->
-  (forall solver. (Solver solver) => solver -> IO (SynthesisResult conProg)) ->
+  IO SymBool ->
   IO ()
-enqueueRefineActionWithTimeout timeout =
-  enqueueRefineActionMaybeTimeout (Just timeout)
+enqueueRefineCondWithTimeout timeout =
+  enqueueRefineCondMaybeTimeout (Just timeout)

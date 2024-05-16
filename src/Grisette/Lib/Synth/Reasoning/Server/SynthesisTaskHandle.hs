@@ -7,8 +7,6 @@
 
 module Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandle
   ( SynthesisTaskHandle,
-    enqueueAction,
-    enqueueActionWithTimeout,
     enqueueMinimalCostTask,
     enqueueMinimalCostTaskWithTimeout,
     alterTaskIfPending,

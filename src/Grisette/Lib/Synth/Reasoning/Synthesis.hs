@@ -48,6 +48,7 @@ import Grisette
     identifier,
     runFreshT,
     simpleMerge,
+    solverGenericCEGIS,
     solverGenericCEGISWithRefinement,
     withInfo,
     withSolver,
@@ -306,12 +307,11 @@ solverRunRefinableSynthesisTaskExtractCex
   solver
   (SynthesisTask verifiers symProg) = do
     (cex, r) <-
-      solverGenericCEGISWithRefinement
+      solverGenericCEGIS
         solver
         True
         (con True)
         (synthesisConstraintFun symProg)
-        Nothing
         ( concatMap
             (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
             verifiers
@@ -321,21 +321,3 @@ solverRunRefinableSynthesisTaskExtractCex
         return (cex, SynthesisSuccess $ evaluateSymToCon model symProg)
       CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
       CEGISSolverFailure failure -> return (cex, SynthesisSolverFailure failure)
-
---  where
---    symProgCost =
---      flip runFreshT "cost" $ progCost symCostObj symProg ::
---        SymbolicContext cost
---    symProgCostLessThanMaxCost :: cost -> SymBool
---    symProgCostLessThanMaxCost maxCost = simpleMerge $ do
---      eitherCost <- runExceptT symProgCost
---      case eitherCost of
---        Left _ -> return $ con False
---        Right cost -> return $ cost .< maxCost
---    refineFun model = do
---      let conProg = evaluateSymToCon model symProg :: conProg
---      let conCost = progCost conCostObj conProg :: ConcreteContext cost
---      case conCost of
---        Left _ -> return $ con False
---        Right cost -> return $ symProgCostLessThanMaxCost cost
---
