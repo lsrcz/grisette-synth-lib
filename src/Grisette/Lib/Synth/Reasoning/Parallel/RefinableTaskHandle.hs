@@ -5,7 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandle
+module Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandle
   ( RefinableTaskHandle,
     pollAtIndexSTM,
     pollAtIndex,
@@ -47,7 +47,7 @@ import Grisette
     solverSolve,
   )
 import Grisette.Internal.SymPrim.SymBool (SymBool)
-import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
+import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( BaseTaskHandle
       ( cancelWith,
         elapsedTimeSTM,
@@ -58,19 +58,19 @@ import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
         waitCatchSTM
       ),
   )
-import Grisette.Lib.Synth.Reasoning.Server.Exception
+import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException
       ( SynthesisTaskIndexOutOfBounds,
         SynthesisTaskSolverDead,
         SynthesisTaskTimeout
       ),
   )
-import Grisette.Lib.Synth.Reasoning.Server.ThreadPool
+import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
   ( ThreadHandle,
     threadId,
     threadPool,
   )
-import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
+import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
     SynthesisTask,

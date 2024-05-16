@@ -7,7 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Grisette.Lib.Synth.Reasoning.Server.ThreadPool
+module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
   ( ThreadHandle (threadId, threadPool),
     ThreadPool,
     newThreadPool,

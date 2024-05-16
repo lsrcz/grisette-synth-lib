@@ -1,4 +1,4 @@
-module Grisette.Lib.Synth.Reasoning.Server.Exception
+module Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (..),
   )
 where

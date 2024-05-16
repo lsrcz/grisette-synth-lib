@@ -5,7 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandle
+module Grisette.Lib.Synth.Reasoning.Parallel.SynthesisTaskHandle
   ( SynthesisTaskHandle,
     enqueueMinimalCostTask,
     enqueueMinimalCostTaskWithTimeout,
@@ -27,7 +27,7 @@ import qualified Control.Exception as C
 import Data.Hashable (Hashable)
 import Data.Typeable (Typeable)
 import Grisette (ConfigurableSolver)
-import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
+import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( BaseTaskHandle
       ( cancelWith,
         endTimeSTM,
@@ -37,11 +37,11 @@ import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
         waitCatchSTM
       ),
   )
-import Grisette.Lib.Synth.Reasoning.Server.Exception
+import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskTimeout),
   )
-import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (ThreadHandle)
-import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
+import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (ThreadHandle)
+import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisMinimalCostTask,
     SynthesisResult,

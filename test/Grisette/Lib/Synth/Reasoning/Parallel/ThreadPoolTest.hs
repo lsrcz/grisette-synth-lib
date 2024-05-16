@@ -1,14 +1,14 @@
-module Grisette.Lib.Synth.Reasoning.Server.ThreadPoolTest (threadPoolTest) where
+module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPoolTest (threadPoolTest) where
 
 import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
 import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
 import Data.Maybe (isNothing)
 import Data.Time (diffUTCTime, getCurrentTime)
-import Grisette.Lib.Synth.Reasoning.Server.Exception
+import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
-import Grisette.Lib.Synth.Reasoning.Server.ThreadPool
+import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
   ( alterIfPending,
     cancelAllWith,
     cancelWith,
@@ -37,7 +37,7 @@ threadPoolTest :: Test
 threadPoolTest =
   plusTestOptions (mempty {topt_timeout = Just $ Just 5000000}) $
     testGroup
-      "Grisette.Lib.Synth.Reasoning.Server.ThreadPool"
+      "Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool"
       [ testCase "poll" $ do
           mvar <- newEmptyMVar
           pool <- newThreadPool 2

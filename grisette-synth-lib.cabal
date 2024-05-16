@@ -61,11 +61,11 @@ library
       Grisette.Lib.Synth.Reasoning.Fuzzing
       Grisette.Lib.Synth.Reasoning.IOPair
       Grisette.Lib.Synth.Reasoning.Matcher
-      Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
-      Grisette.Lib.Synth.Reasoning.Server.Exception
-      Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandle
-      Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandle
-      Grisette.Lib.Synth.Reasoning.Server.ThreadPool
+      Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
+      Grisette.Lib.Synth.Reasoning.Parallel.Exception
+      Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandle
+      Grisette.Lib.Synth.Reasoning.Parallel.SynthesisTaskHandle
+      Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
       Grisette.Lib.Synth.Reasoning.Synthesis
       Grisette.Lib.Synth.TypeSignature
       Grisette.Lib.Synth.Util.Pretty
@@ -202,11 +202,11 @@ test-suite spec
       Grisette.Lib.Synth.Program.Concrete.TypingTest
       Grisette.Lib.Synth.Program.ConcreteTest
       Grisette.Lib.Synth.Reasoning.FuzzingTest
+      Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandleTestCommon
+      Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandleTest
+      Grisette.Lib.Synth.Reasoning.Parallel.SynthesisTaskHandleTest
+      Grisette.Lib.Synth.Reasoning.Parallel.ThreadPoolTest
       Grisette.Lib.Synth.Reasoning.ReverseMatcher
-      Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandleTestCommon
-      Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandleTest
-      Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandleTest
-      Grisette.Lib.Synth.Reasoning.Server.ThreadPoolTest
       Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
       Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
       Grisette.Lib.Synth.Reasoning.Synthesis.Problem

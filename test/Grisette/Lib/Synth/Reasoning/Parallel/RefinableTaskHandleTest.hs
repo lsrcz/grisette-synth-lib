@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandleTest
+module Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandleTest
   ( refinableTaskHandleTest,
   )
 where
@@ -23,23 +23,23 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( PerStmtCostObj (PerStmtCostObj),
   )
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
-import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
+import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( cancel,
     enqueueTask,
     waitCatch,
   )
-import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandleTestCommon
+import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandleTestCommon
   ( baseTaskHandleTestCommon,
   )
-import Grisette.Lib.Synth.Reasoning.Server.Exception (SynthesisTaskException (SynthesisTaskSolverDead))
-import Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandle
+import Grisette.Lib.Synth.Reasoning.Parallel.Exception (SynthesisTaskException (SynthesisTaskSolverDead))
+import Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandle
   ( RefinableTaskHandle,
     checkRefinableSolverAlive,
     enqueueRefineCond,
     pollAtIndex,
     waitCatchAtIndex,
   )
-import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (newThreadPool)
+import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (newThreadPool)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
   )

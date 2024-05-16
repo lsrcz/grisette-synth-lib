@@ -2,7 +2,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandleTestCommon
+module Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandleTestCommon
   ( baseTaskHandleTestCommon,
   )
 where
@@ -13,7 +13,7 @@ import Data.Either (fromRight)
 import qualified Data.HashMap.Lazy as HM
 import Data.Time (diffUTCTime, getCurrentTime)
 import Grisette (precise, z3)
-import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
+import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( BaseTaskHandle,
     cancel,
     elapsedTime,
@@ -25,10 +25,10 @@ import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
     startTime,
     waitCatch,
   )
-import Grisette.Lib.Synth.Reasoning.Server.Exception
+import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled, SynthesisTaskTimeout),
   )
-import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (newThreadPool)
+import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (newThreadPool)
 import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult)
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( ConProg,

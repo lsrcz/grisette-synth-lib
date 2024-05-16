@@ -1,6 +1,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
+module Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( BaseTaskHandle (..),
     startTime,
     endTime,
@@ -24,10 +24,10 @@ import Data.Hashable (Hashable)
 import Data.Time (NominalDiffTime, UTCTime, diffUTCTime)
 import Data.Typeable (Typeable)
 import Grisette (ConfigurableSolver)
-import Grisette.Lib.Synth.Reasoning.Server.Exception
+import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
-import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
+import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult, SynthesisTask)
 
 class
