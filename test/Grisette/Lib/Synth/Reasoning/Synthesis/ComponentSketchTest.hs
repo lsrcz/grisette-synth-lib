@@ -5,7 +5,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
-  ( componentSketchTest,
+  ( ConProg,
+    SymProg,
+    componentSketchTest,
     ComponentSynthesisTestCase (..),
     task,
     sharedSketch,

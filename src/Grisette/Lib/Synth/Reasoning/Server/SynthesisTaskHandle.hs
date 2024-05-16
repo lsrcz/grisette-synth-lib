@@ -9,8 +9,6 @@ module Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandle
   ( SynthesisTaskHandle,
     enqueueAction,
     enqueueActionWithTimeout,
-    enqueueTask,
-    enqueueTaskWithTimeout,
     alterTaskIfPending,
     alterTaskIfPendingWithTimeout,
   )
@@ -33,11 +31,14 @@ import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
   ( BaseTaskHandle
       ( cancelWith,
         endTimeSTM,
+        enqueueTaskMaybeTimeout,
         pollSTM,
         startTimeSTM,
         waitCatchSTM
       ),
-    SynthesisTaskException (SynthesisTaskTimeout),
+  )
+import Grisette.Lib.Synth.Reasoning.Server.Exception
+  ( SynthesisTaskException (SynthesisTaskTimeout),
   )
 import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (ThreadHandle)
 import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
@@ -56,11 +57,13 @@ instance
   (Typeable conProg) =>
   BaseTaskHandle (SynthesisTaskHandle conProg) conProg
   where
+  enqueueTaskMaybeTimeout timeout pool config task =
+    enqueueActionImpl timeout pool (runSynthesisTask config task)
   startTimeSTM = Pool.startTimeSTM . _underlyingHandle
   endTimeSTM = Pool.endTimeSTM . _underlyingHandle
   pollSTM = Pool.pollSTM . _underlyingHandle
   waitCatchSTM = Pool.waitCatchSTM . _underlyingHandle
-  cancelWith (SynthesisTaskHandle handle) e = do Pool.cancelWith e handle
+  cancelWith (SynthesisTaskHandle handle) e = Pool.cancelWith e handle
 
 actionWithTimeout ::
   (Typeable conProg) =>
@@ -114,30 +117,6 @@ enqueueActionWithTimeout ::
   IO (SynthesisResult conProg) ->
   IO (SynthesisTaskHandle conProg)
 enqueueActionWithTimeout timeout = enqueueActionImpl (Just timeout)
-
--- | Add a task to the synthesis server.
-enqueueTask ::
-  (ConfigurableSolver config h, Typeable conProg) =>
-  Pool.ThreadPool ->
-  config ->
-  SynthesisTask conProg ->
-  IO (SynthesisTaskHandle conProg)
-enqueueTask pool config task =
-  enqueueAction pool (runSynthesisTask config task)
-
--- | Add a task to the synthesis server with a timeout.
---
--- This function may result in zombie processes with sbv-10.9 or earlier.
--- See https://github.com/LeventErkok/sbv/pull/691.
-enqueueTaskWithTimeout ::
-  (ConfigurableSolver config h, Typeable conProg) =>
-  Int ->
-  Pool.ThreadPool ->
-  config ->
-  SynthesisTask conProg ->
-  IO (SynthesisTaskHandle conProg)
-enqueueTaskWithTimeout timeout pool config task =
-  enqueueActionWithTimeout timeout pool (runSynthesisTask config task)
 
 alterTaskIfPendingImpl ::
   (ConfigurableSolver config h, Typeable conProg) =>

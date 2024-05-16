@@ -1,8 +1,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 
 module Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
-  ( SynthesisTaskException (..),
-    BaseTaskHandle (..),
+  ( BaseTaskHandle (..),
     elapsedTimeSTM,
     startTime,
     endTime,
@@ -15,6 +14,8 @@ module Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
     cancel,
     pollAnySTM,
     pollAny,
+    enqueueTask,
+    enqueueTaskWithTimeout,
   )
 where
 
@@ -23,18 +24,25 @@ import qualified Control.Exception as C
 import Data.Hashable (Hashable)
 import Data.Time (NominalDiffTime, UTCTime, diffUTCTime)
 import Data.Typeable (Typeable)
-import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult)
-
-data SynthesisTaskException = SynthesisTaskCancelled | SynthesisTaskTimeout
-  deriving (Eq, Show)
-
-instance C.Exception SynthesisTaskException
+import Grisette (ConfigurableSolver)
+import Grisette.Lib.Synth.Reasoning.Server.Exception
+  ( SynthesisTaskException (SynthesisTaskCancelled),
+  )
+import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
+import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult, SynthesisTask)
 
 class
   (Eq handle, Hashable handle, Typeable conProg) =>
   BaseTaskHandle handle conProg
     | handle -> conProg
   where
+  enqueueTaskMaybeTimeout ::
+    (ConfigurableSolver config solver) =>
+    Maybe Int ->
+    Pool.ThreadPool ->
+    config ->
+    SynthesisTask conProg ->
+    IO handle
   startTimeSTM :: handle -> STM UTCTime
   endTimeSTM :: handle -> STM UTCTime
   pollSTM ::
@@ -112,3 +120,20 @@ pollAny ::
   [task] ->
   IO ([task], [(task, Either C.SomeException (SynthesisResult conProg))])
 pollAny = atomically . pollAnySTM
+
+enqueueTask ::
+  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  Pool.ThreadPool ->
+  config ->
+  SynthesisTask conProg ->
+  IO handle
+enqueueTask = enqueueTaskMaybeTimeout Nothing
+
+enqueueTaskWithTimeout ::
+  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  Int ->
+  Pool.ThreadPool ->
+  config ->
+  SynthesisTask conProg ->
+  IO handle
+enqueueTaskWithTimeout timeout = enqueueTaskMaybeTimeout (Just timeout)

@@ -5,7 +5,7 @@ import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
 import Data.Maybe (isNothing)
 import Data.Time (diffUTCTime, getCurrentTime)
-import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
+import Grisette.Lib.Synth.Reasoning.Server.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
 import Grisette.Lib.Synth.Reasoning.Server.ThreadPool

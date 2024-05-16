@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Reasoning.Server.ThreadPool
-  ( ThreadHandle (threadId),
+  ( ThreadHandle (threadId, threadPool),
     ThreadPool,
     newThreadPool,
     newThread,

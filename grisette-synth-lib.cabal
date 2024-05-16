@@ -62,6 +62,8 @@ library
       Grisette.Lib.Synth.Reasoning.IOPair
       Grisette.Lib.Synth.Reasoning.Matcher
       Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
+      Grisette.Lib.Synth.Reasoning.Server.Exception
+      Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandle
       Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandle
       Grisette.Lib.Synth.Reasoning.Server.ThreadPool
       Grisette.Lib.Synth.Reasoning.Synthesis
@@ -201,6 +203,8 @@ test-suite spec
       Grisette.Lib.Synth.Program.ConcreteTest
       Grisette.Lib.Synth.Reasoning.FuzzingTest
       Grisette.Lib.Synth.Reasoning.ReverseMatcher
+      Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandleTestCommon
+      Grisette.Lib.Synth.Reasoning.Server.RefinableTaskHandleTest
       Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandleTest
       Grisette.Lib.Synth.Reasoning.Server.ThreadPoolTest
       Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest

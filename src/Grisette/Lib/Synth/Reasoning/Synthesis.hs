@@ -17,6 +17,8 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
     SomeVerifier (..),
     VerificationCex (..),
     runSynthesisTaskExtractCex,
+    solverRunSynthesisTask,
+    solverRunSynthesisTaskExtractCex,
   )
 where
 
@@ -31,17 +33,19 @@ import Grisette
     Mergeable,
     SOrd ((.<)),
     Solvable (con),
+    Solver,
     SolvingFailure,
     SymBool,
     SynthesisConstraintFun,
     ToCon,
     VerifierFun,
     evaluateSymToCon,
-    genericCEGISWithRefinement,
     identifier,
     runFreshT,
     simpleMerge,
+    solverGenericCEGISWithRefinement,
     withInfo,
+    withSolver,
   )
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext, SymbolicContext)
 import Grisette.Lib.Synth.Program.ProgConstraints
@@ -184,8 +188,25 @@ runSynthesisTaskExtractCex ::
   config ->
   SynthesisTask conProg ->
   IO ([VerificationCex], SynthesisResult conProg)
-runSynthesisTaskExtractCex
-  config
+runSynthesisTaskExtractCex config task = withSolver config $ \solver ->
+  solverRunSynthesisTaskExtractCex solver task
+
+solverRunSynthesisTask ::
+  (Solver solver) =>
+  solver ->
+  SynthesisTask conProg ->
+  IO (SynthesisResult conProg)
+solverRunSynthesisTask solver task =
+  snd <$> solverRunSynthesisTaskExtractCex solver task
+
+solverRunSynthesisTaskExtractCex ::
+  forall solver conProg.
+  (Solver solver) =>
+  solver ->
+  SynthesisTask conProg ->
+  IO ([VerificationCex], SynthesisResult conProg)
+solverRunSynthesisTaskExtractCex
+  solver
   ( SynthesisTask
       verifiers
       symProg
@@ -194,8 +215,8 @@ runSynthesisTaskExtractCex
       symCostObj
     ) = do
     (cex, r) <-
-      genericCEGISWithRefinement
-        config
+      solverGenericCEGISWithRefinement
+        solver
         True
         ( case initialMaxCost of
             Nothing -> con True
