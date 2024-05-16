@@ -26,7 +26,7 @@ import Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandle
     enqueueTask,
     enqueueTaskWithTimeout,
   )
-import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (newPool)
+import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (newThreadPool)
 import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult)
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( fuzzResult,
@@ -73,7 +73,7 @@ synthesisTaskHandleTest =
   testGroup
     "SynthesisTaskHandle"
     [ testCase "Concurrently synthesize several programs" $ do
-        pool <- newPool 2
+        pool <- newThreadPool 2
         handle0 <-
           enqueueTask pool (precise z3) $
             task addThenDoubleSpec addThenDoubleGen sharedSketch
@@ -90,7 +90,7 @@ synthesisTaskHandleTest =
         fuzzResult r1 divModTwiceGen divModTwiceSpec
         fuzzResult r2 addThenDoubleGen addThenDoubleReverseSpec,
       testCase "pollTasks" $ do
-        pool <- newPool 2
+        pool <- newThreadPool 2
         handle0 <-
           enqueueTask pool (precise z3) $
             task addThenDoubleSpec addThenDoubleGen sharedSketch
@@ -107,20 +107,20 @@ synthesisTaskHandleTest =
           divModTwiceGen
           divModTwiceSpec,
       testCase "enqueueTaskWithTimeout" $ do
-        pool <- newPool 2
+        pool <- newThreadPool 2
         -- The timeout cannot be too short due to
         -- https://github.com/jwiegley/async-pool/issues/31
         -- It cannot be too long, either, otherwise the task may finish before
         -- we can cancel the task.
         handle1 <-
-          enqueueTaskWithTimeout pool (precise z3) 10000 $
+          enqueueTaskWithTimeout 10000 pool (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
         r0 <- pollUntilFinished handle1
         case r0 of
           Left e -> fromException e @?= Just SynthesisTaskTimeout
           _ -> fail "Expected TaskTimeout exception.",
       testCase "cancelTask" $ do
-        pool <- newPool 2
+        pool <- newThreadPool 2
         handle1 <-
           enqueueTask pool (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
@@ -135,7 +135,7 @@ synthesisTaskHandleTest =
           Left e -> fromException e @?= Just SynthesisTaskCancelled
           _ -> fail "Expected TaskCancelled exception.",
       testCase "time measurement" $ do
-        pool <- newPool 2
+        pool <- newThreadPool 2
         handle <-
           enqueueTask pool (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch
@@ -150,7 +150,7 @@ synthesisTaskHandleTest =
         assertBool "End time diff should be less than 0.3 second" $
           abs (diffUTCTime endTime expectedEndTime) < 0.3,
       testCase "time measurement for cancelled tasks" $ do
-        pool <- newPool 2
+        pool <- newThreadPool 2
         handle <-
           enqueueTask pool (precise z3) $
             task divModTwiceSpec divModTwiceGen sharedSketch

@@ -8,18 +8,18 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Reasoning.Server.ThreadPool
-  ( TaskHandle (taskId),
-    Pool,
-    newPool,
-    addNewTask,
-    pollTaskSTM,
-    waitCatchTaskSTM,
-    pollTask,
-    waitCatchTask,
-    cancelTaskWith,
-    numOfRunningTasks,
-    cancelAllTasksWith,
-    alterTaskIfPending,
+  ( ThreadHandle (threadId),
+    ThreadPool,
+    newThreadPool,
+    newThread,
+    pollSTM,
+    waitCatchSTM,
+    poll,
+    waitCatch,
+    cancelWith,
+    numOfRunningThreads,
+    cancelAllWith,
+    alterIfPending,
     startTimeSTM,
     endTimeSTM,
     elapsedTimeSTM,
@@ -36,7 +36,7 @@ module Grisette.Lib.Synth.Reasoning.Server.ThreadPool
 where
 
 import Control.Concurrent (MVar, newMVar, putMVar, takeMVar)
-import Control.Concurrent.Async (Async, async, cancelWith)
+import qualified Control.Concurrent.Async as Async
 import Control.Concurrent.STM
   ( STM,
     TMVar,
@@ -70,61 +70,61 @@ instance Show CancellingException where
 
 instance Exception CancellingException
 
-data PendingTask a = PendingTask
-  { taskId :: TaskId,
-    task :: IO a,
-    taskResult :: TMVar (Either SomeException a),
-    taskStartTime :: TMVar UTCTime,
-    taskEndTime :: TMVar UTCTime
+data PendingThread a = PendingThread
+  { threadId :: ThreadId,
+    threadAction :: IO a,
+    threadResult :: TMVar (Either SomeException a),
+    threadStartTime :: TMVar UTCTime,
+    threadEndTime :: TMVar UTCTime
   }
 
-data SomePendingTask where
-  SomePendingTask :: (Typeable a) => PendingTask a -> SomePendingTask
+data SomePendingThread where
+  SomePendingThread :: (Typeable a) => PendingThread a -> SomePendingThread
 
-taskIdCounter :: IORef Int
-taskIdCounter = unsafePerformIO $ newIORef 0
-{-# NOINLINE taskIdCounter #-}
+threadIdCounter :: IORef Int
+threadIdCounter = unsafePerformIO $ newIORef 0
+{-# NOINLINE threadIdCounter #-}
 
-type TaskId = Int
+type ThreadId = Int
 
-freshTaskId :: IO TaskId
-freshTaskId = atomicModifyIORef' taskIdCounter (\x -> (x + 1, x))
+freshThreadId :: IO ThreadId
+freshThreadId = atomicModifyIORef' threadIdCounter (\x -> (x + 1, x))
 
-data Pool = Pool
+data ThreadPool = ThreadPool
   { lock :: MVar (),
     poolSize :: Int,
-    running :: IORef (HM.HashMap TaskId (Async ())),
-    queue :: IORef (OM.OMap TaskId SomePendingTask)
+    running :: IORef (HM.HashMap ThreadId (Async.Async ())),
+    queue :: IORef (OM.OMap ThreadId SomePendingThread)
   }
 
-numOfRunningTasks :: Pool -> IO Int
-numOfRunningTasks Pool {..} = HM.size <$> readIORef running
+numOfRunningThreads :: ThreadPool -> IO Int
+numOfRunningThreads ThreadPool {..} = HM.size <$> readIORef running
 
-data TaskHandle a = TaskHandle
-  { taskId :: TaskId,
-    taskPool :: Pool,
-    taskResult :: TMVar (Either SomeException a),
-    taskStartTime :: TMVar UTCTime,
-    taskEndTime :: TMVar UTCTime
+data ThreadHandle a = ThreadHandle
+  { threadId :: ThreadId,
+    threadPool :: ThreadPool,
+    threadResult :: TMVar (Either SomeException a),
+    threadStartTime :: TMVar UTCTime,
+    threadEndTime :: TMVar UTCTime
   }
 
-instance Eq (TaskHandle a) where
-  TaskHandle {taskId = a} == TaskHandle {taskId = b} = a == b
+instance Eq (ThreadHandle a) where
+  ThreadHandle {threadId = a} == ThreadHandle {threadId = b} = a == b
 
-instance Hashable (TaskHandle a) where
-  hashWithSalt salt TaskHandle {taskId = taskId} =
-    hashWithSalt salt taskId
+instance Hashable (ThreadHandle a) where
+  hashWithSalt salt ThreadHandle {threadId = threadId} =
+    hashWithSalt salt threadId
 
-instance Show (TaskHandle a) where
-  show TaskHandle {taskId = taskId} = "TaskHandle " ++ show taskId
+instance Show (ThreadHandle a) where
+  show ThreadHandle {threadId = threadId} = "ThreadHandle " ++ show threadId
 
-lockPool :: Pool -> IO ()
-lockPool Pool {..} = takeMVar lock
+lockPool :: ThreadPool -> IO ()
+lockPool ThreadPool {..} = takeMVar lock
 
-unlockPool :: Pool -> IO ()
-unlockPool Pool {..} = putMVar lock ()
+unlockPool :: ThreadPool -> IO ()
+unlockPool ThreadPool {..} = putMVar lock ()
 
-withLockedPool :: Pool -> Bool -> IO b -> IO b
+withLockedPool :: ThreadPool -> Bool -> IO b -> IO b
 withLockedPool pool shouldCheckForStarts action = do
   lockPool pool
   result <-
@@ -136,173 +136,177 @@ withLockedPool pool shouldCheckForStarts action = do
   unlockPool pool
   return result
 
-newPool :: Int -> IO Pool
-newPool poolSize = do
+newThreadPool :: Int -> IO ThreadPool
+newThreadPool poolSize = do
   lock <- newMVar ()
   running <- newIORef HM.empty
   queue <- newIORef OM.empty
-  return Pool {..}
+  return ThreadPool {..}
 
-taskFun :: Pool -> PendingTask a -> IO ()
-taskFun pool@Pool {..} PendingTask {..} = mask $ \restore -> do
+threadFun :: ThreadPool -> PendingThread a -> IO ()
+threadFun pool@ThreadPool {..} PendingThread {..} = mask $ \restore -> do
   let writeResult result = do
         oldRunning <- readIORef running
-        writeIORef running $ HM.delete taskId oldRunning
-        atomically $ tryPutTMVar taskResult result
-  getCurrentTime >>= atomically . tryPutTMVar taskStartTime
+        writeIORef running $ HM.delete threadId oldRunning
+        atomically $ tryPutTMVar threadResult result
+  getCurrentTime >>= atomically . tryPutTMVar threadStartTime
   result <-
-    restore task `catch` \(e :: SomeException) -> do
-      getCurrentTime >>= atomically . tryPutTMVar taskEndTime
+    restore threadAction `catch` \(e :: SomeException) -> do
+      getCurrentTime >>= atomically . tryPutTMVar threadEndTime
       case fromException e of
         Just (CancellingException e1) ->
           writeResult (Left $ toException e1) >> throwIO e1
         Nothing -> withLockedPool pool True $ writeResult (Left e) >> throwIO e
   withLockedPool pool True $ writeResult (Right result)
-  getCurrentTime >>= atomically . tryPutTMVar taskEndTime
+  getCurrentTime >>= atomically . tryPutTMVar threadEndTime
   return ()
 
-startIfHaveSpaceImpl :: Pool -> IO ()
-startIfHaveSpaceImpl pool@Pool {..} = do
+startIfHaveSpaceImpl :: ThreadPool -> IO ()
+startIfHaveSpaceImpl pool@ThreadPool {..} = do
   oldRunning <- readIORef running
   when (HM.size oldRunning < poolSize) $ do
     oldQueue <- readIORef queue
     case OM.elemAt oldQueue 0 of
-      Just (_, SomePendingTask pendingTask@PendingTask {..}) -> do
-        exception <- atomically $ tryReadTMVar taskResult
-        writeIORef queue $ OM.delete taskId oldQueue
+      Just (_, SomePendingThread pendingThread@PendingThread {..}) -> do
+        exception <- atomically $ tryReadTMVar threadResult
+        writeIORef queue $ OM.delete threadId oldQueue
         case exception of
           Just _ -> return ()
           Nothing -> do
-            taskAsync <- async $ taskFun pool pendingTask
-            writeIORef running $ HM.insert taskId taskAsync oldRunning
+            threadAsync <- Async.async $ threadFun pool pendingThread
+            writeIORef running $ HM.insert threadId threadAsync oldRunning
         startIfHaveSpaceImpl pool
       _ -> return ()
 
-addNewTask :: forall a. (Typeable a) => Pool -> IO a -> IO (TaskHandle a)
-addNewTask taskPool@Pool {..} task = withLockedPool taskPool True $ do
-  taskId <- freshTaskId
-  taskResult <- newEmptyTMVarIO :: IO (TMVar (Either SomeException a))
-  taskStartTime <- newEmptyTMVarIO :: IO (TMVar UTCTime)
-  taskEndTime <- newEmptyTMVarIO :: IO (TMVar UTCTime)
-  oldQueue <- readIORef queue
-  writeIORef queue $ oldQueue OM.>| (taskId, SomePendingTask $ PendingTask {..})
-  startIfHaveSpaceImpl taskPool
-  return $ TaskHandle {..}
+newThread ::
+  forall a. (Typeable a) => ThreadPool -> IO a -> IO (ThreadHandle a)
+newThread threadPool@ThreadPool {..} threadAction =
+  withLockedPool threadPool True $ do
+    threadId <- freshThreadId
+    threadResult <- newEmptyTMVarIO :: IO (TMVar (Either SomeException a))
+    threadStartTime <- newEmptyTMVarIO :: IO (TMVar UTCTime)
+    threadEndTime <- newEmptyTMVarIO :: IO (TMVar UTCTime)
+    oldQueue <- readIORef queue
+    writeIORef queue $
+      oldQueue
+        OM.>| (threadId, SomePendingThread $ PendingThread {..})
+    startIfHaveSpaceImpl threadPool
+    return $ ThreadHandle {..}
 
-cancelTaskWithImpl :: (Exception e) => Pool -> e -> TaskId -> IO ()
-cancelTaskWithImpl pool@Pool {..} e taskId = do
+cancelWithImpl :: (Exception e) => ThreadPool -> e -> ThreadId -> IO ()
+cancelWithImpl pool@ThreadPool {..} e threadId = do
   oldRunning <- readIORef running
   oldQueue <- readIORef queue
-  case HM.lookup taskId oldRunning of
-    Just taskAsync -> do
-      cancelWith taskAsync $ CancellingException e
+  case HM.lookup threadId oldRunning of
+    Just threadAsync -> do
+      Async.cancelWith threadAsync $ CancellingException e
       startIfHaveSpaceImpl pool
-    Nothing -> case OM.lookup taskId oldQueue of
-      Just (SomePendingTask PendingTask {..}) -> do
+    Nothing -> case OM.lookup threadId oldQueue of
+      Just (SomePendingThread PendingThread {..}) -> do
         time <- getCurrentTime
         atomically $ do
-          tryPutTMVar taskResult (Left $ toException e)
-          tryPutTMVar taskStartTime time
-          tryPutTMVar taskEndTime time
+          tryPutTMVar threadResult (Left $ toException e)
+          tryPutTMVar threadStartTime time
+          tryPutTMVar threadEndTime time
         return ()
       _ -> return ()
 
-cancelTaskWith :: (Exception e) => e -> TaskHandle a -> IO ()
-cancelTaskWith e TaskHandle {taskPool = pool@Pool {..}, taskId} =
-  withLockedPool pool True $ cancelTaskWithImpl pool e taskId
+cancelWith :: (Exception e) => e -> ThreadHandle a -> IO ()
+cancelWith e ThreadHandle {threadPool = pool@ThreadPool {..}, threadId} =
+  withLockedPool pool True $ cancelWithImpl pool e threadId
 
-cancelAllTasksWith :: (Exception e) => Pool -> e -> IO ()
-cancelAllTasksWith pool@Pool {..} e = withLockedPool pool True $ do
+cancelAllWith :: (Exception e) => ThreadPool -> e -> IO ()
+cancelAllWith pool@ThreadPool {..} e = withLockedPool pool True $ do
   oldPending <- readIORef queue
   mapM_
-    ( \(SomePendingTask PendingTask {..}) -> do
+    ( \(SomePendingThread PendingThread {..}) -> do
         time <- getCurrentTime
         atomically $ do
-          tryPutTMVar taskResult (Left $ toException e)
-          tryPutTMVar taskStartTime time
-          tryPutTMVar taskEndTime time
+          tryPutTMVar threadResult (Left $ toException e)
+          tryPutTMVar threadStartTime time
+          tryPutTMVar threadEndTime time
     )
     $ snd <$> OM.assocs oldPending
   oldRunning <- readIORef running
-  mapM_ (`cancelWith` CancellingException e) $ HM.elems oldRunning
+  mapM_ (`Async.cancelWith` CancellingException e) $ HM.elems oldRunning
 
-pollTaskSTM ::
-  (Typeable a) => TaskHandle a -> STM (Maybe (Either SomeException a))
-pollTaskSTM TaskHandle {taskResult} = tryReadTMVar taskResult
+pollSTM ::
+  (Typeable a) => ThreadHandle a -> STM (Maybe (Either SomeException a))
+pollSTM ThreadHandle {threadResult} = tryReadTMVar threadResult
 
-pollTask :: (Typeable a) => TaskHandle a -> IO (Maybe (Either SomeException a))
-pollTask = atomically . pollTaskSTM
+poll :: (Typeable a) => ThreadHandle a -> IO (Maybe (Either SomeException a))
+poll = atomically . pollSTM
 
-waitCatchTaskSTM :: (Typeable a) => TaskHandle a -> STM (Either SomeException a)
-waitCatchTaskSTM TaskHandle {taskResult} = readTMVar taskResult
+waitCatchSTM :: (Typeable a) => ThreadHandle a -> STM (Either SomeException a)
+waitCatchSTM ThreadHandle {threadResult} = readTMVar threadResult
 
-waitCatchTask :: (Typeable a) => TaskHandle a -> IO (Either SomeException a)
-waitCatchTask = atomically . waitCatchTaskSTM
+waitCatch :: (Typeable a) => ThreadHandle a -> IO (Either SomeException a)
+waitCatch = atomically . waitCatchSTM
 
-alterTaskIfPending :: forall a. (Typeable a) => TaskHandle a -> IO a -> IO ()
-alterTaskIfPending
-  TaskHandle {taskId, taskPool = pool@Pool {..}}
+alterIfPending :: forall a. (Typeable a) => ThreadHandle a -> IO a -> IO ()
+alterIfPending
+  ThreadHandle {threadId, threadPool = pool@ThreadPool {..}}
   newAction =
     withLockedPool pool False $ do
       oldQueue <- readIORef queue
-      case OM.lookup taskId oldQueue of
-        Just (SomePendingTask (PendingTask {..} :: PendingTask a1)) -> do
+      case OM.lookup threadId oldQueue of
+        Just (SomePendingThread (PendingThread {..} :: PendingThread a1)) -> do
           case eqT @a @a1 of
             Just Refl -> do
               writeIORef queue $
                 OM.alter
                   ( const $
                       Just $
-                        SomePendingTask $
-                          PendingTask {task = newAction, ..}
+                        SomePendingThread $
+                          PendingThread {threadAction = newAction, ..}
                   )
-                  taskId
+                  threadId
                   oldQueue
               startIfHaveSpaceImpl pool
-            Nothing -> error "alterTaskIfPending: type mismatch"
+            Nothing -> error "alterIfPending: type mismatch"
         Nothing -> return ()
 
-startTimeSTM :: TaskHandle a -> STM UTCTime
-startTimeSTM TaskHandle {taskStartTime} = readTMVar taskStartTime
+startTimeSTM :: ThreadHandle a -> STM UTCTime
+startTimeSTM ThreadHandle {threadStartTime} = readTMVar threadStartTime
 
-endTimeSTM :: TaskHandle a -> STM UTCTime
-endTimeSTM TaskHandle {taskEndTime} = readTMVar taskEndTime
+endTimeSTM :: ThreadHandle a -> STM UTCTime
+endTimeSTM ThreadHandle {threadEndTime} = readTMVar threadEndTime
 
-elapsedTimeSTM :: TaskHandle a -> STM NominalDiffTime
-elapsedTimeSTM TaskHandle {taskStartTime, taskEndTime} = do
-  startTime <- readTMVar taskStartTime
-  endTime <- readTMVar taskEndTime
+elapsedTimeSTM :: ThreadHandle a -> STM NominalDiffTime
+elapsedTimeSTM ThreadHandle {threadStartTime, threadEndTime} = do
+  startTime <- readTMVar threadStartTime
+  endTime <- readTMVar threadEndTime
   return $ diffUTCTime endTime startTime
 
-startTime :: TaskHandle a -> IO UTCTime
+startTime :: ThreadHandle a -> IO UTCTime
 startTime = atomically . startTimeSTM
 
-endTime :: TaskHandle a -> IO UTCTime
+endTime :: ThreadHandle a -> IO UTCTime
 endTime = atomically . endTimeSTM
 
-elapsedTime :: TaskHandle a -> IO NominalDiffTime
+elapsedTime :: ThreadHandle a -> IO NominalDiffTime
 elapsedTime = atomically . elapsedTimeSTM
 
-maybeStartTimeSTM :: TaskHandle a -> STM (Maybe UTCTime)
-maybeStartTimeSTM TaskHandle {taskStartTime} = tryReadTMVar taskStartTime
+maybeStartTimeSTM :: ThreadHandle a -> STM (Maybe UTCTime)
+maybeStartTimeSTM ThreadHandle {threadStartTime} = tryReadTMVar threadStartTime
 
-maybeEndTimeSTM :: TaskHandle a -> STM (Maybe UTCTime)
-maybeEndTimeSTM TaskHandle {taskEndTime} = tryReadTMVar taskEndTime
+maybeEndTimeSTM :: ThreadHandle a -> STM (Maybe UTCTime)
+maybeEndTimeSTM ThreadHandle {threadEndTime} = tryReadTMVar threadEndTime
 
-maybeElapsedTimeSTM :: TaskHandle a -> STM (Maybe NominalDiffTime)
-maybeElapsedTimeSTM TaskHandle {taskStartTime, taskEndTime} = do
-  maybeStartTime <- tryReadTMVar taskStartTime
-  maybeEndTime <- tryReadTMVar taskEndTime
+maybeElapsedTimeSTM :: ThreadHandle a -> STM (Maybe NominalDiffTime)
+maybeElapsedTimeSTM ThreadHandle {threadStartTime, threadEndTime} = do
+  maybeStartTime <- tryReadTMVar threadStartTime
+  maybeEndTime <- tryReadTMVar threadEndTime
   case (maybeStartTime, maybeEndTime) of
     (Just startTime, Just endTime) ->
       return $ Just $ diffUTCTime endTime startTime
     _ -> return Nothing
 
-maybeStartTime :: TaskHandle a -> IO (Maybe UTCTime)
+maybeStartTime :: ThreadHandle a -> IO (Maybe UTCTime)
 maybeStartTime = atomically . maybeStartTimeSTM
 
-maybeEndTime :: TaskHandle a -> IO (Maybe UTCTime)
+maybeEndTime :: ThreadHandle a -> IO (Maybe UTCTime)
 maybeEndTime = atomically . maybeEndTimeSTM
 
-maybeElapsedTime :: TaskHandle a -> IO (Maybe NominalDiffTime)
+maybeElapsedTime :: ThreadHandle a -> IO (Maybe NominalDiffTime)
 maybeElapsedTime = atomically . maybeElapsedTimeSTM

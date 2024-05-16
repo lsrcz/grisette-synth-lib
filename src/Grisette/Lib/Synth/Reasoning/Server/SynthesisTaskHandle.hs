@@ -7,6 +7,8 @@
 
 module Grisette.Lib.Synth.Reasoning.Server.SynthesisTaskHandle
   ( SynthesisTaskHandle,
+    enqueueAction,
+    enqueueActionWithTimeout,
     enqueueTask,
     enqueueTaskWithTimeout,
     alterTaskIfPending,
@@ -37,7 +39,7 @@ import Grisette.Lib.Synth.Reasoning.Server.BaseTaskHandle
       ),
     SynthesisTaskException (SynthesisTaskTimeout),
   )
-import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (TaskHandle)
+import Grisette.Lib.Synth.Reasoning.Server.ThreadPool (ThreadHandle)
 import qualified Grisette.Lib.Synth.Reasoning.Server.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult,
@@ -46,7 +48,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   )
 
 newtype SynthesisTaskHandle conProg = SynthesisTaskHandle
-  { _underlyingHandle :: TaskHandle (SynthesisResult conProg)
+  { _underlyingHandle :: ThreadHandle (SynthesisResult conProg)
   }
   deriving newtype (Eq, Hashable)
 
@@ -56,18 +58,17 @@ instance
   where
   startTimeSTM = Pool.startTimeSTM . _underlyingHandle
   endTimeSTM = Pool.endTimeSTM . _underlyingHandle
-  pollSTM = Pool.pollTaskSTM . _underlyingHandle
-  waitCatchSTM = Pool.waitCatchTaskSTM . _underlyingHandle
-  cancelWith (SynthesisTaskHandle handle) e = do Pool.cancelTaskWith e handle
+  pollSTM = Pool.pollSTM . _underlyingHandle
+  waitCatchSTM = Pool.waitCatchSTM . _underlyingHandle
+  cancelWith (SynthesisTaskHandle handle) e = do Pool.cancelWith e handle
 
-taskFun ::
-  (ConfigurableSolver config h, Typeable conProg) =>
+actionWithTimeout ::
+  (Typeable conProg) =>
   Maybe Int ->
   TMVar (SynthesisTaskHandle conProg) ->
-  config ->
-  SynthesisTask conProg ->
+  IO (SynthesisResult conProg) ->
   IO (SynthesisResult conProg)
-taskFun maybeTimeout taskHandleTMVar config task =
+actionWithTimeout maybeTimeout taskHandleTMVar action =
   C.mask $ \restore -> do
     selfHandle <- atomically $ readTMVar taskHandleTMVar
     case maybeTimeout of
@@ -77,36 +78,52 @@ taskFun maybeTimeout taskHandleTMVar config task =
             >> cancelWith selfHandle SynthesisTaskTimeout
         return ()
       Nothing -> return ()
-    restore (runSynthesisTask config task)
+    restore action
 
-enqueueTaskImpl ::
-  (ConfigurableSolver config h, Typeable conProg) =>
+enqueueActionImpl ::
+  (Typeable conProg) =>
   Maybe Int ->
-  Pool.Pool ->
-  config ->
-  SynthesisTask conProg ->
+  Pool.ThreadPool ->
+  IO (SynthesisResult conProg) ->
   IO (SynthesisTaskHandle conProg)
-enqueueTaskImpl
+enqueueActionImpl
   maybeTimeout
   pool
-  config
-  task = do
+  action = do
     taskHandleTMVar <- newEmptyTMVarIO
     handle <-
-      Pool.addNewTask pool $
-        taskFun maybeTimeout taskHandleTMVar config task
+      Pool.newThread pool $
+        actionWithTimeout maybeTimeout taskHandleTMVar action
     let taskHandle = SynthesisTaskHandle handle
     atomically $ putTMVar taskHandleTMVar taskHandle
     return taskHandle
 
 -- | Add a task to the synthesis server.
+enqueueAction ::
+  (Typeable conProg) =>
+  Pool.ThreadPool ->
+  IO (SynthesisResult conProg) ->
+  IO (SynthesisTaskHandle conProg)
+enqueueAction = enqueueActionImpl Nothing
+
+-- | Add a task to the synthesis server.
+enqueueActionWithTimeout ::
+  (Typeable conProg) =>
+  Int ->
+  Pool.ThreadPool ->
+  IO (SynthesisResult conProg) ->
+  IO (SynthesisTaskHandle conProg)
+enqueueActionWithTimeout timeout = enqueueActionImpl (Just timeout)
+
+-- | Add a task to the synthesis server.
 enqueueTask ::
   (ConfigurableSolver config h, Typeable conProg) =>
-  Pool.Pool ->
+  Pool.ThreadPool ->
   config ->
   SynthesisTask conProg ->
   IO (SynthesisTaskHandle conProg)
-enqueueTask = enqueueTaskImpl Nothing
+enqueueTask pool config task =
+  enqueueAction pool (runSynthesisTask config task)
 
 -- | Add a task to the synthesis server with a timeout.
 --
@@ -114,13 +131,13 @@ enqueueTask = enqueueTaskImpl Nothing
 -- See https://github.com/LeventErkok/sbv/pull/691.
 enqueueTaskWithTimeout ::
   (ConfigurableSolver config h, Typeable conProg) =>
-  Pool.Pool ->
-  config ->
   Int ->
+  Pool.ThreadPool ->
+  config ->
   SynthesisTask conProg ->
   IO (SynthesisTaskHandle conProg)
-enqueueTaskWithTimeout server config timeout =
-  enqueueTaskImpl (Just timeout) server config
+enqueueTaskWithTimeout timeout pool config task =
+  enqueueActionWithTimeout timeout pool (runSynthesisTask config task)
 
 alterTaskIfPendingImpl ::
   (ConfigurableSolver config h, Typeable conProg) =>
@@ -135,12 +152,11 @@ alterTaskIfPendingImpl
   config
   task = do
     taskHandleTMVar <- newEmptyTMVarIO
-    Pool.alterTaskIfPending _underlyingHandle $
-      taskFun
+    Pool.alterIfPending _underlyingHandle $
+      actionWithTimeout
         maybeTimeout
         taskHandleTMVar
-        config
-        task
+        (runSynthesisTask config task)
     atomically $ putTMVar taskHandleTMVar taskHandle
 
 alterTaskIfPending ::
