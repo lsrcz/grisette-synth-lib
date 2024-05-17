@@ -7,6 +7,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPoolTest
 where
 
 import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
+import Control.Exception (throw)
 import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
 import Data.IORef (newIORef, readIORef, writeIORef)
@@ -14,7 +15,7 @@ import Data.List (sortOn)
 import Data.Maybe (isNothing)
 import Data.Time (diffUTCTime, getCurrentTime)
 import Grisette.Lib.Synth.Reasoning.Parallel.Exception
-  ( SynthesisTaskException (SynthesisTaskCancelled),
+  ( SynthesisTaskException (SynthesisTaskCancelled, SynthesisTaskTimeout),
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
   ( ThreadHandle (threadId),
@@ -249,15 +250,40 @@ threadPoolTest =
                   results <- traverse waitCatch handles
                   traverse_ (\(i, Right v) -> i @?= v) $ zip [0 .. 9] results
           ],
-        testProperty "cancellation stress test" $
-          forAll (vectorOf 4 arbitrary :: Gen [Int]) $
+        testProperty "cancellation stress test pending" $
+          forAll (vectorOf 32 arbitrary :: Gen [Int]) $
             \position -> ioProperty $ do
               mvar <- newEmptyMVar
-              pool <- newThreadPool 2
+              pool <- newThreadPool 8
               allHandles <-
                 traverse
                   (\n -> newThread pool $ takeMVar mvar >> return n)
-                  [0 .. 3 :: Int]
+                  [0 .. 31 :: Int]
+              let cancellationOrder =
+                    fmap snd $ sortOn fst $ zip position allHandles
+              traverse_ (cancelWith SynthesisTaskCancelled) cancellationOrder
+              traverse_ waitCatch allHandles,
+        testProperty "cancellation stress test really running" $
+          forAll (vectorOf 32 arbitrary :: Gen [Int]) $
+            \position -> ioProperty $ do
+              pool <- newThreadPool 8
+              allHandles <-
+                traverse
+                  (\n -> newThread pool $ threadDelay 100 >> return n)
+                  [0 .. 31 :: Int]
+              let cancellationOrder =
+                    fmap snd $ sortOn fst $ zip position allHandles
+              traverse_ (cancelWith SynthesisTaskCancelled) cancellationOrder
+              traverse_ waitCatch allHandles,
+        testProperty "cancellation stress test throwing" $
+          forAll (vectorOf 32 arbitrary :: Gen [Int]) $
+            \position -> ioProperty $ do
+              pool <- newThreadPool 8
+              allHandles :: [ThreadHandle Int] <-
+                traverse
+                  ( const . newThread pool $ throw SynthesisTaskTimeout
+                  )
+                  [0 .. 31 :: Int]
               let cancellationOrder =
                     fmap snd $ sortOn fst $ zip position allHandles
               traverse_ (cancelWith SynthesisTaskCancelled) cancellationOrder
