@@ -255,19 +255,19 @@ enqueueRefineCondMaybeTimeout
     let lastHandle = last oldHandles
     taskHandleTMVar <- newEmptyTMVarIO
     handle <-
-      Pool.newThread (threadPool lastHandle) $ do
-        Pool.waitCatch lastHandle
-        withAliveSolver taskHandle $ \solver ->
-          actionWithTimeout
-            maybeTimeout
-            taskHandleTMVar
-            (length oldHandles)
-            _maxSucceedIndex
-            solver
-            ( \solver -> do
-                solverAssert solver =<< cond
-                solverRunRefinableSynthesisTask solver _initialSynthesisTask
-            )
+      Pool.newChildThread (threadPool lastHandle) [Pool.threadId lastHandle] $
+        do
+          withAliveSolver taskHandle $ \solver ->
+            actionWithTimeout
+              maybeTimeout
+              taskHandleTMVar
+              (length oldHandles)
+              _maxSucceedIndex
+              solver
+              ( \solver -> do
+                  solverAssert solver =<< cond
+                  solverRunRefinableSynthesisTask solver _initialSynthesisTask
+              )
     atomically $ writeTVar _underlyingHandles $ oldHandles ++ [handle]
     atomically $ putTMVar taskHandleTMVar taskHandle
 
