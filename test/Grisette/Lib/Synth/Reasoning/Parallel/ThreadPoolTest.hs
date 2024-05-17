@@ -10,6 +10,7 @@ import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
 import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
 import Data.IORef (newIORef, readIORef, writeIORef)
+import Data.List (sortOn)
 import Data.Maybe (isNothing)
 import Data.Time (diffUTCTime, getCurrentTime)
 import Grisette.Lib.Synth.Reasoning.Parallel.Exception
@@ -42,7 +43,7 @@ import Test.Framework
 import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.HUnit (assertBool, (@?=))
-import Test.QuickCheck (Arbitrary (arbitrary), forAll, ioProperty, vectorOf)
+import Test.QuickCheck (Arbitrary (arbitrary), Gen, forAll, ioProperty, vectorOf)
 
 threadPoolTest :: Test
 threadPoolTest =
@@ -247,5 +248,18 @@ threadPoolTest =
                   handles <- readIORef allHandles
                   results <- traverse waitCatch handles
                   traverse_ (\(i, Right v) -> i @?= v) $ zip [0 .. 9] results
-          ]
+          ],
+        testProperty "cancellation stress test" $
+          forAll (vectorOf 4 arbitrary :: Gen [Int]) $
+            \position -> ioProperty $ do
+              mvar <- newEmptyMVar
+              pool <- newThreadPool 2
+              allHandles <-
+                traverse
+                  (\n -> newThread pool $ takeMVar mvar >> return n)
+                  [0 .. 3 :: Int]
+              let cancellationOrder =
+                    fmap snd $ sortOn fst $ zip position allHandles
+              traverse_ (cancelWith SynthesisTaskCancelled) cancellationOrder
+              traverse_ waitCatch allHandles
       ]

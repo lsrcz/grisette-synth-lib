@@ -33,10 +33,11 @@ module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
     maybeStartTime,
     maybeEndTime,
     maybeElapsedTime,
+    printThreadPoolStatus,
   )
 where
 
-import Control.Concurrent (MVar, newMVar, putMVar, takeMVar)
+import Control.Concurrent (MVar, newEmptyMVar, newMVar, putMVar, takeMVar)
 import qualified Control.Concurrent.Async as Async
 import Control.Concurrent.STM
   ( STM,
@@ -104,14 +105,36 @@ type ThreadId = Int
 freshThreadId :: IO ThreadId
 freshThreadId = atomicModifyIORef' threadIdCounter (\x -> (x + 1, x))
 
+data Thread = Thread
+  { _threadAsync :: Async.Async (),
+    _threadCancellable :: MVar ()
+  }
+
 data ThreadPool = ThreadPool
   { lock :: MVar (),
     poolSize :: Int,
-    running :: IORef (HM.HashMap ThreadId (Async.Async ())),
+    running :: IORef (HM.HashMap ThreadId Thread),
     queue :: IORef (OM.OMap ThreadId SomePendingThread),
     childrenQueue :: IORef (HM.HashMap ThreadId SomeChildrenPendingThread),
     children :: IORef (HM.HashMap ThreadId (HS.HashSet ThreadId))
   }
+
+printThreadPoolStatus :: ThreadPool -> IO ()
+printThreadPoolStatus pool@ThreadPool {..} = do
+  lockPool pool
+  putStrLn "Running threads:"
+  runningThreads <- readIORef running
+  mapM_ print $ HM.keys runningThreads
+  putStrLn "Pending threads:"
+  pendingThreads <- readIORef queue
+  mapM_ print $ fst <$> OM.assocs pendingThreads
+  putStrLn "Children threads:"
+  childrenThreads <- readIORef childrenQueue
+  mapM_ print $ HM.keys childrenThreads
+  putStrLn "Children:"
+  childrenMap <- readIORef children
+  print childrenMap
+  unlockPool pool
 
 numOfRunningThreads :: ThreadPool -> IO Int
 numOfRunningThreads ThreadPool {..} = HM.size <$> readIORef running
@@ -187,27 +210,29 @@ cleanupChildrenImpl ThreadPool {..} threadId = do
       writeIORef children $ HM.delete threadId oldChildren
     Nothing -> return ()
 
-threadFun :: ThreadPool -> PendingThread a -> IO ()
-threadFun pool@ThreadPool {..} PendingThread {..} = mask $ \restore -> do
-  let writeResult result = do
-        oldRunning <- readIORef running
-        writeIORef running $ HM.delete threadId oldRunning
-        cleanupChildrenImpl pool threadId
-        atomically $ tryPutTMVar threadResult result
-  getCurrentTime >>= atomically . tryPutTMVar threadStartTime
-  result <-
-    restore threadAction `catch` \(e :: SomeException) -> do
-      getCurrentTime >>= atomically . tryPutTMVar threadEndTime
-      case fromException e of
-        Just (CancellingException e1) -> do
-          writeResult (Left $ toException e1)
-          throwIO e1
-        Nothing -> withLockedPool pool True $ do
-          writeResult (Left e)
-          throwIO e
-  withLockedPool pool True $ writeResult (Right result)
-  getCurrentTime >>= atomically . tryPutTMVar threadEndTime
-  return ()
+threadFun :: ThreadPool -> PendingThread a -> MVar () -> IO ()
+threadFun pool@ThreadPool {..} PendingThread {..} cancellable =
+  mask $ \restore -> do
+    putMVar cancellable ()
+    let writeResult result = do
+          oldRunning <- readIORef running
+          writeIORef running $ HM.delete threadId oldRunning
+          cleanupChildrenImpl pool threadId
+          atomically $ tryPutTMVar threadResult result
+    getCurrentTime >>= atomically . tryPutTMVar threadStartTime
+    result <-
+      restore threadAction `catch` \(e :: SomeException) -> do
+        getCurrentTime >>= atomically . tryPutTMVar threadEndTime
+        case fromException e of
+          Just (CancellingException e1) -> do
+            writeResult (Left $ toException e1)
+            throwIO e1
+          Nothing -> withLockedPool pool True $ do
+            writeResult (Left e)
+            throwIO e
+    withLockedPool pool True $ writeResult (Right result)
+    getCurrentTime >>= atomically . tryPutTMVar threadEndTime
+    return ()
 
 startIfHaveSpaceImpl :: ThreadPool -> IO ()
 startIfHaveSpaceImpl pool@ThreadPool {..} = do
@@ -221,8 +246,11 @@ startIfHaveSpaceImpl pool@ThreadPool {..} = do
         case exception of
           Just _ -> return ()
           Nothing -> do
-            threadAsync <- Async.async $ threadFun pool pendingThread
-            writeIORef running $ HM.insert threadId threadAsync oldRunning
+            cancellable <- newEmptyMVar
+            threadAsync <-
+              Async.async $ threadFun pool pendingThread cancellable
+            writeIORef running $
+              HM.insert threadId (Thread threadAsync cancellable) oldRunning
         startIfHaveSpaceImpl pool
       _ -> return ()
 
@@ -285,19 +313,31 @@ cancelWithImpl :: (Exception e) => ThreadPool -> e -> ThreadId -> IO ()
 cancelWithImpl pool@ThreadPool {..} e threadId = do
   oldRunning <- readIORef running
   oldQueue <- readIORef queue
+  oldChildrenQueue <- readIORef childrenQueue
   case HM.lookup threadId oldRunning of
-    Just threadAsync -> do
+    Just (Thread threadAsync cancellable) -> do
+      takeMVar cancellable
       Async.cancelWith threadAsync $ CancellingException e
       startIfHaveSpaceImpl pool
     Nothing -> case OM.lookup threadId oldQueue of
-      Just (SomePendingThread PendingThread {..}) -> do
-        time <- getCurrentTime
-        atomically $ do
-          tryPutTMVar threadResult (Left $ toException e)
-          tryPutTMVar threadStartTime time
-          tryPutTMVar threadEndTime time
-        return ()
-      _ -> return ()
+      Just pending -> do
+        cancelSomePendingThread pending
+        modifyIORef' queue $ OM.delete threadId
+        cleanupChildrenImpl pool threadId
+      _ -> case HM.lookup threadId oldChildrenQueue of
+        Just (SomeChildrenPendingThread pending _) -> do
+          cancelSomePendingThread pending
+          modifyIORef' childrenQueue $ HM.delete threadId
+          cleanupChildrenImpl pool threadId
+        Nothing -> return ()
+  where
+    cancelSomePendingThread (SomePendingThread PendingThread {..}) = do
+      time <- getCurrentTime
+      atomically $ do
+        tryPutTMVar threadResult (Left $ toException e)
+        tryPutTMVar threadStartTime time
+        tryPutTMVar threadEndTime time
+      return ()
 
 cancelWith :: (Exception e) => e -> ThreadHandle a -> IO ()
 cancelWith e ThreadHandle {threadPool = pool@ThreadPool {..}, threadId} =
@@ -316,7 +356,12 @@ cancelAllWith pool@ThreadPool {..} e = withLockedPool pool True $ do
     )
     $ snd <$> OM.assocs oldPending
   oldRunning <- readIORef running
-  mapM_ (`Async.cancelWith` CancellingException e) $ HM.elems oldRunning
+  mapM_
+    ( \(Thread threadAsync cancellable) -> do
+        takeMVar cancellable
+        Async.cancelWith threadAsync $ CancellingException e
+    )
+    $ HM.elems oldRunning
 
 pollSTM ::
   (Typeable a) => ThreadHandle a -> STM (Maybe (Either SomeException a))
