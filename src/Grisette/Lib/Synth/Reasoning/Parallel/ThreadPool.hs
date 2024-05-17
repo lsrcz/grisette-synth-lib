@@ -12,6 +12,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
     ThreadPool,
     newThreadPool,
     newThread,
+    newChildThread,
     pollSTM,
     waitCatchSTM,
     poll,
@@ -53,10 +54,18 @@ import Control.Exception
     mask,
     throwIO,
   )
-import Control.Monad (when)
+import Control.Monad (filterM, when)
 import qualified Data.HashMap.Lazy as HM
+import qualified Data.HashSet as HS
 import Data.Hashable (Hashable (hashWithSalt))
-import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef, writeIORef)
+import Data.IORef
+  ( IORef,
+    atomicModifyIORef',
+    modifyIORef',
+    newIORef,
+    readIORef,
+    writeIORef,
+  )
 import qualified Data.Map.Ordered as OM
 import Data.Time (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Data.Typeable (Typeable, eqT, type (:~:) (Refl))
@@ -85,6 +94,11 @@ threadIdCounter :: IORef Int
 threadIdCounter = unsafePerformIO $ newIORef 0
 {-# NOINLINE threadIdCounter #-}
 
+data SomeChildrenPendingThread = SomeChildrenPendingThread
+  { pendingThread :: SomePendingThread,
+    parents :: HS.HashSet ThreadId
+  }
+
 type ThreadId = Int
 
 freshThreadId :: IO ThreadId
@@ -94,7 +108,9 @@ data ThreadPool = ThreadPool
   { lock :: MVar (),
     poolSize :: Int,
     running :: IORef (HM.HashMap ThreadId (Async.Async ())),
-    queue :: IORef (OM.OMap ThreadId SomePendingThread)
+    queue :: IORef (OM.OMap ThreadId SomePendingThread),
+    childrenQueue :: IORef (HM.HashMap ThreadId SomeChildrenPendingThread),
+    children :: IORef (HM.HashMap ThreadId (HS.HashSet ThreadId))
   }
 
 numOfRunningThreads :: ThreadPool -> IO Int
@@ -141,22 +157,54 @@ newThreadPool poolSize = do
   lock <- newMVar ()
   running <- newIORef HM.empty
   queue <- newIORef OM.empty
+  childrenQueue <- newIORef HM.empty
+  children <- newIORef HM.empty
   return ThreadPool {..}
+
+cleanupChildrenImpl :: ThreadPool -> ThreadId -> IO ()
+cleanupChildrenImpl ThreadPool {..} threadId = do
+  oldChildren <- readIORef children
+  case HM.lookup threadId oldChildren of
+    Just childrenSet -> do
+      mapM_
+        ( \childrenId -> do
+            oldChildrenQueue <- readIORef childrenQueue
+            let pendingChildren = oldChildrenQueue HM.! childrenId
+            let newParentSet = HS.delete threadId $ parents pendingChildren
+            if HS.null newParentSet
+              then do
+                writeIORef childrenQueue $ HM.delete childrenId oldChildrenQueue
+                modifyIORef' queue $ \oldQueue ->
+                  oldQueue OM.>| (childrenId, pendingThread pendingChildren)
+              else do
+                writeIORef childrenQueue $
+                  HM.insert
+                    childrenId
+                    pendingChildren {parents = newParentSet}
+                    oldChildrenQueue
+        )
+        $ HS.toList childrenSet
+      writeIORef children $ HM.delete threadId oldChildren
+    Nothing -> return ()
 
 threadFun :: ThreadPool -> PendingThread a -> IO ()
 threadFun pool@ThreadPool {..} PendingThread {..} = mask $ \restore -> do
   let writeResult result = do
         oldRunning <- readIORef running
         writeIORef running $ HM.delete threadId oldRunning
+        cleanupChildrenImpl pool threadId
         atomically $ tryPutTMVar threadResult result
   getCurrentTime >>= atomically . tryPutTMVar threadStartTime
   result <-
     restore threadAction `catch` \(e :: SomeException) -> do
       getCurrentTime >>= atomically . tryPutTMVar threadEndTime
       case fromException e of
-        Just (CancellingException e1) ->
-          writeResult (Left $ toException e1) >> throwIO e1
-        Nothing -> withLockedPool pool True $ writeResult (Left e) >> throwIO e
+        Just (CancellingException e1) -> do
+          writeResult (Left $ toException e1)
+          throwIO e1
+        Nothing -> withLockedPool pool True $ do
+          writeResult (Left e)
+          throwIO e
   withLockedPool pool True $ writeResult (Right result)
   getCurrentTime >>= atomically . tryPutTMVar threadEndTime
   return ()
@@ -178,20 +226,60 @@ startIfHaveSpaceImpl pool@ThreadPool {..} = do
         startIfHaveSpaceImpl pool
       _ -> return ()
 
-newThread ::
-  forall a. (Typeable a) => ThreadPool -> IO a -> IO (ThreadHandle a)
-newThread threadPool@ThreadPool {..} threadAction =
+taskNotYetFinishedImpl :: ThreadPool -> ThreadId -> IO Bool
+taskNotYetFinishedImpl ThreadPool {..} threadId = do
+  oldRunning <- readIORef running
+  oldQueue <- readIORef queue
+  oldChildrenQueue <- readIORef childrenQueue
+  return $
+    HM.member threadId oldRunning
+      || OM.member threadId oldQueue
+      || HM.member threadId oldChildrenQueue
+
+newChildThread ::
+  forall a.
+  (Typeable a) =>
+  ThreadPool ->
+  [ThreadId] ->
+  IO a ->
+  IO (ThreadHandle a)
+newChildThread threadPool@ThreadPool {..} parents threadAction =
   withLockedPool threadPool True $ do
     threadId <- freshThreadId
     threadResult <- newEmptyTMVarIO :: IO (TMVar (Either SomeException a))
     threadStartTime <- newEmptyTMVarIO :: IO (TMVar UTCTime)
     threadEndTime <- newEmptyTMVarIO :: IO (TMVar UTCTime)
-    oldQueue <- readIORef queue
-    writeIORef queue $
-      oldQueue
-        OM.>| (threadId, SomePendingThread $ PendingThread {..})
+    filteredParents <- filterM (taskNotYetFinishedImpl threadPool) parents
+    if null filteredParents
+      then do
+        oldQueue <- readIORef queue
+        writeIORef queue $
+          oldQueue
+            OM.>| (threadId, SomePendingThread $ PendingThread {..})
+      else do
+        modifyIORef' childrenQueue $
+          HM.insert
+            threadId
+            SomeChildrenPendingThread
+              { pendingThread = SomePendingThread $ PendingThread {..},
+                parents = HS.fromList filteredParents
+              }
+        mapM_
+          ( \parent -> do
+              oldChildren <- readIORef children
+              let oldChildrenOfParent = oldChildren HM.! parent
+              modifyIORef' children $
+                HM.insert parent $
+                  HS.insert threadId oldChildrenOfParent
+          )
+          filteredParents
+    modifyIORef' children $ HM.insert threadId HS.empty
     startIfHaveSpaceImpl threadPool
     return $ ThreadHandle {..}
+
+newThread ::
+  forall a. (Typeable a) => ThreadPool -> IO a -> IO (ThreadHandle a)
+newThread threadPool = newChildThread threadPool []
 
 cancelWithImpl :: (Exception e) => ThreadPool -> e -> ThreadId -> IO ()
 cancelWithImpl pool@ThreadPool {..} e threadId = do

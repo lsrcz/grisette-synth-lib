@@ -1,15 +1,23 @@
-module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPoolTest (threadPoolTest) where
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPoolTest
+  ( threadPoolTest,
+  )
+where
 
 import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
 import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Maybe (isNothing)
 import Data.Time (diffUTCTime, getCurrentTime)
 import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
-  ( alterIfPending,
+  ( ThreadHandle (threadId),
+    alterIfPending,
     cancelAllWith,
     cancelWith,
     elapsedTime,
@@ -17,6 +25,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
     maybeElapsedTime,
     maybeEndTime,
     maybeStartTime,
+    newChildThread,
     newThread,
     newThreadPool,
     numOfRunningThreads,
@@ -31,7 +40,9 @@ import Test.Framework
     testGroup,
   )
 import Test.Framework.Providers.HUnit (testCase)
+import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.HUnit (assertBool, (@?=))
+import Test.QuickCheck (Arbitrary (arbitrary), forAll, ioProperty, vectorOf)
 
 threadPoolTest :: Test
 threadPoolTest =
@@ -167,5 +178,74 @@ threadPoolTest =
             startTime2' <= endTime2'
           elapsedTime2' <- elapsedTime (handle !! 2)
           assertBool "The time must be after the current time" $
-            elapsedTime2' == endTime2' `diffUTCTime` startTime2'
+            elapsedTime2' == endTime2' `diffUTCTime` startTime2',
+        testGroup
+          "newChildThread"
+          [ testCase "simpleTest" $ do
+              mvar <- newEmptyMVar
+              mvar1 <- newEmptyMVar
+              mvar2 <- newEmptyMVar
+              pool <- newThreadPool 2
+              handle0 <- newThread pool $ takeMVar mvar >> return (0 :: Int)
+              handle1 <-
+                newChildThread pool [threadId handle0] $
+                  putMVar mvar1 ()
+                    >> takeMVar mvar
+                    >> return (1 :: Int)
+              handle2 <-
+                newChildThread pool [threadId handle0] $
+                  putMVar mvar2 ()
+                    >> takeMVar mvar
+                    >> return (2 :: Int)
+              handle3 <-
+                newChildThread pool [threadId handle1, threadId handle2] $
+                  takeMVar mvar >> return (3 :: Int)
+              numOfRunningThreads pool >>= (@?= 1)
+              putMVar mvar ()
+              waitCatch handle0 >>= (\(Right v) -> v @?= 0)
+              takeMVar mvar1
+              takeMVar mvar2
+              numOfRunningThreads pool >>= (@?= 2)
+              putMVar mvar ()
+              let waitUntilOnefinished = do
+                    numFinished <-
+                      sum . fmap (\case (Just _) -> 1; _ -> 0)
+                        <$> traverse poll [handle1, handle2, handle3]
+                    if numFinished == 1
+                      then return ()
+                      else do
+                        threadDelay 100000
+                        waitUntilOnefinished
+              waitUntilOnefinished
+              numOfRunningThreads pool >>= (@?= 1)
+              putMVar mvar ()
+              putMVar mvar ()
+              waitCatch handle1 >>= (\(Right v) -> v @?= 1)
+              waitCatch handle2 >>= (\(Right v) -> v @?= 2)
+              waitCatch handle3 >>= (\(Right v) -> v @?= 3),
+            testProperty "stress" $
+              forAll (traverse (`vectorOf` arbitrary) [0 .. 9]) $
+                \depGraph -> ioProperty $ do
+                  mvar <- newEmptyMVar
+                  pool <- newThreadPool 2
+                  allHandles <- newIORef []
+                  traverse_
+                    ( \n -> do
+                        handles <- readIORef allHandles
+                        let dep = depGraph !! n
+                        let filteredHandleIds =
+                              fmap (threadId . fst) $
+                                filter snd $
+                                  zip handles dep
+                        newHandle <-
+                          newChildThread pool filteredHandleIds $
+                            takeMVar mvar >> return n
+                        writeIORef allHandles (handles ++ [newHandle])
+                    )
+                    [0 .. 9]
+                  replicateM_ 10 (putMVar mvar ())
+                  handles <- readIORef allHandles
+                  results <- traverse waitCatch handles
+                  traverse_ (\(i, Right v) -> i @?= v) $ zip [0 .. 9] results
+          ]
       ]

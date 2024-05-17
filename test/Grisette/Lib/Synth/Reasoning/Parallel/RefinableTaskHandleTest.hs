@@ -31,7 +31,9 @@ import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
 import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandleTestCommon
   ( baseTaskHandleTestCommon,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.Exception (SynthesisTaskException (SynthesisTaskSolverDead))
+import Grisette.Lib.Synth.Reasoning.Parallel.Exception
+  ( SynthesisTaskException (SynthesisTaskSolverDead),
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandle
   ( RefinableTaskHandle,
     checkRefinableSolverAlive,
