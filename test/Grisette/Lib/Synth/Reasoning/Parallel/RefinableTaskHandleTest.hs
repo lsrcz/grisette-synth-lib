@@ -51,6 +51,9 @@ import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
     times4Sketch,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem (times4Gen, times4Spec)
+import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
+  ( TestSemanticsCost (TestSemanticsCost),
+  )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (Assertion, (@?=))
@@ -59,14 +62,14 @@ type Handle = RefinableTaskHandle ConProg
 
 shouldHaveCost ::
   ( Show conProg,
-    ProgCost PerStmtCostObj conProg SymInteger ConcreteContext
+    ProgCost (PerStmtCostObj TestSemanticsCost) conProg SymInteger ConcreteContext
   ) =>
   Either C.SomeException (SynthesisResult conProg) ->
   SymInteger ->
   Assertion
 shouldHaveCost (Right (SynthesisSuccess prog)) cost = do
   let Right finalCost =
-        progCost PerStmtCostObj prog ::
+        progCost (PerStmtCostObj TestSemanticsCost) prog ::
           ConcreteContext SymInteger
   finalCost @?= cost
 shouldHaveCost r _ = error $ "Unexpected result " <> show r
@@ -101,11 +104,11 @@ refinableTaskHandleTest =
         case r of
           Right (SynthesisSuccess prog) -> do
             let Right cost =
-                  progCost PerStmtCostObj prog ::
+                  progCost (PerStmtCostObj TestSemanticsCost) prog ::
                     ConcreteContext SymInteger
             enqueueRefineCond handle $ do
               let newCost =
-                    progCost PerStmtCostObj times4Sketch ::
+                    progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
                       SymbolicContext SymInteger
               return $ newCost .== return (symIte (cost .== 2) 3 2)
             -- case r of
@@ -123,7 +126,7 @@ refinableTaskHandleTest =
           enqueueTask pool (precise z3) $
             task times4Spec times4Gen times4Sketch
         let newCost =
-              progCost PerStmtCostObj times4Sketch ::
+              progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
                 SymbolicContext SymInteger
         enqueueRefineCond handle $ return $ newCost .== return 2
         enqueueRefineCond handle $ return $ newCost .== return 3

@@ -11,13 +11,13 @@ where
 import Grisette (Mergeable, MonadUnion, UnionM, liftUnionM)
 import Grisette.Lib.Synth.Context (MonadContext)
 
-data PerStmtCostObj = PerStmtCostObj
+newtype PerStmtCostObj opCostObj = PerStmtCostObj opCostObj
 
-class (MonadContext ctx) => OpCost op cost ctx where
-  opCost :: op -> ctx cost
+class (MonadContext ctx) => OpCost opCostObj op cost ctx where
+  opCost :: opCostObj -> op -> ctx cost
 
 instance
-  (MonadUnion ctx, OpCost op cost ctx, Mergeable op) =>
-  OpCost (UnionM op) cost ctx
+  (MonadUnion ctx, OpCost opCostObj op cost ctx, Mergeable op) =>
+  OpCost opCostObj (UnionM op) cost ctx
   where
-  opCost op = liftUnionM op >>= opCost
+  opCost obj op = liftUnionM op >>= opCost obj

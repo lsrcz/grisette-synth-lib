@@ -10,7 +10,8 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   )
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.TestOperator.TestCostOperator
-  ( TestCostOperator (TestCostOperator),
+  ( TestCost (TestCost),
+    TestCostOperator (TestCostOperator),
   )
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (testCase)
@@ -26,5 +27,7 @@ progCostTest = testCase "ProgCost" $ do
             Component.Stmt (TestCostOperator 20) [] 0 [] 0 "y" []
           ]
           []
-  let cost = progCost PerStmtCostObj prog :: SymbolicContext SymInteger
+  let cost =
+        progCost (PerStmtCostObj TestCost) prog ::
+          SymbolicContext SymInteger
   cost .@?= return (symIte "x" 0 10 + symIte "y" 0 20)

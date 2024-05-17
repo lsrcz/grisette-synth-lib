@@ -74,7 +74,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
     genOpIntermediates,
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost), PerStmtCostObj)
+import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost), PerStmtCostObj (PerStmtCostObj))
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
@@ -545,15 +545,17 @@ instance
 instance
   ( MonadContext ctx,
     MonadUnion ctx,
-    OpCost op cost ctx,
+    OpCost opCostObj op cost ctx,
     Num cost,
     Mergeable cost
   ) =>
-  ProgCost PerStmtCostObj (Prog op varId ty) cost ctx
+  ProgCost (PerStmtCostObj opCostObj) (Prog op varId ty) cost ctx
   where
-  progCost _ prog = do
+  progCost (PerStmtCostObj obj) prog = do
     stmtCosts <-
       traverse
-        (\stmt -> mrgIf (stmtDisabled stmt) (return 0) $ opCost $ stmtOp stmt)
+        ( \stmt ->
+            mrgIf (stmtDisabled stmt) (return 0) $ opCost obj $ stmtOp stmt
+        )
         (progStmtList prog)
     return $ sum stmtCosts

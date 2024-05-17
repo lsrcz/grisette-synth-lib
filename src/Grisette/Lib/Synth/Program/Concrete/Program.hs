@@ -102,7 +102,7 @@ import Grisette.Lib.Synth.Program.Concrete.OpToDot
     argumentsToFieldEdges,
     resultsToFieldEdges,
   )
-import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost), PerStmtCostObj)
+import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost), PerStmtCostObj (PerStmtCostObj))
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgGPretty (ProgGPretty (topologicalGPrettyProg), gprettyProg)
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
@@ -613,9 +613,9 @@ instance ProgUtil (Prog op varId ty) (Stmt op varId) varId where
     | otherwise = return $ progStmtList prog !! idx
 
 instance
-  (MonadContext ctx, OpCost op cost ctx, Num cost) =>
-  ProgCost PerStmtCostObj (Prog op varId ty) cost ctx
+  (MonadContext ctx, OpCost opCostObj op cost ctx, Num cost) =>
+  ProgCost (PerStmtCostObj opCostObj) (Prog op varId ty) cost ctx
   where
-  progCost _ (Prog _ _ stmts _) = do
-    stmtCosts <- traverse (opCost . stmtOp) stmts
+  progCost (PerStmtCostObj obj) (Prog _ _ stmts _) = do
+    stmtCosts <- traverse (opCost obj . stmtOp) stmts
     return $ sum stmtCosts

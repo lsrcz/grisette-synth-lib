@@ -39,7 +39,9 @@ import Grisette.Lib.Synth.Program.ComponentSketch
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.Concrete.Flatten (flattenProg)
-import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (PerStmtCostObj (PerStmtCostObj))
+import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
+  ( PerStmtCostObj (PerStmtCostObj),
+  )
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( WithConstraints (WithConstraints),
   )
@@ -58,7 +60,14 @@ import Grisette.Lib.Synth.Reasoning.Fuzzing
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SomeVerifier (SomeVerifier),
-    SynthesisMinimalCostTask (SynthesisMinimalCostTask, synthesisMinimalCostTaskConCostObj, synthesisMinimalCostTaskInitialMaxCost, synthesisMinimalCostTaskSymCostObj, synthesisMinimalCostTaskSymProg, synthesisMinimalCostTaskVerifiers),
+    SynthesisMinimalCostTask
+      ( SynthesisMinimalCostTask,
+        synthesisMinimalCostTaskConCostObj,
+        synthesisMinimalCostTaskInitialMaxCost,
+        synthesisMinimalCostTaskSymCostObj,
+        synthesisMinimalCostTaskSymProg,
+        synthesisMinimalCostTaskVerifiers
+      ),
     SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
@@ -80,7 +89,8 @@ import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
     times4Spec,
   )
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
-  ( TestSemanticsObj (TestSemanticsObj),
+  ( TestSemanticsCost (TestSemanticsCost),
+    TestSemanticsObj (TestSemanticsObj),
     TestSemanticsOp (Add, DivMod, Double),
     TestSemanticsType (IntType),
   )
@@ -341,8 +351,10 @@ componentSketchTest =
                       synthesisMinimalCostTaskSymProg = times4Sketch,
                       synthesisMinimalCostTaskInitialMaxCost =
                         Nothing :: Maybe SymInteger,
-                      synthesisMinimalCostTaskConCostObj = PerStmtCostObj,
-                      synthesisMinimalCostTaskSymCostObj = PerStmtCostObj
+                      synthesisMinimalCostTaskConCostObj =
+                        PerStmtCostObj TestSemanticsCost,
+                      synthesisMinimalCostTaskSymCostObj =
+                        PerStmtCostObj TestSemanticsCost
                     }
             let expectedSynthesizedProg =
                   Concrete.Prog
@@ -365,8 +377,10 @@ componentSketchTest =
                       synthesisMinimalCostTaskSymProg = times4Sketch,
                       synthesisMinimalCostTaskInitialMaxCost =
                         Just 2 :: Maybe SymInteger,
-                      synthesisMinimalCostTaskConCostObj = PerStmtCostObj,
-                      synthesisMinimalCostTaskSymCostObj = PerStmtCostObj
+                      synthesisMinimalCostTaskConCostObj =
+                        PerStmtCostObj TestSemanticsCost,
+                      synthesisMinimalCostTaskSymCostObj =
+                        PerStmtCostObj TestSemanticsCost
                     }
             result <- runSynthesisMinimalCostTask (precise z3) task
             case result of

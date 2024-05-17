@@ -11,6 +11,7 @@ module Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (..),
     TestSemanticsObj (..),
     TestSemanticsType (..),
+    TestSemanticsCost (..),
   )
 where
 
@@ -155,11 +156,16 @@ instance
   where
   genIntermediate _ _ = simpleFresh ()
 
-instance (MonadContext ctx) => OpCost TestSemanticsOp SymInteger ctx where
-  opCost Add = return 2
-  opCost Double = return 1
-  opCost Inc = return 1
-  opCost DivMod = return 5
+data TestSemanticsCost = TestSemanticsCost
+
+instance
+  (MonadContext ctx) =>
+  OpCost TestSemanticsCost TestSemanticsOp SymInteger ctx
+  where
+  opCost _ Add = return 2
+  opCost _ Double = return 1
+  opCost _ Inc = return 1
+  opCost _ DivMod = return 5
 
 instance (MonadContext ctx) => HasSubProgs TestSemanticsOp NullProg ctx where
   getSubProgs _ = return []
