@@ -30,7 +30,6 @@ where
 import Control.Monad.Except (runExceptT)
 import Data.Data (Typeable, eqT, type (:~:) (Refl))
 import Data.Proxy (Proxy)
-import qualified Data.Text as T
 import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
@@ -45,12 +44,11 @@ import Grisette
     ToCon,
     VerifierFun,
     evaluateSymToCon,
-    identifier,
     runFreshT,
     simpleMerge,
     solverGenericCEGIS,
     solverGenericCEGISWithRefinement,
-    withInfo,
+    uniqueIdentifier,
     withSolver,
   )
 import Grisette.Lib.Synth.Context
@@ -69,34 +67,28 @@ import Grisette.Lib.Synth.Reasoning.IOPair
   ( IOPair (ioPairInputs, ioPairOutputs),
   )
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher (match))
-import Grisette.Lib.Synth.Util.Show (showText)
 
 class SynthesisContext ctx where
   genSynthesisConstraint ::
     (Matcher matcher SymBool val, Mergeable val) =>
-    Int ->
     matcher ->
     ctx [val] ->
     [val] ->
-    SymBool
+    IO SymBool
 
 instance SynthesisContext SymbolicContext where
-  genSynthesisConstraint _ matcher actual expectedOutputs = simpleMerge $ do
-    actualVal <- runExceptT actual
-    case actualVal of
-      Left _ -> return $ con False
-      Right actualOutputs ->
-        return $ match matcher actualOutputs expectedOutputs
+  genSynthesisConstraint matcher actual expectedOutputs =
+    return $ simpleMerge $ do
+      actualVal <- runExceptT actual
+      case actualVal of
+        Left _ -> return $ con False
+        Right actualOutputs ->
+          return $ match matcher actualOutputs expectedOutputs
 
 instance SynthesisContext AngelicContext where
-  genSynthesisConstraint i matcher actual =
-    genSynthesisConstraint
-      i
-      matcher
-      ( runFreshT
-          actual
-          (withInfo (identifier $ showText i) ("synth" :: T.Text))
-      )
+  genSynthesisConstraint matcher actual expectedOutputs = do
+    ident <- uniqueIdentifier
+    genSynthesisConstraint matcher (runFreshT actual ident) expectedOutputs
 
 data VerificationCex where
   VerificationCex ::
@@ -171,7 +163,6 @@ synthesisConstraintFun ::
   SynthesisConstraintFun VerificationCex
 synthesisConstraintFun
   prog
-  i
   ( VerificationCex
       (_ :: Proxy ctx)
       (_ :: Proxy symProg')
@@ -181,14 +172,12 @@ synthesisConstraintFun
     ) =
     case eqT @symProg @symProg' of
       Just Refl ->
-        return $
-          genSynthesisConstraint
-            i
-            matcher
-            ( runProgWithConstraints symSem prog (ioPairInputs iop) ::
-                ctx [symVal]
-            )
-            (ioPairOutputs iop)
+        genSynthesisConstraint
+          matcher
+          ( runProgWithConstraints symSem prog (ioPairInputs iop) ::
+              ctx [symVal]
+          )
+          (ioPairOutputs iop)
       Nothing -> error "Should not happen"
 
 data SynthesisResult conProg
