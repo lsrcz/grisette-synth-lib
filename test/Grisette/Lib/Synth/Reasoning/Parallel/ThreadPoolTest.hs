@@ -145,8 +145,8 @@ threadPoolTest =
             traverse
               ( \n ->
                   newThread pool $
-                    takeMVar (mvars !! n)
-                      >> when (n == 0) (putMVar mvar1 ())
+                    when (n == 2) (putMVar mvar1 ())
+                      >> takeMVar (mvars !! n)
                       >> return n
               )
               [0 .. 3 :: Int]
@@ -156,7 +156,7 @@ threadPoolTest =
           putMVar (mvars !! 1) ()
           putMVar (mvars !! 2) ()
           results <- traverse waitCatch handles
-          traverse_ (\(i, Right v) -> i @?= v) $ zip [0, 1, 2, 42] results,
+          traverse_ (\(i, Right v) -> v @?= i) $ zip [0, 1, 2, 42] results,
         testCase "timing test" $ do
           mvars <- replicateM 3 newEmptyMVar
           pool <- newThreadPool 2
