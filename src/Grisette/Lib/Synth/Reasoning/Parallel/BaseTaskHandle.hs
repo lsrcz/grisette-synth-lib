@@ -13,8 +13,11 @@ module Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
     cancel,
     pollAnySTM,
     pollAny,
+    enqueueTaskMaybeTimeout,
     enqueueTask,
     enqueueTaskWithTimeout,
+    enqueueTaskPrecond,
+    enqueueTaskPrecondWithTimeout,
   )
 where
 
@@ -23,7 +26,7 @@ import qualified Control.Exception as C
 import Data.Hashable (Hashable)
 import Data.Time (NominalDiffTime, UTCTime, diffUTCTime)
 import Data.Typeable (Typeable)
-import Grisette (ConfigurableSolver)
+import Grisette (ConfigurableSolver, Solvable (con), SymBool)
 import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
@@ -35,12 +38,13 @@ class
   BaseTaskHandle handle conProg
     | handle -> conProg
   where
-  enqueueTaskMaybeTimeout ::
+  enqueueTaskPrecondMaybeTimeout ::
     (ConfigurableSolver config solver) =>
     Maybe Int ->
     Pool.ThreadPool ->
     config ->
     SynthesisTask conProg ->
+    IO SymBool ->
     IO handle
   startTimeSTM :: handle -> STM UTCTime
   endTimeSTM :: handle -> STM UTCTime
@@ -118,6 +122,41 @@ pollAny ::
   [task] ->
   IO ([task], [(task, Either C.SomeException (SynthesisResult conProg))])
 pollAny = atomically . pollAnySTM
+
+enqueueTaskPrecond ::
+  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  Pool.ThreadPool ->
+  config ->
+  SynthesisTask conProg ->
+  IO SymBool ->
+  IO handle
+enqueueTaskPrecond = enqueueTaskPrecondMaybeTimeout Nothing
+
+enqueueTaskPrecondWithTimeout ::
+  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  Int ->
+  Pool.ThreadPool ->
+  config ->
+  SynthesisTask conProg ->
+  IO SymBool ->
+  IO handle
+enqueueTaskPrecondWithTimeout timeout =
+  enqueueTaskPrecondMaybeTimeout (Just timeout)
+
+enqueueTaskMaybeTimeout ::
+  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  Maybe Int ->
+  Pool.ThreadPool ->
+  config ->
+  SynthesisTask conProg ->
+  IO handle
+enqueueTaskMaybeTimeout maybeTimeout pool config task =
+  enqueueTaskPrecondMaybeTimeout
+    maybeTimeout
+    pool
+    config
+    task
+    (return $ con True)
 
 enqueueTask ::
   (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>

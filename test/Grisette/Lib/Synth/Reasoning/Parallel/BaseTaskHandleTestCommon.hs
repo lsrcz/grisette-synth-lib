@@ -8,17 +8,30 @@ module Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandleTestCommon
 where
 
 import Control.Concurrent (threadDelay)
+import Control.Concurrent.STM
+  ( atomically,
+    newEmptyTMVarIO,
+    readTMVar,
+    writeTMVar,
+  )
 import Control.Exception (Exception (fromException), SomeException)
 import Data.Either (fromRight)
 import qualified Data.HashMap.Lazy as HM
 import Data.Time (diffUTCTime, getCurrentTime)
-import Grisette (precise, z3)
+import Grisette (SEq ((.==)), precise, z3)
+import Grisette.Internal.SymPrim.SymInteger (SymInteger)
+import Grisette.Lib.Synth.Context (SymbolicContext)
+import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
+  ( PerStmtCostObj (PerStmtCostObj),
+  )
+import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( BaseTaskHandle,
     cancel,
     elapsedTime,
     endTime,
     enqueueTask,
+    enqueueTaskPrecond,
     enqueueTaskWithTimeout,
     poll,
     pollAny,
@@ -29,12 +42,13 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled, SynthesisTaskTimeout),
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (newThreadPool)
-import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult)
+import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult (SynthesisSuccess))
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( ConProg,
     fuzzResult,
     sharedSketch,
     task,
+    times4Sketch,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
   ( addThenDoubleGen,
@@ -42,7 +56,10 @@ import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
     addThenDoubleSpec,
     divModTwiceGen,
     divModTwiceSpec,
+    times4Gen,
+    times4Spec,
   )
+import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator (TestSemanticsCost (TestSemanticsCost))
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool, (@?=))
@@ -172,5 +189,24 @@ baseTaskHandleTestCommon name _ =
         assertBool "Diff should be less than 0.3 second" $
           abs (expectedElapsedTime - elapsedTime) < 0.3
         assertBool "End time diff should be less than 0.3 second" $
-          abs (diffUTCTime endTime expectedEndTime) < 0.3
+          abs (diffUTCTime endTime expectedEndTime) < 0.3,
+      testCase "with precondition that can be provided later" $ do
+        expectedCost <- newEmptyTMVarIO
+        pool <- newThreadPool 1
+        let sketchCost =
+              progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
+                SymbolicContext SymInteger
+        handle :: handle <-
+          enqueueTaskPrecond
+            pool
+            (precise z3)
+            (task times4Spec times4Gen times4Sketch)
+            $ atomically
+            $ do
+              cost <- readTMVar expectedCost
+              return $ sketchCost .== return cost
+        atomically $ writeTMVar expectedCost 4
+        Right (SynthesisSuccess prog) <- waitCatch handle
+        progCost (PerStmtCostObj TestSemanticsCost) prog
+          @?= Right (4 :: SymInteger)
     ]

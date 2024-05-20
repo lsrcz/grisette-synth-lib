@@ -26,12 +26,12 @@ import Control.Concurrent.STM
 import qualified Control.Exception as C
 import Data.Hashable (Hashable)
 import Data.Typeable (Typeable)
-import Grisette (ConfigurableSolver)
+import Grisette (ConfigurableSolver, Solver (solverAssert), withSolver)
 import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( BaseTaskHandle
       ( cancelWith,
         endTimeSTM,
-        enqueueTaskMaybeTimeout,
+        enqueueTaskPrecondMaybeTimeout,
         pollSTM,
         startTimeSTM,
         waitCatchSTM
@@ -48,6 +48,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisTask,
     runSynthesisMinimalCostTask,
     runSynthesisTask,
+    solverRunRefinableSynthesisTask,
   )
 
 newtype SynthesisTaskHandle conProg = SynthesisTaskHandle
@@ -59,8 +60,15 @@ instance
   (Typeable conProg) =>
   BaseTaskHandle (SynthesisTaskHandle conProg) conProg
   where
-  enqueueTaskMaybeTimeout timeout pool config task =
-    enqueueActionImpl timeout pool (runSynthesisTask config task)
+  enqueueTaskPrecondMaybeTimeout timeout pool config task precond =
+    enqueueActionImpl
+      timeout
+      pool
+      ( withSolver config $ \solver -> do
+          precondition <- precond
+          solverAssert solver precondition
+          solverRunRefinableSynthesisTask solver task
+      )
   startTimeSTM = Pool.startTimeSTM . _underlyingHandle
   endTimeSTM = Pool.endTimeSTM . _underlyingHandle
   pollSTM = Pool.pollSTM . _underlyingHandle

@@ -111,10 +111,6 @@ refinableTaskHandleTest =
                     progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
                       SymbolicContext SymInteger
               return $ newCost .== return (symIte (cost .== 2) 3 2)
-            -- case r of
-            --   Left err -> return $ SynthesisSolverFailure err
-            --   Right m ->
-            --     return $ SynthesisSuccess $ evaluateSymToCon m times4Sketch
             r <- waitCatch handle
             shouldHaveCost r $ symIte (cost .== 2) 3 2
             checkRefinableSolverAlive handle >>= (@?= True)

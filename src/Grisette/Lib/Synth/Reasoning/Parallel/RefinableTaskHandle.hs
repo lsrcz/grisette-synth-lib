@@ -52,7 +52,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
       ( cancelWith,
         elapsedTimeSTM,
         endTimeSTM,
-        enqueueTaskMaybeTimeout,
+        enqueueTaskPrecondMaybeTimeout,
         pollSTM,
         startTimeSTM,
         waitCatchSTM
@@ -99,28 +99,37 @@ instance
   (Typeable conProg) =>
   BaseTaskHandle (RefinableTaskHandle conProg) conProg
   where
-  enqueueTaskMaybeTimeout maybeTimeout pool config _initialSynthesisTask = do
-    solverHandle <- newSolver config
-    _solverHandle <- newTMVarIO solverHandle
-    taskHandleTMVar <- newEmptyTMVarIO
-    _maxSucceedIndex <- newTVarIO (-1)
-    handle <-
-      Pool.newThread pool $
-        actionWithTimeout
-          maybeTimeout
-          taskHandleTMVar
-          0
-          _maxSucceedIndex
-          solverHandle
-          (`solverRunRefinableSynthesisTask` _initialSynthesisTask)
-    _underlyingHandles <- newTVarIO [handle]
-    let taskHandle =
-          RefinableTaskHandle
-            { _initialThreadHandleId = threadId handle,
-              ..
-            }
-    atomically $ putTMVar taskHandleTMVar taskHandle
-    return taskHandle
+  enqueueTaskPrecondMaybeTimeout
+    maybeTimeout
+    pool
+    config
+    _initialSynthesisTask
+    precond = do
+      solverHandle <- newSolver config
+      _solverHandle <- newTMVarIO solverHandle
+      taskHandleTMVar <- newEmptyTMVarIO
+      _maxSucceedIndex <- newTVarIO (-1)
+      handle <-
+        Pool.newThread pool $
+          actionWithTimeout
+            maybeTimeout
+            taskHandleTMVar
+            0
+            _maxSucceedIndex
+            solverHandle
+            ( \solver -> do
+                precondition <- precond
+                solverAssert solver precondition
+                solverRunRefinableSynthesisTask solver _initialSynthesisTask
+            )
+      _underlyingHandles <- newTVarIO [handle]
+      let taskHandle =
+            RefinableTaskHandle
+              { _initialThreadHandleId = threadId handle,
+                ..
+              }
+      atomically $ putTMVar taskHandleTMVar taskHandle
+      return taskHandle
   startTimeSTM RefinableTaskHandle {..} =
     readTVar _underlyingHandles >>= Pool.startTimeSTM . head
   endTimeSTM RefinableTaskHandle {..} =
