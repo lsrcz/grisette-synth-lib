@@ -12,7 +12,7 @@ import Control.Concurrent.STM
   ( atomically,
     newEmptyTMVarIO,
     readTMVar,
-    writeTMVar,
+    putTMVar,
   )
 import Control.Exception (Exception (fromException), SomeException)
 import Data.Either (fromRight)
@@ -205,7 +205,7 @@ baseTaskHandleTestCommon name _ =
             $ do
               cost <- readTMVar expectedCost
               return $ sketchCost .== return cost
-        atomically $ writeTMVar expectedCost 4
+        atomically $ putTMVar expectedCost 4
         Right (SynthesisSuccess prog) <- waitCatch handle
         progCost (PerStmtCostObj TestSemanticsCost) prog
           @?= Right (4 :: SymInteger)
