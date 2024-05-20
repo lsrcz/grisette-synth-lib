@@ -11,8 +11,8 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM
   ( atomically,
     newEmptyTMVarIO,
-    readTMVar,
     putTMVar,
+    readTMVar,
   )
 import Control.Exception (Exception (fromException), SomeException)
 import Data.Either (fromRight)
