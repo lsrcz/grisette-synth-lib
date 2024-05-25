@@ -42,7 +42,10 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled, SynthesisTaskTimeout),
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (newThreadPool)
-import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult (SynthesisSuccess))
+import Grisette.Lib.Synth.Reasoning.Synthesis
+  ( SynthesisResult (SynthesisSuccess),
+    VerificationCex,
+  )
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( ConProg,
     fuzzResult,
@@ -59,7 +62,9 @@ import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
     times4Gen,
     times4Spec,
   )
-import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator (TestSemanticsCost (TestSemanticsCost))
+import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
+  ( TestSemanticsCost (TestSemanticsCost),
+  )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool, (@?=))
@@ -67,7 +72,7 @@ import Test.HUnit (assertBool, (@?=))
 pollUntilFinished ::
   (BaseTaskHandle handle ConProg) =>
   handle ->
-  IO (Either SomeException (SynthesisResult ConProg))
+  IO (Either SomeException ([VerificationCex], SynthesisResult ConProg))
 pollUntilFinished handle = do
   r <- poll handle
   case r of
@@ -79,7 +84,7 @@ pollTasksUntilFinished ::
   [handle] ->
   IO
     [ ( handle,
-        Either SomeException (SynthesisResult ConProg)
+        Either SomeException ([VerificationCex], SynthesisResult ConProg)
       )
     ]
 pollTasksUntilFinished taskSet = do
@@ -108,9 +113,9 @@ baseTaskHandleTestCommon name _ =
         handle2 :: handle <-
           enqueueTask pool (precise z3) $
             task addThenDoubleReverseSpec addThenDoubleGen sharedSketch
-        Right r0 <- pollUntilFinished handle0
-        Right r1 <- pollUntilFinished handle1
-        Right r2 <- pollUntilFinished handle2
+        Right (_, r0) <- pollUntilFinished handle0
+        Right (_, r1) <- pollUntilFinished handle1
+        Right (_, r2) <- pollUntilFinished handle2
         fuzzResult r0 addThenDoubleGen addThenDoubleSpec
         fuzzResult r1 divModTwiceGen divModTwiceSpec
         fuzzResult r2 addThenDoubleGen addThenDoubleReverseSpec,
@@ -124,11 +129,11 @@ baseTaskHandleTestCommon name _ =
             task divModTwiceSpec divModTwiceGen sharedSketch
         map <- HM.fromList <$> pollTasksUntilFinished [handle0, handle1]
         fuzzResult
-          (fromRight undefined $ map HM.! handle0)
+          (snd $ fromRight undefined $ map HM.! handle0)
           addThenDoubleGen
           addThenDoubleSpec
         fuzzResult
-          (fromRight undefined $ map HM.! handle1)
+          (snd $ fromRight undefined $ map HM.! handle1)
           divModTwiceGen
           divModTwiceSpec,
       testCase "enqueueTaskWithTimeout" $ do
@@ -206,7 +211,7 @@ baseTaskHandleTestCommon name _ =
               cost <- readTMVar expectedCost
               return $ sketchCost .== return cost
         atomically $ putTMVar expectedCost 4
-        Right (SynthesisSuccess prog) <- waitCatch handle
+        Right (_, SynthesisSuccess prog) <- waitCatch handle
         progCost (PerStmtCostObj TestSemanticsCost) prog
           @?= Right (4 :: SymInteger)
     ]

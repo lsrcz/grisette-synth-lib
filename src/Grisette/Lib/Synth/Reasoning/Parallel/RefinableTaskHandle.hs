@@ -74,7 +74,8 @@ import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
     SynthesisTask,
-    solverRunRefinableSynthesisTask,
+    VerificationCex,
+    solverRunRefinableSynthesisTaskExtractCex,
   )
 
 data RefinableTaskHandle conProg where
@@ -82,7 +83,8 @@ data RefinableTaskHandle conProg where
     (Solver solver) =>
     { _initialThreadHandleId :: Int,
       _initialSynthesisTask :: SynthesisTask conProg,
-      _underlyingHandles :: TVar [ThreadHandle (SynthesisResult conProg)],
+      _underlyingHandles ::
+        TVar [ThreadHandle ([VerificationCex], SynthesisResult conProg)],
       _maxSucceedIndex :: TVar Int,
       _solverHandle :: TMVar solver
     } ->
@@ -120,7 +122,7 @@ instance
             ( \solver -> do
                 precondition <- precond
                 solverAssert solver precondition
-                solverRunRefinableSynthesisTask solver _initialSynthesisTask
+                solverRunRefinableSynthesisTaskExtractCex solver _initialSynthesisTask
             )
       _underlyingHandles <- newTVarIO [handle]
       let taskHandle =
@@ -157,7 +159,10 @@ pollAtIndexSTM ::
   (Typeable conProg) =>
   RefinableTaskHandle conProg ->
   Int ->
-  STM (Maybe (Either C.SomeException (SynthesisResult conProg)))
+  STM
+    ( Maybe
+        (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+    )
 pollAtIndexSTM RefinableTaskHandle {..} index = do
   handles <- readTVar _underlyingHandles
   if index >= length handles || index < 0
@@ -168,14 +173,17 @@ pollAtIndex ::
   (Typeable conProg) =>
   RefinableTaskHandle conProg ->
   Int ->
-  IO (Maybe (Either C.SomeException (SynthesisResult conProg)))
+  IO
+    ( Maybe
+        (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+    )
 pollAtIndex handle index = atomically $ pollAtIndexSTM handle index
 
 waitCatchAtIndexSTM ::
   (Typeable conProg) =>
   RefinableTaskHandle conProg ->
   Int ->
-  STM (Either C.SomeException (SynthesisResult conProg))
+  STM (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
 waitCatchAtIndexSTM RefinableTaskHandle {..} index = do
   handles <- readTVar _underlyingHandles
   if index >= length handles || index < 0
@@ -186,7 +194,7 @@ waitCatchAtIndex ::
   (Typeable conProg) =>
   RefinableTaskHandle conProg ->
   Int ->
-  IO (Either C.SomeException (SynthesisResult conProg))
+  IO (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
 waitCatchAtIndex handle index = atomically $ waitCatchAtIndexSTM handle index
 
 checkRefinableSolverAlive ::
@@ -225,8 +233,8 @@ actionWithTimeout ::
   Int ->
   TVar Int ->
   solver ->
-  (solver -> IO (SynthesisResult conProg)) ->
-  IO (SynthesisResult conProg)
+  (solver -> IO ([VerificationCex], SynthesisResult conProg)) ->
+  IO ([VerificationCex], SynthesisResult conProg)
 actionWithTimeout
   maybeTimeout
   taskHandleTMVar
@@ -245,7 +253,7 @@ actionWithTimeout
         Nothing -> return ()
       r <- restore (action solver)
       case r of
-        SynthesisSuccess _ ->
+        (_, SynthesisSuccess _) ->
           atomically $ writeTVar maxFinishedIndex currentIndex
         _ -> return ()
       return r
@@ -275,7 +283,9 @@ enqueueRefineCondMaybeTimeout
               solver
               ( \solver -> do
                   solverAssert solver =<< cond
-                  solverRunRefinableSynthesisTask solver _initialSynthesisTask
+                  solverRunRefinableSynthesisTaskExtractCex
+                    solver
+                    _initialSynthesisTask
               )
     atomically $ writeTVar _underlyingHandles $ oldHandles ++ [handle]
     atomically $ putTMVar taskHandleTMVar taskHandle

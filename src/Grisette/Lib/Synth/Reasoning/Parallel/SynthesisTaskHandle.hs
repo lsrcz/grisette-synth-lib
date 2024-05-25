@@ -46,13 +46,15 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisMinimalCostTask,
     SynthesisResult,
     SynthesisTask,
-    runSynthesisMinimalCostTask,
-    runSynthesisTask,
-    solverRunRefinableSynthesisTask,
+    VerificationCex,
+    runSynthesisMinimalCostTaskExtractCex,
+    runSynthesisTaskExtractCex,
+    solverRunRefinableSynthesisTaskExtractCex,
   )
 
 newtype SynthesisTaskHandle conProg = SynthesisTaskHandle
-  { _underlyingHandle :: ThreadHandle (SynthesisResult conProg)
+  { _underlyingHandle ::
+      ThreadHandle ([VerificationCex], SynthesisResult conProg)
   }
   deriving newtype (Eq, Hashable)
 
@@ -67,7 +69,7 @@ instance
       ( withSolver config $ \solver -> do
           precondition <- precond
           solverAssert solver precondition
-          solverRunRefinableSynthesisTask solver task
+          solverRunRefinableSynthesisTaskExtractCex solver task
       )
   startTimeSTM = Pool.startTimeSTM . _underlyingHandle
   endTimeSTM = Pool.endTimeSTM . _underlyingHandle
@@ -79,8 +81,8 @@ actionWithTimeout ::
   (Typeable conProg) =>
   Maybe Int ->
   TMVar (SynthesisTaskHandle conProg) ->
-  IO (SynthesisResult conProg) ->
-  IO (SynthesisResult conProg)
+  IO ([VerificationCex], SynthesisResult conProg) ->
+  IO ([VerificationCex], SynthesisResult conProg)
 actionWithTimeout maybeTimeout taskHandleTMVar action =
   C.mask $ \restore -> do
     selfHandle <- atomically $ readTMVar taskHandleTMVar
@@ -97,7 +99,7 @@ enqueueActionImpl ::
   (Typeable conProg) =>
   Maybe Int ->
   Pool.ThreadPool ->
-  IO (SynthesisResult conProg) ->
+  IO ([VerificationCex], SynthesisResult conProg) ->
   IO (SynthesisTaskHandle conProg)
 enqueueActionImpl
   maybeTimeout
@@ -115,7 +117,7 @@ enqueueActionImpl
 enqueueAction ::
   (Typeable conProg) =>
   Pool.ThreadPool ->
-  IO (SynthesisResult conProg) ->
+  IO ([VerificationCex], SynthesisResult conProg) ->
   IO (SynthesisTaskHandle conProg)
 enqueueAction = enqueueActionImpl Nothing
 
@@ -124,7 +126,7 @@ enqueueActionWithTimeout ::
   (Typeable conProg) =>
   Int ->
   Pool.ThreadPool ->
-  IO (SynthesisResult conProg) ->
+  IO ([VerificationCex], SynthesisResult conProg) ->
   IO (SynthesisTaskHandle conProg)
 enqueueActionWithTimeout timeout = enqueueActionImpl (Just timeout)
 
@@ -135,7 +137,7 @@ enqueueMinimalCostTask ::
   SynthesisMinimalCostTask conProg ->
   IO (SynthesisTaskHandle conProg)
 enqueueMinimalCostTask pool config task =
-  enqueueAction pool (runSynthesisMinimalCostTask config task)
+  enqueueAction pool (runSynthesisMinimalCostTaskExtractCex config task)
 
 enqueueMinimalCostTaskWithTimeout ::
   (ConfigurableSolver config solver, Typeable conProg) =>
@@ -148,7 +150,7 @@ enqueueMinimalCostTaskWithTimeout timeout pool config task =
   enqueueActionWithTimeout
     timeout
     pool
-    (runSynthesisMinimalCostTask config task)
+    (runSynthesisMinimalCostTaskExtractCex config task)
 
 alterTaskIfPendingImpl ::
   (ConfigurableSolver config h, Typeable conProg) =>
@@ -167,7 +169,7 @@ alterTaskIfPendingImpl
       actionWithTimeout
         maybeTimeout
         taskHandleTMVar
-        (runSynthesisTask config task)
+        (runSynthesisTaskExtractCex config task)
     atomically $ putTMVar taskHandleTMVar taskHandle
 
 alterTaskIfPending ::

@@ -31,7 +31,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
-import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult, SynthesisTask)
+import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult, SynthesisTask, VerificationCex)
 
 class
   (Eq handle, Hashable handle, Typeable conProg) =>
@@ -54,9 +54,14 @@ class
     endTime <- endTimeSTM task
     return $ endTime `diffUTCTime` startTime
   pollSTM ::
-    handle -> STM (Maybe (Either C.SomeException (SynthesisResult conProg)))
+    handle ->
+    STM
+      ( Maybe
+          (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+      )
   waitCatchSTM ::
-    handle -> STM (Either C.SomeException (SynthesisResult conProg))
+    handle ->
+    STM (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
   cancelWith :: (C.Exception e) => handle -> e -> IO ()
 
 startTime :: (BaseTaskHandle task conProg) => task -> IO UTCTime
@@ -94,13 +99,16 @@ maybeElapsedTime = atomically . maybeElapsedTimeSTM
 poll ::
   (BaseTaskHandle task conProg) =>
   task ->
-  IO (Maybe (Either C.SomeException (SynthesisResult conProg)))
+  IO
+    ( Maybe
+        (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+    )
 poll = atomically . pollSTM
 
 waitCatch ::
   (BaseTaskHandle task conProg) =>
   task ->
-  IO (Either C.SomeException (SynthesisResult conProg))
+  IO (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
 waitCatch = atomically . waitCatchSTM
 
 cancel :: (BaseTaskHandle task conProg) => task -> IO ()
@@ -109,7 +117,13 @@ cancel task = cancelWith task SynthesisTaskCancelled
 pollAnySTM ::
   (BaseTaskHandle task conProg) =>
   [task] ->
-  STM ([task], [(task, Either C.SomeException (SynthesisResult conProg))])
+  STM
+    ( [task],
+      [ ( task,
+          Either C.SomeException ([VerificationCex], SynthesisResult conProg)
+        )
+      ]
+    )
 pollAnySTM tasks = do
   results <- mapM pollSTM tasks
   let zipped = zip tasks results
@@ -120,7 +134,13 @@ pollAnySTM tasks = do
 pollAny ::
   (BaseTaskHandle task conProg) =>
   [task] ->
-  IO ([task], [(task, Either C.SomeException (SynthesisResult conProg))])
+  IO
+    ( [task],
+      [ ( task,
+          Either C.SomeException ([VerificationCex], SynthesisResult conProg)
+        )
+      ]
+    )
 pollAny = atomically . pollAnySTM
 
 enqueueTaskPrecond ::

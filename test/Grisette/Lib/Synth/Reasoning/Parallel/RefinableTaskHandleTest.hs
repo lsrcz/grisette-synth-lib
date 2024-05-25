@@ -44,6 +44,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandle
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (newThreadPool)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
+    VerificationCex,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( ConProg,
@@ -62,33 +63,37 @@ type Handle = RefinableTaskHandle ConProg
 
 shouldHaveCost ::
   ( Show conProg,
-    ProgCost (PerStmtCostObj TestSemanticsCost) conProg SymInteger ConcreteContext
+    ProgCost
+      (PerStmtCostObj TestSemanticsCost)
+      conProg
+      SymInteger
+      ConcreteContext
   ) =>
-  Either C.SomeException (SynthesisResult conProg) ->
+  Either C.SomeException ([VerificationCex], SynthesisResult conProg) ->
   SymInteger ->
   Assertion
-shouldHaveCost (Right (SynthesisSuccess prog)) cost = do
+shouldHaveCost (Right (_, SynthesisSuccess prog)) cost = do
   let Right finalCost =
         progCost (PerStmtCostObj TestSemanticsCost) prog ::
           ConcreteContext SymInteger
   finalCost @?= cost
-shouldHaveCost r _ = error $ "Unexpected result " <> show r
+shouldHaveCost r _ = error $ "Unexpected result " <> show (snd <$> r)
 
 shouldUnsat ::
   (HasCallStack, Show conProg) =>
-  Either C.SomeException (SynthesisResult conProg) ->
+  Either C.SomeException ([VerificationCex], SynthesisResult conProg) ->
   Assertion
-shouldUnsat (Right (SynthesisSolverFailure Unsat)) = return ()
-shouldUnsat r = error $ "Unexpected result " <> show r
+shouldUnsat (Right (_, SynthesisSolverFailure Unsat)) = return ()
+shouldUnsat r = error $ "Unexpected result " <> show (snd <$> r)
 
 shouldSolverDead ::
   (HasCallStack, Show conProg) =>
-  Either C.SomeException (SynthesisResult conProg) ->
+  Either C.SomeException ([VerificationCex], SynthesisResult conProg) ->
   Assertion
 shouldSolverDead (Left e) = case C.fromException e of
   Just SynthesisTaskSolverDead -> return ()
   _ -> error $ "Unexpected exception " <> show e
-shouldSolverDead r = error $ "Unexpected result " <> show r
+shouldSolverDead r = error $ "Unexpected result " <> show (snd <$> r)
 
 refinableTaskHandleTest :: Test
 refinableTaskHandleTest =
@@ -102,7 +107,7 @@ refinableTaskHandleTest =
             task times4Spec times4Gen times4Sketch
         r <- waitCatch handle
         case r of
-          Right (SynthesisSuccess prog) -> do
+          Right (_, SynthesisSuccess prog) -> do
             let Right cost =
                   progCost (PerStmtCostObj TestSemanticsCost) prog ::
                     ConcreteContext SymInteger
