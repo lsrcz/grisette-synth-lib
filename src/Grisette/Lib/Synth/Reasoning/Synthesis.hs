@@ -15,6 +15,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
     SomeVerifier (..),
     VerificationCex (..),
     SynthesisTask (..),
+    synthesisConstraintFun,
     runSynthesisTask,
     runSynthesisTaskExtractCex,
     solverRunRefinableSynthesisTask,
