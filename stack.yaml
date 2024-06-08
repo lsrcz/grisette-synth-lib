@@ -41,8 +41,7 @@ packages:
 #
 # extra-deps: []
 extra-deps:
-  - git: https://github.com/lsrcz/grisette.git
-    commit: 8316eecd447dd154e93b21f4459b5228b1141d25
+  - grisette-0.6.0.0
   - quickcheck-with-counterexamples-1.2
 # Override default flag values for local packages and extra-deps
 # flags: {}

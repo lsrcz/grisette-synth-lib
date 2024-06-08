@@ -88,7 +88,7 @@ instance SynthesisContext SymbolicContext where
 
 instance SynthesisContext AngelicContext where
   genSynthesisConstraint matcher actual expectedOutputs = do
-    ident <- uniqueIdentifier
+    ident <- uniqueIdentifier "synth"
     genSynthesisConstraint matcher (runFreshT actual ident) expectedOutputs
 
 data VerificationCex where
