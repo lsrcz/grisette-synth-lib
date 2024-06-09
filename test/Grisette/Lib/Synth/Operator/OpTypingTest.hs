@@ -6,7 +6,8 @@ import Grisette (UnionM, mrgIf, mrgReturn)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
-    SymOpLimits (symOpMaximumArgNum, symOpMaximumResNum),
+    symOpMaximumArgNum,
+    symOpMaximumResNum,
   )
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (Add, DivMod, Inc),

@@ -31,7 +31,6 @@ import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping,
     OpTypingSimple (typeOpSimple),
-    SymOpLimits,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
@@ -105,8 +104,6 @@ instance OpTypingSimple OpCode OpType where
   typeOpSimple UMinus = TypeSignature [IntegerType] [IntegerType]
 
 instance (MonadContext ctx) => OpTyping OpCode OpType ctx
-
-instance SymOpLimits OpCode
 
 -- | Here, for generating `SymInteger`, we just generate a fresh variable using
 -- `simpleFresh` provided by Grisette.

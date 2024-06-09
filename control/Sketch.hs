@@ -24,7 +24,6 @@ import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
-    SymOpLimits,
   )
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
@@ -69,8 +68,6 @@ instance
   typeOp Minus = typeMinus
   typeOp IntConst {} = typeIntConst
   typeOp (If true false) = typeIf true false
-
-instance SymOpLimits (Op varId intVal)
 
 instance
   ( HasSemantics (SymValue intVal boolVal) ctx,

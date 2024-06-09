@@ -32,8 +32,11 @@ import Grisette
     Solvable (con),
     ToSym (toSym),
   )
+import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Operator.OpTyping
-  ( SymOpLimits (symOpMaximumArgNum, symOpMaximumResNum),
+  ( OpTyping,
+    symOpMaximumArgNum,
+    symOpMaximumResNum,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch.Program
   ( Prog (Prog),
@@ -49,7 +52,7 @@ newtype StmtExtraConstraint op symVarId = StmtExtraConstraint
   }
 
 simpleFreshStmt' ::
-  (SymOpLimits op, GenSymSimple () symVarId) =>
+  (OpTyping op ty SymbolicContext, GenSymSimple () symVarId) =>
   op ->
   StmtExtraConstraint op symVarId ->
   Fresh [Stmt op symVarId]
@@ -85,7 +88,7 @@ augmentDisabled = go (con False)
        in stmt {stmtDisabled = newDisabled} : go newDisabled stmts
 
 simpleFreshStmts' ::
-  (SymOpLimits op, GenSymSimple () symVarId) =>
+  (OpTyping op ty SymbolicContext, GenSymSimple () symVarId) =>
   Int ->
   op ->
   StmtExtraConstraint op symVarId ->
@@ -95,20 +98,20 @@ simpleFreshStmts' num op extraConstraint = do
   return $ augmentDisabled $ augmentMustBeAfterForStmts stmts
 
 simpleFreshStmt ::
-  (SymOpLimits op, GenSymSimple () symVarId) =>
+  (OpTyping op ty SymbolicContext, GenSymSimple () symVarId) =>
   op ->
   Fresh [Stmt op symVarId]
 simpleFreshStmt op = simpleFreshStmt' op (StmtExtraConstraint [])
 
 simpleFreshStmts ::
-  (SymOpLimits op, GenSymSimple () symVarId) =>
+  (OpTyping op ty SymbolicContext, GenSymSimple () symVarId) =>
   Int ->
   op ->
   Fresh [Stmt op symVarId]
 simpleFreshStmts num op = simpleFreshStmts' num op (StmtExtraConstraint [])
 
 freshStmt' ::
-  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  (OpTyping op ty SymbolicContext, Mergeable op, GenSymSimple () symVarId) =>
   Fresh op ->
   StmtExtraConstraint op symVarId ->
   Fresh [Stmt op symVarId]
@@ -117,7 +120,7 @@ freshStmt' freshOp extraConstraint = do
   simpleFreshStmt' op extraConstraint
 
 freshStmts' ::
-  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  (OpTyping op ty SymbolicContext, Mergeable op, GenSymSimple () symVarId) =>
   Int ->
   Fresh op ->
   StmtExtraConstraint op symVarId ->
@@ -127,13 +130,13 @@ freshStmts' num freshOp extraConstraint = do
   return $ augmentDisabled $ augmentMustBeAfterForStmts stmts
 
 freshStmt ::
-  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  (OpTyping op ty SymbolicContext, Mergeable op, GenSymSimple () symVarId) =>
   Fresh op ->
   Fresh [Stmt op symVarId]
 freshStmt freshOp = freshStmt' freshOp (StmtExtraConstraint [])
 
 freshStmts ::
-  (SymOpLimits op, Mergeable op, GenSymSimple () symVarId) =>
+  (OpTyping op ty SymbolicContext, Mergeable op, GenSymSimple () symVarId) =>
   Int ->
   Fresh op ->
   Fresh [Stmt op symVarId]
@@ -184,7 +187,7 @@ fromConcrete ::
   forall symOp symVarId symTy conOp conVarId conTy.
   ( ToSym conTy symTy,
     ToSym conOp symOp,
-    SymOpLimits symOp,
+    OpTyping symOp symTy SymbolicContext,
     GenSymSimple () symVarId
   ) =>
   Concrete.Prog conOp conVarId conTy ->
