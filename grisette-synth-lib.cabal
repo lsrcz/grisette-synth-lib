@@ -90,7 +90,7 @@ library
     , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
-    , sbv >=8.11 && <11
+    , sbv >=8.17 && <11
     , stm
     , template-haskell
     , text >=1.2.4.1 && <2.2
@@ -121,7 +121,7 @@ executable arith
     , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
-    , sbv >=8.11 && <11
+    , sbv >=8.17 && <11
     , stm
     , template-haskell
     , text >=1.2.4.1 && <2.2
@@ -156,7 +156,7 @@ executable control
     , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
-    , sbv >=8.11 && <11
+    , sbv >=8.17 && <11
     , stm
     , template-haskell
     , text >=1.2.4.1 && <2.2
@@ -237,7 +237,7 @@ test-suite spec
     , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
     , quickcheck-with-counterexamples ==1.2.*
-    , sbv >=8.11 && <11
+    , sbv >=8.17 && <11
     , stm
     , template-haskell
     , test-framework >=0.8.2 && <0.9
