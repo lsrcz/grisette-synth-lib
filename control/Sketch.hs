@@ -16,11 +16,9 @@ import Grisette
     EvaluateSym,
     GenSymSimple,
     Mergeable,
-    MonadFresh,
-    MonadUnion,
     ToCon,
   )
-import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
@@ -71,8 +69,7 @@ instance
 
 instance
   ( HasSemantics (SymValue intVal boolVal) ctx,
-    MonadUnion ctx,
-    MonadFresh ctx,
+    MonadAngelicContext ctx,
     SymbolicVarId varId,
     GenSymSimple () intVal,
     GenSymSimple () boolVal

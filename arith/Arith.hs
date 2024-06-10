@@ -19,14 +19,12 @@ import Grisette
     GPretty (gpretty),
     GenSymSimple (simpleFresh),
     Mergeable,
-    MonadFresh,
-    MonadUnion,
     SymInteger,
     ToCon,
     mrgReturn,
   )
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
-import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping,
@@ -108,7 +106,7 @@ instance (MonadContext ctx) => OpTyping OpCode OpType ctx
 -- | Here, for generating `SymInteger`, we just generate a fresh variable using
 -- `simpleFresh` provided by Grisette.
 instance
-  (MonadContext ctx, MonadFresh ctx, MonadUnion ctx) =>
+  (MonadAngelicContext ctx) =>
   GenIntermediate Sem OpType SymInteger ctx
   where
   genIntermediate _ IntegerType = simpleFresh ()

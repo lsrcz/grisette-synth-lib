@@ -11,6 +11,8 @@
 -- Portability :    GHC only
 module Grisette.Lib.Synth.Context
   ( MonadContext,
+    MonadSymbolicContext,
+    MonadAngelicContext,
     ConcreteContext,
     SymbolicContext,
     AngelicContext,
@@ -19,9 +21,13 @@ where
 
 import Control.Monad.Except (ExceptT, MonadError)
 import qualified Data.Text as T
-import Grisette (FreshT, TryMerge, UnionM)
+import Grisette (FreshT, MonadFresh, MonadUnion, TryMerge, UnionM)
 
 type MonadContext ctx = (MonadError T.Text ctx, TryMerge ctx)
+
+type MonadSymbolicContext ctx = (MonadContext ctx, MonadUnion ctx)
+
+type MonadAngelicContext ctx = (MonadSymbolicContext ctx, MonadFresh ctx)
 
 -- | A concrete context is a context that does not do multi-path symbolic
 -- execution.
