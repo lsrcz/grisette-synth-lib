@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -52,7 +53,7 @@ import Grisette.Lib.Synth.Context
   )
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
-    OpTypingSimple (typeOpSimple),
+    simpleTyping,
   )
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
   ( ComponentProgDefUse (ComponentProgDefUse),
@@ -154,32 +155,31 @@ data LivelinessOp = LivelinessOp
 instance LivelinessName LivelinessOp where
   livelinessName LivelinessOp = "ConstrainedType"
 
-instance OpTypingSimple Op Type where
-  typeOpSimple OpUse = TypeSignature [OtherType, ConstrainedType] [OtherType]
-  typeOpSimple OpDef = TypeSignature [OtherType] [OtherType, ConstrainedType]
-  typeOpSimple OpNone = TypeSignature [OtherType] [OtherType]
-  typeOpSimple OpUseDef = TypeSignature [ConstrainedType] [ConstrainedType]
-  typeOpSimple OpDefNoInvalidate =
-    TypeSignature [OtherType] [ConstrainedType]
-  typeOpSimple OpDefShareScope =
-    TypeSignature [ConstrainedType] [ConstrainedType]
-  typeOpSimple OpUse2 = TypeSignature [OtherType, ConstrainedType2] [OtherType]
-  typeOpSimple OpDef2 = TypeSignature [OtherType] [OtherType, ConstrainedType2]
-  typeOpSimple OpUseAny = TypeSignature [OtherType, AnyType] [OtherType]
-  typeOpSimple OpDefAny = TypeSignature [OtherType] [OtherType, AnyType]
-  typeOpSimple OpUseDefAny = TypeSignature [AnyType] [AnyType]
-  typeOpSimple OpDefShareScope2 =
-    TypeSignature [ConstrainedType2] [ConstrainedType2]
-  typeOpSimple (OpSubProg prog) =
-    TypeSignature
-      (Concrete.progArgType <$> Concrete.progArgList prog)
-      (Concrete.progResType <$> Concrete.progResList prog)
-  typeOpSimple (OpComponentSubProg prog) =
-    TypeSignature
-      (Component.progArgType <$> Component.progArgList prog)
-      (Component.progResType <$> Component.progResList prog)
-
-instance (MonadContext ctx) => OpTyping Op Type ctx
+instance (MonadContext ctx) => OpTyping Op Type ctx where
+  typeOp = simpleTyping $ \case
+    OpUse -> TypeSignature [OtherType, ConstrainedType] [OtherType]
+    OpDef -> TypeSignature [OtherType] [OtherType, ConstrainedType]
+    OpNone -> TypeSignature [OtherType] [OtherType]
+    OpUseDef -> TypeSignature [ConstrainedType] [ConstrainedType]
+    OpDefNoInvalidate ->
+      TypeSignature [OtherType] [ConstrainedType]
+    OpDefShareScope ->
+      TypeSignature [ConstrainedType] [ConstrainedType]
+    OpUse2 -> TypeSignature [OtherType, ConstrainedType2] [OtherType]
+    OpDef2 -> TypeSignature [OtherType] [OtherType, ConstrainedType2]
+    OpUseAny -> TypeSignature [OtherType, AnyType] [OtherType]
+    OpDefAny -> TypeSignature [OtherType] [OtherType, AnyType]
+    OpUseDefAny -> TypeSignature [AnyType] [AnyType]
+    OpDefShareScope2 ->
+      TypeSignature [ConstrainedType2] [ConstrainedType2]
+    (OpSubProg prog) ->
+      TypeSignature
+        (Concrete.progArgType <$> Concrete.progArgList prog)
+        (Concrete.progResType <$> Concrete.progResList prog)
+    (OpComponentSubProg prog) ->
+      TypeSignature
+        (Component.progArgType <$> Component.progArgList prog)
+        (Component.progResType <$> Component.progResList prog)
 
 instance
   ( MonadContext ctx,

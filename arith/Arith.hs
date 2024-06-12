@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -26,10 +27,7 @@ import Grisette
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTyping,
-    OpTypingSimple (typeOpSimple),
-  )
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp), simpleTyping)
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
   )
@@ -94,14 +92,12 @@ data OpType = IntegerType
   deriving (Show, Eq, Generic)
   deriving (Mergeable, EvaluateSym, ToCon OpType) via (Default OpType)
 
--- instance OpTypingSimple OpCode OpType where
-instance OpTypingSimple OpCode OpType where
-  typeOpSimple Plus = TypeSignature [IntegerType, IntegerType] [IntegerType]
-  typeOpSimple Mul = TypeSignature [IntegerType, IntegerType] [IntegerType]
-  typeOpSimple Minus = TypeSignature [IntegerType, IntegerType] [IntegerType]
-  typeOpSimple UMinus = TypeSignature [IntegerType] [IntegerType]
-
-instance (MonadContext ctx) => OpTyping OpCode OpType ctx
+instance (MonadContext ctx) => OpTyping OpCode OpType ctx where
+  typeOp = simpleTyping $ \case
+    Plus -> TypeSignature [IntegerType, IntegerType] [IntegerType]
+    Mul -> TypeSignature [IntegerType, IntegerType] [IntegerType]
+    Minus -> TypeSignature [IntegerType, IntegerType] [IntegerType]
+    UMinus -> TypeSignature [IntegerType] [IntegerType]
 
 -- | Here, for generating `SymInteger`, we just generate a fresh variable using
 -- `simpleFresh` provided by Grisette.

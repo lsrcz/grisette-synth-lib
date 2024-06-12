@@ -9,7 +9,7 @@
 
 module Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (..),
-    OpTypingSimple (..),
+    simpleTyping,
     symOpMaximumArgNum,
     symOpMaximumResNum,
   )
@@ -33,16 +33,15 @@ import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
 
-class OpTypingSimple op ty | op -> ty where
-  typeOpSimple :: op -> TypeSignature ty
+simpleTyping ::
+  (MonadContext ctx, Mergeable ty) =>
+  (op -> TypeSignature ty) ->
+  op ->
+  ctx (TypeSignature ty)
+simpleTyping f = mrgReturn . f
 
 class (MonadContext ctx) => OpTyping op ty ctx | op -> ty where
   typeOp :: op -> ctx (TypeSignature ty)
-  default typeOp ::
-    (OpTypingSimple op ty, MonadContext ctx, Mergeable ty) =>
-    op ->
-    ctx (TypeSignature ty)
-  typeOp = mrgReturn . typeOpSimple
 
 instance
   (MonadUnion ctx, OpTyping op ty ctx, Mergeable op, Mergeable ty) =>

@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -38,8 +39,8 @@ import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTyping,
-    OpTypingSimple (typeOpSimple),
+  ( OpTyping (typeOp),
+    simpleTyping,
   )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
@@ -139,13 +140,15 @@ instance
         <> showText (length l)
         <> " arguments."
 
-instance OpTypingSimple TestSemanticsOp TestSemanticsType where
-  typeOpSimple Add = TypeSignature [IntType, IntType] [IntType]
-  typeOpSimple DivMod = TypeSignature [IntType, IntType] [IntType, IntType]
-  typeOpSimple Inc = TypeSignature [IntType] [IntType]
-  typeOpSimple Double = TypeSignature [IntType] [IntType]
-
-instance (MonadContext ctx) => OpTyping TestSemanticsOp TestSemanticsType ctx
+instance
+  (MonadContext ctx) =>
+  OpTyping TestSemanticsOp TestSemanticsType ctx
+  where
+  typeOp = simpleTyping $ \case
+    Add -> TypeSignature [IntType, IntType] [IntType]
+    DivMod -> TypeSignature [IntType, IntType] [IntType, IntType]
+    Inc -> TypeSignature [IntType] [IntType]
+    Double -> TypeSignature [IntType] [IntType]
 
 instance
   (MonadUnion ctx, MonadContext ctx, MonadFresh ctx) =>
