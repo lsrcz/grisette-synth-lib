@@ -26,7 +26,6 @@ import Grisette
     EvaluateSym,
     GenSymSimple (simpleFresh),
     Mergeable,
-    MonadFresh,
     MonadUnion,
     SafeDivision (safeDivMod),
     SymInteger,
@@ -150,10 +149,7 @@ instance
     Inc -> TypeSignature [IntType] [IntType]
     Double -> TypeSignature [IntType] [IntType]
 
-instance
-  (MonadUnion ctx, MonadContext ctx, MonadFresh ctx) =>
-  GenIntermediate TestSemanticsObj TestSemanticsType SymInteger ctx
-  where
+instance GenIntermediate TestSemanticsObj TestSemanticsType SymInteger where
   genIntermediate _ _ = simpleFresh ()
 
 data TestSemanticsCost = TestSemanticsCost

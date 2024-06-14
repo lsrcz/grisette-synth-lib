@@ -18,28 +18,18 @@ import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
     Mergeable,
-    MonadFresh,
-    MonadUnion,
   )
 import Grisette.Lib.Data.Traversable (mrgTraverse)
-import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Context (MonadAngelicContext)
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (argTypes, resTypes),
   )
 
-class
-  ( MonadFresh ctx,
-    MonadContext ctx,
-    MonadUnion ctx,
-    Mergeable val,
-    Mergeable ty
-  ) =>
-  GenIntermediate sem ty val ctx
-  where
-  genIntermediate :: sem -> ty -> ctx val
+class (Mergeable val, Mergeable ty) => GenIntermediate sem ty val where
+  genIntermediate :: (MonadAngelicContext ctx) => sem -> ty -> ctx val
 
 genIntermediates ::
-  (GenIntermediate sem ty val ctx) =>
+  (GenIntermediate sem ty val, MonadAngelicContext ctx) =>
   sem ->
   [ty] ->
   ctx [val]
@@ -54,7 +44,7 @@ data Intermediates val = Intermediates
 
 genOpIntermediates ::
   forall semObj ty val ctx p.
-  (GenIntermediate semObj ty val ctx) =>
+  (GenIntermediate semObj ty val, MonadAngelicContext ctx) =>
   p ty ->
   semObj ->
   TypeSignature ty ->

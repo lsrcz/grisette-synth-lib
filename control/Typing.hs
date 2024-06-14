@@ -25,8 +25,6 @@ import Grisette
     GPretty (gpretty),
     GenSymSimple (simpleFresh),
     Mergeable,
-    MonadFresh,
-    MonadUnion,
     ToCon,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -75,15 +73,12 @@ typeIf true false = do
   mrgReturn $ TypeSignature (BoolType : trueArgType) trueResType
 
 instance
-  ( MonadFresh ctx,
-    MonadContext ctx,
-    Mergeable intVal,
-    MonadUnion ctx,
+  ( Mergeable intVal,
     Mergeable boolVal,
     GenSymSimple () intVal,
     GenSymSimple () boolVal
   ) =>
-  GenIntermediate Sem Type (SymValue intVal boolVal) ctx
+  GenIntermediate Sem Type (SymValue intVal boolVal)
   where
   genIntermediate _ IntType = mkInt <$> simpleFresh ()
   genIntermediate _ BoolType = mkBool <$> simpleFresh ()

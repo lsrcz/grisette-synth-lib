@@ -64,7 +64,7 @@ import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Control.Monad.State.Class (mrgModify)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT)
-import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
 import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
@@ -74,7 +74,10 @@ import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
     genOpIntermediates,
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost), PerStmtCostObj (PerStmtCostObj))
+import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
+  ( OpCost (opCost),
+    PerStmtCostObj (PerStmtCostObj),
+  )
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
@@ -356,7 +359,8 @@ genProgResVals ::
   ( SymbolicVarId symVarId,
     Mergeable val,
     Mergeable ty,
-    GenIntermediate sem ty val ctx
+    GenIntermediate sem ty val,
+    MonadAngelicContext ctx
   ) =>
   sem ->
   [ProgRes symVarId ty] ->
@@ -385,11 +389,12 @@ symAll f = foldl' (\acc v -> acc .&& f v) (con True)
 constrainStmt ::
   forall sem op ty val ctx p symVarId.
   ( SymbolicVarId symVarId,
-    GenIntermediate sem ty val ctx,
+    GenIntermediate sem ty val,
     OpSemantics sem op val ctx,
     OpTyping op ty ctx,
     Mergeable op,
-    SEq val
+    SEq val,
+    MonadAngelicContext ctx
   ) =>
   p ty ->
   sem ->
@@ -483,11 +488,12 @@ defDistinct = do
 
 instance
   ( SymbolicVarId symVarId,
-    GenIntermediate sem ty val ctx,
+    GenIntermediate sem ty val,
     OpSemantics sem op val ctx,
     OpTyping op ty ctx,
     Mergeable op,
-    SEq val
+    SEq val,
+    MonadAngelicContext ctx
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx
   where
