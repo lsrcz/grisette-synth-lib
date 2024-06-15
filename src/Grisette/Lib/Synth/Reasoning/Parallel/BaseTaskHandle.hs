@@ -43,7 +43,7 @@ class
     Maybe Int ->
     Pool.ThreadPool ->
     config ->
-    SynthesisTask conProg ->
+    SynthesisTask symProg conProg ->
     IO SymBool ->
     IO handle
   startTimeSTM :: handle -> STM UTCTime
@@ -147,7 +147,7 @@ enqueueTaskPrecond ::
   (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
   Pool.ThreadPool ->
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO SymBool ->
   IO handle
 enqueueTaskPrecond = enqueueTaskPrecondMaybeTimeout Nothing
@@ -157,7 +157,7 @@ enqueueTaskPrecondWithTimeout ::
   Int ->
   Pool.ThreadPool ->
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO SymBool ->
   IO handle
 enqueueTaskPrecondWithTimeout timeout =
@@ -168,7 +168,7 @@ enqueueTaskMaybeTimeout ::
   Maybe Int ->
   Pool.ThreadPool ->
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO handle
 enqueueTaskMaybeTimeout maybeTimeout pool config task =
   enqueueTaskPrecondMaybeTimeout
@@ -182,7 +182,7 @@ enqueueTask ::
   (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
   Pool.ThreadPool ->
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO handle
 enqueueTask = enqueueTaskMaybeTimeout Nothing
 
@@ -191,6 +191,6 @@ enqueueTaskWithTimeout ::
   Int ->
   Pool.ThreadPool ->
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO handle
 enqueueTaskWithTimeout timeout = enqueueTaskMaybeTimeout (Just timeout)

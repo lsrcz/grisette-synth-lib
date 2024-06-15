@@ -140,7 +140,7 @@ byteCodeSketchTest =
               quickCheckFuzzerGenerators = [gen],
               quickCheckFuzzerSpec = spec
             } ::
-            QuickCheckFuzzer SymProg ConProg SymVal ConVal SymbolicContext
+            QuickCheckFuzzer SymVal ConVal SymProg ConProg SymbolicContext
     let task =
           SynthesisTask
             { synthesisTaskVerifiers = [SomeVerifier verifier],

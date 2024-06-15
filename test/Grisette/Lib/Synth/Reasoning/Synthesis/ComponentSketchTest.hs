@@ -258,7 +258,7 @@ verifier ::
   (Matcher matcher SymBool SymVal, Matcher matcher Bool ConVal, Typeable matcher) =>
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->
-  QuickCheckFuzzer SymProg ConProg SymVal ConVal AngelicContext
+  QuickCheckFuzzer SymVal ConVal SymProg ConProg AngelicContext
 verifier spec gen =
   QuickCheckFuzzer
     { quickCheckFuzzerSymSemantics =
@@ -267,8 +267,7 @@ verifier spec gen =
       quickCheckFuzzerMaxTests = 100,
       quickCheckFuzzerGenerators = [gen],
       quickCheckFuzzerSpec = spec
-    } ::
-    QuickCheckFuzzer SymProg ConProg SymVal ConVal AngelicContext
+    }
 
 task ::
   ( Matcher matcher SymBool SymVal,
@@ -278,7 +277,7 @@ task ::
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->
   SymProg ->
-  SynthesisTask ConProg
+  SynthesisTask SymProg ConProg
 task spec gen sketch =
   SynthesisTask
     { synthesisTaskVerifiers = [SomeVerifier $ verifier spec gen],

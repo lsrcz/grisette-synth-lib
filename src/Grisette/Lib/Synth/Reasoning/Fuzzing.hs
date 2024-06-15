@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Reasoning.Fuzzing
   ( fuzzingTestProg,
@@ -30,7 +32,7 @@ import Grisette
     VerifierResult (CEGISVerifierFoundCex, CEGISVerifierNoCex),
     evaluateSymToCon,
   )
-import Grisette.Lib.Synth.Context (ConcreteContext)
+import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( ProgConstraints,
@@ -41,6 +43,7 @@ import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher), Matcher (match))
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( IsVerifier (toVerifierFuns),
+    SomeVerifier (SomeVerifier),
     SynthesisContext,
     VerificationCex (VerificationCex),
   )
@@ -105,7 +108,7 @@ fuzzingTestSymProgWithModel gen spec maxTests _ sem prog model = do
     sem
     (evaluateSymToCon model prog :: conProg)
 
-data QuickCheckFuzzer symProg conProg symVal conVal symCtx where
+data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
   QuickCheckFuzzer ::
     ( ProgSemantics symSemObj symProg symVal symCtx,
       ProgConstraints symConstObj symProg symCtx,
@@ -130,11 +133,11 @@ data QuickCheckFuzzer symProg conProg symVal conVal symCtx where
       quickCheckFuzzerGenerators :: [Gen [conVal]],
       quickCheckFuzzerSpec :: [conVal] -> ([conVal], matcher)
     } ->
-    QuickCheckFuzzer symProg conProg symVal conVal symCtx
+    QuickCheckFuzzer symVal conVal symProg conProg symCtx
 
 instance
   IsVerifier
-    (QuickCheckFuzzer symProg conProg symVal conVal symCtx)
+    (QuickCheckFuzzer symVal conVal symProg conProg symCtx)
     symProg
     conProg
   where
@@ -163,12 +166,12 @@ instance
         Nothing -> return CEGISVerifierNoCex
 
 defaultQuickCheckFuzzerWithConstraint ::
-  ( ProgSemantics semObj symProg symVal symCtx,
+  forall symVal conVal symProg conProg semObj constObj.
+  ( ProgSemantics semObj symProg symVal AngelicContext,
     ProgSemantics semObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
     EvaluateSym symProg,
-    SynthesisContext symCtx,
     Show conVal,
     Mergeable symVal,
     Typeable symProg,
@@ -176,30 +179,33 @@ defaultQuickCheckFuzzerWithConstraint ::
     Typeable symVal,
     SEq symVal,
     Eq conVal,
-    ProgConstraints constObj symProg symCtx,
+    ProgConstraints constObj symProg AngelicContext,
     Typeable constObj
   ) =>
   semObj ->
   constObj ->
   Gen [conVal] ->
   ([conVal] -> [conVal]) ->
-  QuickCheckFuzzer symProg conProg symVal conVal symCtx
+  SomeVerifier symProg conProg
 defaultQuickCheckFuzzerWithConstraint semObj constObj gen spec =
-  QuickCheckFuzzer
-    { quickCheckFuzzerSymSemantics = WithConstraints semObj constObj,
-      quickCheckFuzzerConSemantics = semObj,
-      quickCheckFuzzerMaxTests = 100,
-      quickCheckFuzzerGenerators = [gen],
-      quickCheckFuzzerSpec = (,EqMatcher) . spec
-    }
+  SomeVerifier
+    ( QuickCheckFuzzer
+        { quickCheckFuzzerSymSemantics = WithConstraints semObj constObj,
+          quickCheckFuzzerConSemantics = semObj,
+          quickCheckFuzzerMaxTests = 100,
+          quickCheckFuzzerGenerators = [gen],
+          quickCheckFuzzerSpec = (,EqMatcher) . spec
+        } ::
+        QuickCheckFuzzer symVal conVal symProg conProg AngelicContext
+    )
 
 defaultQuickCheckFuzzer ::
-  ( ProgSemantics semObj symProg symVal symCtx,
+  forall symVal conVal symProg conProg semObj.
+  ( ProgSemantics semObj symProg symVal AngelicContext,
     ProgSemantics semObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
     EvaluateSym symProg,
-    SynthesisContext symCtx,
     Show conVal,
     Mergeable symVal,
     Typeable symProg,
@@ -211,17 +217,17 @@ defaultQuickCheckFuzzer ::
   semObj ->
   Gen [conVal] ->
   ([conVal] -> [conVal]) ->
-  QuickCheckFuzzer symProg conProg symVal conVal symCtx
+  SomeVerifier symProg conProg
 defaultQuickCheckFuzzer semObj =
-  defaultQuickCheckFuzzerWithConstraint semObj ()
+  defaultQuickCheckFuzzerWithConstraint @symVal semObj ()
 
 defaultSemQuickCheckFuzzer ::
-  ( ProgSemantics DefaultSem symProg symVal symCtx,
+  forall symVal conVal symProg conProg.
+  ( ProgSemantics DefaultSem symProg symVal AngelicContext,
     ProgSemantics DefaultSem conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
     EvaluateSym symProg,
-    SynthesisContext symCtx,
     Show conVal,
     Mergeable symVal,
     Typeable symProg,
@@ -231,5 +237,5 @@ defaultSemQuickCheckFuzzer ::
   ) =>
   Gen [conVal] ->
   ([conVal] -> [conVal]) ->
-  QuickCheckFuzzer symProg conProg symVal conVal symCtx
-defaultSemQuickCheckFuzzer = defaultQuickCheckFuzzer DefaultSem
+  SomeVerifier symProg conProg
+defaultSemQuickCheckFuzzer = defaultQuickCheckFuzzer @symVal DefaultSem

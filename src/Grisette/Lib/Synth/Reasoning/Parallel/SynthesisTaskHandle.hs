@@ -157,7 +157,7 @@ alterTaskIfPendingImpl ::
   Maybe Int ->
   SynthesisTaskHandle conProg ->
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO ()
 alterTaskIfPendingImpl
   maybeTimeout
@@ -176,7 +176,7 @@ alterTaskIfPending ::
   (ConfigurableSolver config h, Typeable conProg) =>
   SynthesisTaskHandle conProg ->
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO ()
 alterTaskIfPending = alterTaskIfPendingImpl Nothing
 
@@ -184,7 +184,7 @@ alterTaskIfPendingWithTimeout ::
   (ConfigurableSolver config h, Typeable conProg) =>
   SynthesisTaskHandle conProg ->
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   Int ->
   IO ()
 alterTaskIfPendingWithTimeout handle config task timeout =

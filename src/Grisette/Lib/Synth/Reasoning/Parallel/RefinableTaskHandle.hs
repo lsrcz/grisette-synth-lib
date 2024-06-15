@@ -82,7 +82,7 @@ data RefinableTaskHandle conProg where
   RefinableTaskHandle ::
     (Solver solver) =>
     { _initialThreadHandleId :: Int,
-      _initialSynthesisTask :: SynthesisTask conProg,
+      _initialSynthesisTask :: SynthesisTask symProg conProg,
       _underlyingHandles ::
         TVar [ThreadHandle ([VerificationCex], SynthesisResult conProg)],
       _maxSucceedIndex :: TVar Int,

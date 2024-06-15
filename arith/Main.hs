@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main (main) where
 
@@ -7,19 +8,17 @@ import Arith (OpCode (Minus, Mul, Plus))
 import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
 import qualified Data.Text.Lazy as TL
 import Grisette (GPretty (gpretty), SymInteger, precise, z3)
-import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
+import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
-  ( QuickCheckFuzzer,
-    defaultSemQuickCheckFuzzer,
+  ( defaultSemQuickCheckFuzzer,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SomeVerifier (SomeVerifier),
-    SynthesisResult (SynthesisSuccess),
+  ( SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
         synthesisTaskSymProg,
@@ -72,16 +71,14 @@ gen = vectorOf 2 arbitrary
 
 main :: IO ()
 main = do
-  let verifier =
-        defaultSemQuickCheckFuzzer gen spec ::
-          QuickCheckFuzzer Sketch ConProg SymInteger Integer AngelicContext
-  let task =
-        SynthesisTask
-          { synthesisTaskVerifiers = [SomeVerifier verifier],
-            synthesisTaskSymProg = sketch
-          }
   print sketch
-  r <- runSynthesisTask (precise z3) task
+  r <-
+    runSynthesisTask (precise z3) $
+      SynthesisTask
+        { synthesisTaskVerifiers =
+            [defaultSemQuickCheckFuzzer @SymInteger gen spec],
+          synthesisTaskSymProg = sketch
+        }
   case r of
     SynthesisSuccess (prog :: ConProg) -> do
       -- def test(x: int, y: int):

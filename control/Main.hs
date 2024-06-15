@@ -158,7 +158,7 @@ main = do
             quickCheckFuzzerGenerators = [gen],
             quickCheckFuzzerSpec = (,EqMatcher) . spec
           } ::
-          QuickCheckFuzzer Sketch ConProg SymVal ConVal AngelicContext
+          QuickCheckFuzzer SymVal ConVal Sketch ConProg AngelicContext
   let task =
         SynthesisTask
           { synthesisTaskVerifiers = [SomeVerifier verifier],

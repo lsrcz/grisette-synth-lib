@@ -127,7 +127,7 @@ data SomeVerifier symProg conProg where
     verifier ->
     SomeVerifier symProg conProg
 
-data SynthesisTask conProg where
+data SynthesisTask symProg conProg where
   SynthesisTask ::
     forall symProg conProg.
     ( EvaluateSym symProg,
@@ -137,7 +137,7 @@ data SynthesisTask conProg where
     { synthesisTaskVerifiers :: [SomeVerifier symProg conProg],
       synthesisTaskSymProg :: symProg
     } ->
-    SynthesisTask conProg
+    SynthesisTask symProg conProg
 
 data SynthesisMinimalCostTask conProg where
   SynthesisMinimalCostTask ::
@@ -266,15 +266,14 @@ solverRunSynthesisMinimalCostTaskExtractCex
 runSynthesisTask ::
   (ConfigurableSolver config h) =>
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO (SynthesisResult conProg)
 runSynthesisTask config task = snd <$> runSynthesisTaskExtractCex config task
 
 runSynthesisTaskExtractCex ::
-  forall config h conProg.
   (ConfigurableSolver config h) =>
   config ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO ([VerificationCex], SynthesisResult conProg)
 runSynthesisTaskExtractCex config task = withSolver config $ \solver ->
   solverRunRefinableSynthesisTaskExtractCex solver task
@@ -282,16 +281,15 @@ runSynthesisTaskExtractCex config task = withSolver config $ \solver ->
 solverRunRefinableSynthesisTask ::
   (Solver solver) =>
   solver ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO (SynthesisResult conProg)
 solverRunRefinableSynthesisTask solver task =
   snd <$> solverRunRefinableSynthesisTaskExtractCex solver task
 
 solverRunRefinableSynthesisTaskExtractCex ::
-  forall solver conProg.
   (Solver solver) =>
   solver ->
-  SynthesisTask conProg ->
+  SynthesisTask symProg conProg ->
   IO ([VerificationCex], SynthesisResult conProg)
 solverRunRefinableSynthesisTaskExtractCex
   solver
