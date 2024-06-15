@@ -1,32 +1,38 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Arith (OpCode (..)) where
 
-import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvaluateSym,
     GPretty (gpretty),
     Mergeable,
-    ToCon,
+    deriveAllGrisetteExcept,
     mrgReturn,
   )
-import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics
   ( DefaultSem,
     OpSemantics (applyOp),
+    pureBinaryOp,
+    pureUnaryOp,
   )
 import Grisette.Lib.Synth.Operator.OpTyping
-  ( DefaultType (DefaultType),
+  ( DefaultType,
     OpTyping (typeOp),
+    binaryDefaultType,
     simpleTyping,
+    unaryDefaultType,
   )
 import Grisette.Lib.Synth.Program.Concrete
   ( OpPretty (describeArguments),
@@ -36,8 +42,6 @@ import Grisette.Lib.Synth.Program.SubProg
   ( HasAnyPathSubProgs (getAnyPathSubProgs),
     HasSubProgs (getSubProgs),
   )
-import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
-import Grisette.Lib.Synth.Util.Show (showText)
 
 -- * Operators
 
@@ -47,8 +51,8 @@ data OpCode
   | Mul
   | Minus
   | UMinus
-  deriving (Show, Generic)
-  deriving (EvaluateSym, Mergeable, ToCon OpCode) via (Default OpCode)
+
+deriveAllGrisetteExcept ''OpCode [''GPretty]
 
 -- * Semantics and typing.
 
@@ -71,12 +75,10 @@ instance
   (MonadContext ctx, Num a, Mergeable a) =>
   OpSemantics DefaultSem OpCode a ctx
   where
-  applyOp _ Plus [x, y] = mrgReturn [x + y]
-  applyOp _ Mul [x, y] = mrgReturn [x * y]
-  applyOp _ Minus [x, y] = mrgReturn [x - y]
-  applyOp _ UMinus [x] = mrgReturn [x]
-  applyOp _ op _ =
-    mrgThrowError $ "Invalid number of arguments to operator " <> showText op
+  applyOp _ Plus = pureBinaryOp "Plus" (+)
+  applyOp _ Mul = pureBinaryOp "Mul" (*)
+  applyOp _ Minus = pureBinaryOp "Minus" (-)
+  applyOp _ UMinus = pureUnaryOp "UMinus" negate
 
 -- | The component encoding
 -- (https://ieeexplore.ieee.org/abstract/document/6062089) needs to generate
@@ -87,11 +89,11 @@ instance
 -- 'DefaultType'. It can be used to generate intermediate symbolic integers
 -- along with the 'DefaultSem'.
 instance (MonadContext ctx) => OpTyping OpCode DefaultType ctx where
-  typeOp = simpleTyping $ \case
-    Plus -> TypeSignature [DefaultType, DefaultType] [DefaultType]
-    Mul -> TypeSignature [DefaultType, DefaultType] [DefaultType]
-    Minus -> TypeSignature [DefaultType, DefaultType] [DefaultType]
-    UMinus -> TypeSignature [DefaultType] [DefaultType]
+  typeOp = simpleTyping $ \op ->
+    if
+      | op `elem` [Plus, Mul, Minus] -> binaryDefaultType
+      | op == UMinus -> unaryDefaultType
+      | otherwise -> error "If fall through"
 
 -- Pretty printing
 instance GPretty OpCode where

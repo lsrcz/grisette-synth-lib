@@ -19,6 +19,9 @@ module Grisette.Lib.Synth.Operator.OpTyping
     symOpMaximumArgNum,
     symOpMaximumResNum,
     DefaultType (DefaultType),
+    unaryDefaultType,
+    binaryDefaultType,
+    ternaryDefaultType,
   )
 where
 
@@ -94,3 +97,13 @@ instance GPretty DefaultType where
 
 instance (Mergeable a, GenSym () a) => GenSym DefaultType a where
   fresh _ = fresh ()
+
+unaryDefaultType :: TypeSignature DefaultType
+unaryDefaultType = TypeSignature [DefaultType] [DefaultType]
+
+binaryDefaultType :: TypeSignature DefaultType
+binaryDefaultType = TypeSignature [DefaultType, DefaultType] [DefaultType]
+
+ternaryDefaultType :: TypeSignature DefaultType
+ternaryDefaultType =
+  TypeSignature [DefaultType, DefaultType, DefaultType] [DefaultType]
