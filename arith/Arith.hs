@@ -89,11 +89,11 @@ instance
 -- 'DefaultType'. It can be used to generate intermediate symbolic integers
 -- along with the 'DefaultSem'.
 instance (MonadContext ctx) => OpTyping OpCode DefaultType ctx where
-  typeOp = simpleTyping $ \op ->
-    if
-      | op `elem` [Plus, Mul, Minus] -> binaryDefaultType
-      | op == UMinus -> unaryDefaultType
-      | otherwise -> error "If fall through"
+  typeOp = simpleTyping $ \case
+    Plus -> binaryDefaultType
+    Mul -> binaryDefaultType
+    Minus -> binaryDefaultType
+    UMinus -> unaryDefaultType
 
 -- Pretty printing
 instance GPretty OpCode where
