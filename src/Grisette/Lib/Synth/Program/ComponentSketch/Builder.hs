@@ -18,6 +18,7 @@ module Grisette.Lib.Synth.Program.ComponentSketch.Builder
     freshStmts',
     MkProg (..),
     MkFreshProg (..),
+    mkSimpleFreshProg,
     fromConcrete,
     mkSketch,
     mkSimpleSketch,
@@ -176,6 +177,23 @@ instance
 class MkFreshProg prog stmt op ty | prog -> stmt op ty where
   mkFreshProg :: T.Text -> [ty] -> [Fresh [stmt]] -> [ty] -> Fresh prog
 
+mkSimpleFreshProg ::
+  forall prog op ty symVarId.
+  ( MkFreshProg prog (Stmt op symVarId) op ty,
+    OpTyping op ty SymbolicContext,
+    GenSymSimple () symVarId
+  ) =>
+  T.Text ->
+  [ty] ->
+  [op] ->
+  [ty] ->
+  Fresh prog
+mkSimpleFreshProg name argTypes ops =
+  mkFreshProg
+    name
+    argTypes
+    (simpleFreshStmt <$> ops :: [Fresh [Stmt op symVarId]])
+
 instance
   (GenSymSimple () symVarId) =>
   MkFreshProg (Prog op symVarId ty) (Stmt op symVarId) op ty
@@ -239,8 +257,4 @@ mkSimpleSketch ::
   prog
 mkSimpleSketch name argTypes ops retTypes =
   flip runFresh (identifier name) $
-    mkFreshProg
-      name
-      argTypes
-      (simpleFreshStmt <$> ops :: [Fresh [Stmt op symVarId]])
-      retTypes
+    mkSimpleFreshProg name argTypes ops retTypes

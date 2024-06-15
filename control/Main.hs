@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main (main) where
 
@@ -13,31 +13,18 @@ import Grisette
     SymBool,
     SymInteger,
     precise,
-    runFresh,
     z3,
   )
-import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
+import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.ProgConstraints
-  ( WithConstraints (WithConstraints),
-  )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
-  ( QuickCheckFuzzer
-      ( QuickCheckFuzzer,
-        quickCheckFuzzerConSemantics,
-        quickCheckFuzzerGenerators,
-        quickCheckFuzzerMaxTests,
-        quickCheckFuzzerSpec,
-        quickCheckFuzzerSymSemantics
-      ),
+  ( defaultSemQuickCheckFuzzer,
   )
-import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher))
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SomeVerifier (SomeVerifier),
-    SynthesisResult (SynthesisSuccess),
+  ( SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
         synthesisSketch,
@@ -103,38 +90,35 @@ conProg = Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
 
 trueBranchSketch :: Fresh Sketch
 trueBranchSketch =
-  Component.mkFreshProg
+  Component.mkSimpleFreshProg
     "trueBranch"
     [IntType, IntType]
-    [ Component.simpleFreshStmt S.Plus,
-      Component.simpleFreshStmt S.Minus
+    [ S.Plus,
+      S.Minus
     ]
     [IntType]
 
 falseBranchSketch :: Fresh Sketch
 falseBranchSketch =
-  Component.mkFreshProg
+  Component.mkSimpleFreshProg
     "falseBranch"
     [IntType, IntType]
-    [ Component.simpleFreshStmt S.Plus,
-      Component.simpleFreshStmt S.Minus
-    ]
+    [S.Plus, S.Minus]
     [IntType]
 
 sketch :: Sketch
 sketch =
-  flip runFresh "x" $
-    Component.mkFreshProg
-      "prog"
-      [IntType, IntType]
-      [ Component.simpleFreshStmt S.Plus,
-        Component.simpleFreshStmt S.Plus,
-        Component.simpleFreshStmt S.Equals,
-        Component.freshStmt $ do
-          trueBranch <- trueBranchSketch
-          S.If trueBranch <$> falseBranchSketch
-      ]
-      [IntType]
+  Component.mkSketch
+    "prog"
+    [IntType, IntType]
+    [ Component.simpleFreshStmt S.Plus,
+      Component.simpleFreshStmt S.Plus,
+      Component.simpleFreshStmt S.Equals,
+      Component.freshStmt $ do
+        trueBranch <- trueBranchSketch
+        S.If trueBranch <$> falseBranchSketch
+    ]
+    [IntType]
 
 spec :: [ConVal] -> [ConVal]
 spec [IntValue a, IntValue b] = [IntValue $ if a == b then a + b else a - b]
@@ -150,18 +134,9 @@ main = do
   print a
   let b = runProg DefaultSem conProg [IntValue 1, IntValue 2] :: ConResult
   print b
-  let verifier =
-        QuickCheckFuzzer
-          { quickCheckFuzzerSymSemantics = WithConstraints DefaultSem (),
-            quickCheckFuzzerConSemantics = DefaultSem,
-            quickCheckFuzzerMaxTests = 100,
-            quickCheckFuzzerGenerators = [gen],
-            quickCheckFuzzerSpec = (,EqMatcher) . spec
-          } ::
-          QuickCheckFuzzer SymVal ConVal Sketch ConProg AngelicContext
   let task =
         SynthesisTask
-          { synthesisVerifiers = [SomeVerifier verifier],
+          { synthesisVerifiers = [defaultSemQuickCheckFuzzer @SymVal gen spec],
             synthesisSketch = sketch
           }
   r <- runSynthesisTask (precise z3) task
