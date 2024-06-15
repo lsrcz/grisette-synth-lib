@@ -6,8 +6,9 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Reasoning.Fuzzing
   ( fuzzingTestProg,
@@ -48,13 +49,52 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     VerificationCex (VerificationCex),
   )
 import Test.QuickCheck.Counterexamples
-  ( Args (chatty, maxSuccess),
+  ( Args (chatty),
     Gen,
+    PropertyOf,
+    Testable (Counterexample),
     forAll,
     quickCheckWith,
     stdArgs,
+    withMaxSuccess,
     type (:&:) ((:&:)),
   )
+
+fuzzingTestProg' ::
+  ( Matcher matcher Bool conVal,
+    Show conVal,
+    Testable prop,
+    Counterexample prop ~ ([conVal] :&: ())
+  ) =>
+  prop ->
+  ([conVal] -> ([conVal], matcher)) ->
+  IO (Maybe (IOPair conVal, matcher))
+fuzzingTestProg' prop spec = do
+  maybeCex <- quickCheckWith stdArgs {chatty = False} prop
+  case maybeCex of
+    Nothing -> return Nothing
+    Just (cex :&: _) -> do
+      let (outputs, matcher) = spec cex
+      return $ Just (IOPair cex outputs, matcher)
+
+propertyWithMatcher ::
+  ( Matcher matcher Bool conVal,
+    Show conVal,
+    ProgSemantics conSemObj conProg conVal ConcreteContext
+  ) =>
+  Gen [conVal] ->
+  ([conVal] -> ([conVal], matcher)) ->
+  Int ->
+  conSemObj ->
+  conProg ->
+  PropertyOf ([conVal] :&: ())
+propertyWithMatcher gen spec maxTests sem prog = forAll gen $ \inputs ->
+  withMaxSuccess maxTests $
+    let (expectedOutputs, matcher) = spec inputs
+     in case runProg sem prog inputs of
+          Left _ -> False
+          Right actualOutputs ->
+            match matcher actualOutputs expectedOutputs
 
 fuzzingTestProg ::
   ( Matcher matcher Bool conVal,
@@ -67,22 +107,8 @@ fuzzingTestProg ::
   conSemObj ->
   conProg ->
   IO (Maybe (IOPair conVal, matcher))
-fuzzingTestProg gen spec maxTests sem prog = do
-  maybeCex <-
-    quickCheckWith
-      stdArgs {maxSuccess = maxTests, chatty = False}
-      ( forAll gen $ \inputs ->
-          let (expectedOutputs, matcher) = spec inputs
-           in case runProg sem prog inputs of
-                Left _ -> False
-                Right actualOutputs ->
-                  match matcher actualOutputs expectedOutputs
-      )
-  case maybeCex of
-    Nothing -> return Nothing
-    Just (cex :&: _) -> do
-      let (outputs, matcher) = spec cex
-      return $ Just (IOPair cex outputs, matcher)
+fuzzingTestProg gen spec maxTests sem prog =
+  fuzzingTestProg' (propertyWithMatcher gen spec maxTests sem prog) spec
 
 fuzzingTestSymProgWithModel ::
   forall conVal conProg symProg matcher conSemObj p.
