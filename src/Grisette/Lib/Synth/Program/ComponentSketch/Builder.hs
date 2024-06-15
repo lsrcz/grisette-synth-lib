@@ -19,6 +19,7 @@ module Grisette.Lib.Synth.Program.ComponentSketch.Builder
     MkProg (..),
     MkFreshProg (..),
     fromConcrete,
+    mkSketch,
   )
 where
 
@@ -31,6 +32,8 @@ import Grisette
     Mergeable,
     Solvable (con),
     ToSym (toSym),
+    identifier,
+    runFresh,
   )
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Operator.OpTyping
@@ -209,3 +212,15 @@ fromConcrete (Concrete.Prog name argList stmtList resList) = do
             return $ ProgRes freshId (toSym ty)
         )
         resList
+
+mkSketch ::
+  forall prog stmt op ty.
+  (MkFreshProg prog stmt op ty) =>
+  T.Text ->
+  [ty] ->
+  [Fresh [stmt]] ->
+  [ty] ->
+  prog
+mkSketch name argTypes stmts retTypes =
+  flip runFresh (identifier name) $
+    mkFreshProg name argTypes stmts retTypes
