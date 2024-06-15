@@ -40,8 +40,8 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
-        synthesisTaskSymProg,
-        synthesisTaskVerifiers
+        synthesisSketch,
+        synthesisVerifiers
       ),
     runSynthesisTask,
   )
@@ -161,8 +161,8 @@ main = do
           QuickCheckFuzzer SymVal ConVal Sketch ConProg AngelicContext
   let task =
         SynthesisTask
-          { synthesisTaskVerifiers = [SomeVerifier verifier],
-            synthesisTaskSymProg = sketch
+          { synthesisVerifiers = [SomeVerifier verifier],
+            synthesisSketch = sketch
           }
   r <- runSynthesisTask (precise z3) task
   case r of

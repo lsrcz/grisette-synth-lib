@@ -134,8 +134,8 @@ data SynthesisTask symProg conProg where
       ToCon symProg conProg,
       Typeable symProg
     ) =>
-    { synthesisTaskVerifiers :: [SomeVerifier symProg conProg],
-      synthesisTaskSymProg :: symProg
+    { synthesisVerifiers :: [SomeVerifier symProg conProg],
+      synthesisSketch :: symProg
     } ->
     SynthesisTask symProg conProg
 

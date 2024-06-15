@@ -71,8 +71,8 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
-        synthesisTaskSymProg,
-        synthesisTaskVerifiers
+        synthesisSketch,
+        synthesisVerifiers
       ),
     runSynthesisMinimalCostTask,
     runSynthesisTask,
@@ -280,8 +280,8 @@ task ::
   SynthesisTask SymProg ConProg
 task spec gen sketch =
   SynthesisTask
-    { synthesisTaskVerifiers = [SomeVerifier $ verifier spec gen],
-      synthesisTaskSymProg = sketch
+    { synthesisVerifiers = [SomeVerifier $ verifier spec gen],
+      synthesisSketch = sketch
     }
 
 componentSketchTest :: Test

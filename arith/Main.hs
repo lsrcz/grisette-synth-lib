@@ -21,8 +21,8 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
-        synthesisTaskSymProg,
-        synthesisTaskVerifiers
+        synthesisSketch,
+        synthesisVerifiers
       ),
     runSynthesisTask,
   )
@@ -75,9 +75,9 @@ main = do
   r <-
     runSynthesisTask (precise z3) $
       SynthesisTask
-        { synthesisTaskVerifiers =
+        { synthesisVerifiers =
             [defaultSemQuickCheckFuzzer @SymInteger gen spec],
-          synthesisTaskSymProg = sketch
+          synthesisSketch = sketch
         }
   case r of
     SynthesisSuccess (prog :: ConProg) -> do
