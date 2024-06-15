@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 
 module Main (main) where
 
@@ -13,21 +12,11 @@ import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.ProgConstraints
-  ( WithConstraints (WithConstraints),
-  )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
-  ( QuickCheckFuzzer
-      ( QuickCheckFuzzer,
-        quickCheckFuzzerConSemantics,
-        quickCheckFuzzerGenerators,
-        quickCheckFuzzerMaxTests,
-        quickCheckFuzzerSpec,
-        quickCheckFuzzerSymSemantics
-      ),
+  ( QuickCheckFuzzer,
+    defaultSemQuickCheckFuzzer,
   )
-import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher))
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SomeVerifier (SomeVerifier),
     SynthesisResult (SynthesisSuccess),
@@ -84,13 +73,7 @@ gen = vectorOf 2 arbitrary
 main :: IO ()
 main = do
   let verifier =
-        QuickCheckFuzzer
-          { quickCheckFuzzerSymSemantics = WithConstraints DefaultSem (),
-            quickCheckFuzzerConSemantics = DefaultSem,
-            quickCheckFuzzerMaxTests = 100,
-            quickCheckFuzzerGenerators = [gen],
-            quickCheckFuzzerSpec = (,EqMatcher) . spec
-          } ::
+        defaultSemQuickCheckFuzzer gen spec ::
           QuickCheckFuzzer Sketch ConProg SymInteger Integer AngelicContext
   let task =
         SynthesisTask
