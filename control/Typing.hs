@@ -23,6 +23,7 @@ import Grisette
   ( Default (Default),
     EvaluateSym,
     GPretty (gpretty),
+    GenSym (fresh),
     GenSymSimple (simpleFresh),
     Mergeable,
     ToCon,
@@ -30,15 +31,11 @@ import Grisette
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Program.ComponentSketch
-  ( GenIntermediate (genIntermediate),
-  )
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
-import Semantics (Sem)
-import Value (SymValue, ValueBuilder (mkBool, mkInt))
+import Value (Value, ValueBuilder (mkBool, mkInt))
 
 data Type = IntType | BoolType
   deriving (Show, Eq, Generic)
@@ -78,7 +75,7 @@ instance
     GenSymSimple () intVal,
     GenSymSimple () boolVal
   ) =>
-  GenIntermediate Sem Type (SymValue intVal boolVal)
+  GenSym Type (Value intVal boolVal)
   where
-  genIntermediate _ IntType = mkInt <$> simpleFresh ()
-  genIntermediate _ BoolType = mkBool <$> simpleFresh ()
+  fresh IntType = mkInt <$> simpleFresh ()
+  fresh BoolType = mkBool <$> simpleFresh ()

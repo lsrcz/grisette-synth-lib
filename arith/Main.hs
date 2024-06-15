@@ -4,11 +4,13 @@
 
 module Main (main) where
 
-import Arith (OpCode (Minus, Mul, Plus), OpType (IntegerType), Sem (Sem))
+import Arith (OpCode (Minus, Mul, Plus))
 import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
 import qualified Data.Text.Lazy as TL
 import Grisette (GPretty (gpretty), SymInteger, precise, runFresh, z3)
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
+import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
+import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
@@ -38,9 +40,9 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   )
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, vectorOf)
 
-type ConProg = Concrete.Prog OpCode Integer OpType
+type ConProg = Concrete.Prog OpCode Integer DefaultType
 
-type Sketch = Component.Prog OpCode SymInteger OpType
+type Sketch = Component.Prog OpCode SymInteger DefaultType
 
 -- The sketch is currently all manually constructed for the purpose of showing
 -- the structure of a sketch. The symbolic constants are assigned with unique
@@ -55,7 +57,7 @@ sketch =
       -- should make sure that the programs has a unique name.
       "test"
       -- The types of the arguments to the program.
-      [IntegerType, IntegerType]
+      [DefaultType, DefaultType]
       -- The components of the program. Each component is a statement.
       --
       -- The synthesizer could
@@ -67,7 +69,7 @@ sketch =
         Component.simpleFreshStmt Plus
       ]
       -- The program result type.
-      [IntegerType]
+      [DefaultType]
 
 -- The specification specifies the expected behavior. Here, we want to synthesis
 -- a program that computes the expression a * (a + b) - b.
@@ -84,8 +86,8 @@ main :: IO ()
 main = do
   let verifier =
         QuickCheckFuzzer
-          { quickCheckFuzzerSymSemantics = WithConstraints Sem (),
-            quickCheckFuzzerConSemantics = Sem,
+          { quickCheckFuzzerSymSemantics = WithConstraints DefaultSem (),
+            quickCheckFuzzerConSemantics = DefaultSem,
             quickCheckFuzzerMaxTests = 100,
             quickCheckFuzzerGenerators = [gen],
             quickCheckFuzzerSpec = (,EqMatcher) . spec
@@ -109,5 +111,5 @@ main = do
       writeFile "/tmp/arith.dot" $ TL.unpack $ renderDot $ toDot prog
       let input = [5, 20]
       print $ spec input
-      print (runProg Sem prog input :: ConcreteContext [Integer])
+      print (runProg DefaultSem prog input :: ConcreteContext [Integer])
     _ -> print r

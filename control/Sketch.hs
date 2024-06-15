@@ -19,7 +19,7 @@ import Grisette
     ToCon,
   )
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
-import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem, OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
   )
@@ -27,7 +27,6 @@ import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import Grisette.Lib.Synth.VarId (RelatedVarId, SymbolicVarId)
 import Semantics
   ( HasSemantics,
-    Sem,
     applyEquals,
     applyIf,
     applyIntConst,
@@ -74,7 +73,7 @@ instance
     GenSymSimple () intVal,
     GenSymSimple () boolVal
   ) =>
-  OpSemantics Sem (Op varId intVal) (SymValue intVal boolVal) ctx
+  OpSemantics DefaultSem (Op varId intVal) (SymValue intVal boolVal) ctx
   where
   applyOp _ Plus = applyPlus
   applyOp _ Equals = applyEquals

@@ -17,6 +17,7 @@ import Grisette
     z3,
   )
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
+import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
@@ -44,7 +45,6 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
       ),
     runSynthesisTask,
   )
-import Semantics (Sem (Sem))
 import qualified Sketch as S
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, vectorOf)
 import Typing (Type (IntType))
@@ -146,14 +146,14 @@ gen = vectorOf 2 $ IntValue <$> arbitrary
 main :: IO ()
 main = do
   print $ gpretty conProg
-  let a = runProg Sem conProg [IntValue 2, IntValue 2] :: ConResult
+  let a = runProg DefaultSem conProg [IntValue 2, IntValue 2] :: ConResult
   print a
-  let b = runProg Sem conProg [IntValue 1, IntValue 2] :: ConResult
+  let b = runProg DefaultSem conProg [IntValue 1, IntValue 2] :: ConResult
   print b
   let verifier =
         QuickCheckFuzzer
-          { quickCheckFuzzerSymSemantics = WithConstraints Sem (),
-            quickCheckFuzzerConSemantics = Sem,
+          { quickCheckFuzzerSymSemantics = WithConstraints DefaultSem (),
+            quickCheckFuzzerConSemantics = DefaultSem,
             quickCheckFuzzerMaxTests = 100,
             quickCheckFuzzerGenerators = [gen],
             quickCheckFuzzerSpec = (,EqMatcher) . spec
@@ -170,7 +170,7 @@ main = do
       print $ gpretty prog
       writeFile "/tmp/control.dot" $ TL.unpack $ renderDot $ toDot prog
       print $ spec [IntValue 5, IntValue 5]
-      print (runProg Sem prog [IntValue 5, IntValue 5] :: ConResult)
+      print (runProg DefaultSem prog [IntValue 5, IntValue 5] :: ConResult)
       print $ spec [IntValue 5, IntValue 4]
-      print (runProg Sem prog [IntValue 5, IntValue 4] :: ConResult)
+      print (runProg DefaultSem prog [IntValue 5, IntValue 4] :: ConResult)
     _ -> print r

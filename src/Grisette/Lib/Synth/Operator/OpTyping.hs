@@ -1,10 +1,16 @@
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Operator.OpTyping
@@ -12,16 +18,21 @@ module Grisette.Lib.Synth.Operator.OpTyping
     simpleTyping,
     symOpMaximumArgNum,
     symOpMaximumResNum,
+    DefaultType (DefaultType),
   )
 where
 
 import Control.Monad.Except (runExceptT)
 import Grisette
-  ( Mergeable (rootStrategy),
+  ( Default (Default),
+    GPretty (gpretty),
+    GenSym (fresh),
+    Mergeable (rootStrategy),
     MergingStrategy (SimpleStrategy),
     MonadUnion,
     SimpleMergeable (mrgIte),
     UnionM,
+    deriveAllGrisetteExcept,
     liftUnionM,
     mrgFmap,
     mrgReturn,
@@ -73,3 +84,13 @@ symOpMaximumResNum op =
     case ty of
       Left _ -> return 0 :: UnionM Int
       Right (TypeSignature _ resTypes) -> return $ length resTypes
+
+data DefaultType = DefaultType
+
+deriveAllGrisetteExcept ''DefaultType [''GPretty]
+
+instance GPretty DefaultType where
+  gpretty _ = "default"
+
+instance (Mergeable a, GenSym () a) => GenSym DefaultType a where
+  fresh _ = fresh ()

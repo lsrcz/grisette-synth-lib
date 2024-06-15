@@ -6,34 +6,30 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Arith
-  ( OpCode (..),
-    Sem (..),
-    OpType (..),
-  )
-where
+module Arith (OpCode (..)) where
 
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
     EvaluateSym,
     GPretty (gpretty),
-    GenSymSimple (simpleFresh),
     Mergeable,
-    SymInteger,
     ToCon,
     mrgReturn,
   )
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp), simpleTyping)
-import Grisette.Lib.Synth.Program.ComponentSketch
-  ( GenIntermediate (genIntermediate),
+import Grisette.Lib.Synth.Operator.OpSemantics
+  ( DefaultSem,
+    OpSemantics (applyOp),
+  )
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( DefaultType (DefaultType),
+    OpTyping (typeOp),
+    simpleTyping,
   )
 import Grisette.Lib.Synth.Program.Concrete
   ( OpPretty (describeArguments),
-    PrefixByType (prefixByType),
   )
 import Grisette.Lib.Synth.Program.NullProg (NullProg)
 import Grisette.Lib.Synth.Program.SubProg
@@ -56,14 +52,6 @@ data OpCode
 
 -- * Semantics and typing.
 
--- | We use the type information for generating the intermediate values for the
--- synthesizer.
-
--- | A semantics object. You may use different semantics objects to choose
--- different semantics of the operators. For now, we just define a simple unit
--- object that does not carry any information.
-data Sem = Sem
-
 -- | The semantics of the operators are given with the 'OpSemantics' type class.
 -- The ctx here is the context for the evaluation. It is a monadic context that
 -- supports error handling and may support merging of multiple paths and fresh
@@ -73,9 +61,15 @@ data Sem = Sem
 -- running a program concretely, while an 'AngelicContext' is for running a
 -- program symbolically, with the introduction of angelic variables. To use the
 -- component encoding for synthesis, you need to use the 'AngelicContext'.
+--
+-- The 'DefaultSem' is a predefined semantics object. If you don't need to
+-- parameterize the semantics, you can use this type. It is also used by the
+-- component encoding to generate intermediate values. With 'DefaultSem' and
+-- 'DefaultType' (see below), the system is able to resolve whether it can
+-- generate intermediate values based on a reasonable default behavior.
 instance
   (MonadContext ctx, Num a, Mergeable a) =>
-  OpSemantics Sem OpCode a ctx
+  OpSemantics DefaultSem OpCode a ctx
   where
   applyOp _ Plus [x, y] = mrgReturn [x + y]
   applyOp _ Mul [x, y] = mrgReturn [x * y]
@@ -84,31 +78,22 @@ instance
   applyOp _ op _ =
     mrgThrowError $ "Invalid number of arguments to operator " <> showText op
 
--- | Here we only have one type, the integer type. The component encoding
+-- | The component encoding
 -- (https://ieeexplore.ieee.org/abstract/document/6062089) needs to generate
--- intermediate values for the inputs and outputs of the operators. We use this
--- type info for that generation.
-data OpType = IntegerType
-  deriving (Show, Eq, Generic)
-  deriving (Mergeable, EvaluateSym, ToCon OpType) via (Default OpType)
-
-instance (MonadContext ctx) => OpTyping OpCode OpType ctx where
+-- intermediate values for the inputs and outputs of the operators. We use type
+-- info for that generation.
+--
+-- Since here we only have one type, the integer type, we can use the
+-- 'DefaultType'. It can be used to generate intermediate symbolic integers
+-- along with the 'DefaultSem'.
+instance (MonadContext ctx) => OpTyping OpCode DefaultType ctx where
   typeOp = simpleTyping $ \case
-    Plus -> TypeSignature [IntegerType, IntegerType] [IntegerType]
-    Mul -> TypeSignature [IntegerType, IntegerType] [IntegerType]
-    Minus -> TypeSignature [IntegerType, IntegerType] [IntegerType]
-    UMinus -> TypeSignature [IntegerType] [IntegerType]
-
--- | Here, for generating `SymInteger`, we just generate a fresh variable using
--- `simpleFresh` provided by Grisette.
-instance GenIntermediate Sem OpType SymInteger where
-  genIntermediate _ IntegerType = simpleFresh ()
+    Plus -> TypeSignature [DefaultType, DefaultType] [DefaultType]
+    Mul -> TypeSignature [DefaultType, DefaultType] [DefaultType]
+    Minus -> TypeSignature [DefaultType, DefaultType] [DefaultType]
+    UMinus -> TypeSignature [DefaultType] [DefaultType]
 
 -- Pretty printing
-
-instance GPretty OpType where
-  gpretty IntegerType = "int"
-
 instance GPretty OpCode where
   gpretty Plus = "plus"
   gpretty Mul = "mul"
@@ -120,9 +105,6 @@ instance OpPretty OpCode where
   describeArguments Mul = Right [Just "lhs", Just "rhs"]
   describeArguments Minus = Right [Just "lhs", Just "rhs"]
   describeArguments UMinus = Right [Nothing]
-
-instance PrefixByType OpType where
-  prefixByType IntegerType = "r"
 
 instance (MonadContext ctx) => HasSubProgs OpCode NullProg ctx where
   getSubProgs _ = mrgReturn []

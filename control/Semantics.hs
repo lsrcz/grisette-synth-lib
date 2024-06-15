@@ -9,7 +9,6 @@
 module Semantics
   ( IfContext (..),
     Equals (..),
-    Sem (..),
     HasSemantics,
     applyPlus,
     applyEquals,
@@ -37,8 +36,6 @@ import Value
   ( ValueBuilder (BoolValType, IntValType, mkBool, mkInt),
     ValueExtractor (getBool, getInt),
   )
-
-data Sem = Sem
 
 intInt2IntOp ::
   (MonadContext ctx, Num i, ValueExtractor val ctx, i ~ IntValType val) =>

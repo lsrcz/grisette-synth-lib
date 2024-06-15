@@ -358,7 +358,6 @@ addProgArgs args =
 genProgResVals ::
   ( SymbolicVarId symVarId,
     Mergeable val,
-    Mergeable ty,
     GenIntermediate sem ty val,
     MonadAngelicContext ctx
   ) =>

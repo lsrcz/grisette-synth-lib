@@ -17,15 +17,18 @@ where
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
+    GenSym (fresh),
     Mergeable,
+    liftUnionM,
   )
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadAngelicContext)
+import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem)
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (argTypes, resTypes),
   )
 
-class (Mergeable val, Mergeable ty) => GenIntermediate sem ty val where
+class (Mergeable val) => GenIntermediate sem ty val where
   genIntermediate :: (MonadAngelicContext ctx) => sem -> ty -> ctx val
 
 genIntermediates ::
@@ -53,3 +56,6 @@ genOpIntermediates _ sem signature = do
   arg <- genIntermediates sem $ argTypes signature
   res <- genIntermediates sem $ resTypes signature
   return $ Intermediates arg res
+
+instance (GenSym ty a) => GenIntermediate DefaultSem ty a where
+  genIntermediate _ ty = fresh ty >>= liftUnionM

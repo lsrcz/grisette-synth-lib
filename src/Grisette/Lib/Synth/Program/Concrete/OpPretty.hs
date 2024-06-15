@@ -27,7 +27,7 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (Default (Default), GPretty (gpretty), Mergeable)
 import Grisette.Lib.Synth.Context (ConcreteContext)
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
+import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType), OpTyping (typeOp))
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Util.Pretty
   ( Doc,
@@ -85,6 +85,9 @@ instance
 
 class PrefixByType ty where
   prefixByType :: ty -> T.Text
+
+instance PrefixByType DefaultType where
+  prefixByType DefaultType = "r"
 
 allPrefixesByTypes ::
   (OpTyping op ty ConcreteContext, PrefixByType ty) =>

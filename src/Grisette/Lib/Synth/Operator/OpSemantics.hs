@@ -2,7 +2,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (..)) where
+module Grisette.Lib.Synth.Operator.OpSemantics
+  ( OpSemantics (..),
+    DefaultSem (..),
+  )
+where
 
 import Grisette (Mergeable, MonadUnion, UnionM, liftUnionM, tryMerge)
 import Grisette.Lib.Synth.Context (MonadContext)
@@ -21,3 +25,5 @@ instance
   applyOp semObj op args = tryMerge $ do
     op' <- liftUnionM op
     applyOp semObj op' args
+
+data DefaultSem = DefaultSem
