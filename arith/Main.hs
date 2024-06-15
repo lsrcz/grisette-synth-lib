@@ -39,7 +39,7 @@ type Sketch = Component.Prog OpCode SymInteger DefaultType
 -- A generator for a sketch with components is under development.
 sketch :: Sketch
 sketch =
-  Component.mkSketch
+  Component.mkSimpleSketch
     -- The name of the program. If your program supports procedure calls, you
     -- should make sure that the programs has a unique name.
     "test"
@@ -51,10 +51,7 @@ sketch =
     -- \* reorder the components, and
     -- \* choose whether or now to disable a component, and
     -- \* choose the arguments of a component.
-    [ Component.simpleFreshStmt Minus,
-      Component.simpleFreshStmt Mul,
-      Component.simpleFreshStmt Plus
-    ]
+    [Minus, Mul, Plus]
     -- The program result type.
     [DefaultType]
 
