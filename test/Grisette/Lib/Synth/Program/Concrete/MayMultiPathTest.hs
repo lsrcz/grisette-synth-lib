@@ -17,7 +17,7 @@ import Grisette
     MonadUnion,
     Solvable (ssym),
     SymBool,
-    UnionM,
+    Union,
     identifier,
     liftToMonadUnion,
     mrgIf,
@@ -45,7 +45,7 @@ data Sem = Sem
 
 data IntType = IntType
 
-mayAddOne :: SymBool -> Int -> UnionM Int
+mayAddOne :: SymBool -> Int -> Union Int
 mayAddOne s x = mrgIf s (return x) (return $ x + 1)
 
 instance

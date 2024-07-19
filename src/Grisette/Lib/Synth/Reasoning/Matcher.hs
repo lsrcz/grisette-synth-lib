@@ -7,14 +7,14 @@ module Grisette.Lib.Synth.Reasoning.Matcher
   )
 where
 
-import Grisette (SEq ((.==)), SymBool)
+import Grisette (SymBool, SymEq ((.==)))
 
 class Matcher matcher bool a where
   match :: matcher -> [a] -> [a] -> bool
 
 data EqMatcher = EqMatcher
 
-instance (SEq a) => Matcher EqMatcher SymBool a where
+instance (SymEq a) => Matcher EqMatcher SymBool a where
   match _ = (.==)
 
 instance (Eq a) => Matcher EqMatcher Bool a where

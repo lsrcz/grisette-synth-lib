@@ -19,9 +19,9 @@ import Grisette
   ( Default (Default),
     Mergeable,
     MonadUnion,
-    SEq,
+    SymEq,
     ToSym,
-    UnionM,
+    Union,
     liftToMonadUnion,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -33,7 +33,7 @@ data Value intVal boolVal
   | BoolValue boolVal
   deriving (Show, Eq, Generic)
   deriving
-    (Mergeable, SEq, ToSym (Value symIntVal symBoolVal))
+    (Mergeable, SymEq, ToSym (Value symIntVal symBoolVal))
     via (Default (Value intVal boolVal))
 
 class (Mergeable val) => ValueBuilder val where
@@ -64,7 +64,7 @@ instance
   mkInt = IntValue
   mkBool = BoolValue
 
-type SymValue intVal boolVal = UnionM (Value intVal boolVal)
+type SymValue intVal boolVal = Union (Value intVal boolVal)
 
 instance
   (Mergeable intVal, Mergeable boolVal) =>

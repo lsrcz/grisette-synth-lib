@@ -20,7 +20,7 @@ import Grisette
     Mergeable,
     MonadFresh,
     MonadUnion,
-    SEq ((.==)),
+    SymEq ((.==)),
     SimpleMergeable,
     Solvable (con),
     SymBool,

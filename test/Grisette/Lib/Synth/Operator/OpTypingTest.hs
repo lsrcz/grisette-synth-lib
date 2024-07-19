@@ -2,7 +2,7 @@
 
 module Grisette.Lib.Synth.Operator.OpTypingTest (opTypingTest) where
 
-import Grisette (UnionM, mrgIf, mrgReturn)
+import Grisette (Union, mrgIf, mrgReturn)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
@@ -26,10 +26,10 @@ opTypingTest =
         let expected =
               Right $ TypeSignature [IntType, IntType] [IntType]
         typeOp Add @?= expected,
-      testCase "UnionM OpTyping" $ do
+      testCase "Union OpTyping" $ do
         let op =
               mrgIf "a" (mrgReturn Add) (mrgReturn DivMod) ::
-                UnionM TestSemanticsOp
+                Union TestSemanticsOp
         let actual =
               typeOp op :: SymbolicContext (TypeSignature TestSemanticsType)
         let expected =
@@ -43,15 +43,15 @@ opTypingTest =
       testCase "Default SymOpLimits" $ do
         symOpMaximumArgNum Add @?= 2
         symOpMaximumResNum Add @?= 1,
-      testCase "UnionM SymOpLimits" $ do
+      testCase "Union SymOpLimits" $ do
         symOpMaximumArgNum
           ( mrgIf "a" (mrgReturn Add) (mrgReturn Inc) ::
-              UnionM TestSemanticsOp
+              Union TestSemanticsOp
           )
           @?= 2
         symOpMaximumResNum
           ( mrgIf "a" (mrgReturn Add) (mrgReturn DivMod) ::
-              UnionM TestSemanticsOp
+              Union TestSemanticsOp
           )
           @?= 2
     ]

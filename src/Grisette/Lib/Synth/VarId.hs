@@ -10,10 +10,10 @@ where
 
 import Data.Hashable (Hashable)
 import Data.Typeable (Typeable)
-import Grisette (GPretty, GenSymSimple, Mergeable, SOrd, ToCon, ToSym)
+import Grisette (GenSymSimple, Mergeable, PPrint, SymOrd, ToCon, ToSym)
 
 type ConcreteVarId varId =
-  ( GPretty varId,
+  ( PPrint varId,
     Show varId,
     Eq varId,
     Hashable varId,
@@ -26,7 +26,7 @@ type SymbolicVarId varId =
   ( Show varId,
     Eq varId,
     Num varId,
-    SOrd varId,
+    SymOrd varId,
     Mergeable varId,
     Typeable varId,
     GenSymSimple () varId

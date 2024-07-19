@@ -7,8 +7,8 @@
 module Grisette.Lib.Synth.TypeSignature (TypeSignature (..)) where
 
 import GHC.Generics (Generic)
-import Grisette (Default (Default), EvaluateSym, Mergeable)
+import Grisette (Default (Default), EvalSym, Mergeable)
 
 data TypeSignature ty = TypeSignature {argTypes :: [ty], resTypes :: [ty]}
   deriving (Show, Eq, Generic)
-  deriving (EvaluateSym, Mergeable) via (Default (TypeSignature ty))
+  deriving (EvalSym, Mergeable) via (Default (TypeSignature ty))

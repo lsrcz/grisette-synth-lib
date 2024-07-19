@@ -9,9 +9,9 @@ module Grisette.Lib.Synth.Program.SumProg (SumProg (..)) where
 import Control.DeepSeq (NFData)
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
-import Grisette (Default (Default), EvaluateSym, Mergeable, ToCon, ToSym)
+import Grisette (Default (Default), EvalSym, Mergeable, ToCon, ToSym)
 import Grisette.Lib.Synth.Program.Concrete.Program
-  ( ProgGPretty (topologicalGPrettyProg),
+  ( ProgPPrint (topologicalPFormatProg),
     ProgToDot (topologicalProgToDot),
   )
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
@@ -24,7 +24,7 @@ data SumProg l r
   deriving (Eq, Generic)
   deriving anyclass (NFData, Hashable)
   deriving
-    ( EvaluateSym,
+    ( EvalSym,
       Mergeable,
       ToCon (SumProg sl sr),
       ToSym (SumProg cl cr)
@@ -50,9 +50,9 @@ instance (ProgTyping l ty, ProgTyping r ty) => ProgTyping (SumProg l r) ty where
   typeProg (SumProgL l) = typeProg l
   typeProg (SumProgR r) = typeProg r
 
-instance (ProgGPretty l, ProgGPretty r) => ProgGPretty (SumProg l r) where
-  topologicalGPrettyProg (SumProgL l) = topologicalGPrettyProg l
-  topologicalGPrettyProg (SumProgR r) = topologicalGPrettyProg r
+instance (ProgPPrint l, ProgPPrint r) => ProgPPrint (SumProg l r) where
+  topologicalPFormatProg (SumProgL l) = topologicalPFormatProg l
+  topologicalPFormatProg (SumProgR r) = topologicalPFormatProg r
 
 instance (ProgToDot l, ProgToDot r) => ProgToDot (SumProg l r) where
   topologicalProgToDot (SumProgL l) = topologicalProgToDot l

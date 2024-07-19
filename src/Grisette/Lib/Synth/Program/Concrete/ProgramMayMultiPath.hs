@@ -22,7 +22,7 @@ import Grisette
     MergingStrategy (SimpleStrategy, SortedStrategy),
     MonadUnion,
     SimpleMergeable (mrgIte),
-    UnionM,
+    Union,
     liftToMonadUnion,
     merge,
   )
@@ -41,7 +41,7 @@ import Grisette.Lib.Synth.VarId (ConcreteVarId)
 newtype ProgMayMultiPath op varId ty = ProgMayMultiPath (Prog op varId ty)
 
 newtype MayMultiPathEnv varId val
-  = MayMultiPathEnv (HM.HashMap varId (UnionM val))
+  = MayMultiPathEnv (HM.HashMap varId (Union val))
 
 instance
   (ConcreteVarId conVarId, Mergeable val) =>

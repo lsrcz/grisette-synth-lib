@@ -24,13 +24,13 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvaluateSym,
+    EvalSym,
     Mergeable,
     MergingStrategy (NoStrategy, SimpleStrategy, SortedStrategy),
     MonadUnion,
-    SEq ((.==)),
-    SOrd ((.>=)),
     SimpleMergeable (mrgIte),
+    SymEq ((.==)),
+    SymOrd ((.>=)),
     ToCon (toCon),
     ToSym (toSym),
     mrgIf,
@@ -78,7 +78,7 @@ data Stmt op conVarId symVarId = Stmt
     stmtResNum :: symVarId
   }
   deriving (Show, Eq, Generic)
-  deriving (EvaluateSym) via (Default (Stmt op conVarId symVarId))
+  deriving (EvalSym) via (Default (Stmt op conVarId symVarId))
 
 instance
   (ToCon conOp symOp, RelatedVarId conVarId symVarId, Mergeable conOp) =>
@@ -100,7 +100,7 @@ data ProgArg conVarId ty = ProgArg
     progArgType :: ty
   }
   deriving (Show, Eq, Generic)
-  deriving (EvaluateSym) via (Default (ProgArg conVarId ty))
+  deriving (EvalSym) via (Default (ProgArg conVarId ty))
 
 instance
   (ToCon symTy conTy) =>
@@ -116,7 +116,7 @@ data ProgRes symVarId ty = ProgRes
     progResType :: ty
   }
   deriving (Show, Eq, Generic)
-  deriving (EvaluateSym) via (Default (ProgRes symVarId ty))
+  deriving (EvalSym) via (Default (ProgRes symVarId ty))
 
 instance
   (RelatedVarId conVarId symVarId, ToCon symTy conTy) =>
@@ -141,7 +141,7 @@ data Prog op conVarId symVarId ty = Prog
     progResList :: [ProgRes symVarId ty]
   }
   deriving (Show, Eq, Generic)
-  deriving (EvaluateSym) via (Default (Prog op conVarId symVarId ty))
+  deriving (EvalSym) via (Default (Prog op conVarId symVarId ty))
 
 deriving via
   (Default (Concrete.Prog conOp conVarId conTy))

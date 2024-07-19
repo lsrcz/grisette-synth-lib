@@ -29,17 +29,17 @@ import Grisette
     Mergeable,
     MonadFresh,
     MonadUnion,
-    SEq ((.==)),
     SimpleMergeable (mrgIte),
     Solvable (con, isym),
     SymBool,
+    SymEq ((.==)),
     SymWordN,
     ToCon,
     ToSym (toSym),
-    UnionM,
+    Union,
     WordN,
     chooseFresh,
-    liftUnionM,
+    liftUnion,
     mrgIf,
     mrgReturn,
     runFreshT,
@@ -102,7 +102,7 @@ import Test.SymbolicAssertion ((.@?=))
 data Resources = Resources {resource1 :: SymBool, resource2 :: SymBool}
   deriving (Eq, Show, Generic)
   deriving
-    (Mergeable, SEq, SimpleMergeable)
+    (Mergeable, SymEq, SimpleMergeable)
     via (Default Resources)
 
 mkResource1 :: Resources
@@ -243,7 +243,7 @@ instance
   livelinessTypeDefResource LivelinessOp OtherType = mrgReturn Nothing
   livelinessTypeDefResource LivelinessOp AnyType = do
     chosen <- chooseFresh [Just mkResource1, Just mkResource2]
-    liftUnionM chosen
+    liftUnion chosen
 
 data LivelinessTest where
   LivelinessTest ::
@@ -256,16 +256,16 @@ data LivelinessTest where
     } ->
     LivelinessTest
 
-opUse :: UnionM Op
+opUse :: Union Op
 opUse = mrgReturn OpUse
 
-opDef :: UnionM Op
+opDef :: Union Op
 opDef = mrgReturn OpDef
 
-opNone :: UnionM Op
+opNone :: Union Op
 opNone = mrgReturn OpNone
 
-opUseDef :: UnionM Op
+opUseDef :: Union Op
 opUseDef = mrgReturn OpUseDef
 
 livelinessIdentifier :: Identifier -> [T.Text] -> Identifier

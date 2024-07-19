@@ -11,7 +11,7 @@ import Grisette
     LogicalOp ((.||)),
     Solvable (isym),
     SymInteger,
-    UnionM,
+    Union,
     chooseFresh,
     mrgIf,
     mrgReturn,
@@ -97,7 +97,7 @@ builderTest =
       testCase "freshStmt" $ do
         let actual =
               freshStmt (chooseFresh [Add, DivMod]) ::
-                Fresh [Stmt (UnionM TestSemanticsOp) SymInteger]
+                Fresh [Stmt (Union TestSemanticsOp) SymInteger]
         let expected =
               Stmt
                 { stmtOp = mrgIf (isym "x" 0) (return Add) (return DivMod),
@@ -113,7 +113,7 @@ builderTest =
         let actual = do
               precursor <-
                 simpleFreshStmt $ mrgReturn DivMod ::
-                  Fresh [Stmt (UnionM TestSemanticsOp) SymInteger]
+                  Fresh [Stmt (Union TestSemanticsOp) SymInteger]
               precursor2 <- simpleFreshStmt $ mrgReturn DivMod
               freshStmt'
                 (chooseFresh [Add, DivMod])
@@ -137,7 +137,7 @@ builderTest =
         let actual = do
               precursor <-
                 simpleFreshStmt (mrgReturn DivMod) ::
-                  Fresh [Stmt (UnionM TestSemanticsOp) SymInteger]
+                  Fresh [Stmt (Union TestSemanticsOp) SymInteger]
               precursor2 <- simpleFreshStmt (mrgReturn DivMod)
               freshStmts'
                 3

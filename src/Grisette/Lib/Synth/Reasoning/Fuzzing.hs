@@ -23,15 +23,15 @@ where
 import Data.Data (Typeable)
 import Data.Proxy (Proxy (Proxy))
 import Grisette
-  ( EvaluateSym,
+  ( EvalSym,
     Mergeable,
     Model,
-    SEq,
     SymBool,
+    SymEq,
     ToCon,
     ToSym (toSym),
     VerifierResult (CEGISVerifierFoundCex, CEGISVerifierNoCex),
-    evaluateSymToCon,
+    evalSymToCon,
   )
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
@@ -116,7 +116,7 @@ fuzzingTestSymProgWithModel ::
     Show conVal,
     ProgSemantics conSemObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
-    EvaluateSym symProg
+    EvalSym symProg
   ) =>
   Gen [conVal] ->
   ([conVal] -> ([conVal], matcher)) ->
@@ -132,7 +132,7 @@ fuzzingTestSymProgWithModel gen spec maxTests _ sem prog model = do
     spec
     maxTests
     sem
-    (evaluateSymToCon model prog :: conProg)
+    (evalSymToCon model prog :: conProg)
 
 data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
   QuickCheckFuzzer ::
@@ -141,7 +141,7 @@ data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
       ProgSemantics conSemObj conProg conVal ConcreteContext,
       ToCon symProg conProg,
       ToSym conVal symVal,
-      EvaluateSym symProg,
+      EvalSym symProg,
       SynthesisContext symCtx,
       Matcher matcher SymBool symVal,
       Matcher matcher Bool conVal,
@@ -197,13 +197,13 @@ defaultQuickCheckFuzzerWithConstraint ::
     ProgSemantics semObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
-    EvaluateSym symProg,
+    EvalSym symProg,
     Show conVal,
     Mergeable symVal,
     Typeable symProg,
     Typeable semObj,
     Typeable symVal,
-    SEq symVal,
+    SymEq symVal,
     Eq conVal,
     ProgConstraints constObj symProg AngelicContext,
     Typeable constObj
@@ -231,13 +231,13 @@ defaultQuickCheckFuzzer ::
     ProgSemantics semObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
-    EvaluateSym symProg,
+    EvalSym symProg,
     Show conVal,
     Mergeable symVal,
     Typeable symProg,
     Typeable semObj,
     Typeable symVal,
-    SEq symVal,
+    SymEq symVal,
     Eq conVal
   ) =>
   semObj ->
@@ -253,12 +253,12 @@ defaultSemQuickCheckFuzzer ::
     ProgSemantics DefaultSem conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
-    EvaluateSym symProg,
+    EvalSym symProg,
     Show conVal,
     Mergeable symVal,
     Typeable symProg,
     Typeable symVal,
-    SEq symVal,
+    SymEq symVal,
     Eq conVal
   ) =>
   Gen [conVal] ->

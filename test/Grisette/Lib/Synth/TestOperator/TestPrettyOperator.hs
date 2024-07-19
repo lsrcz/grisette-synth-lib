@@ -13,11 +13,11 @@ module Grisette.Lib.Synth.TestOperator.TestPrettyOperator
 where
 
 import GHC.Generics (Generic)
-import Grisette (Default (Default), GPretty (gpretty), Mergeable, mrgReturn)
+import Grisette (Default (Default), Mergeable, PPrint (pformat), mrgReturn)
 import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpPretty (describeArguments, prefixResults),
+  ( OpPPrint (describeArguments, prefixResults),
     PrefixByType (prefixByType),
     Prog (progArgList, progName, progResList),
     ProgArg (progArgType),
@@ -45,10 +45,10 @@ instance (MonadContext ctx) => HasSubProgs TestPrettyExtOp NullProg ctx where
 instance HasAnyPathSubProgs TestPrettyExtOp NullProg where
   getAnyPathSubProgs _ = []
 
-instance GPretty TestPrettyExtOp where
-  gpretty TestPrettyExtOp = "ext"
+instance PPrint TestPrettyExtOp where
+  pformat TestPrettyExtOp = "ext"
 
-instance OpPretty TestPrettyExtOp where
+instance OpPPrint TestPrettyExtOp where
   describeArguments TestPrettyExtOp = Right [Nothing]
 
 instance OpTyping TestPrettyExtOp TestPrettyType ConcreteContext where
@@ -95,16 +95,16 @@ instance OpFlatten TestPrettyOp Int TestPrettyType where
   opForwardedSubProg (PrettyInvokeOp prog) = return $ Just prog
   opForwardedSubProg _ = return Nothing
 
-instance GPretty TestPrettyOp where
-  gpretty PrettyOp0 = "op0"
-  gpretty PrettyOp1 = "op1"
-  gpretty PrettyOp2 = "op2"
-  gpretty PrettyOp2NoDescNoPrefix = "op2NoDescNoPrefix"
-  gpretty (PrettyInvokeOp prog) = "invoke(" <> gpretty (progName prog) <> ")"
-  gpretty (PrettyInvokeExtOp prog) =
-    "invoke_ext(" <> gpretty (progName prog) <> ")"
+instance PPrint TestPrettyOp where
+  pformat PrettyOp0 = "op0"
+  pformat PrettyOp1 = "op1"
+  pformat PrettyOp2 = "op2"
+  pformat PrettyOp2NoDescNoPrefix = "op2NoDescNoPrefix"
+  pformat (PrettyInvokeOp prog) = "invoke(" <> pformat (progName prog) <> ")"
+  pformat (PrettyInvokeExtOp prog) =
+    "invoke_ext(" <> pformat (progName prog) <> ")"
 
-instance OpPretty TestPrettyOp where
+instance OpPPrint TestPrettyOp where
   describeArguments PrettyOp0 = Right []
   describeArguments PrettyOp1 = Right [Just "op1"]
   describeArguments PrettyOp2 = Right [Just "op2'2'0'arg", Nothing]
@@ -119,7 +119,7 @@ instance OpPretty TestPrettyOp where
 
 data TestPrettyType = PrettyType1 | PrettyType2
   deriving (Show, Generic, Eq)
-  deriving (Mergeable, GPretty) via (Default TestPrettyType)
+  deriving (Mergeable, PPrint) via (Default TestPrettyType)
 
 instance PrefixByType TestPrettyType where
   prefixByType PrettyType1 = "t1_"

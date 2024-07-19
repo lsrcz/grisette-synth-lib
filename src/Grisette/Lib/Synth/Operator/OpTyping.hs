@@ -12,6 +12,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (..),
@@ -28,15 +29,15 @@ where
 import Control.Monad.Except (runExceptT)
 import Grisette
   ( Default (Default),
-    GPretty (gpretty),
+    PPrint (pformat),
     GenSym (fresh),
     Mergeable (rootStrategy),
     MergingStrategy (SimpleStrategy),
     MonadUnion,
     SimpleMergeable (mrgIte),
-    UnionM,
-    deriveAllGrisetteExcept,
-    liftUnionM,
+    Union,
+    deriveAllExcept,
+    liftUnion,
     mrgFmap,
     mrgReturn,
     simpleMerge,
@@ -59,9 +60,9 @@ class (MonadContext ctx) => OpTyping op ty ctx | op -> ty where
 
 instance
   (MonadUnion ctx, OpTyping op ty ctx, Mergeable op, Mergeable ty) =>
-  OpTyping (UnionM op) ty ctx
+  OpTyping (Union op) ty ctx
   where
-  typeOp op = tryMerge $ liftUnionM op >>= typeOp
+  typeOp op = tryMerge $ liftUnion op >>= typeOp
 
 newtype MaxAcrossBranches = MaxAcrossBranches {unMaxAcrossBranches :: Int}
 
@@ -77,7 +78,7 @@ symOpMaximumArgNum op =
   unMaxAcrossBranches $ simpleMerge $ mrgFmap MaxAcrossBranches $ do
     ty <- runExceptT $ typeOp op
     case ty of
-      Left _ -> return 0 :: UnionM Int
+      Left _ -> return 0 :: Union Int
       Right (TypeSignature argTypes _) -> return $ length argTypes
 
 symOpMaximumResNum :: (OpTyping op ty SymbolicContext) => op -> Int
@@ -85,15 +86,15 @@ symOpMaximumResNum op =
   unMaxAcrossBranches $ simpleMerge $ mrgFmap MaxAcrossBranches $ do
     ty <- runExceptT $ typeOp op
     case ty of
-      Left _ -> return 0 :: UnionM Int
+      Left _ -> return 0 :: Union Int
       Right (TypeSignature _ resTypes) -> return $ length resTypes
 
 data DefaultType = DefaultType
 
-deriveAllGrisetteExcept ''DefaultType [''GPretty]
+deriveAllExcept ''DefaultType [''PPrint]
 
-instance GPretty DefaultType where
-  gpretty _ = "default"
+instance PPrint DefaultType where
+  pformat _ = "default"
 
 instance (Mergeable a, GenSym () a) => GenSym DefaultType a where
   fresh _ = fresh ()

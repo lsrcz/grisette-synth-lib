@@ -16,7 +16,7 @@ module Grisette.Lib.Synth.Operator.OpSemantics
 where
 
 import qualified Data.Text as T
-import Grisette (Mergeable, MonadUnion, UnionM, liftUnionM, mrgReturn, tryMerge)
+import Grisette (Mergeable, MonadUnion, Union, liftUnion, mrgReturn, tryMerge)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Util.Show (showText)
@@ -93,10 +93,10 @@ instance
     Mergeable op,
     Mergeable val
   ) =>
-  OpSemantics semObj (UnionM op) val ctx
+  OpSemantics semObj (Union op) val ctx
   where
   applyOp semObj op args = tryMerge $ do
-    op' <- liftUnionM op
+    op' <- liftUnion op
     applyOp semObj op' args
 
 data DefaultSem = DefaultSem

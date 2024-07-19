@@ -2,13 +2,13 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Grisette.Lib.Synth.Operator.OpPrettyTest (opPrettyTest) where
+module Grisette.Lib.Synth.Operator.OpPPrintTest (opPPrintTest) where
 
 import Control.Arrow (Arrow (second))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpPrettyError
+  ( OpPPrintError
       ( IncorrectNumberOfArguments,
         IncorrectNumberOfResults,
         RedefinedResult,
@@ -30,33 +30,33 @@ env :: VarIdMap Int
 env = HM.fromList [(0, "x"), (1, "y")]
 
 looselyRenderArguments ::
-  TestPrettyOp -> [Int] -> Either (OpPrettyError Int TestPrettyOp) T.Text
+  TestPrettyOp -> [Int] -> Either (OpPPrintError Int TestPrettyOp) T.Text
 looselyRenderArguments op args =
   renderDoc 80 <$> prettyArguments op args env
 
 compactlyRenderArguments ::
-  TestPrettyOp -> [Int] -> Either (OpPrettyError Int TestPrettyOp) T.Text
+  TestPrettyOp -> [Int] -> Either (OpPPrintError Int TestPrettyOp) T.Text
 compactlyRenderArguments op args =
   renderDoc 1 <$> prettyArguments op args env
 
 looselyRenderResults ::
   TestPrettyOp ->
   [Int] ->
-  Either (OpPrettyError Int TestPrettyOp) (VarIdMap Int, T.Text)
+  Either (OpPPrintError Int TestPrettyOp) (VarIdMap Int, T.Text)
 looselyRenderResults op res =
   second (renderDoc 80) <$> prettyResults op res env
 
 compactlyRenderResults ::
   TestPrettyOp ->
   [Int] ->
-  Either (OpPrettyError Int TestPrettyOp) (VarIdMap Int, T.Text)
+  Either (OpPPrintError Int TestPrettyOp) (VarIdMap Int, T.Text)
 compactlyRenderResults op res =
   second (renderDoc 1) <$> prettyResults op res env
 
-opPrettyTest :: Test
-opPrettyTest =
+opPPrintTest :: Test
+opPPrintTest =
   testGroup
-    "Grisette.Lib.Synth.Operator.OpPretty"
+    "Grisette.Lib.Synth.Operator.OpPPrint"
     [ testGroup
         "prettyArguments"
         [ testGroup

@@ -10,9 +10,9 @@ where
 
 import Grisette
   ( LogicalOp (symNot, (.||)),
-    SEq ((.==)),
     Solvable (con, isym),
     SymBool,
+    SymEq ((.==)),
     SymInteger,
     SymWordN,
     mrgIf,

@@ -21,7 +21,7 @@ where
 
 import Control.Monad.Except (ExceptT, MonadError)
 import qualified Data.Text as T
-import Grisette (FreshT, MonadFresh, MonadUnion, TryMerge, UnionM)
+import Grisette (FreshT, MonadFresh, MonadUnion, TryMerge, Union)
 
 type MonadContext ctx = (MonadError T.Text ctx, TryMerge ctx)
 
@@ -34,8 +34,8 @@ type MonadAngelicContext ctx = (MonadSymbolicContext ctx, MonadFresh ctx)
 type ConcreteContext = Either T.Text
 
 -- | A symbolic context is a context that does multi-path symbolic execution.
-type SymbolicContext = ExceptT T.Text UnionM
+type SymbolicContext = ExceptT T.Text Union
 
 -- | An angelic context is a context that does multi-path symbolic execution
 -- with angelic choices.
-type AngelicContext = FreshT (ExceptT T.Text UnionM)
+type AngelicContext = FreshT (ExceptT T.Text Union)

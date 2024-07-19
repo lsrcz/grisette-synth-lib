@@ -13,8 +13,8 @@ import Grisette
   ( Mergeable,
     MonadUnion,
     PlainUnion (overestimateUnionValues),
-    UnionM,
-    liftUnionM,
+    Union,
+    liftUnion,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 
@@ -28,9 +28,9 @@ instance
     Mergeable subProg,
     Mergeable op
   ) =>
-  HasSubProgs (UnionM op) subProg ctx
+  HasSubProgs (Union op) subProg ctx
   where
-  getSubProgs op = liftUnionM op >>= getSubProgs
+  getSubProgs op = liftUnion op >>= getSubProgs
 
 class HasAnyPathSubProgs op subProg | op -> subProg where
   getAnyPathSubProgs :: op -> [subProg]
@@ -40,7 +40,7 @@ instance
     Mergeable subProg,
     Mergeable op
   ) =>
-  HasAnyPathSubProgs (UnionM op) subProg
+  HasAnyPathSubProgs (Union op) subProg
   where
   getAnyPathSubProgs op =
     concatMap getAnyPathSubProgs (overestimateUnionValues op)

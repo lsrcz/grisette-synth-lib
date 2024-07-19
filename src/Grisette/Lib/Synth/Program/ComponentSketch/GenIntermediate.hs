@@ -19,7 +19,7 @@ import Grisette
   ( Default (Default),
     GenSym (fresh),
     Mergeable,
-    liftUnionM,
+    liftUnion,
   )
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadAngelicContext)
@@ -58,4 +58,4 @@ genOpIntermediates _ sem signature = do
   return $ Intermediates arg res
 
 instance (GenSym ty a) => GenIntermediate DefaultSem ty a where
-  genIntermediate _ ty = fresh ty >>= liftUnionM
+  genIntermediate _ ty = fresh ty >>= liftUnion

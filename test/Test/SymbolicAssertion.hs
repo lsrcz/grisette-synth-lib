@@ -4,15 +4,15 @@ module Test.SymbolicAssertion ((.@?=), symShouldEq) where
 
 import GHC.Stack (HasCallStack)
 import Grisette
-  ( EvaluateSym (evaluateSym),
+  ( EvalSym (evalSym),
     Model,
-    SEq ((./=), (.==)),
+    SymEq ((./=), (.==)),
     precise,
     solve,
     z3,
   )
 
-(.@?=) :: (HasCallStack, Show a, SEq a, EvaluateSym a) => a -> a -> IO ()
+(.@?=) :: (HasCallStack, Show a, SymEq a, EvalSym a) => a -> a -> IO ()
 (.@?=) actual expected =
   symShouldEq
     actual
@@ -21,13 +21,13 @@ import Grisette
         "Can be not equal, model: "
           <> show m
           <> ". Actual value: "
-          <> show (evaluateSym False m actual)
+          <> show (evalSym False m actual)
           <> ". Expected value: "
-          <> show (evaluateSym False m expected)
+          <> show (evalSym False m expected)
     )
 
 symShouldEq ::
-  (HasCallStack, Show a, SEq a, EvaluateSym a) =>
+  (HasCallStack, Show a, SymEq a, EvalSym a) =>
   a ->
   a ->
   (Model -> String) ->

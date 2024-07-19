@@ -12,7 +12,7 @@ import Grisette.Lib.Synth.Program.Concrete
     ProgArg (ProgArg),
     ProgRes (ProgRes),
     Stmt (Stmt),
-    topologicalGPrettyProg,
+    topologicalPFormatProg,
     topologicalProgToDot,
   )
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
@@ -65,8 +65,8 @@ topologicalSortTest :: Test
 topologicalSortTest =
   testGroup
     "TopologicalSort"
-    [ testCase "topologicalGPrettyProg" $ do
-        let sorted = topologicalGPrettyProg prog3 OM.empty
+    [ testCase "topologicalPFormatProg" $ do
+        let sorted = topologicalPFormatProg prog3 OM.empty
         fst <$> OM.assocs sorted @?= ["ext", "prog1", "prog2", "prog3"],
       testCase "topologicalProgToDot" $ do
         let sorted = topologicalProgToDot prog3 OM.empty

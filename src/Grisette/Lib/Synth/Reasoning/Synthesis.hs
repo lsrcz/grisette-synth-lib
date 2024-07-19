@@ -34,17 +34,17 @@ import Data.Proxy (Proxy)
 import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
-    EvaluateSym,
+    EvalSym,
     Mergeable,
-    SOrd ((.<)),
     Solvable (con),
     Solver,
     SolvingFailure,
     SymBool,
+    SymOrd ((.<)),
     SynthesisConstraintFun,
     ToCon,
     VerifierFun,
-    evaluateSymToCon,
+    evalSymToCon,
     runFreshT,
     simpleMerge,
     solverGenericCEGIS,
@@ -130,7 +130,7 @@ data SomeVerifier symProg conProg where
 data SynthesisTask symProg conProg where
   SynthesisTask ::
     forall symProg conProg.
-    ( EvaluateSym symProg,
+    ( EvalSym symProg,
       ToCon symProg conProg,
       Typeable symProg
     ) =>
@@ -142,12 +142,12 @@ data SynthesisTask symProg conProg where
 data SynthesisMinimalCostTask conProg where
   SynthesisMinimalCostTask ::
     forall symProg conProg cost conCostObj symCostObj.
-    ( EvaluateSym symProg,
+    ( EvalSym symProg,
       ToCon symProg conProg,
       Typeable symProg,
       ProgCost conCostObj conProg cost ConcreteContext,
       ProgCost symCostObj symProg cost AngelicContext,
-      SOrd cost
+      SymOrd cost
     ) =>
     { synthesisMinimalCostTaskVerifiers :: [SomeVerifier symProg conProg],
       synthesisMinimalCostTaskSymProg :: symProg,
@@ -243,7 +243,7 @@ solverRunSynthesisMinimalCostTaskExtractCex
         )
     case r of
       CEGISSuccess model ->
-        return (cex, SynthesisSuccess $ evaluateSymToCon model symProg)
+        return (cex, SynthesisSuccess $ evalSymToCon model symProg)
       CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
       CEGISSolverFailure failure -> return (cex, SynthesisSolverFailure failure)
     where
@@ -257,7 +257,7 @@ solverRunSynthesisMinimalCostTaskExtractCex
           Left _ -> return $ con False
           Right cost -> return $ cost .< maxCost
       refineFun model = do
-        let conProg = evaluateSymToCon model symProg :: conProg
+        let conProg = evalSymToCon model symProg :: conProg
         let conCost = progCost conCostObj conProg :: ConcreteContext cost
         case conCost of
           Left _ -> return $ con False
@@ -306,6 +306,6 @@ solverRunRefinableSynthesisTaskExtractCex
         )
     case r of
       CEGISSuccess model ->
-        return (cex, SynthesisSuccess $ evaluateSymToCon model symProg)
+        return (cex, SynthesisSuccess $ evalSymToCon model symProg)
       CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
       CEGISSolverFailure failure -> return (cex, SynthesisSolverFailure failure)

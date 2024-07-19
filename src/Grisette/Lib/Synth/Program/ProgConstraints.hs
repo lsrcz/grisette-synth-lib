@@ -48,8 +48,8 @@ import Grisette
     MonadFresh (localIdentifier),
     MonadUnion,
     TryMerge,
-    UnionM,
-    liftUnionM,
+    Union,
+    liftUnion,
     mrgReturn,
     tryMerge,
   )
@@ -113,10 +113,10 @@ class (MonadContext ctx) => OpSubProgConstraints constObj op ctx where
 
 instance
   (MonadUnion ctx, OpSubProgConstraints constObj op ctx, Mergeable op) =>
-  OpSubProgConstraints constObj (UnionM op) ctx
+  OpSubProgConstraints constObj (Union op) ctx
   where
   constrainOpSubProg constObj op =
-    liftUnionM op >>= constrainOpSubProg constObj
+    liftUnion op >>= constrainOpSubProg constObj
 
 data ConstraintHierarchy where
   ConstraintHierarchy ::

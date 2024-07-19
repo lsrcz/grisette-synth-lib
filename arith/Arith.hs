@@ -10,14 +10,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Arith (OpCode (..)) where
 
+import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    GPretty (gpretty),
+    EvalSym,
     Mergeable,
-    deriveAllGrisetteExcept,
+    PPrint (pformat),
+    derive,
     mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
@@ -35,7 +38,7 @@ import Grisette.Lib.Synth.Operator.OpTyping
     unaryDefaultType,
   )
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpPretty (describeArguments),
+  ( OpPPrint (describeArguments),
   )
 import Grisette.Lib.Synth.Program.NullProg (NullProg)
 import Grisette.Lib.Synth.Program.SubProg
@@ -52,7 +55,7 @@ data OpCode
   | Minus
   | UMinus
 
-deriveAllGrisetteExcept ''OpCode [''GPretty]
+derive ''OpCode [''EvalSym, ''Show, ''Generic, ''Mergeable]
 
 -- * Semantics and typing.
 
@@ -96,13 +99,13 @@ instance (MonadContext ctx) => OpTyping OpCode DefaultType ctx where
     UMinus -> unaryDefaultType
 
 -- Pretty printing
-instance GPretty OpCode where
-  gpretty Plus = "plus"
-  gpretty Mul = "mul"
-  gpretty Minus = "minus"
-  gpretty UMinus = "uminus"
+instance PPrint OpCode where
+  pformat Plus = "plus"
+  pformat Mul = "mul"
+  pformat Minus = "minus"
+  pformat UMinus = "uminus"
 
-instance OpPretty OpCode where
+instance OpPPrint OpCode where
   describeArguments Plus = Right [Just "lhs", Just "rhs"]
   describeArguments Mul = Right [Just "lhs", Just "rhs"]
   describeArguments Minus = Right [Just "lhs", Just "rhs"]

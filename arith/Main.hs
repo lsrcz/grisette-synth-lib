@@ -7,7 +7,7 @@ module Main (main) where
 import Arith (OpCode (Minus, Mul, Plus))
 import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
 import qualified Data.Text.Lazy as TL
-import Grisette (GPretty (gpretty), SymInteger, precise, z3)
+import Grisette (PPrint (pformat), SymInteger, precise, z3)
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType))
@@ -83,7 +83,7 @@ main = do
       --   r3 = mul(lhs=r2, rhs=x)
       --   r4 = minus(lhs=r3, rhs=y)
       --   return r4
-      print $ gpretty prog
+      print $ pformat prog
       writeFile "/tmp/arith.dot" $ TL.unpack $ renderDot $ toDot prog
       let input = [5, 20]
       print $ spec input

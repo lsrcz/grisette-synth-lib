@@ -22,7 +22,7 @@ import qualified Data.Text as T
 import Grisette
   ( Mergeable,
     MonadUnion,
-    SEq ((.==)),
+    SymEq ((.==)),
     SymBool,
     SymInteger,
     mrgIf,
@@ -99,8 +99,8 @@ type HasSemantics val ctx =
     IfContext (BoolValType val) ctx,
     Mergeable (IntValType val),
     Mergeable (BoolValType val),
-    SEq (IntValType val),
-    SEq (BoolValType val),
+    SymEq (IntValType val),
+    SymEq (BoolValType val),
     Show (IntValType val),
     Show (BoolValType val)
   )

@@ -24,10 +24,10 @@ import Data.GraphViz.Attributes.Complete
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpPrettyError (RedefinedResult, UndefinedArgument),
+  ( OpPPrintError (RedefinedResult, UndefinedArgument),
     Prog (Prog),
     ProgArg (ProgArg),
-    ProgPrettyError (StmtPrettyError),
+    ProgPPrintError (StmtPPrintError),
     ProgRes (ProgRes),
     Stmt (Stmt),
     progToDotSubGraph,
@@ -55,7 +55,7 @@ data StmtToDotTestCase = StmtToDotTestCase
     testStmtIndex :: Int,
     testStmtExpectedResult ::
       Either
-        (ProgPrettyError Int TestPrettyOp)
+        (ProgPPrintError Int TestPrettyOp)
         (DotNode T.Text, [DotEdge T.Text]),
     testStmtNewMap :: VarIdToLabel Int
   }
@@ -65,7 +65,7 @@ data ProgToDotTestCase = ProgToDotTestCase
     testProg :: Prog TestPrettyOp Int TestPrettyType,
     testProgExpectedResult ::
       Either
-        (ProgPrettyError Int TestPrettyOp)
+        (ProgPPrintError Int TestPrettyOp)
         (DotSubGraph T.Text)
   }
 
@@ -160,7 +160,7 @@ toDotTest =
                 testStmt = Stmt PrettyOp1 [2] [3],
                 testStmtIndex = 3,
                 testStmtExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp1 [2] [3]) 3 $
+                  Left . StmtPPrintError (Stmt PrettyOp1 [2] [3]) 3 $
                     UndefinedArgument 0 2,
                 testStmtNewMap = env
               },
@@ -169,7 +169,7 @@ toDotTest =
                 testStmt = Stmt PrettyOp2 [0, 1] [1, 2],
                 testStmtIndex = 3,
                 testStmtExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [0, 1] [1, 2]) 3 $
+                  Left . StmtPPrintError (Stmt PrettyOp2 [0, 1] [1, 2]) 3 $
                     RedefinedResult 0 1,
                 testStmtNewMap = env
               }

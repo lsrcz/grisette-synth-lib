@@ -7,16 +7,16 @@ where
 
 import Control.Monad.Error.Class (MonadError (catchError))
 import Grisette
-  ( EvaluateSym (evaluateSym),
+  ( EvalSym (evalSym),
     ITEOp (symIte),
     Identifier,
     LogicalOp (symImplies, symNot, (.&&), (.||)),
-    SEq ((./=), (.==)),
-    SOrd ((.<), (.>=)),
     Solvable (con, isym),
     SymBool,
+    SymEq ((./=), (.==)),
     SymInteger,
-    UnionM,
+    SymOrd ((.<), (.>=)),
+    Union,
     mrgIf,
     runFreshT,
   )
@@ -47,7 +47,7 @@ data ExpectedResult
 data SemanticsTestCase = SemanticsTestCase
   { semanticsTestCaseName :: String,
     semanticsTestCaseProg ::
-      Prog (UnionM TestSemanticsOp) SymInteger TestSemanticsType,
+      Prog (Union TestSemanticsOp) SymInteger TestSemanticsType,
     semanticsTestCaseArgs :: [SymInteger],
     semanticsTestCaseExpected :: ExpectedResult,
     semanticsTestCaseIdentifier :: Identifier
@@ -557,9 +557,9 @@ semanticsTest = testGroup "Semantics" $ do
                 <> "-- (debug) model --\n"
                 <> show model
                 <> "-- (debug) actual value --\n"
-                <> show (evaluateSym False model actual)
+                <> show (evalSym False model actual)
                 <> "\n-- (debug) pre condition --\n"
-                <> show (evaluateSym False model preCond)
+                <> show (evalSym False model preCond)
                 <> "\n-- (debug) expected integers --\n"
-                <> show (evaluateSym False model expectedIntegers)
+                <> show (evalSym False model expectedIntegers)
           )

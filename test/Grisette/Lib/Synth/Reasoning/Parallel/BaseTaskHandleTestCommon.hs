@@ -18,7 +18,7 @@ import Control.Exception (Exception (fromException), SomeException)
 import Data.Either (fromRight)
 import qualified Data.HashMap.Lazy as HM
 import Data.Time (diffUTCTime, getCurrentTime)
-import Grisette (SEq ((.==)), precise, z3)
+import Grisette (SymEq ((.==)), precise, z3)
 import Grisette.Internal.SymPrim.SymInteger (SymInteger)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel

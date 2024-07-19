@@ -41,7 +41,7 @@ library
       Grisette.Lib.Synth.Program.Concrete
       Grisette.Lib.Synth.Program.Concrete.Builder
       Grisette.Lib.Synth.Program.Concrete.Flatten
-      Grisette.Lib.Synth.Program.Concrete.OpPretty
+      Grisette.Lib.Synth.Program.Concrete.OpPPrint
       Grisette.Lib.Synth.Program.Concrete.OpToDot
       Grisette.Lib.Synth.Program.Concrete.Program
       Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath
@@ -50,8 +50,8 @@ library
       Grisette.Lib.Synth.Program.NullProg
       Grisette.Lib.Synth.Program.ProgConstraints
       Grisette.Lib.Synth.Program.ProgCost
-      Grisette.Lib.Synth.Program.ProgGPretty
       Grisette.Lib.Synth.Program.ProgNaming
+      Grisette.Lib.Synth.Program.ProgPPrint
       Grisette.Lib.Synth.Program.ProgSemantics
       Grisette.Lib.Synth.Program.ProgToDot
       Grisette.Lib.Synth.Program.ProgTyping
@@ -84,7 +84,7 @@ library
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
-    , grisette >=0.6.1 && <0.7
+    , grisette ==0.8.*
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
     , ordered-containers >=0.2.3 && <0.3
@@ -114,7 +114,7 @@ executable arith
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
-    , grisette >=0.6.1 && <0.7
+    , grisette ==0.8.*
     , grisette-synth-lib
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
@@ -149,7 +149,7 @@ executable control
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
-    , grisette >=0.6.1 && <0.7
+    , grisette ==0.8.*
     , grisette-synth-lib
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
@@ -168,7 +168,7 @@ test-suite spec
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
-      Grisette.Lib.Synth.Operator.OpPrettyTest
+      Grisette.Lib.Synth.Operator.OpPPrintTest
       Grisette.Lib.Synth.Operator.OpSemanticsTest
       Grisette.Lib.Synth.Operator.OpToDotTest
       Grisette.Lib.Synth.Operator.OpTypingTest
@@ -230,7 +230,7 @@ test-suite spec
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
-    , grisette >=0.6.1 && <0.7
+    , grisette ==0.8.*
     , grisette-synth-lib
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4

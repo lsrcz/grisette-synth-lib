@@ -23,11 +23,11 @@ import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvaluateSym,
+    EvalSym,
     GenSymSimple (simpleFresh),
     Mergeable,
     MonadUnion,
-    SafeDivision (safeDivMod),
+    SafeDiv (safeDivMod),
     SymInteger,
     ToCon,
     ToSym,
@@ -59,7 +59,7 @@ data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving (Show, Generic, Eq)
   deriving anyclass (Hashable)
   deriving
-    (Mergeable, ToCon TestSemanticsOp, EvaluateSym, ToSym TestSemanticsOp)
+    (Mergeable, ToCon TestSemanticsOp, EvalSym, ToSym TestSemanticsOp)
     via (Default TestSemanticsOp)
 
 instance
@@ -72,7 +72,7 @@ data TestSemanticsType = IntType
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable)
   deriving
-    (Mergeable, EvaluateSym, ToCon TestSemanticsType, ToSym TestSemanticsType)
+    (Mergeable, EvalSym, ToCon TestSemanticsType, ToSym TestSemanticsType)
     via (Default TestSemanticsType)
 
 instance

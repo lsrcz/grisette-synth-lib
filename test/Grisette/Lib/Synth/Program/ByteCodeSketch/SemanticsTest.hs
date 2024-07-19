@@ -11,9 +11,9 @@ import qualified Data.Text as T
 import Grisette
   ( ITEOp (symIte),
     LogicalOp ((.||)),
-    SEq ((.==)),
     Solvable (con),
     SymBool,
+    SymEq ((.==)),
     SymInteger,
     mrgIf,
     mrgReturn,

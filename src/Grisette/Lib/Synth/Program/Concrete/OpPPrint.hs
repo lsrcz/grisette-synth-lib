@@ -6,13 +6,13 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Grisette.Lib.Synth.Program.Concrete.OpPretty
+module Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( VarIdMap,
-    OpPrettyError (..),
+    OpPPrintError (..),
     noArgumentsDescription,
     allPrefixesByTypes,
     PrefixByType (..),
-    OpPretty (..),
+    OpPPrint (..),
     prettyArguments,
     prettyResults,
   )
@@ -25,7 +25,7 @@ import qualified Data.HashMap.Lazy as HM
 -- import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (Default (Default), GPretty (gpretty), Mergeable)
+import Grisette (Default (Default), Mergeable, PPrint (pformat))
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType), OpTyping (typeOp))
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
@@ -37,51 +37,51 @@ import Grisette.Lib.Synth.Util.Pretty
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
-data OpPrettyError varId op
+data OpPPrintError varId op
   = IncorrectNumberOfArguments op Int Int
   | UndefinedArgument Int varId
   | IncorrectNumberOfResults op Int Int
   | RedefinedResult Int varId
-  | PrettyTypingError op T.Text
+  | PPrintTypingError op T.Text
   deriving (Show, Eq, Generic, Functor)
-  deriving (Mergeable) via (Default (OpPrettyError varId op))
+  deriving (Mergeable) via (Default (OpPPrintError varId op))
 
 instance
-  (OpPretty op, ConcreteVarId varId) =>
-  GPretty (OpPrettyError varId op)
+  (OpPPrint op, ConcreteVarId varId) =>
+  PPrint (OpPPrintError varId op)
   where
-  gpretty (IncorrectNumberOfArguments op expectedNumArguments numArguments) =
+  pformat (IncorrectNumberOfArguments op expectedNumArguments numArguments) =
     "Incorrect number of arguments for "
-      <> prettyOp op
+      <> pformatOp op
       <> ": expected "
-      <> gpretty expectedNumArguments
+      <> pformat expectedNumArguments
       <> " arguments, but got"
-      <> gpretty numArguments
-  gpretty (UndefinedArgument idx varId) =
+      <> pformat numArguments
+  pformat (UndefinedArgument idx varId) =
     "The argument "
-      <> gpretty (toInteger varId)
+      <> pformat (toInteger varId)
       <> " at index "
-      <> gpretty idx
+      <> pformat idx
       <> " is undefined."
-  gpretty (IncorrectNumberOfResults op expectedNumResults numResults) =
+  pformat (IncorrectNumberOfResults op expectedNumResults numResults) =
     "Incorrect number of result for "
-      <> prettyOp op
+      <> pformatOp op
       <> ": expected "
-      <> gpretty expectedNumResults
+      <> pformat expectedNumResults
       <> " results, but got"
-      <> gpretty numResults
+      <> pformat numResults
       <> " results."
-  gpretty (RedefinedResult idx varId) =
+  pformat (RedefinedResult idx varId) =
     "The result "
-      <> gpretty (toInteger varId)
+      <> pformat (toInteger varId)
       <> " at index "
-      <> gpretty idx
+      <> pformat idx
       <> " is redefined."
-  gpretty (PrettyTypingError op err) =
+  pformat (PPrintTypingError op err) =
     "Error while typing "
-      <> prettyOp op
+      <> pformatOp op
       <> ": "
-      <> gpretty err
+      <> pformat err
 
 class PrefixByType ty where
   prefixByType :: ty -> T.Text
@@ -92,48 +92,48 @@ instance PrefixByType DefaultType where
 allPrefixesByTypes ::
   (OpTyping op ty ConcreteContext, PrefixByType ty) =>
   op ->
-  Either (OpPrettyError varId op) [T.Text]
+  Either (OpPPrintError varId op) [T.Text]
 allPrefixesByTypes op = case typeOp op of
   Right (TypeSignature _ resTypes) ->
     return $ prefixByType <$> resTypes
-  Left err -> throwError $ PrettyTypingError op err
+  Left err -> throwError $ PPrintTypingError op err
 
 noArgumentsDescription ::
   (OpTyping op ty ConcreteContext) =>
   op ->
-  Either (OpPrettyError varId op) [Maybe T.Text]
+  Either (OpPPrintError varId op) [Maybe T.Text]
 noArgumentsDescription op = case typeOp op of
   Right (TypeSignature argTypes _) ->
     return $ Nothing <$ argTypes
-  Left err -> throwError $ PrettyTypingError op err
+  Left err -> throwError $ PPrintTypingError op err
 
-class OpPretty op where
-  prefixResults :: op -> Either (OpPrettyError varId op) [T.Text]
+class OpPPrint op where
+  prefixResults :: op -> Either (OpPPrintError varId op) [T.Text]
   default prefixResults ::
     (OpTyping op ty ConcreteContext, PrefixByType ty) =>
     op ->
-    Either (OpPrettyError varId op) [T.Text]
+    Either (OpPPrintError varId op) [T.Text]
   prefixResults = allPrefixesByTypes
-  describeArguments :: op -> Either (OpPrettyError varId op) [Maybe T.Text]
+  describeArguments :: op -> Either (OpPPrintError varId op) [Maybe T.Text]
   default describeArguments ::
     (OpTyping op ty ConcreteContext) =>
     op ->
-    Either (OpPrettyError varId op) [Maybe T.Text]
+    Either (OpPPrintError varId op) [Maybe T.Text]
   describeArguments = noArgumentsDescription
-  prettyOp :: op -> Doc ann
-  default prettyOp :: (GPretty op) => op -> Doc ann
-  prettyOp = gpretty
+  pformatOp :: op -> Doc ann
+  default pformatOp :: (PPrint op) => op -> Doc ann
+  pformatOp = pformat
 
 type VarIdMap varId = HM.HashMap varId T.Text
 
 prettyArguments ::
   ( ConcreteVarId varId,
-    OpPretty op
+    OpPPrint op
   ) =>
   op ->
   [varId] ->
   VarIdMap varId ->
-  Either (OpPrettyError varId op) (Doc ann)
+  Either (OpPPrintError varId op) (Doc ann)
 prettyArguments op varIds map = do
   let lookupVarId (idx, varId) =
         maybe
@@ -148,20 +148,20 @@ prettyArguments op varIds map = do
     $ IncorrectNumberOfArguments op (length argDescriptions) (length argNames)
   let finalArgDescriptions =
         if null argDescriptions then Nothing <$ argNames else argDescriptions
-  let describe argName Nothing = gpretty argName
+  let describe argName Nothing = pformat argName
       describe argName (Just argDesc) =
-        gpretty argDesc <> "=" <> gpretty argName
-  let argPretty = zipWith describe argNames finalArgDescriptions
-  return $ parenCommaList argPretty
+        pformat argDesc <> "=" <> pformat argName
+  let arpformat = zipWith describe argNames finalArgDescriptions
+  return $ parenCommaList arpformat
 
 prettyResults ::
   ( ConcreteVarId varId,
-    OpPretty op
+    OpPPrint op
   ) =>
   op ->
   [varId] ->
   VarIdMap varId ->
-  Either (OpPrettyError varId op) (VarIdMap varId, Doc ann)
+  Either (OpPPrintError varId op) (VarIdMap varId, Doc ann)
 prettyResults op varIds map = do
   let ensureNotRedefined (idx, varId) =
         when (HM.member varId map) $ throwError $ RedefinedResult idx varId
@@ -177,4 +177,4 @@ prettyResults op varIds map = do
           finalPrefixes
           varIds
   let newMap = HM.union map $ HM.fromList $ zip varIds names
-  return (newMap, parenCommaListIfNotSingle $ gpretty <$> names)
+  return (newMap, parenCommaListIfNotSingle $ pformat <$> names)

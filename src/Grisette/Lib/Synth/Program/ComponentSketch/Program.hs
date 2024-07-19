@@ -41,18 +41,18 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvaluateSym,
+    EvalSym,
     LogicalOp (symImplies, (.&&), (.||)),
     Mergeable (rootStrategy),
     MergingStrategy (NoStrategy),
     MonadUnion,
-    SEq ((./=), (.==)),
-    SOrd ((.<), (.<=), (.>)),
     Solvable (con),
     SymBool,
+    SymEq ((./=), (.==)),
+    SymOrd ((.<), (.<=), (.>)),
     ToCon (toCon),
     ToSym (toSym),
-    UnionM,
+    Union,
     mrgFmap,
     mrgIf,
     mrgSequence_,
@@ -115,7 +115,7 @@ data Stmt op symVarId = Stmt
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
-  deriving (EvaluateSym) via (Default (Stmt op symVarId))
+  deriving (EvalSym) via (Default (Stmt op symVarId))
 
 deriving via
   (Default (Stmt conOp symVarId))
@@ -138,7 +138,7 @@ data ProgArg ty = ProgArg
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
-  deriving (EvaluateSym) via (Default (ProgArg ty))
+  deriving (EvalSym) via (Default (ProgArg ty))
 
 deriving via
   (Default (ProgArg conTy))
@@ -161,7 +161,7 @@ data ProgRes symVarId ty = ProgRes
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
-  deriving (EvaluateSym) via (Default (ProgRes symVarId ty))
+  deriving (EvalSym) via (Default (ProgRes symVarId ty))
 
 deriving via
   (Default (ProgRes symVarId conTy))
@@ -186,7 +186,7 @@ data Prog op symVarId ty = Prog
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
-  deriving (EvaluateSym) via (Default (Prog op symVarId ty))
+  deriving (EvalSym) via (Default (Prog op symVarId ty))
 
 deriving via
   (Default (Prog conOp symVarId conTy))
@@ -308,16 +308,16 @@ instance
         (sortOn (listToMaybe . Concrete.stmtResIds) conStmts)
         conResList
 
-data IdValPair symVarId val = IdValPair SymBool symVarId (UnionM (Maybe val))
+data IdValPair symVarId val = IdValPair SymBool symVarId (Union (Maybe val))
   deriving (Show, Eq, Generic)
-  deriving (EvaluateSym, Mergeable) via Default (IdValPair symVarId val)
+  deriving (EvalSym, Mergeable) via Default (IdValPair symVarId val)
 
 data CollectedDefUse symVarId val = CollectedDefUse
   { collectedDef :: [IdValPair symVarId val],
     collectedUse :: [IdValPair symVarId val]
   }
   deriving (Show, Eq, Generic)
-  deriving (EvaluateSym, Mergeable) via Default (CollectedDefUse symVarId val)
+  deriving (EvalSym, Mergeable) via Default (CollectedDefUse symVarId val)
 
 addDefs ::
   ( MonadState (CollectedDefUse symVarId val) ctx,
@@ -392,7 +392,7 @@ constrainStmt ::
     OpSemantics sem op val ctx,
     OpTyping op ty ctx,
     Mergeable op,
-    SEq val,
+    SymEq val,
     MonadAngelicContext ctx
   ) =>
   p ty ->
@@ -453,7 +453,7 @@ connected ::
   ( MonadUnion ctx,
     MonadContext ctx,
     SymbolicVarId symVarId,
-    SEq val,
+    SymEq val,
     Mergeable val
   ) =>
   StateT (CollectedDefUse symVarId val) ctx ()
@@ -473,7 +473,7 @@ defDistinct ::
   ( MonadUnion ctx,
     MonadContext ctx,
     SymbolicVarId symVarId,
-    SEq val,
+    SymEq val,
     Mergeable val
   ) =>
   StateT (CollectedDefUse symVarId val) ctx ()
@@ -491,7 +491,7 @@ instance
     OpSemantics sem op val ctx,
     OpTyping op ty ctx,
     Mergeable op,
-    SEq val,
+    SymEq val,
     MonadAngelicContext ctx
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx

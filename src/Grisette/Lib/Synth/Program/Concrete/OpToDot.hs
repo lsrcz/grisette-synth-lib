@@ -22,9 +22,9 @@ import Data.GraphViz.Attributes.Complete
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import Grisette.Lib.Synth.Program.Concrete.OpPretty
-  ( OpPretty (describeArguments, prefixResults),
-    OpPrettyError
+import Grisette.Lib.Synth.Program.Concrete.OpPPrint
+  ( OpPPrint (describeArguments, prefixResults),
+    OpPPrintError
       ( IncorrectNumberOfArguments,
         IncorrectNumberOfResults,
         RedefinedResult,
@@ -37,12 +37,12 @@ import Grisette.Lib.Synth.VarId (ConcreteVarId)
 type VarIdToLabel varId = HM.HashMap varId (T.Text, PortName)
 
 argumentsToFieldEdges ::
-  (ConcreteVarId varId, OpPretty op) =>
+  (ConcreteVarId varId, OpPPrint op) =>
   T.Text ->
   op ->
   [varId] ->
   VarIdToLabel varId ->
-  Either (OpPrettyError varId op) (RecordFields, [DotEdge T.Text])
+  Either (OpPPrintError varId op) (RecordFields, [DotEdge T.Text])
 argumentsToFieldEdges nodeId op argIds map = do
   argDescriptions <- describeArguments op
   when (length argIds /= length argDescriptions) $
@@ -69,13 +69,13 @@ argumentsToFieldEdges nodeId op argIds map = do
   return (argLabel, zipWith preLabelToEdge argPreLabels [0 ..])
 
 resultsToFieldEdges ::
-  (ConcreteVarId varId, OpPretty op) =>
+  (ConcreteVarId varId, OpPPrint op) =>
   T.Text ->
   op ->
   [varId] ->
   VarIdToLabel varId ->
   Either
-    (OpPrettyError varId op)
+    (OpPPrintError varId op)
     (VarIdToLabel varId, RecordFields)
 resultsToFieldEdges nodeId op resIds map = do
   let ensureNotRedefined (idx, varId) =

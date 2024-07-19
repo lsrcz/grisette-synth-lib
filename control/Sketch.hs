@@ -13,7 +13,7 @@ import qualified ConProg as Concrete
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvaluateSym,
+    EvalSym,
     GenSymSimple,
     Mergeable,
     ToCon,
@@ -43,7 +43,7 @@ data Op varId intVal
   | IntConst intVal
   | If (Prog varId intVal) (Prog varId intVal)
   deriving (Show, Generic)
-  deriving (EvaluateSym, Mergeable) via (Default (Op varId intVal))
+  deriving (EvalSym, Mergeable) via (Default (Op varId intVal))
 
 deriving via
   (Default (Concrete.Op conVarId conIntVal))

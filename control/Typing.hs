@@ -21,11 +21,11 @@ import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvaluateSym,
-    GPretty (gpretty),
+    EvalSym,
     GenSym (fresh),
     GenSymSimple (simpleFresh),
     Mergeable,
+    PPrint (pformat),
     ToCon,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -40,11 +40,11 @@ import Value (Value, ValueBuilder (mkBool, mkInt))
 data Type = IntType | BoolType
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable)
-  deriving (Mergeable, EvaluateSym, ToCon Type) via (Default Type)
+  deriving (Mergeable, EvalSym, ToCon Type) via (Default Type)
 
-instance GPretty Type where
-  gpretty IntType = "int"
-  gpretty BoolType = "bool"
+instance PPrint Type where
+  pformat IntType = "int"
+  pformat BoolType = "bool"
 
 typePlus :: (MonadContext ctx) => ctx (TypeSignature Type)
 typePlus = mrgReturn $ TypeSignature [IntType, IntType] [IntType]

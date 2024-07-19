@@ -3,7 +3,7 @@
 
 module Grisette.Lib.Synth.Program.ComponentSketch.ToSymTest (toSymTest) where
 
-import Grisette (Solvable (con), SymWordN, ToSym (toSym), UnionM, mrgReturn)
+import Grisette (Solvable (con), SymWordN, ToSym (toSym), Union, mrgReturn)
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -43,6 +43,6 @@ toSymTest =
                   Stmt (mrgReturn DivMod) [2, 0] 2 [3, 4] 2 (con False) []
                 ]
                 [ProgRes 3 IntType, ProgRes 4 IntType] ::
-                Prog (UnionM TestSemanticsOp) (SymWordN 8) TestSemanticsType
+                Prog (Union TestSemanticsOp) (SymWordN 8) TestSemanticsType
         toSym prog @?= expected
     ]

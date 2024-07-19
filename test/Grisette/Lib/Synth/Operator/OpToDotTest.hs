@@ -11,7 +11,7 @@ import Data.GraphViz.Attributes.Complete
   )
 import qualified Data.HashMap.Lazy as HM
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpPrettyError
+  ( OpPPrintError
       ( IncorrectNumberOfArguments,
         IncorrectNumberOfResults,
         RedefinedResult,

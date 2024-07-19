@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Grisette.Lib.Synth.Operator.OpPrettyTest (opPrettyTest)
+import Grisette.Lib.Synth.Operator.OpPPrintTest (opPPrintTest)
 import Grisette.Lib.Synth.Operator.OpSemanticsTest (opSemanticsTest)
 import Grisette.Lib.Synth.Operator.OpToDotTest (opToDotTest)
 import Grisette.Lib.Synth.Operator.OpTypingTest (opTypingTest)
@@ -30,7 +30,7 @@ tests :: [Test]
 tests =
   [ prettyTest,
     showTest,
-    opPrettyTest,
+    opPPrintTest,
     opToDotTest,
     opTypingTest,
     opSemanticsTest,

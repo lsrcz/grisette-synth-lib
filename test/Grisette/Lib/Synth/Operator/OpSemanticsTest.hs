@@ -3,7 +3,7 @@
 module Grisette.Lib.Synth.Operator.OpSemanticsTest (opSemanticsTest) where
 
 import Control.Monad.Error.Class (MonadError (throwError))
-import Grisette (LogicalOp ((.||)), SymInteger, UnionM, mrgIf, mrgReturn)
+import Grisette (LogicalOp ((.||)), SymInteger, Union, mrgIf, mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgModifyError)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
@@ -19,12 +19,12 @@ opSemanticsTest :: Test
 opSemanticsTest =
   testGroup
     "Grisette.Lib.Synth.Operator.OpSemantics"
-    [ testCase "UnionM OpSemantics" $ do
+    [ testCase "Union OpSemantics" $ do
         let op =
               mrgIf "a" (return Add) $
                 mrgIf "b" (return DivMod) $
                   mrgIf "c" (mrgReturn Inc) (mrgReturn Double) ::
-                UnionM TestSemanticsOp
+                Union TestSemanticsOp
         let actual1 =
               mrgModifyError (const "Err") $ applyOp TestSemanticsObj op [2] ::
                 SymbolicContext [SymInteger]

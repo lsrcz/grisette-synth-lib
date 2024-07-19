@@ -12,8 +12,8 @@ import Data.Typeable (Proxy (Proxy))
 import GHC.Stack (HasCallStack)
 import Grisette
   ( ITEOp (symIte),
-    SEq ((.==)),
     SolvingFailure (Unsat),
+    SymEq ((.==)),
     SymInteger,
     precise,
     z3,

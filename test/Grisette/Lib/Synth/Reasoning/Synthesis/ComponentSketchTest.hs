@@ -21,7 +21,7 @@ import Grisette
   ( SolvingFailure (Unsat),
     SymBool,
     SymInteger,
-    UnionM,
+    Union,
     mrgIf,
     mrgReturn,
     precise,
@@ -105,7 +105,7 @@ type SymVal = SymInteger
 
 type ConProg = Concrete.Prog TestSemanticsOp Integer TestSemanticsType
 
-type SymProg = Prog (UnionM TestSemanticsOp) SymInteger TestSemanticsType
+type SymProg = Prog (Union TestSemanticsOp) SymInteger TestSemanticsType
 
 sharedSketch :: SymProg
 sharedSketch =

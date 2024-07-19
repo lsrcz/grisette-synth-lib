@@ -12,14 +12,14 @@ module ConProg (Op (..), Prog) where
 
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
-import Grisette (GPretty (gpretty), mrgReturn)
+import Grisette (PPrint (pformat), mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem, OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (typeOp),
   )
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpPretty (describeArguments),
+  ( OpPPrint (describeArguments),
     PrefixByType (prefixByType),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
@@ -63,17 +63,17 @@ instance HasAnyPathSubProgs (Op varId intVal) (Prog varId intVal) where
 
 type Prog varId intVal = Concrete.Prog (Op varId intVal) varId Type
 
-instance (GPretty intVal) => GPretty (Op varId intVal) where
-  gpretty Plus = "plus"
-  gpretty Equals = "equals"
-  gpretty Minus = "Minus"
-  gpretty (IntConst n) = "const" <> parenCommaList [gpretty n]
-  gpretty (If true false) =
-    "if" <> parenCommaList (gpretty <$> [nameProg true, nameProg false])
+instance (PPrint intVal) => PPrint (Op varId intVal) where
+  pformat Plus = "plus"
+  pformat Equals = "equals"
+  pformat Minus = "Minus"
+  pformat (IntConst n) = "const" <> parenCommaList [pformat n]
+  pformat (If true false) =
+    "if" <> parenCommaList (pformat <$> [nameProg true, nameProg false])
 
 instance
-  (GPretty intVal, ConcreteVarId varId, Show intVal) =>
-  OpPretty (Op varId intVal)
+  (PPrint intVal, ConcreteVarId varId, Show intVal) =>
+  OpPPrint (Op varId intVal)
   where
   describeArguments Plus = return $ replicate 2 Nothing
   describeArguments Equals = return $ replicate 2 Nothing

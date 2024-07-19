@@ -55,20 +55,20 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvaluateSym,
+    EvalSym,
     LogicalOp (symImplies, symNot, (.&&), (.||)),
     Mergeable (rootStrategy),
     MergingStrategy (SimpleStrategy),
     MonadFresh,
     MonadUnion,
-    SEq ((.==)),
-    SOrd ((.<=), (.>=)),
     SimpleMergeable (mrgIte),
     Solvable (con),
     SymBool,
+    SymEq ((.==)),
+    SymOrd ((.<=), (.>=)),
     ToSym (toSym),
-    UnionM,
-    liftUnionM,
+    Union,
+    liftUnion,
     mrgFmap,
     mrgIf,
     mrgReturn,
@@ -151,7 +151,7 @@ instance
   where
   rootStrategy = SimpleStrategy mrgIte
 
-class (SEq res, SimpleMergeable res) => Resource res where
+class (SymEq res, SimpleMergeable res) => Resource res where
   conflict :: res -> res -> SymBool
 
 data Def varId res = Def
@@ -161,7 +161,7 @@ data Def varId res = Def
   }
   deriving (Show, Eq, Generic)
   deriving
-    (Mergeable, SEq, EvaluateSym)
+    (Mergeable, SymEq, EvalSym)
     via (Default (Def varId res))
 
 data Use varId res = Use
@@ -170,13 +170,13 @@ data Use varId res = Use
     useDisabled :: SymBool
   }
   deriving (Show, Eq, Generic)
-  deriving (Mergeable, SEq, EvaluateSym) via (Default (Use varId res))
+  deriving (Mergeable, SymEq, EvalSym) via (Default (Use varId res))
 
 newtype Liveliness livelinessObj = Liveliness livelinessObj
 
-type UnionDef varId res = UnionM [Def varId res]
+type UnionDef varId res = Union [Def varId res]
 
-type UnionUse varId res = UnionM [Use varId res]
+type UnionUse varId res = Union [Use varId res]
 
 class LivelinessName livelinessObj where
   livelinessName :: livelinessObj -> T.Text
@@ -294,10 +294,10 @@ instance
     MonadUnion ctx,
     Mergeable op
   ) =>
-  LivelinessOpResource livelinessObj (UnionM op) res ctx
+  LivelinessOpResource livelinessObj (Union op) res ctx
   where
   livelinessOpDefUses livelinessObj opUnion argIds resIds disabled =
-    liftUnionM opUnion
+    liftUnion opUnion
       .>>= \op -> livelinessOpDefUses livelinessObj op argIds resIds disabled
 
 livelinessProgArgDefs ::
@@ -522,28 +522,28 @@ instance
       where
         invalidate ::
           UnionDef conVarId res ->
-          [UnionM [(Def conVarId res, SymBool)]] ->
-          [UnionM [(Def conVarId res, SymBool)]]
+          [Union [(Def conVarId res, SymBool)]] ->
+          [Union [(Def conVarId res, SymBool)]]
         invalidate invalidatingDef =
           fmap (\defUnion -> invalidateList <$> invalidatingDef <*> defUnion)
         cannotUseInvalidatedUnion ::
           UnionUse conVarId res ->
-          UnionM [(Def conVarId res, SymBool)] ->
+          Union [(Def conVarId res, SymBool)] ->
           ctx ()
         cannotUseInvalidatedUnion useUnion defUnion = do
-          uses <- liftUnionM useUnion
-          defs <- liftUnionM defUnion
+          uses <- liftUnion useUnion
+          defs <- liftUnion defUnion
           cannotUseInvalidatedList livelinessObj uses defs
         cannotUseInvalidated ::
           UnionUse conVarId res ->
-          [UnionM [(Def conVarId res, SymBool)]] ->
+          [Union [(Def conVarId res, SymBool)]] ->
           ctx ()
         cannotUseInvalidated uses =
           mrgTraverse_ (cannotUseInvalidatedUnion uses)
         goStmts ::
-          [UnionM [(Def conVarId res, SymBool)]] ->
+          [Union [(Def conVarId res, SymBool)]] ->
           Int ->
-          ctx [UnionM [(Def conVarId res, SymBool)]]
+          ctx [Union [(Def conVarId res, SymBool)]]
         goStmts allDefs i
           | i == getProgNumStmts prog = mrgReturn allDefs
           | otherwise = do
@@ -656,11 +656,11 @@ data ComponentUse varId res = ComponentUse
   }
   deriving (Show, Eq, Generic)
   deriving
-    (Mergeable, SEq, EvaluateSym)
+    (Mergeable, SymEq, EvalSym)
     via (Default (ComponentUse varId res))
 
 --
-type ComponentUnionUse varId res = UnionM [ComponentUse varId res]
+type ComponentUnionUse varId res = Union [ComponentUse varId res]
 
 data ComponentStmtDefUse varId res = ComponentStmtDefUse
   { componentStmtDef :: UnionDef varId res,
@@ -779,8 +779,8 @@ instance
       [0 .. getProgNumStmts sketch - 1]
     where
       traverseUnion ::
-        (Mergeable a) => UnionM [a] -> (a -> ctx ()) -> ctx ()
-      traverseUnion union f = liftUnionM union >>= mrgTraverse_ f
+        (Mergeable a) => Union [a] -> (a -> ctx ()) -> ctx ()
+      traverseUnion union f = liftUnion union >>= mrgTraverse_ f
       defUseConstraint ::
         ComponentUse symVarId res ->
         UnionDef symVarId res ->

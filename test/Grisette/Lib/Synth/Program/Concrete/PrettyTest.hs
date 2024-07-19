@@ -7,12 +7,12 @@ import Control.Arrow (Arrow (first))
 import Control.Monad.State (StateT (runStateT))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
-import Grisette (GPretty (gpretty))
+import Grisette (PPrint (pformat))
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpPrettyError (RedefinedResult, UndefinedArgument),
+  ( OpPPrintError (RedefinedResult, UndefinedArgument),
     Prog (Prog),
     ProgArg (ProgArg),
-    ProgPrettyError (ResultUndefined, StmtPrettyError),
+    ProgPPrintError (ResultUndefined, StmtPPrintError),
     ProgRes (ProgRes),
     Stmt (Stmt),
     VarIdMap,
@@ -37,9 +37,9 @@ data PrettyStmtTestCase = PrettyStmtTestCase
     testStmt :: Stmt TestPrettyOp Int,
     testStmtIndex :: Int,
     testStmtLooseExpectedResult ::
-      Either (ProgPrettyError Int TestPrettyOp) T.Text,
+      Either (ProgPPrintError Int TestPrettyOp) T.Text,
     testStmtCompactExpectedResult ::
-      Either (ProgPrettyError Int TestPrettyOp) T.Text,
+      Either (ProgPPrintError Int TestPrettyOp) T.Text,
     testStmtNewMap :: VarIdMap Int
   }
 
@@ -47,9 +47,9 @@ data PrettyProgTestCase = PrettyProgTestCase
   { testProgGroupName :: String,
     testProg :: Prog TestPrettyOp Int TestPrettyType,
     testProgLooseExpectedResult ::
-      Either (ProgPrettyError Int TestPrettyOp) T.Text,
+      Either (ProgPPrintError Int TestPrettyOp) T.Text,
     testProgCompactExpectedResult ::
-      Either (ProgPrettyError Int TestPrettyOp) T.Text
+      Either (ProgPPrintError Int TestPrettyOp) T.Text
   }
 
 prettyTest :: Test
@@ -114,10 +114,10 @@ prettyTest =
                 testStmt = Stmt PrettyOp1 [2] [3],
                 testStmtIndex = 3,
                 testStmtLooseExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp1 [2] [3]) 3 $
+                  Left . StmtPPrintError (Stmt PrettyOp1 [2] [3]) 3 $
                     UndefinedArgument 0 2,
                 testStmtCompactExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp1 [2] [3]) 3 $
+                  Left . StmtPPrintError (Stmt PrettyOp1 [2] [3]) 3 $
                     UndefinedArgument 0 2,
                 testStmtNewMap = env
               },
@@ -126,10 +126,10 @@ prettyTest =
                 testStmt = Stmt PrettyOp2 [0, 1] [1, 2],
                 testStmtIndex = 3,
                 testStmtLooseExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [0, 1] [1, 2]) 3 $
+                  Left . StmtPPrintError (Stmt PrettyOp2 [0, 1] [1, 2]) 3 $
                     RedefinedResult 0 1,
                 testStmtCompactExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [0, 1] [1, 2]) 3 $
+                  Left . StmtPPrintError (Stmt PrettyOp2 [0, 1] [1, 2]) 3 $
                     RedefinedResult 0 1,
                 testStmtNewMap = env
               }
@@ -236,10 +236,10 @@ prettyTest =
                     [Stmt PrettyOp2 [0, 1] [1, 2]]
                     [ProgRes 0 PrettyType1],
                 testProgLooseExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [0, 1] [1, 2]) 0 $
+                  Left . StmtPPrintError (Stmt PrettyOp2 [0, 1] [1, 2]) 0 $
                     RedefinedResult 0 1,
                 testProgCompactExpectedResult =
-                  Left . StmtPrettyError (Stmt PrettyOp2 [0, 1] [1, 2]) 0 $
+                  Left . StmtPPrintError (Stmt PrettyOp2 [0, 1] [1, 2]) 0 $
                     RedefinedResult 0 1
               },
             PrettyProgTestCase
@@ -259,7 +259,7 @@ prettyTest =
           [ testCase "loose" $ renderDoc 80 <$> doc @?= loose,
             testCase "compact" $ renderDoc 1 <$> doc @?= compact
             ],
-      testGroup "gpretty" $ do
+      testGroup "pformat" $ do
         let progExt =
               Prog
                 "ext"
@@ -280,7 +280,7 @@ prettyTest =
                   Stmt (PrettyInvokeOp prog1) [1] [2]
                 ]
                 [ProgRes 2 PrettyType1]
-        let doc = gpretty prog2
+        let doc = pformat prog2
         [ testCase "loose" $ do
             let actual = renderDoc 80 doc
             let expected =
