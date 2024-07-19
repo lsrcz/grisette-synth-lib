@@ -22,8 +22,8 @@ import qualified Data.Text as T
 import Grisette
   ( Mergeable,
     MonadUnion,
-    SymEq ((.==)),
     SymBool,
+    SymEq ((.==)),
     SymInteger,
     mrgIf,
   )

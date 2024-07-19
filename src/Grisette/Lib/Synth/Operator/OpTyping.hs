@@ -11,8 +11,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (..),
@@ -29,11 +29,11 @@ where
 import Control.Monad.Except (runExceptT)
 import Grisette
   ( Default (Default),
-    PPrint (pformat),
     GenSym (fresh),
     Mergeable (rootStrategy),
     MergingStrategy (SimpleStrategy),
     MonadUnion,
+    PPrint (pformat),
     SimpleMergeable (mrgIte),
     Union,
     deriveAllExcept,
