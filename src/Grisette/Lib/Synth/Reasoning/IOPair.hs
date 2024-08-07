@@ -4,7 +4,7 @@
 module Grisette.Lib.Synth.Reasoning.IOPair (IOPair (..)) where
 
 import GHC.Generics (Generic)
-import Grisette (Default (Default), ToCon, ToSym, Mergeable)
+import Grisette (Default (Default), Mergeable, ToCon, ToSym)
 
 data IOPair val = IOPair {ioPairInputs :: [val], ioPairOutputs :: [val]}
   deriving (Show, Eq, Generic)
