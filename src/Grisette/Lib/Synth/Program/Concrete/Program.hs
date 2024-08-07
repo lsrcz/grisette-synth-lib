@@ -185,7 +185,7 @@ data ProgArg varId ty = ProgArg
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
-  deriving (EvalSym) via (Default (ProgArg varId ty))
+  deriving (EvalSym, Mergeable) via (Default (ProgArg varId ty))
 
 instance
   (ToCon symTy conTy) =>
@@ -194,7 +194,7 @@ instance
   toCon (ProgArg name varId ty) = ProgArg name varId <$> toCon ty
 
 instance
-  (ToSym conTy symTy) =>
+  (ToSym conTy symTy, Mergeable varId) =>
   ToSym (ProgArg varId conTy) (ProgArg varId symTy)
   where
   toSym (ProgArg name varId ty) = ProgArg name varId $ toSym ty
@@ -205,7 +205,7 @@ data ProgRes varId ty = ProgRes
   }
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable, NFData)
-  deriving (EvalSym) via (Default (ProgRes varId ty))
+  deriving (EvalSym, Mergeable) via (Default (ProgRes varId ty))
 
 instance
   (ToCon symTy conTy) =>
@@ -214,7 +214,7 @@ instance
   toCon (ProgRes varId ty) = ProgRes varId <$> toCon ty
 
 instance
-  (ToSym conTy symTy) =>
+  (ToSym conTy symTy, Mergeable varId) =>
   ToSym (ProgRes varId conTy) (ProgRes varId symTy)
   where
   toSym (ProgRes varId ty) = ProgRes varId $ toSym ty
@@ -237,7 +237,7 @@ instance
     Prog name <$> toCon arg <*> traverse toCon stmt <*> toCon res
 
 instance
-  (ToSym conOp symOp, ToSym conTy symTy) =>
+  (ToSym conOp symOp, ToSym conTy symTy, Mergeable varId) =>
   ToSym (Prog conOp varId conTy) (Prog symOp varId symTy)
   where
   toSym (Prog name arg stmt res) =
