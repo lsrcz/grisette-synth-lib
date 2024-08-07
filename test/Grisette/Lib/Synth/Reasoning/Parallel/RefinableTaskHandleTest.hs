@@ -15,7 +15,6 @@ import Grisette
     SolvingFailure (Unsat),
     SymEq ((.==)),
     SymInteger,
-    precise,
     z3,
   )
 import Grisette.Lib.Synth.Context (ConcreteContext, SymbolicContext)
@@ -103,7 +102,7 @@ refinableTaskHandleTest =
       testCase "refine" $ do
         pool <- newThreadPool 2
         handle :: Handle <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task times4Spec times4Gen times4Sketch
         r <- waitCatch handle
         case r of
@@ -124,7 +123,7 @@ refinableTaskHandleTest =
       testCase "refine all submitted at once" $ do
         pool <- newThreadPool 2
         handle :: Handle <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task times4Spec times4Gen times4Sketch
         let newCost =
               progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::

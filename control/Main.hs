@@ -12,7 +12,6 @@ import Grisette
     PPrint (pformat),
     SymBool,
     SymInteger,
-    precise,
     z3,
   )
 import Grisette.Lib.Synth.Context (ConcreteContext)
@@ -139,7 +138,7 @@ main = do
           { synthesisVerifiers = [defaultSemQuickCheckFuzzer @SymVal gen spec],
             synthesisSketch = sketch
           }
-  r <- runSynthesisTask (precise z3) task
+  r <- runSynthesisTask z3 task
   case r of
     SynthesisSuccess (prog :: ConProg) -> do
       print $ pformat prog

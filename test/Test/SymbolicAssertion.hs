@@ -7,7 +7,6 @@ import Grisette
   ( EvalSym (evalSym),
     Model,
     SymEq ((./=), (.==)),
-    precise,
     solve,
     z3,
   )
@@ -33,8 +32,8 @@ symShouldEq ::
   (Model -> String) ->
   IO ()
 symShouldEq actual expected notEqualCaseMessage = do
-  canBeNotEqual <- solve (precise z3) $ actual ./= expected
-  canBeEqual <- solve (precise z3) $ actual .== expected
+  canBeNotEqual <- solve z3 $ actual ./= expected
+  canBeEqual <- solve z3 $ actual .== expected
   case (canBeNotEqual, canBeEqual) of
     (Left _, Right _) -> return ()
     (Right m, _) -> fail $ notEqualCaseMessage m

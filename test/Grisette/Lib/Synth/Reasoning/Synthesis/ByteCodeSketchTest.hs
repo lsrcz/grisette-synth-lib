@@ -10,7 +10,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
 where
 
 import Data.Data (Typeable)
-import Grisette (SymBool, SymInteger, Union, mrgIf, precise, z3)
+import Grisette (SymBool, SymInteger, Union, mrgIf, z3)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.ByteCodeSketch
   ( Prog (Prog),
@@ -147,7 +147,7 @@ byteCodeSketchTest =
               synthesisSketch = sketch
             }
     return $ testCase name $ do
-      SynthesisSuccess (prog :: ConProg) <- runSynthesisTask (precise z3) task
+      SynthesisSuccess (prog :: ConProg) <- runSynthesisTask z3 task
       fuzzingResult <-
         fuzzingTestProg
           gen

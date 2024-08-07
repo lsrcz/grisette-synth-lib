@@ -24,7 +24,6 @@ import Grisette
     Union,
     mrgIf,
     mrgReturn,
-    precise,
     z3,
   )
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
@@ -316,12 +315,12 @@ componentSketchTest =
                 ]
 
             return $ testCase (name <> namePostFix) $ do
-              result <- runSynthesisTask (precise z3) $ task spec gen sketch
+              result <- runSynthesisTask z3 $ task spec gen sketch
               fuzzResult result gen spec
         )
           ++ [ testCase "Add then DivMod with must be after constraint" $ do
                  SynthesisSuccess prog <-
-                   runSynthesisTask (precise z3) $
+                   runSynthesisTask z3 $
                      task addThenDivModSpec addThenDivModGen addThenDivModSketch
                  fuzzingResult <-
                    fuzzingTestProg
@@ -333,7 +332,7 @@ componentSketchTest =
                  fst <$> fuzzingResult @?= Nothing,
                testCase "Add then DivMod with bad must be after constraint" $ do
                  SynthesisSolverFailure Unsat <-
-                   runSynthesisTask (precise z3) $
+                   runSynthesisTask z3 $
                      task
                        addThenDivModSpec
                        addThenDivModGen
@@ -363,7 +362,7 @@ componentSketchTest =
                       Concrete.Stmt Double [1] [2]
                     ]
                     [Concrete.ProgRes 2 IntType]
-            result <- runSynthesisMinimalCostTask (precise z3) task
+            result <- runSynthesisMinimalCostTask z3 task
             case result of
               SynthesisSuccess prog ->
                 flattenProg prog @?= Right expectedSynthesizedProg
@@ -381,7 +380,7 @@ componentSketchTest =
                       synthesisMinimalCostTaskSymCostObj =
                         PerStmtCostObj TestSemanticsCost
                     }
-            result <- runSynthesisMinimalCostTask (precise z3) task
+            result <- runSynthesisMinimalCostTask z3 task
             case result of
               SynthesisSolverFailure Unsat -> return ()
               _ -> fail "Unexpected result"

@@ -18,7 +18,7 @@ import Control.Exception (Exception (fromException), SomeException)
 import Data.Either (fromRight)
 import qualified Data.HashMap.Lazy as HM
 import Data.Time (diffUTCTime, getCurrentTime)
-import Grisette (SymEq ((.==)), precise, z3)
+import Grisette (SymEq ((.==)), z3)
 import Grisette.Internal.SymPrim.SymInteger (SymInteger)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
@@ -105,13 +105,13 @@ baseTaskHandleTestCommon name _ =
     [ testCase "Concurrently synthesize several programs" $ do
         pool <- newThreadPool 2
         handle0 :: handle <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task addThenDoubleSpec addThenDoubleGen sharedSketch
         handle1 :: handle <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task divModTwiceSpec divModTwiceGen sharedSketch
         handle2 :: handle <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task addThenDoubleReverseSpec addThenDoubleGen sharedSketch
         Right (_, r0) <- pollUntilFinished handle0
         Right (_, r1) <- pollUntilFinished handle1
@@ -122,10 +122,10 @@ baseTaskHandleTestCommon name _ =
       testCase "pollTasks" $ do
         pool <- newThreadPool 2
         handle0 :: handle <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task addThenDoubleSpec addThenDoubleGen sharedSketch
         handle1 <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task divModTwiceSpec divModTwiceGen sharedSketch
         map <- HM.fromList <$> pollTasksUntilFinished [handle0, handle1]
         fuzzResult
@@ -143,7 +143,7 @@ baseTaskHandleTestCommon name _ =
         -- It cannot be too long, either, otherwise the task may finish before
         -- we can cancel the task.
         handle1 :: handle <-
-          enqueueTaskWithTimeout 10000 pool (precise z3) $
+          enqueueTaskWithTimeout 10000 pool z3 $
             task divModTwiceSpec divModTwiceGen sharedSketch
         r0 <- pollUntilFinished handle1
         case r0 of
@@ -152,7 +152,7 @@ baseTaskHandleTestCommon name _ =
       testCase "cancelTask" $ do
         pool <- newThreadPool 2
         handle1 :: handle <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task divModTwiceSpec divModTwiceGen sharedSketch
         -- The delay is necessary due to
         -- https://github.com/jwiegley/async-pool/issues/31
@@ -167,7 +167,7 @@ baseTaskHandleTestCommon name _ =
       testCase "time measurement" $ do
         pool <- newThreadPool 2
         handle :: handle <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task divModTwiceSpec divModTwiceGen sharedSketch
         _ <- waitCatch handle
         startTime <- startTime handle
@@ -182,7 +182,7 @@ baseTaskHandleTestCommon name _ =
       testCase "time measurement for cancelled tasks" $ do
         pool <- newThreadPool 2
         handle :: handle <-
-          enqueueTask pool (precise z3) $
+          enqueueTask pool z3 $
             task divModTwiceSpec divModTwiceGen sharedSketch
         threadDelay 100000
         cancel handle
@@ -204,7 +204,7 @@ baseTaskHandleTestCommon name _ =
         handle :: handle <-
           enqueueTaskPrecond
             pool
-            (precise z3)
+            z3
             (task times4Spec times4Gen times4Sketch)
             $ atomically
             $ do

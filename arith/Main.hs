@@ -7,7 +7,7 @@ module Main (main) where
 import Arith (OpCode (Minus, Mul, Plus))
 import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
 import qualified Data.Text.Lazy as TL
-import Grisette (PPrint (pformat), SymInteger, precise, z3)
+import Grisette (PPrint (pformat), SymInteger, z3)
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType))
@@ -70,7 +70,7 @@ main :: IO ()
 main = do
   print sketch
   r <-
-    runSynthesisTask (precise z3) $
+    runSynthesisTask z3 $
       SynthesisTask
         { synthesisVerifiers =
             [defaultSemQuickCheckFuzzer @SymInteger gen spec],
