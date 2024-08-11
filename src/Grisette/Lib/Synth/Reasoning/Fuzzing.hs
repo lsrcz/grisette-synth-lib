@@ -26,6 +26,7 @@ import Grisette
   ( EvalSym,
     Mergeable,
     Model,
+    PPrint,
     SymBool,
     SymEq,
     ToCon,
@@ -147,6 +148,8 @@ data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
       Matcher matcher Bool conVal,
       Show conVal,
       Mergeable symVal,
+      Show symVal,
+      PPrint symVal,
       Typeable symProg,
       Typeable symSemObj,
       Typeable symConstObj,
@@ -204,6 +207,8 @@ defaultQuickCheckFuzzerWithConstraint ::
     Typeable semObj,
     Typeable symVal,
     SymEq symVal,
+    Show symVal,
+    PPrint symVal,
     Eq conVal,
     ProgConstraints constObj symProg AngelicContext,
     Typeable constObj
@@ -237,6 +242,8 @@ defaultQuickCheckFuzzer ::
     Typeable symProg,
     Typeable semObj,
     Typeable symVal,
+    Show symVal,
+    PPrint symVal,
     SymEq symVal,
     Eq conVal
   ) =>
@@ -258,6 +265,8 @@ defaultSemQuickCheckFuzzer ::
     Mergeable symVal,
     Typeable symProg,
     Typeable symVal,
+    Show symVal,
+    PPrint symVal,
     SymEq symVal,
     Eq conVal
   ) =>

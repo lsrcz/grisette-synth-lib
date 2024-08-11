@@ -19,6 +19,7 @@ import Grisette
   ( Default (Default),
     Mergeable,
     MonadUnion,
+    PPrint,
     SymEq,
     ToSym,
     Union,
@@ -33,7 +34,7 @@ data Value intVal boolVal
   | BoolValue boolVal
   deriving (Show, Eq, Generic)
   deriving
-    (Mergeable, SymEq, ToSym (Value symIntVal symBoolVal))
+    (Mergeable, SymEq, ToSym (Value symIntVal symBoolVal), PPrint)
     via (Default (Value intVal boolVal))
 
 class (Mergeable val) => ValueBuilder val where

@@ -50,7 +50,7 @@ import Grisette
     solverGenericCEGIS,
     solverGenericCEGISWithRefinement,
     uniqueIdentifier,
-    withSolver,
+    withSolver, PPrint (pformat),
   )
 import Grisette.Lib.Synth.Context
   ( AngelicContext,
@@ -103,6 +103,8 @@ data VerificationCex where
       Typeable symSemObj,
       Typeable symConstObj,
       Typeable symVal,
+      Show symVal,
+      PPrint symVal,
       Typeable matcher
     ) =>
     { verificationCexContext :: Proxy ctx,
@@ -112,6 +114,12 @@ data VerificationCex where
       verificationCexMatcher :: matcher
     } ->
     VerificationCex
+
+instance Show VerificationCex where
+  show (VerificationCex _ _ _ iop _) = show iop
+
+instance PPrint VerificationCex where
+  pformat (VerificationCex _ _ _ iop _) = pformat iop
 
 class
   IsVerifier verifier symProg conProg
