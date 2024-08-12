@@ -44,10 +44,10 @@ import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher), Matcher (match))
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( IsVerifier (toVerifierFuns),
+  ( Example (Example),
+    IsVerifier (toVerifierFuns),
     SomeVerifier (SomeVerifier),
     SynthesisContext,
-    Example (Example),
   )
 import Test.QuickCheck.Counterexamples
   ( Args (chatty),

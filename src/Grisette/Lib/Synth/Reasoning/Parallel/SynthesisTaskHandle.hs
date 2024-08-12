@@ -43,10 +43,10 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (ThreadHandle)
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisMinimalCostTask,
+  ( Example,
+    SynthesisMinimalCostTask,
     SynthesisResult,
     SynthesisTask,
-    Example,
     runSynthesisMinimalCostTaskExtractCex,
     runSynthesisTaskExtractCex,
     solverRunRefinableSynthesisTaskExtractCex,
