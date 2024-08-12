@@ -43,11 +43,12 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (newThreadPool)
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisResult (SynthesisSuccess),
-    VerificationCex,
+  ( Example,
+    SynthesisResult (SynthesisSuccess),
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( ConProg,
+    SymProg,
     fuzzResult,
     sharedSketch,
     task,
@@ -70,9 +71,9 @@ import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool, (@?=))
 
 pollUntilFinished ::
-  (BaseTaskHandle handle ConProg) =>
+  (BaseTaskHandle handle SymProg ConProg) =>
   handle ->
-  IO (Either SomeException ([VerificationCex], SynthesisResult ConProg))
+  IO (Either SomeException ([Example SymProg], SynthesisResult ConProg))
 pollUntilFinished handle = do
   r <- poll handle
   case r of
@@ -80,11 +81,11 @@ pollUntilFinished handle = do
     _ -> threadDelay 100000 >> pollUntilFinished handle
 
 pollTasksUntilFinished ::
-  (BaseTaskHandle handle ConProg) =>
+  (BaseTaskHandle handle SymProg ConProg) =>
   [handle] ->
   IO
     [ ( handle,
-        Either SomeException ([VerificationCex], SynthesisResult ConProg)
+        Either SomeException ([Example SymProg], SynthesisResult ConProg)
       )
     ]
 pollTasksUntilFinished taskSet = do
@@ -95,7 +96,7 @@ pollTasksUntilFinished taskSet = do
 
 baseTaskHandleTestCommon ::
   forall handle proxy.
-  (BaseTaskHandle handle ConProg) =>
+  (BaseTaskHandle handle SymProg ConProg) =>
   String ->
   proxy handle ->
   Test

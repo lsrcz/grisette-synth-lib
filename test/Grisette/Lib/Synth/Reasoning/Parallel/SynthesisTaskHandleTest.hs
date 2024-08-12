@@ -15,10 +15,11 @@ import Grisette.Lib.Synth.Reasoning.Parallel.SynthesisTaskHandle
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( ConProg,
+    SymProg,
   )
 import Test.Framework (Test, testGroup)
 
-type Handle = SynthesisTaskHandle ConProg
+type Handle = SynthesisTaskHandle SymProg ConProg
 
 synthesisTaskHandleTest :: Test
 synthesisTaskHandleTest =

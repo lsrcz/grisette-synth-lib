@@ -72,34 +72,34 @@ import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
   )
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisResult (SynthesisSuccess),
+  ( Example,
+    SynthesisResult (SynthesisSuccess),
     SynthesisTask,
-    VerificationCex,
     solverRunRefinableSynthesisTaskExtractCex,
   )
 
-data RefinableTaskHandle conProg where
+data RefinableTaskHandle symProg conProg where
   RefinableTaskHandle ::
     (Solver solver) =>
     { _initialThreadHandleId :: Int,
       _initialSynthesisTask :: SynthesisTask symProg conProg,
       _underlyingHandles ::
-        TVar [ThreadHandle ([VerificationCex], SynthesisResult conProg)],
+        TVar [ThreadHandle ([Example symProg], SynthesisResult conProg)],
       _maxSucceedIndex :: TVar Int,
       _solverHandle :: TMVar solver
     } ->
-    RefinableTaskHandle conProg
+    RefinableTaskHandle symProg conProg
 
-instance Eq (RefinableTaskHandle conProg) where
+instance Eq (RefinableTaskHandle symProg conProg) where
   RefinableTaskHandle id1 _ _ _ _ == RefinableTaskHandle id2 _ _ _ _ =
     id1 == id2
 
-instance Hashable (RefinableTaskHandle conProg) where
+instance Hashable (RefinableTaskHandle symProg conProg) where
   hashWithSalt salt (RefinableTaskHandle id _ _ _ _) = hashWithSalt salt id
 
 instance
-  (Typeable conProg) =>
-  BaseTaskHandle (RefinableTaskHandle conProg) conProg
+  (Typeable symProg, Typeable conProg) =>
+  BaseTaskHandle (RefinableTaskHandle symProg conProg) symProg conProg
   where
   enqueueTaskPrecondMaybeTimeout
     maybeTimeout
@@ -159,12 +159,12 @@ instance
     traverse_ solverForceTerminate solverHandle
 
 pollAtIndexSTM ::
-  (Typeable conProg) =>
-  RefinableTaskHandle conProg ->
+  (Typeable symProg, Typeable conProg) =>
+  RefinableTaskHandle symProg conProg ->
   Int ->
   STM
     ( Maybe
-        (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+        (Either C.SomeException ([Example symProg], SynthesisResult conProg))
     )
 pollAtIndexSTM RefinableTaskHandle {..} index = do
   handles <- readTVar _underlyingHandles
@@ -173,20 +173,20 @@ pollAtIndexSTM RefinableTaskHandle {..} index = do
     else Pool.pollSTM (handles !! index)
 
 pollAtIndex ::
-  (Typeable conProg) =>
-  RefinableTaskHandle conProg ->
+  (Typeable symProg, Typeable conProg) =>
+  RefinableTaskHandle symProg conProg ->
   Int ->
   IO
     ( Maybe
-        (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+        (Either C.SomeException ([Example symProg], SynthesisResult conProg))
     )
 pollAtIndex handle index = atomically $ pollAtIndexSTM handle index
 
 waitCatchAtIndexSTM ::
-  (Typeable conProg) =>
-  RefinableTaskHandle conProg ->
+  (Typeable symProg, Typeable conProg) =>
+  RefinableTaskHandle symProg conProg ->
   Int ->
-  STM (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+  STM (Either C.SomeException ([Example symProg], SynthesisResult conProg))
 waitCatchAtIndexSTM RefinableTaskHandle {..} index = do
   handles <- readTVar _underlyingHandles
   if index >= length handles || index < 0
@@ -194,15 +194,13 @@ waitCatchAtIndexSTM RefinableTaskHandle {..} index = do
     else Pool.waitCatchSTM (handles !! index)
 
 waitCatchAtIndex ::
-  (Typeable conProg) =>
-  RefinableTaskHandle conProg ->
+  (Typeable symProg, Typeable conProg) =>
+  RefinableTaskHandle symProg conProg ->
   Int ->
-  IO (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+  IO (Either C.SomeException ([Example symProg], SynthesisResult conProg))
 waitCatchAtIndex handle index = atomically $ waitCatchAtIndexSTM handle index
 
-checkRefinableSolverAlive ::
-  RefinableTaskHandle conProg ->
-  IO Bool
+checkRefinableSolverAlive :: RefinableTaskHandle symProg conProg -> IO Bool
 checkRefinableSolverAlive RefinableTaskHandle {..} = do
   solverHandle <- atomically $ tryReadTMVar _solverHandle
   case solverHandle of
@@ -217,7 +215,7 @@ checkRefinableSolverAlive RefinableTaskHandle {..} = do
     Nothing -> return False
 
 withAliveSolver ::
-  RefinableTaskHandle conProg ->
+  RefinableTaskHandle symProg conProg ->
   (forall solver. (Solver solver) => solver -> IO a) ->
   IO a
 withAliveSolver handle@RefinableTaskHandle {..} action = do
@@ -230,14 +228,14 @@ withAliveSolver handle@RefinableTaskHandle {..} action = do
     Nothing -> throwIO SynthesisTaskSolverDead
 
 actionWithTimeout ::
-  (Solver solver, Typeable conProg) =>
+  (Solver solver, Typeable symProg, Typeable conProg) =>
   Maybe Int ->
-  TMVar (RefinableTaskHandle conProg) ->
+  TMVar (RefinableTaskHandle symProg conProg) ->
   Int ->
   TVar Int ->
   solver ->
-  (solver -> IO ([VerificationCex], SynthesisResult conProg)) ->
-  IO ([VerificationCex], SynthesisResult conProg)
+  (solver -> IO ([Example symProg], SynthesisResult conProg)) ->
+  IO ([Example symProg], SynthesisResult conProg)
 actionWithTimeout
   maybeTimeout
   taskHandleTMVar
@@ -262,10 +260,10 @@ actionWithTimeout
       return r
 
 enqueueRefineCondMaybeTimeout ::
-  (Typeable conProg) =>
+  (Typeable symProg, Typeable conProg) =>
   Maybe Int ->
   Double ->
-  RefinableTaskHandle conProg ->
+  RefinableTaskHandle symProg conProg ->
   IO SymBool ->
   IO ()
 enqueueRefineCondMaybeTimeout
@@ -299,18 +297,18 @@ enqueueRefineCondMaybeTimeout
     atomically $ putTMVar taskHandleTMVar taskHandle
 
 enqueueRefineCond ::
-  (Typeable conProg) =>
+  (Typeable symProg, Typeable conProg) =>
   Double ->
-  RefinableTaskHandle conProg ->
+  RefinableTaskHandle symProg conProg ->
   IO SymBool ->
   IO ()
 enqueueRefineCond = enqueueRefineCondMaybeTimeout Nothing
 
 enqueueRefineCondWithTimeout ::
-  (Typeable conProg) =>
+  (Typeable symProg, Typeable conProg) =>
   Int ->
   Double ->
-  RefinableTaskHandle conProg ->
+  RefinableTaskHandle symProg conProg ->
   IO SymBool ->
   IO ()
 enqueueRefineCondWithTimeout timeout =

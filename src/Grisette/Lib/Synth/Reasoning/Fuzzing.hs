@@ -47,7 +47,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   ( IsVerifier (toVerifierFuns),
     SomeVerifier (SomeVerifier),
     SynthesisContext,
-    VerificationCex (VerificationCex),
+    Example (Example),
   )
 import Test.QuickCheck.Counterexamples
   ( Args (chatty),
@@ -185,9 +185,8 @@ instance
         Just (ioPair, matcher) ->
           return
             ( CEGISVerifierFoundCex $
-                VerificationCex
+                Example
                   (Proxy :: Proxy symCtx)
-                  (Proxy :: Proxy symProg)
                   symSem
                   (toSym ioPair :: IOPair symVal)
                   matcher

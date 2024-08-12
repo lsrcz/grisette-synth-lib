@@ -5,7 +5,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Grisette.Lib.Synth.Reasoning.Synthesis
@@ -13,7 +12,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisResult (..),
     IsVerifier (..),
     SomeVerifier (..),
-    VerificationCex (..),
+    Example (..),
     SynthesisTask (..),
     synthesisConstraintFun,
     runSynthesisTask,
@@ -29,13 +28,14 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
 where
 
 import Control.Monad.Except (runExceptT)
-import Data.Data (Typeable, eqT, type (:~:) (Refl))
+import Data.Data (Typeable)
 import Data.Proxy (Proxy)
 import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
     EvalSym,
     Mergeable,
+    PPrint (pformat),
     Solvable (con),
     Solver,
     SolvingFailure,
@@ -50,7 +50,7 @@ import Grisette
     solverGenericCEGIS,
     solverGenericCEGISWithRefinement,
     uniqueIdentifier,
-    withSolver, PPrint (pformat),
+    withSolver,
   )
 import Grisette.Lib.Synth.Context
   ( AngelicContext,
@@ -91,15 +91,14 @@ instance SynthesisContext AngelicContext where
     ident <- uniqueIdentifier "synth"
     genSynthesisConstraint matcher (runFreshT actual ident) expectedOutputs
 
-data VerificationCex where
-  VerificationCex ::
+data Example symProg where
+  Example ::
     forall symSemObj symConstObj symProg symVal ctx matcher.
     ( ProgSemantics symSemObj symProg symVal ctx,
       ProgConstraints symConstObj symProg ctx,
       SynthesisContext ctx,
       Matcher matcher SymBool symVal,
       Mergeable symVal,
-      Typeable symProg,
       Typeable symSemObj,
       Typeable symConstObj,
       Typeable symVal,
@@ -107,26 +106,25 @@ data VerificationCex where
       PPrint symVal,
       Typeable matcher
     ) =>
-    { verificationCexContext :: Proxy ctx,
-      verificationCexSymProg :: Proxy symProg,
-      verificationCexSymSemantics :: WithConstraints symSemObj symConstObj,
-      verificationCexIOPair :: IOPair symVal,
-      verificationCexMatcher :: matcher
+    { exampleContext :: Proxy ctx,
+      exampleSymSemantics :: WithConstraints symSemObj symConstObj,
+      exampleIOPair :: IOPair symVal,
+      exampleMatcher :: matcher
     } ->
-    VerificationCex
+    Example symProg
 
-instance Show VerificationCex where
-  show (VerificationCex _ _ _ iop _) = show iop
+instance Show (Example symProg) where
+  show (Example _ _ iop _) = show iop
 
-instance PPrint VerificationCex where
-  pformat (VerificationCex _ _ _ iop _) = pformat iop
+instance PPrint (Example symProg) where
+  pformat (Example _ _ iop _) = pformat iop
 
 class
   IsVerifier verifier symProg conProg
     | verifier -> symProg conProg
   where
   toVerifierFuns ::
-    verifier -> symProg -> [VerifierFun VerificationCex ()]
+    verifier -> symProg -> [VerifierFun (Example symProg) ()]
 
 data SomeVerifier symProg conProg where
   SomeVerifier ::
@@ -143,16 +141,16 @@ data SynthesisTask symProg conProg where
       Typeable symProg
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
+      -- synthesisInitialExamples ::
       synthesisSketch :: symProg
     } ->
     SynthesisTask symProg conProg
 
-data SynthesisMinimalCostTask conProg where
+data SynthesisMinimalCostTask symProg conProg where
   SynthesisMinimalCostTask ::
     forall symProg conProg cost conCostObj symCostObj.
     ( EvalSym symProg,
       ToCon symProg conProg,
-      Typeable symProg,
       ProgCost conCostObj conProg cost ConcreteContext,
       ProgCost symCostObj symProg cost AngelicContext,
       SymOrd cost
@@ -163,31 +161,20 @@ data SynthesisMinimalCostTask conProg where
       synthesisMinimalCostTaskConCostObj :: conCostObj,
       synthesisMinimalCostTaskSymCostObj :: symCostObj
     } ->
-    SynthesisMinimalCostTask conProg
+    SynthesisMinimalCostTask symProg conProg
 
 synthesisConstraintFun ::
   forall symProg.
   (Typeable symProg) =>
   symProg ->
-  SynthesisConstraintFun VerificationCex
+  SynthesisConstraintFun (Example symProg)
 synthesisConstraintFun
   prog
-  ( VerificationCex
-      (_ :: Proxy ctx)
-      (_ :: Proxy symProg')
-      symSem
-      (iop :: IOPair symVal)
+  (Example (_ :: Proxy ctx) symSem (iop :: IOPair symVal) matcher) =
+    genSynthesisConstraint
       matcher
-    ) =
-    case eqT @symProg @symProg' of
-      Just Refl ->
-        genSynthesisConstraint
-          matcher
-          ( runProgWithConstraints symSem prog (ioPairInputs iop) ::
-              ctx [symVal]
-          )
-          (ioPairOutputs iop)
-      Nothing -> error "Should not happen"
+      (runProgWithConstraints symSem prog (ioPairInputs iop) :: ctx [symVal])
+      (ioPairOutputs iop)
 
 data SynthesisResult conProg
   = SynthesisSuccess conProg
@@ -196,36 +183,37 @@ data SynthesisResult conProg
   deriving (Show)
 
 runSynthesisMinimalCostTask ::
-  (ConfigurableSolver config h) =>
+  (ConfigurableSolver config h, Typeable symProg) =>
   config ->
-  SynthesisMinimalCostTask conProg ->
+  SynthesisMinimalCostTask symProg conProg ->
   IO (SynthesisResult conProg)
 runSynthesisMinimalCostTask config task =
   snd <$> runSynthesisMinimalCostTaskExtractCex config task
 
 runSynthesisMinimalCostTaskExtractCex ::
-  forall config h conProg.
-  (ConfigurableSolver config h) =>
+  forall config h symProg conProg.
+  (ConfigurableSolver config h, Typeable symProg) =>
   config ->
-  SynthesisMinimalCostTask conProg ->
-  IO ([VerificationCex], SynthesisResult conProg)
-runSynthesisMinimalCostTaskExtractCex config task = withSolver config $ \solver ->
-  solverRunSynthesisMinimalCostTaskExtractCex solver task
+  SynthesisMinimalCostTask symProg conProg ->
+  IO ([Example symProg], SynthesisResult conProg)
+runSynthesisMinimalCostTaskExtractCex config task =
+  withSolver config $ \solver ->
+    solverRunSynthesisMinimalCostTaskExtractCex solver task
 
 solverRunSynthesisMinimalCostTask ::
-  (Solver solver) =>
+  (Solver solver, Typeable symProg) =>
   solver ->
-  SynthesisMinimalCostTask conProg ->
+  SynthesisMinimalCostTask symProg conProg ->
   IO (SynthesisResult conProg)
 solverRunSynthesisMinimalCostTask solver task =
   snd <$> solverRunSynthesisMinimalCostTaskExtractCex solver task
 
 solverRunSynthesisMinimalCostTaskExtractCex ::
-  forall solver conProg.
-  (Solver solver) =>
+  forall solver symProg conProg.
+  (Solver solver, Typeable symProg) =>
   solver ->
-  SynthesisMinimalCostTask conProg ->
-  IO ([VerificationCex], SynthesisResult conProg)
+  SynthesisMinimalCostTask symProg conProg ->
+  IO ([Example symProg], SynthesisResult conProg)
 solverRunSynthesisMinimalCostTaskExtractCex
   solver
   ( SynthesisMinimalCostTask
@@ -282,7 +270,7 @@ runSynthesisTaskExtractCex ::
   (ConfigurableSolver config h) =>
   config ->
   SynthesisTask symProg conProg ->
-  IO ([VerificationCex], SynthesisResult conProg)
+  IO ([Example symProg], SynthesisResult conProg)
 runSynthesisTaskExtractCex config task = withSolver config $ \solver ->
   solverRunRefinableSynthesisTaskExtractCex solver task
 
@@ -298,7 +286,7 @@ solverRunRefinableSynthesisTaskExtractCex ::
   (Solver solver) =>
   solver ->
   SynthesisTask symProg conProg ->
-  IO ([VerificationCex], SynthesisResult conProg)
+  IO ([Example symProg], SynthesisResult conProg)
 solverRunRefinableSynthesisTaskExtractCex
   solver
   (SynthesisTask verifiers symProg) = do

@@ -46,21 +46,21 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisMinimalCostTask,
     SynthesisResult,
     SynthesisTask,
-    VerificationCex,
+    Example,
     runSynthesisMinimalCostTaskExtractCex,
     runSynthesisTaskExtractCex,
     solverRunRefinableSynthesisTaskExtractCex,
   )
 
-newtype SynthesisTaskHandle conProg = SynthesisTaskHandle
+newtype SynthesisTaskHandle symProg conProg = SynthesisTaskHandle
   { _underlyingHandle ::
-      ThreadHandle ([VerificationCex], SynthesisResult conProg)
+      ThreadHandle ([Example symProg], SynthesisResult conProg)
   }
   deriving newtype (Eq, Hashable)
 
 instance
-  (Typeable conProg) =>
-  BaseTaskHandle (SynthesisTaskHandle conProg) conProg
+  (Typeable symProg, Typeable conProg) =>
+  BaseTaskHandle (SynthesisTaskHandle symProg conProg) symProg conProg
   where
   enqueueTaskPrecondMaybeTimeout timeout pool config priority task precond =
     enqueueActionImpl
@@ -79,11 +79,11 @@ instance
   cancelWith (SynthesisTaskHandle handle) e = Pool.cancelWith e handle
 
 actionWithTimeout ::
-  (Typeable conProg) =>
+  (Typeable symProg, Typeable conProg) =>
   Maybe Int ->
-  TMVar (SynthesisTaskHandle conProg) ->
-  IO ([VerificationCex], SynthesisResult conProg) ->
-  IO ([VerificationCex], SynthesisResult conProg)
+  TMVar (SynthesisTaskHandle symProg conProg) ->
+  IO ([Example symProg], SynthesisResult conProg) ->
+  IO ([Example symProg], SynthesisResult conProg)
 actionWithTimeout maybeTimeout taskHandleTMVar action =
   C.mask $ \restore -> do
     selfHandle <- atomically $ readTMVar taskHandleTMVar
@@ -97,12 +97,12 @@ actionWithTimeout maybeTimeout taskHandleTMVar action =
     restore action
 
 enqueueActionImpl ::
-  (Typeable conProg) =>
+  (Typeable symProg, Typeable conProg) =>
   Maybe Int ->
   Pool.ThreadPool ->
   Double ->
-  IO ([VerificationCex], SynthesisResult conProg) ->
-  IO (SynthesisTaskHandle conProg)
+  IO ([Example symProg], SynthesisResult conProg) ->
+  IO (SynthesisTaskHandle symProg conProg)
 enqueueActionImpl
   maybeTimeout
   pool
@@ -118,30 +118,30 @@ enqueueActionImpl
 
 -- | Add a task to the synthesis server.
 enqueueAction ::
-  (Typeable conProg) =>
+  (Typeable symProg, Typeable conProg) =>
   Pool.ThreadPool ->
   Double ->
-  IO ([VerificationCex], SynthesisResult conProg) ->
-  IO (SynthesisTaskHandle conProg)
+  IO ([Example symProg], SynthesisResult conProg) ->
+  IO (SynthesisTaskHandle symProg conProg)
 enqueueAction = enqueueActionImpl Nothing
 
 -- | Add a task to the synthesis server.
 enqueueActionWithTimeout ::
-  (Typeable conProg) =>
+  (Typeable symProg, Typeable conProg) =>
   Int ->
   Pool.ThreadPool ->
   Double ->
-  IO ([VerificationCex], SynthesisResult conProg) ->
-  IO (SynthesisTaskHandle conProg)
+  IO ([Example symProg], SynthesisResult conProg) ->
+  IO (SynthesisTaskHandle symProg conProg)
 enqueueActionWithTimeout timeout = enqueueActionImpl (Just timeout)
 
 enqueueMinimalCostTask ::
-  (ConfigurableSolver config solver, Typeable conProg) =>
+  (ConfigurableSolver config solver, Typeable symProg, Typeable conProg) =>
   Pool.ThreadPool ->
   config ->
   Double ->
-  SynthesisMinimalCostTask conProg ->
-  IO (SynthesisTaskHandle conProg)
+  SynthesisMinimalCostTask symProg conProg ->
+  IO (SynthesisTaskHandle symProg conProg)
 enqueueMinimalCostTask pool config priority task =
   enqueueAction
     pool
@@ -149,13 +149,13 @@ enqueueMinimalCostTask pool config priority task =
     (runSynthesisMinimalCostTaskExtractCex config task)
 
 enqueueMinimalCostTaskWithTimeout ::
-  (ConfigurableSolver config solver, Typeable conProg) =>
+  (ConfigurableSolver config solver, Typeable symProg, Typeable conProg) =>
   Int ->
   Pool.ThreadPool ->
   config ->
   Double ->
-  SynthesisMinimalCostTask conProg ->
-  IO (SynthesisTaskHandle conProg)
+  SynthesisMinimalCostTask symProg conProg ->
+  IO (SynthesisTaskHandle symProg conProg)
 enqueueMinimalCostTaskWithTimeout timeout pool config priority task =
   enqueueActionWithTimeout
     timeout
@@ -164,9 +164,9 @@ enqueueMinimalCostTaskWithTimeout timeout pool config priority task =
     (runSynthesisMinimalCostTaskExtractCex config task)
 
 alterTaskIfPendingImpl ::
-  (ConfigurableSolver config h, Typeable conProg) =>
+  (ConfigurableSolver config h, Typeable symProg, Typeable conProg) =>
   Maybe Int ->
-  SynthesisTaskHandle conProg ->
+  SynthesisTaskHandle symProg conProg ->
   config ->
   SynthesisTask symProg conProg ->
   IO ()
@@ -184,16 +184,16 @@ alterTaskIfPendingImpl
     atomically $ putTMVar taskHandleTMVar taskHandle
 
 alterTaskIfPending ::
-  (ConfigurableSolver config h, Typeable conProg) =>
-  SynthesisTaskHandle conProg ->
+  (ConfigurableSolver config h, Typeable symProg, Typeable conProg) =>
+  SynthesisTaskHandle symProg conProg ->
   config ->
   SynthesisTask symProg conProg ->
   IO ()
 alterTaskIfPending = alterTaskIfPendingImpl Nothing
 
 alterTaskIfPendingWithTimeout ::
-  (ConfigurableSolver config h, Typeable conProg) =>
-  SynthesisTaskHandle conProg ->
+  (ConfigurableSolver config h, Typeable symProg, Typeable conProg) =>
+  SynthesisTaskHandle symProg conProg ->
   config ->
   SynthesisTask symProg conProg ->
   Int ->

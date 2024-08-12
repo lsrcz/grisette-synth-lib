@@ -25,22 +25,21 @@ import Control.Concurrent.STM (STM, atomically, orElse)
 import qualified Control.Exception as C
 import Data.Hashable (Hashable)
 import Data.Time (NominalDiffTime, UTCTime, diffUTCTime)
-import Data.Typeable (Typeable)
 import Grisette (ConfigurableSolver, Solvable (con), SymBool)
 import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SynthesisResult,
+  ( Example,
+    SynthesisResult,
     SynthesisTask,
-    VerificationCex,
   )
 
 class
-  (Eq handle, Hashable handle, Typeable conProg) =>
-  BaseTaskHandle handle conProg
-    | handle -> conProg
+  (Eq handle, Hashable handle) =>
+  BaseTaskHandle handle symProg conProg
+    | handle -> symProg conProg
   where
   enqueueTaskPrecondMaybeTimeout ::
     (ConfigurableSolver config solver) =>
@@ -62,70 +61,75 @@ class
     handle ->
     STM
       ( Maybe
-          (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+          (Either C.SomeException ([Example symProg], SynthesisResult conProg))
       )
   waitCatchSTM ::
     handle ->
-    STM (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+    STM (Either C.SomeException ([Example symProg], SynthesisResult conProg))
   cancelWith :: (C.Exception e) => handle -> e -> IO ()
 
-startTime :: (BaseTaskHandle task conProg) => task -> IO UTCTime
+startTime :: (BaseTaskHandle task symProg conProg) => task -> IO UTCTime
 startTime = atomically . startTimeSTM
 
-endTime :: (BaseTaskHandle task conProg) => task -> IO UTCTime
+endTime :: (BaseTaskHandle task symProg conProg) => task -> IO UTCTime
 endTime = atomically . endTimeSTM
 
-elapsedTime :: (BaseTaskHandle task conProg) => task -> IO NominalDiffTime
+elapsedTime ::
+  (BaseTaskHandle task symProg conProg) => task -> IO NominalDiffTime
 elapsedTime = atomically . elapsedTimeSTM
 
-maybeStartTimeSTM :: (BaseTaskHandle task conProg) => task -> STM (Maybe UTCTime)
+maybeStartTimeSTM ::
+  (BaseTaskHandle task symProg conProg) => task -> STM (Maybe UTCTime)
 maybeStartTimeSTM task =
   (Just <$> startTimeSTM task) `orElse` return Nothing
 
-maybeEndTimeSTM :: (BaseTaskHandle task conProg) => task -> STM (Maybe UTCTime)
+maybeEndTimeSTM ::
+  (BaseTaskHandle task symProg conProg) => task -> STM (Maybe UTCTime)
 maybeEndTimeSTM task =
   (Just <$> endTimeSTM task) `orElse` return Nothing
 
 maybeElapsedTimeSTM ::
-  (BaseTaskHandle task conProg) => task -> STM (Maybe NominalDiffTime)
+  (BaseTaskHandle task symProg conProg) => task -> STM (Maybe NominalDiffTime)
 maybeElapsedTimeSTM task =
   (Just <$> elapsedTimeSTM task) `orElse` return Nothing
 
-maybeStartTime :: (BaseTaskHandle task conProg) => task -> IO (Maybe UTCTime)
+maybeStartTime ::
+  (BaseTaskHandle task symProg conProg) => task -> IO (Maybe UTCTime)
 maybeStartTime = atomically . maybeStartTimeSTM
 
-maybeEndTime :: (BaseTaskHandle task conProg) => task -> IO (Maybe UTCTime)
+maybeEndTime ::
+  (BaseTaskHandle task symProg conProg) => task -> IO (Maybe UTCTime)
 maybeEndTime = atomically . maybeEndTimeSTM
 
 maybeElapsedTime ::
-  (BaseTaskHandle task conProg) => task -> IO (Maybe NominalDiffTime)
+  (BaseTaskHandle task symProg conProg) => task -> IO (Maybe NominalDiffTime)
 maybeElapsedTime = atomically . maybeElapsedTimeSTM
 
 poll ::
-  (BaseTaskHandle task conProg) =>
+  (BaseTaskHandle task symProg conProg) =>
   task ->
   IO
     ( Maybe
-        (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+        (Either C.SomeException ([Example symProg], SynthesisResult conProg))
     )
 poll = atomically . pollSTM
 
 waitCatch ::
-  (BaseTaskHandle task conProg) =>
+  (BaseTaskHandle task symProg conProg) =>
   task ->
-  IO (Either C.SomeException ([VerificationCex], SynthesisResult conProg))
+  IO (Either C.SomeException ([Example symProg], SynthesisResult conProg))
 waitCatch = atomically . waitCatchSTM
 
-cancel :: (BaseTaskHandle task conProg) => task -> IO ()
+cancel :: (BaseTaskHandle task symProg conProg) => task -> IO ()
 cancel task = cancelWith task SynthesisTaskCancelled
 
 pollAnySTM ::
-  (BaseTaskHandle task conProg) =>
+  (BaseTaskHandle task symProg conProg) =>
   [task] ->
   STM
     ( [task],
       [ ( task,
-          Either C.SomeException ([VerificationCex], SynthesisResult conProg)
+          Either C.SomeException ([Example symProg], SynthesisResult conProg)
         )
       ]
     )
@@ -137,19 +141,19 @@ pollAnySTM tasks = do
   return (unfinished, finished)
 
 pollAny ::
-  (BaseTaskHandle task conProg) =>
+  (BaseTaskHandle task symProg conProg) =>
   [task] ->
   IO
     ( [task],
       [ ( task,
-          Either C.SomeException ([VerificationCex], SynthesisResult conProg)
+          Either C.SomeException ([Example symProg], SynthesisResult conProg)
         )
       ]
     )
 pollAny = atomically . pollAnySTM
 
 enqueueTaskPrecond ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
   Pool.ThreadPool ->
   config ->
   Double ->
@@ -159,7 +163,7 @@ enqueueTaskPrecond ::
 enqueueTaskPrecond = enqueueTaskPrecondMaybeTimeout Nothing
 
 enqueueTaskPrecondWithTimeout ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
   Int ->
   Pool.ThreadPool ->
   config ->
@@ -171,7 +175,7 @@ enqueueTaskPrecondWithTimeout timeout =
   enqueueTaskPrecondMaybeTimeout (Just timeout)
 
 enqueueTaskMaybeTimeout ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
   Maybe Int ->
   Pool.ThreadPool ->
   config ->
@@ -188,7 +192,7 @@ enqueueTaskMaybeTimeout maybeTimeout pool config priority task =
     (return $ con True)
 
 enqueueTask ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
   Pool.ThreadPool ->
   config ->
   Double ->
@@ -197,7 +201,7 @@ enqueueTask ::
 enqueueTask = enqueueTaskMaybeTimeout Nothing
 
 enqueueTaskWithTimeout ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
+  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
   Int ->
   Pool.ThreadPool ->
   config ->
