@@ -36,6 +36,7 @@ import Grisette
     ConfigurableSolver,
     EvalSym,
     Mergeable,
+    PPrint (pformat),
     Solvable (con),
     Solver,
     SolvingFailure,
@@ -50,7 +51,7 @@ import Grisette
     solverGenericCEGIS,
     solverGenericCEGISWithRefinement,
     uniqueIdentifier,
-    withSolver, PPrint (pformat),
+    withSolver,
   )
 import Grisette.Lib.Synth.Context
   ( AngelicContext,
