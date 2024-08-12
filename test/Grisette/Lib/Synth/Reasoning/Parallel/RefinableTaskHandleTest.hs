@@ -102,7 +102,7 @@ refinableTaskHandleTest =
       testCase "refine" $ do
         pool <- newThreadPool 2
         handle :: Handle <-
-          enqueueTask pool z3 $
+          enqueueTask pool z3 0 $
             task times4Spec times4Gen times4Sketch
         r <- waitCatch handle
         case r of
@@ -110,7 +110,7 @@ refinableTaskHandleTest =
             let Right cost =
                   progCost (PerStmtCostObj TestSemanticsCost) prog ::
                     ConcreteContext SymInteger
-            enqueueRefineCond handle $ do
+            enqueueRefineCond 0 handle $ do
               let newCost =
                     progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
                       SymbolicContext SymInteger
@@ -123,14 +123,14 @@ refinableTaskHandleTest =
       testCase "refine all submitted at once" $ do
         pool <- newThreadPool 2
         handle :: Handle <-
-          enqueueTask pool z3 $
+          enqueueTask pool z3 0 $
             task times4Spec times4Gen times4Sketch
         let newCost =
               progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
                 SymbolicContext SymInteger
-        enqueueRefineCond handle $ return $ newCost .== return 2
-        enqueueRefineCond handle $ return $ newCost .== return 3
-        enqueueRefineCond handle $ return $ newCost .== return 2
+        enqueueRefineCond 0 handle $ return $ newCost .== return 2
+        enqueueRefineCond 0 handle $ return $ newCost .== return 3
+        enqueueRefineCond 0 handle $ return $ newCost .== return 2
 
         r <- waitCatch handle
         shouldHaveCost r 2

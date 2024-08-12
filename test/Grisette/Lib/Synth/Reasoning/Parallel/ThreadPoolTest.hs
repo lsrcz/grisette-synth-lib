@@ -44,7 +44,13 @@ import Test.Framework
 import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.HUnit (assertBool, (@?=))
-import Test.QuickCheck (Arbitrary (arbitrary), Gen, forAll, ioProperty, vectorOf)
+import Test.QuickCheck
+  ( Arbitrary (arbitrary),
+    Gen,
+    forAll,
+    ioProperty,
+    vectorOf,
+  )
 
 threadPoolTest :: Test
 threadPoolTest =
@@ -54,7 +60,7 @@ threadPoolTest =
       [ testCase "poll" $ do
           mvar <- newEmptyMVar
           pool <- newThreadPool 2
-          handle <- newThread pool (takeMVar mvar >> return (42 :: Int))
+          handle <- newThread pool 0 (takeMVar mvar >> return (42 :: Int))
           r0 <- poll handle
           assertBool "Poll before finishing" $ isNothing r0
           let wait = do
@@ -69,7 +75,7 @@ threadPoolTest =
             _ -> fail "Expected Right 42",
         testCase "waitCatch" $ do
           pool <- newThreadPool 2
-          handle <- newThread pool (return (42 :: Int))
+          handle <- newThread pool 0 (return (42 :: Int))
           r1 <- waitCatch handle
           case r1 of
             Right v -> v @?= 42
@@ -79,7 +85,7 @@ threadPoolTest =
           pool <- newThreadPool 2
           handle <-
             traverse
-              (\n -> newThread pool $ takeMVar mvar >> return n)
+              (\n -> newThread pool 0 $ takeMVar mvar >> return n)
               [0 .. 20 :: Int]
           let wait = do
                 r <- numOfRunningThreads pool
@@ -92,12 +98,26 @@ threadPoolTest =
           Right 15 <- waitCatch (handle !! 15)
           results <- traverse waitCatch handle
           traverse_ (\(i, Right v) -> i @?= v) $ zip [0 .. 20 :: Int] results,
+        testCase "priority" $ do
+          mvar <- newEmptyMVar
+          pool <- newThreadPool 1
+          h0 <- newThread pool 0 $ takeMVar mvar >> return (0 :: Int)
+          h1 <- newThread pool 1 $ takeMVar mvar >> return (1 :: Int)
+          h2 <- newThread pool 2 $ takeMVar mvar >> return (2 :: Int)
+          h3 <- newThread pool 0.5 $ takeMVar mvar >> return (3 :: Int)
+          traverse_
+            ( \(h, i) -> do
+                putMVar mvar ()
+                Right v <- waitCatch h
+                when (i /= v) $ fail "Bad order"
+            )
+            [(h0, 0), (h3, 3), (h1, 1), (h2, 2)],
         testCase "cancelWith running" $ do
           mvar <- newEmptyMVar
           pool <- newThreadPool 2
           handle <-
             traverse
-              (\n -> newThread pool $ takeMVar mvar >> return n)
+              (\n -> newThread pool 0 $ takeMVar mvar >> return n)
               [0 .. 1 :: Int]
           let wait = do
                 r <- numOfRunningThreads pool
@@ -118,7 +138,7 @@ threadPoolTest =
           pool <- newThreadPool 2
           handle <-
             traverse
-              (\n -> newThread pool $ takeMVar mvar >> return n)
+              (\n -> newThread pool 0 $ takeMVar mvar >> return n)
               [0 .. 3 :: Int]
           cancelWith SynthesisTaskCancelled (last handle)
           replicateM_ 3 (putMVar mvar ())
@@ -132,7 +152,7 @@ threadPoolTest =
           pool <- newThreadPool 2
           handle <-
             traverse
-              (\n -> newThread pool $ takeMVar mvar >> return n)
+              (\n -> newThread pool 0 $ takeMVar mvar >> return n)
               [0 .. 3 :: Int]
           cancelAllWith pool SynthesisTaskCancelled
           results <- traverse waitCatch handle
@@ -144,7 +164,7 @@ threadPoolTest =
           handles <-
             traverse
               ( \n ->
-                  newThread pool $
+                  newThread pool 0 $
                     when (n == 2) (putMVar mvar1 ())
                       >> takeMVar (mvars !! n)
                       >> return n
@@ -162,7 +182,7 @@ threadPoolTest =
           pool <- newThreadPool 2
           handle <-
             traverse
-              (\n -> newThread pool $ takeMVar (mvars !! n) >> return n)
+              (\n -> newThread pool 0 $ takeMVar (mvars !! n) >> return n)
               [0 .. 2 :: Int]
           currentTime <- getCurrentTime
           startTime2 <- maybeStartTime (handle !! 2)
@@ -188,19 +208,19 @@ threadPoolTest =
               mvar1 <- newEmptyMVar
               mvar2 <- newEmptyMVar
               pool <- newThreadPool 2
-              handle0 <- newThread pool $ takeMVar mvar >> return (0 :: Int)
+              handle0 <- newThread pool 0 $ takeMVar mvar >> return (0 :: Int)
               handle1 <-
-                newChildThread pool [threadId handle0] $
+                newChildThread pool [threadId handle0] 0 $
                   putMVar mvar1 ()
                     >> takeMVar mvar
                     >> return (1 :: Int)
               handle2 <-
-                newChildThread pool [threadId handle0] $
+                newChildThread pool [threadId handle0] 0 $
                   putMVar mvar2 ()
                     >> takeMVar mvar
                     >> return (2 :: Int)
               handle3 <-
-                newChildThread pool [threadId handle1, threadId handle2] $
+                newChildThread pool [threadId handle1, threadId handle2] 0 $
                   takeMVar mvar >> return (3 :: Int)
               numOfRunningThreads pool >>= (@?= 1)
               putMVar mvar ()
@@ -240,7 +260,7 @@ threadPoolTest =
                                 filter snd $
                                   zip handles dep
                         newHandle <-
-                          newChildThread pool filteredHandleIds $
+                          newChildThread pool filteredHandleIds 0 $
                             takeMVar mvar >> return n
                         writeIORef allHandles (handles ++ [newHandle])
                     )
@@ -257,7 +277,7 @@ threadPoolTest =
               pool <- newThreadPool 8
               allHandles <-
                 traverse
-                  (\n -> newThread pool $ takeMVar mvar >> return n)
+                  (\n -> newThread pool 0 $ takeMVar mvar >> return n)
                   [0 .. 31 :: Int]
               let cancellationOrder =
                     fmap snd $ sortOn fst $ zip position allHandles
@@ -269,7 +289,7 @@ threadPoolTest =
               pool <- newThreadPool 8
               allHandles <-
                 traverse
-                  (\n -> newThread pool $ threadDelay 100 >> return n)
+                  (\n -> newThread pool 0 $ threadDelay 100 >> return n)
                   [0 .. 31 :: Int]
               let cancellationOrder =
                     fmap snd $ sortOn fst $ zip position allHandles
@@ -281,7 +301,7 @@ threadPoolTest =
               pool <- newThreadPool 8
               allHandles :: [ThreadHandle Int] <-
                 traverse
-                  ( const . newThread pool $ throw SynthesisTaskTimeout
+                  ( const . newThread pool 0 $ throw SynthesisTaskTimeout
                   )
                   [0 .. 31 :: Int]
               let cancellationOrder =

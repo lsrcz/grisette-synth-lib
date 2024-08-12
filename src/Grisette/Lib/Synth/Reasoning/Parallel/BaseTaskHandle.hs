@@ -31,7 +31,11 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   ( SynthesisTaskException (SynthesisTaskCancelled),
   )
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
-import Grisette.Lib.Synth.Reasoning.Synthesis (SynthesisResult, SynthesisTask, VerificationCex)
+import Grisette.Lib.Synth.Reasoning.Synthesis
+  ( SynthesisResult,
+    SynthesisTask,
+    VerificationCex,
+  )
 
 class
   (Eq handle, Hashable handle, Typeable conProg) =>
@@ -43,6 +47,7 @@ class
     Maybe Int ->
     Pool.ThreadPool ->
     config ->
+    Double ->
     SynthesisTask symProg conProg ->
     IO SymBool ->
     IO handle
@@ -147,6 +152,7 @@ enqueueTaskPrecond ::
   (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
   Pool.ThreadPool ->
   config ->
+  Double ->
   SynthesisTask symProg conProg ->
   IO SymBool ->
   IO handle
@@ -157,6 +163,7 @@ enqueueTaskPrecondWithTimeout ::
   Int ->
   Pool.ThreadPool ->
   config ->
+  Double ->
   SynthesisTask symProg conProg ->
   IO SymBool ->
   IO handle
@@ -168,13 +175,15 @@ enqueueTaskMaybeTimeout ::
   Maybe Int ->
   Pool.ThreadPool ->
   config ->
+  Double ->
   SynthesisTask symProg conProg ->
   IO handle
-enqueueTaskMaybeTimeout maybeTimeout pool config task =
+enqueueTaskMaybeTimeout maybeTimeout pool config priority task =
   enqueueTaskPrecondMaybeTimeout
     maybeTimeout
     pool
     config
+    priority
     task
     (return $ con True)
 
@@ -182,6 +191,7 @@ enqueueTask ::
   (ConfigurableSolver config solver, BaseTaskHandle handle conProg) =>
   Pool.ThreadPool ->
   config ->
+  Double ->
   SynthesisTask symProg conProg ->
   IO handle
 enqueueTask = enqueueTaskMaybeTimeout Nothing
@@ -191,6 +201,7 @@ enqueueTaskWithTimeout ::
   Int ->
   Pool.ThreadPool ->
   config ->
+  Double ->
   SynthesisTask symProg conProg ->
   IO handle
 enqueueTaskWithTimeout timeout = enqueueTaskMaybeTimeout (Just timeout)

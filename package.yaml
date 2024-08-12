@@ -33,6 +33,7 @@ dependencies:
   - containers
   - async
   - time
+  - psqueues
 
 ghc-options:
   - -Wextra

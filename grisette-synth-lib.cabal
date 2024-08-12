@@ -89,6 +89,7 @@ library
     , mtl >=2.2.2 && <2.4
     , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
+    , psqueues
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.17 && <11
     , stm
@@ -120,6 +121,7 @@ executable arith
     , mtl >=2.2.2 && <2.4
     , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
+    , psqueues
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.17 && <11
     , stm
@@ -155,6 +157,7 @@ executable control
     , mtl >=2.2.2 && <2.4
     , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
+    , psqueues
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.17 && <11
     , stm
@@ -236,6 +239,7 @@ test-suite spec
     , mtl >=2.2.2 && <2.4
     , ordered-containers >=0.2.3 && <0.3
     , prettyprinter >=1.5 && <1.8
+    , psqueues
     , quickcheck-with-counterexamples ==1.2.*
     , sbv >=8.17 && <11
     , stm

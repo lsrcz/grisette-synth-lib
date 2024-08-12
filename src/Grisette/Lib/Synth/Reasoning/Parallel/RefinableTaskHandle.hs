@@ -105,6 +105,7 @@ instance
     maybeTimeout
     pool
     config
+    priority
     _initialSynthesisTask
     precond = do
       solverHandle <- newSolver config
@@ -112,7 +113,7 @@ instance
       taskHandleTMVar <- newEmptyTMVarIO
       _maxSucceedIndex <- newTVarIO (-1)
       handle <-
-        Pool.newThread pool $
+        Pool.newThread pool priority $
           actionWithTimeout
             maybeTimeout
             taskHandleTMVar
@@ -122,7 +123,9 @@ instance
             ( \solver -> do
                 precondition <- precond
                 solverAssert solver precondition
-                solverRunRefinableSynthesisTaskExtractCex solver _initialSynthesisTask
+                solverRunRefinableSynthesisTaskExtractCex
+                  solver
+                  _initialSynthesisTask
             )
       _underlyingHandles <- newTVarIO [handle]
       let taskHandle =
@@ -261,19 +264,24 @@ actionWithTimeout
 enqueueRefineCondMaybeTimeout ::
   (Typeable conProg) =>
   Maybe Int ->
+  Double ->
   RefinableTaskHandle conProg ->
   IO SymBool ->
   IO ()
 enqueueRefineCondMaybeTimeout
   maybeTimeout
+  priority
   taskHandle@RefinableTaskHandle {..}
   cond = do
     oldHandles <- readTVarIO _underlyingHandles
     let lastHandle = last oldHandles
     taskHandleTMVar <- newEmptyTMVarIO
     handle <-
-      Pool.newChildThread (threadPool lastHandle) [Pool.threadId lastHandle] $
-        do
+      Pool.newChildThread
+        (threadPool lastHandle)
+        [Pool.threadId lastHandle]
+        priority
+        $ do
           withAliveSolver taskHandle $ \solver ->
             actionWithTimeout
               maybeTimeout
@@ -292,6 +300,7 @@ enqueueRefineCondMaybeTimeout
 
 enqueueRefineCond ::
   (Typeable conProg) =>
+  Double ->
   RefinableTaskHandle conProg ->
   IO SymBool ->
   IO ()
@@ -300,6 +309,7 @@ enqueueRefineCond = enqueueRefineCondMaybeTimeout Nothing
 enqueueRefineCondWithTimeout ::
   (Typeable conProg) =>
   Int ->
+  Double ->
   RefinableTaskHandle conProg ->
   IO SymBool ->
   IO ()

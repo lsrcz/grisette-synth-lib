@@ -57,6 +57,7 @@ import Control.Exception
   )
 import Control.Monad (filterM, when)
 import qualified Data.HashMap.Lazy as HM
+import qualified Data.HashPSQ as PSQ
 import qualified Data.HashSet as HS
 import Data.Hashable (Hashable (hashWithSalt))
 import Data.IORef
@@ -67,7 +68,6 @@ import Data.IORef
     readIORef,
     writeIORef,
   )
-import qualified Data.Map.Ordered as OM
 import Data.Time (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Data.Typeable (Typeable, eqT, type (:~:) (Refl))
 import GHC.IO (unsafePerformIO)
@@ -105,6 +105,7 @@ threadIdCounter = unsafePerformIO $ newIORef 0
 
 data SomeChildrenPendingThread = SomeChildrenPendingThread
   { pendingThread :: SomePendingThread,
+    pendingPriority :: Double,
     parents :: HS.HashSet ThreadId
   }
 
@@ -122,7 +123,8 @@ data ThreadPool = ThreadPool
   { lock :: MVar (),
     poolSize :: Int,
     running :: IORef (HM.HashMap ThreadId Thread),
-    queue :: IORef (OM.OMap ThreadId SomePendingThread),
+    -- | Thread id, priority, pending thread. Smaller number is higher priority.
+    queue :: IORef (PSQ.HashPSQ ThreadId Double SomePendingThread),
     childrenQueue :: IORef (HM.HashMap ThreadId SomeChildrenPendingThread),
     children :: IORef (HM.HashMap ThreadId (HS.HashSet ThreadId))
   }
@@ -135,7 +137,7 @@ printThreadPoolStatus pool@ThreadPool {..} = do
   mapM_ print $ HM.keys runningThreads
   putStrLn "Pending threads:"
   pendingThreads <- readIORef queue
-  mapM_ print $ fst <$> OM.assocs pendingThreads
+  mapM_ print $ PSQ.keys pendingThreads
   putStrLn "Children threads:"
   childrenThreads <- readIORef childrenQueue
   mapM_ print $ HM.keys childrenThreads
@@ -188,7 +190,7 @@ newThreadPool :: Int -> IO ThreadPool
 newThreadPool poolSize = do
   lock <- newMVar ()
   running <- newIORef HM.empty
-  queue <- newIORef OM.empty
+  queue <- newIORef PSQ.empty
   childrenQueue <- newIORef HM.empty
   children <- newIORef HM.empty
   return ThreadPool {..}
@@ -207,7 +209,11 @@ cleanupChildrenImpl ThreadPool {..} threadId = do
               then do
                 writeIORef childrenQueue $ HM.delete childrenId oldChildrenQueue
                 modifyIORef' queue $ \oldQueue ->
-                  oldQueue OM.>| (childrenId, pendingThread pendingChildren)
+                  PSQ.insert
+                    childrenId
+                    (pendingPriority pendingChildren)
+                    (pendingThread pendingChildren)
+                    oldQueue
               else do
                 writeIORef childrenQueue $
                   HM.insert
@@ -247,10 +253,10 @@ startIfHaveSpaceImpl pool@ThreadPool {..} = do
   oldRunning <- readIORef running
   when (HM.size oldRunning < poolSize) $ do
     oldQueue <- readIORef queue
-    case OM.elemAt oldQueue 0 of
-      Just (_, SomePendingThread pendingThread@PendingThread {..}) -> do
+    case PSQ.findMin oldQueue of
+      Just (_, _, SomePendingThread pendingThread@PendingThread {..}) -> do
         exception <- atomically $ tryReadTMVar threadResult
-        writeIORef queue $ OM.delete threadId oldQueue
+        writeIORef queue $ PSQ.delete threadId oldQueue
         case exception of
           Just _ -> return ()
           Nothing -> do
@@ -269,7 +275,7 @@ taskNotYetFinishedImpl ThreadPool {..} threadId = do
   oldChildrenQueue <- readIORef childrenQueue
   return $
     HM.member threadId oldRunning
-      || OM.member threadId oldQueue
+      || PSQ.member threadId oldQueue
       || HM.member threadId oldChildrenQueue
 
 newChildThread ::
@@ -277,9 +283,10 @@ newChildThread ::
   (Typeable a) =>
   ThreadPool ->
   [ThreadId] ->
+  Double ->
   IO a ->
   IO (ThreadHandle a)
-newChildThread threadPool@ThreadPool {..} parents threadAction =
+newChildThread threadPool@ThreadPool {..} parents priority threadAction =
   withLockedPool threadPool True $ do
     threadId <- freshThreadId
     threadResult <- newEmptyTMVarIO :: IO (TMVar (Either SomeException a))
@@ -290,14 +297,18 @@ newChildThread threadPool@ThreadPool {..} parents threadAction =
       then do
         oldQueue <- readIORef queue
         writeIORef queue $
-          oldQueue
-            OM.>| (threadId, SomePendingThread $ PendingThread {..})
+          PSQ.insert
+            threadId
+            priority
+            (SomePendingThread $ PendingThread {..})
+            oldQueue
       else do
         modifyIORef' childrenQueue $
           HM.insert
             threadId
             SomeChildrenPendingThread
               { pendingThread = SomePendingThread $ PendingThread {..},
+                pendingPriority = priority,
                 parents = HS.fromList filteredParents
               }
         mapM_
@@ -314,7 +325,7 @@ newChildThread threadPool@ThreadPool {..} parents threadAction =
     return $ ThreadHandle {..}
 
 newThread ::
-  forall a. (Typeable a) => ThreadPool -> IO a -> IO (ThreadHandle a)
+  forall a. (Typeable a) => ThreadPool -> Double -> IO a -> IO (ThreadHandle a)
 newThread threadPool = newChildThread threadPool []
 
 cancelSomePendingThreadImpl :: (Exception e) => e -> SomePendingThread -> IO ()
@@ -334,14 +345,14 @@ cancelWith e ThreadHandle {threadPool = pool@ThreadPool {..}, threadId} = do
     oldChildrenQueue <- readIORef childrenQueue
     case HM.lookup threadId oldRunning of
       Just thread -> return $ Just thread
-      Nothing -> case OM.lookup threadId oldQueue of
-        Just pending -> do
+      Nothing -> case PSQ.lookup threadId oldQueue of
+        Just (_, pending) -> do
           cancelSomePendingThreadImpl e pending
-          modifyIORef' queue $ OM.delete threadId
+          modifyIORef' queue $ PSQ.delete threadId
           cleanupChildrenImpl pool threadId
           return Nothing
         _ -> case HM.lookup threadId oldChildrenQueue of
-          Just (SomeChildrenPendingThread pending _) -> do
+          Just (SomeChildrenPendingThread pending _ _) -> do
             cancelSomePendingThreadImpl e pending
             modifyIORef' childrenQueue $ HM.delete threadId
             cleanupChildrenImpl pool threadId
@@ -358,8 +369,9 @@ cancelAllWith :: (Exception e) => ThreadPool -> e -> IO ()
 cancelAllWith pool@ThreadPool {..} e = do
   oldRunning <- withLockedPool pool True $ do
     oldPending <- readIORef queue
-    mapM_ (cancelSomePendingThreadImpl e) $ snd <$> OM.assocs oldPending
-    writeIORef queue OM.empty
+    mapM_ (cancelSomePendingThreadImpl e) $
+      (\(_, _, v) -> v) <$> PSQ.toList oldPending
+    writeIORef queue PSQ.empty
     oldChildrenQueue <- readIORef childrenQueue
     mapM_ (cancelSomePendingThreadImpl e . pendingThread) oldChildrenQueue
     writeIORef childrenQueue HM.empty
@@ -392,19 +404,24 @@ alterIfPending
   newAction =
     withLockedPool pool False $ do
       oldQueue <- readIORef queue
-      case OM.lookup threadId oldQueue of
-        Just (SomePendingThread (PendingThread {..} :: PendingThread a1)) -> do
+      case PSQ.lookup threadId oldQueue of
+        Just (prio, SomePendingThread (PendingThread {..} :: PendingThread a1)) -> do
           case eqT @a @a1 of
             Just Refl -> do
               writeIORef queue $
-                OM.alter
-                  ( const $
-                      Just $
-                        SomePendingThread $
-                          PendingThread {threadAction = newAction, ..}
-                  )
-                  threadId
-                  oldQueue
+                snd $
+                  PSQ.alter
+                    ( const
+                        ( 0,
+                          Just
+                            ( prio,
+                              SomePendingThread $
+                                PendingThread {threadAction = newAction, ..}
+                            )
+                        )
+                    )
+                    threadId
+                    oldQueue
               startIfHaveSpaceImpl pool
             Nothing -> error "alterIfPending: type mismatch"
         Nothing -> return ()

@@ -62,10 +62,11 @@ instance
   (Typeable conProg) =>
   BaseTaskHandle (SynthesisTaskHandle conProg) conProg
   where
-  enqueueTaskPrecondMaybeTimeout timeout pool config task precond =
+  enqueueTaskPrecondMaybeTimeout timeout pool config priority task precond =
     enqueueActionImpl
       timeout
       pool
+      priority
       ( withSolver config $ \solver -> do
           precondition <- precond
           solverAssert solver precondition
@@ -99,15 +100,17 @@ enqueueActionImpl ::
   (Typeable conProg) =>
   Maybe Int ->
   Pool.ThreadPool ->
+  Double ->
   IO ([VerificationCex], SynthesisResult conProg) ->
   IO (SynthesisTaskHandle conProg)
 enqueueActionImpl
   maybeTimeout
   pool
+  priority
   action = do
     taskHandleTMVar <- newEmptyTMVarIO
     handle <-
-      Pool.newThread pool $
+      Pool.newThread pool priority $
         actionWithTimeout maybeTimeout taskHandleTMVar action
     let taskHandle = SynthesisTaskHandle handle
     atomically $ putTMVar taskHandleTMVar taskHandle
@@ -117,6 +120,7 @@ enqueueActionImpl
 enqueueAction ::
   (Typeable conProg) =>
   Pool.ThreadPool ->
+  Double ->
   IO ([VerificationCex], SynthesisResult conProg) ->
   IO (SynthesisTaskHandle conProg)
 enqueueAction = enqueueActionImpl Nothing
@@ -126,6 +130,7 @@ enqueueActionWithTimeout ::
   (Typeable conProg) =>
   Int ->
   Pool.ThreadPool ->
+  Double ->
   IO ([VerificationCex], SynthesisResult conProg) ->
   IO (SynthesisTaskHandle conProg)
 enqueueActionWithTimeout timeout = enqueueActionImpl (Just timeout)
@@ -134,22 +139,28 @@ enqueueMinimalCostTask ::
   (ConfigurableSolver config solver, Typeable conProg) =>
   Pool.ThreadPool ->
   config ->
+  Double ->
   SynthesisMinimalCostTask conProg ->
   IO (SynthesisTaskHandle conProg)
-enqueueMinimalCostTask pool config task =
-  enqueueAction pool (runSynthesisMinimalCostTaskExtractCex config task)
+enqueueMinimalCostTask pool config priority task =
+  enqueueAction
+    pool
+    priority
+    (runSynthesisMinimalCostTaskExtractCex config task)
 
 enqueueMinimalCostTaskWithTimeout ::
   (ConfigurableSolver config solver, Typeable conProg) =>
   Int ->
   Pool.ThreadPool ->
   config ->
+  Double ->
   SynthesisMinimalCostTask conProg ->
   IO (SynthesisTaskHandle conProg)
-enqueueMinimalCostTaskWithTimeout timeout pool config task =
+enqueueMinimalCostTaskWithTimeout timeout pool config priority task =
   enqueueActionWithTimeout
     timeout
     pool
+    priority
     (runSynthesisMinimalCostTaskExtractCex config task)
 
 alterTaskIfPendingImpl ::
