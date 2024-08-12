@@ -104,7 +104,7 @@ refinableTaskHandleTest =
         pool <- newThreadPool 2
         handle :: Handle <-
           enqueueTask pool z3 0 $
-            task times4Spec times4Gen times4Sketch
+            task times4Spec times4Gen [] times4Sketch
         r <- waitCatch handle
         case r of
           Right (_, SynthesisSuccess prog) -> do
@@ -125,7 +125,7 @@ refinableTaskHandleTest =
         pool <- newThreadPool 2
         handle :: Handle <-
           enqueueTask pool z3 0 $
-            task times4Spec times4Gen times4Sketch
+            task times4Spec times4Gen [] times4Sketch
         let newCost =
               progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
                 SymbolicContext SymInteger

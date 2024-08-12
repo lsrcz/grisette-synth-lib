@@ -107,13 +107,13 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle0 :: handle <-
           enqueueTask pool z3 0 $
-            task addThenDoubleSpec addThenDoubleGen sharedSketch
+            task addThenDoubleSpec addThenDoubleGen [] sharedSketch
         handle1 :: handle <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen sharedSketch
+            task divModTwiceSpec divModTwiceGen [] sharedSketch
         handle2 :: handle <-
           enqueueTask pool z3 0 $
-            task addThenDoubleReverseSpec addThenDoubleGen sharedSketch
+            task addThenDoubleReverseSpec addThenDoubleGen [] sharedSketch
         Right (_, r0) <- pollUntilFinished handle0
         Right (_, r1) <- pollUntilFinished handle1
         Right (_, r2) <- pollUntilFinished handle2
@@ -124,10 +124,10 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle0 :: handle <-
           enqueueTask pool z3 0 $
-            task addThenDoubleSpec addThenDoubleGen sharedSketch
+            task addThenDoubleSpec addThenDoubleGen [] sharedSketch
         handle1 <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen sharedSketch
+            task divModTwiceSpec divModTwiceGen [] sharedSketch
         map <- HM.fromList <$> pollTasksUntilFinished [handle0, handle1]
         fuzzResult
           (snd $ fromRight undefined $ map HM.! handle0)
@@ -145,7 +145,7 @@ baseTaskHandleTestCommon name _ =
         -- we can cancel the task.
         handle1 :: handle <-
           enqueueTaskWithTimeout 10000 pool z3 0 $
-            task divModTwiceSpec divModTwiceGen sharedSketch
+            task divModTwiceSpec divModTwiceGen [] sharedSketch
         r0 <- pollUntilFinished handle1
         case r0 of
           Left e -> fromException e @?= Just SynthesisTaskTimeout
@@ -154,7 +154,7 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle1 :: handle <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen sharedSketch
+            task divModTwiceSpec divModTwiceGen [] sharedSketch
         -- The delay is necessary due to
         -- https://github.com/jwiegley/async-pool/issues/31
         -- It cannot be too long, either, otherwise the task may finish before
@@ -169,7 +169,7 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle :: handle <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen sharedSketch
+            task divModTwiceSpec divModTwiceGen [] sharedSketch
         _ <- waitCatch handle
         startTime <- startTime handle
         expectedEndTime <- getCurrentTime
@@ -184,7 +184,7 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle :: handle <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen sharedSketch
+            task divModTwiceSpec divModTwiceGen [] sharedSketch
         threadDelay 100000
         cancel handle
         startTime <- startTime handle
@@ -207,7 +207,7 @@ baseTaskHandleTestCommon name _ =
             pool
             z3
             0
-            (task times4Spec times4Gen times4Sketch)
+            (task times4Spec times4Gen [] times4Sketch)
             $ atomically
             $ do
               cost <- readTMVar expectedCost

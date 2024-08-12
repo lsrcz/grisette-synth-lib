@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( ConProg,
@@ -16,7 +17,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   )
 where
 
-import Data.Data (Typeable)
+import Data.Data (Proxy (Proxy), Typeable)
 import Grisette
   ( SolvingFailure (Unsat),
     SymBool,
@@ -56,9 +57,11 @@ import Grisette.Lib.Synth.Reasoning.Fuzzing
       ),
     fuzzingTestProg,
   )
-import Grisette.Lib.Synth.Reasoning.Matcher (Matcher)
+import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
+import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher), Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( SomeVerifier (SomeVerifier),
+  ( Example (Example, exampleContext, exampleIOPair, exampleMatcher, exampleSymSemantics),
+    SomeVerifier (SomeVerifier),
     SynthesisMinimalCostTask
       ( SynthesisMinimalCostTask,
         synthesisMinimalCostTaskConCostObj,
@@ -70,6 +73,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
+        synthesisInitialExamples,
         synthesisSketch,
         synthesisVerifiers
       ),
@@ -227,7 +231,9 @@ data ComponentSynthesisTestCase where
     ) =>
     { componentSynthesisTestCaseName :: String,
       componentSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
-      componentSynthesisTestCaseGen :: Gen [Integer]
+      componentSynthesisTestCaseInitialExamples :: [Example SymProg],
+      componentSynthesisTestCaseSynthGen :: Gen [Integer],
+      componentSynthesisTestCaseFuzzGen :: Gen [Integer]
     } ->
     ComponentSynthesisTestCase
 
@@ -253,6 +259,18 @@ fuzzResult (SynthesisSuccess prog) gen spec = do
   fst <$> fuzzingResult @?= Nothing
 fuzzResult r _ _ = fail $ "Unexpected result: " <> show r
 
+example :: IOPair SymInteger -> Example SymProg
+example iop =
+  Example
+    { exampleContext = Proxy :: Proxy AngelicContext,
+      exampleSymSemantics =
+        WithConstraints
+          TestSemanticsObj
+          (ComponentSymmetryReduction ()),
+      exampleIOPair = iop,
+      exampleMatcher = EqMatcher
+    }
+
 verifier ::
   (Matcher matcher SymBool SymVal, Matcher matcher Bool ConVal, Typeable matcher) =>
   ([ConVal] -> ([ConVal], matcher)) ->
@@ -275,11 +293,13 @@ task ::
   ) =>
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->
+  [Example SymProg] ->
   SymProg ->
   SynthesisTask SymProg ConProg
-task spec gen sketch =
+task spec gen initialExamples sketch =
   SynthesisTask
     { synthesisVerifiers = [SomeVerifier $ verifier spec gen],
+      synthesisInitialExamples = initialExamples,
       synthesisSketch = sketch
     }
 
@@ -296,32 +316,54 @@ componentSketchTest =
             ComponentSynthesisTestCase
               name
               (spec :: [Integer] -> ([Integer], matcher))
-              gen <-
+              examples
+              synthGen
+              fuzzGen <-
               [ ComponentSynthesisTestCase
                   { componentSynthesisTestCaseName = "Add then double",
                     componentSynthesisTestCaseSpec = addThenDoubleSpec,
-                    componentSynthesisTestCaseGen = addThenDoubleGen
+                    componentSynthesisTestCaseInitialExamples = [],
+                    componentSynthesisTestCaseSynthGen = addThenDoubleGen,
+                    componentSynthesisTestCaseFuzzGen = addThenDoubleGen
+                  },
+                ComponentSynthesisTestCase
+                  { componentSynthesisTestCaseName =
+                      "Add then double, initial examples",
+                    componentSynthesisTestCaseSpec = addThenDoubleSpec,
+                    componentSynthesisTestCaseInitialExamples =
+                      [ example $ IOPair [102, 50] [152, 304]
+                      ],
+                    componentSynthesisTestCaseSynthGen = return [0, 0],
+                    componentSynthesisTestCaseFuzzGen = addThenDoubleGen
                   },
                 ComponentSynthesisTestCase
                   { componentSynthesisTestCaseName = "Add then double/reverse",
                     componentSynthesisTestCaseSpec = addThenDoubleReverseSpec,
-                    componentSynthesisTestCaseGen = addThenDoubleGen
+                    componentSynthesisTestCaseInitialExamples = [],
+                    componentSynthesisTestCaseSynthGen = addThenDoubleGen,
+                    componentSynthesisTestCaseFuzzGen = addThenDoubleGen
                   },
                 ComponentSynthesisTestCase
                   { componentSynthesisTestCaseName = "DivMod twice",
                     componentSynthesisTestCaseSpec = divModTwiceSpec,
-                    componentSynthesisTestCaseGen = divModTwiceGen
+                    componentSynthesisTestCaseInitialExamples = [],
+                    componentSynthesisTestCaseSynthGen = divModTwiceGen,
+                    componentSynthesisTestCaseFuzzGen = divModTwiceGen
                   }
                 ]
 
             return $ testCase (name <> namePostFix) $ do
-              result <- runSynthesisTask z3 $ task spec gen sketch
-              fuzzResult result gen spec
+              result <- runSynthesisTask z3 $ task spec synthGen examples sketch
+              fuzzResult result fuzzGen spec
         )
           ++ [ testCase "Add then DivMod with must be after constraint" $ do
                  SynthesisSuccess prog <-
                    runSynthesisTask z3 $
-                     task addThenDivModSpec addThenDivModGen addThenDivModSketch
+                     task
+                       addThenDivModSpec
+                       addThenDivModGen
+                       []
+                       addThenDivModSketch
                  fuzzingResult <-
                    fuzzingTestProg
                      addThenDivModGen
@@ -336,6 +378,7 @@ componentSketchTest =
                      task
                        addThenDivModSpec
                        addThenDivModGen
+                       []
                        addThenDivModSketchBadMustBeAfter
                  return ()
              ],

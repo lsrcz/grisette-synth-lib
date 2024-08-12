@@ -21,6 +21,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
+        synthesisInitialExamples,
         synthesisSketch,
         synthesisVerifiers
       ),
@@ -74,6 +75,7 @@ main = do
       SynthesisTask
         { synthesisVerifiers =
             [defaultSemQuickCheckFuzzer @SymInteger gen spec],
+          synthesisInitialExamples = [],
           synthesisSketch = sketch
         }
   case r of

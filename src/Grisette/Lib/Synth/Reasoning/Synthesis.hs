@@ -49,6 +49,7 @@ import Grisette
     simpleMerge,
     solverGenericCEGIS,
     solverGenericCEGISWithRefinement,
+    symAnd,
     uniqueIdentifier,
     withSolver,
   )
@@ -141,7 +142,7 @@ data SynthesisTask symProg conProg where
       Typeable symProg
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
-      -- synthesisInitialExamples ::
+      synthesisInitialExamples :: [Example symProg],
       synthesisSketch :: symProg
     } ->
     SynthesisTask symProg conProg
@@ -289,12 +290,14 @@ solverRunRefinableSynthesisTaskExtractCex ::
   IO ([Example symProg], SynthesisResult conProg)
 solverRunRefinableSynthesisTaskExtractCex
   solver
-  (SynthesisTask verifiers symProg) = do
+  (SynthesisTask verifiers examples symProg) = do
+    initialExampleConstraints <-
+      traverse (synthesisConstraintFun symProg) examples
     (cex, r) <-
       solverGenericCEGIS
         solver
         True
-        (con True)
+        (symAnd initialExampleConstraints)
         (synthesisConstraintFun symProg)
         ( concatMap
             (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)

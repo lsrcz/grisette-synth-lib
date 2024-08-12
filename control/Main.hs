@@ -26,6 +26,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
+        synthesisInitialExamples,
         synthesisSketch,
         synthesisVerifiers
       ),
@@ -136,6 +137,7 @@ main = do
   let task =
         SynthesisTask
           { synthesisVerifiers = [defaultSemQuickCheckFuzzer @SymVal gen spec],
+            synthesisInitialExamples = [],
             synthesisSketch = sketch
           }
   r <- runSynthesisTask z3 task

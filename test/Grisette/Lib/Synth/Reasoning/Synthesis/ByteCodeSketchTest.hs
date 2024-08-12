@@ -39,6 +39,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
+        synthesisInitialExamples,
         synthesisSketch,
         synthesisVerifiers
       ),
@@ -144,6 +145,7 @@ byteCodeSketchTest =
     let task =
           SynthesisTask
             { synthesisVerifiers = [SomeVerifier verifier],
+              synthesisInitialExamples = [],
               synthesisSketch = sketch
             }
     return $ testCase name $ do
