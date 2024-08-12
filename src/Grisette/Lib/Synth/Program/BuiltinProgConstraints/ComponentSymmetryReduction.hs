@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,6 +25,7 @@ import Grisette
     Solvable (con),
     SymBool,
     SymEq ((.==)),
+    Union,
     mrgIf,
     mrgReturn,
     mrgTraverse,
@@ -294,6 +296,10 @@ instance
             symNot useDisabled
               .&& symNot defDisabled
               .&& conflict useResource defResource
+        firstUsesInvalidatedBySecond ::
+          Union [ComponentUse varId res] ->
+          Union [Def varId res] ->
+          SymBool
         firstUsesInvalidatedBySecond firstUses secondInvalidated =
           simpleMerge $
             ( \useList invalidatedList ->
@@ -311,6 +317,8 @@ instance
             symNot useDisabled
               .&& symNot invalidatedDisabled
               .&& conflict useResource invalidatedResource
+        secondDefsInvalidatedByFirst ::
+          Union [Def varId res] -> Union [Def varId res] -> SymBool
         secondDefsInvalidatedByFirst secondDefs firstInvalidated =
           simpleMerge $
             ( \defList invalidatedList ->

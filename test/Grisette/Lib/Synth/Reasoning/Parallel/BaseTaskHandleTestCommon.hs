@@ -159,7 +159,7 @@ baseTaskHandleTestCommon name _ =
         -- https://github.com/jwiegley/async-pool/issues/31
         -- It cannot be too long, either, otherwise the task may finish before
         -- we can cancel the task.
-        threadDelay 10000
+        threadDelay 1000
         cancel handle1
         r0 <- pollUntilFinished handle1
         case r0 of
