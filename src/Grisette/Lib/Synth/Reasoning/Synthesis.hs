@@ -220,7 +220,8 @@ instance
     ( SynthesisBoundCostTask
         verifiers
         examples
-        symProg precond
+        symProg
+        precond
         (initialMaxCost :: cost)
         symCostObj
       ) = do
