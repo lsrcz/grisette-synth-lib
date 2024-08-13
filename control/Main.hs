@@ -10,6 +10,7 @@ import qualified Data.Text.Lazy as TL
 import Grisette
   ( Fresh,
     PPrint (pformat),
+    Solvable (con),
     SymBool,
     SymInteger,
     z3,
@@ -27,6 +28,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisTask
       ( SynthesisTask,
         synthesisInitialExamples,
+        synthesisPrecondition,
         synthesisSketch,
         synthesisVerifiers
       ),
@@ -138,7 +140,8 @@ main = do
         SynthesisTask
           { synthesisVerifiers = [defaultSemQuickCheckFuzzer @SymVal gen spec],
             synthesisInitialExamples = [],
-            synthesisSketch = sketch
+            synthesisSketch = sketch,
+            synthesisPrecondition = con True
           }
   r <- runSynthesisTask z3 task
   case r of

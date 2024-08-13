@@ -33,6 +33,7 @@ import Control.Concurrent.STM
     readTVarIO,
     tryReadTMVar,
     tryTakeTMVar,
+    writeTMVar,
     writeTVar,
   )
 import Control.Exception (Exception (toException), mask, throwIO)
@@ -53,7 +54,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
       ( cancelWith,
         elapsedTimeSTM,
         endTimeSTM,
-        enqueueTaskPrecondMaybeTimeout,
+        enqueueTaskMaybeTimeout,
         pollSTM,
         startTimeSTM,
         waitCatchSTM
@@ -82,7 +83,7 @@ data RefinableTaskHandle symProg conProg where
   RefinableTaskHandle ::
     (Solver solver, RunSynthesisTask task symProg conProg) =>
     { _initialThreadHandleId :: Int,
-      _initialSynthesisTask :: task,
+      _initialSynthesisTask :: TMVar task,
       _underlyingHandles ::
         TVar [ThreadHandle ([Example symProg], SynthesisResult conProg)],
       _maxSucceedIndex :: TVar Int,
@@ -101,19 +102,17 @@ instance
   (Typeable symProg, Typeable conProg) =>
   BaseTaskHandle (RefinableTaskHandle symProg conProg) symProg conProg
   where
-  enqueueTaskPrecondMaybeTimeout
+  enqueueTaskMaybeTimeout
     maybeTimeout
     pool
     config
     priority
-    _initialSynthesisTask
-    precond = do
-      unless (taskRefinable _initialSynthesisTask) $
-        fail "Task is not refinable"
+    ioTask = do
       solverHandle <- newSolver config
       _solverHandle <- newTMVarIO solverHandle
       taskHandleTMVar <- newEmptyTMVarIO
       _maxSucceedIndex <- newTVarIO (-1)
+      _initialSynthesisTask <- newEmptyTMVarIO
       handle <-
         Pool.newThread pool priority $
           actionWithTimeout
@@ -123,11 +122,11 @@ instance
             _maxSucceedIndex
             solverHandle
             ( \solver -> do
-                precondition <- precond
-                solverAssert solver precondition
-                solverRunSynthesisTaskExtractCex
-                  solver
-                  _initialSynthesisTask
+                task <- ioTask
+                unless (taskRefinable task) $
+                  fail "Task is not refinable"
+                atomically $ writeTMVar _initialSynthesisTask task
+                solverRunSynthesisTaskExtractCex solver task
             )
       _underlyingHandles <- newTVarIO [handle]
       let taskHandle =
@@ -291,9 +290,10 @@ enqueueRefineCondMaybeTimeout
               solver
               ( \solver -> do
                   solverAssert solver =<< cond
+                  task <- atomically $ readTMVar _initialSynthesisTask
                   solverRunSynthesisTaskExtractCex
                     solver
-                    _initialSynthesisTask
+                    task
               )
     atomically $ writeTVar _underlyingHandles $ oldHandles ++ [handle]
     atomically $ putTMVar taskHandleTMVar taskHandle

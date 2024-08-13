@@ -7,7 +7,7 @@ module Main (main) where
 import Arith (OpCode (Minus, Mul, Plus))
 import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
 import qualified Data.Text.Lazy as TL
-import Grisette (PPrint (pformat), SymInteger, z3)
+import Grisette (PPrint (pformat), Solvable (con), SymInteger, z3)
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType))
@@ -22,6 +22,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisTask
       ( SynthesisTask,
         synthesisInitialExamples,
+        synthesisPrecondition,
         synthesisSketch,
         synthesisVerifiers
       ),
@@ -76,7 +77,8 @@ main = do
         { synthesisVerifiers =
             [defaultSemQuickCheckFuzzer @SymInteger gen spec],
           synthesisInitialExamples = [],
-          synthesisSketch = sketch
+          synthesisSketch = sketch,
+          synthesisPrecondition = con True
         }
   case r of
     SynthesisSuccess (prog :: ConProg) -> do

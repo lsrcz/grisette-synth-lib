@@ -18,7 +18,7 @@ import Control.Exception (Exception (fromException), SomeException)
 import Data.Either (fromRight)
 import qualified Data.HashMap.Lazy as HM
 import Data.Time (diffUTCTime, getCurrentTime)
-import Grisette (SymEq ((.==)), z3)
+import Grisette (Solvable (con), SymEq ((.==)), z3)
 import Grisette.Internal.SymPrim.SymInteger (SymInteger)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
@@ -31,7 +31,6 @@ import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
     elapsedTime,
     endTime,
     enqueueTask,
-    enqueueTaskPrecond,
     enqueueTaskWithTimeout,
     poll,
     pollAny,
@@ -107,13 +106,21 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle0 :: handle <-
           enqueueTask pool z3 0 $
-            task addThenDoubleSpec addThenDoubleGen [] sharedSketch
+            return $
+              task addThenDoubleSpec addThenDoubleGen [] sharedSketch (con True)
         handle1 :: handle <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen [] sharedSketch
+            return $
+              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
         handle2 :: handle <-
           enqueueTask pool z3 0 $
-            task addThenDoubleReverseSpec addThenDoubleGen [] sharedSketch
+            return $
+              task
+                addThenDoubleReverseSpec
+                addThenDoubleGen
+                []
+                sharedSketch
+                (con True)
         Right (_, r0) <- pollUntilFinished handle0
         Right (_, r1) <- pollUntilFinished handle1
         Right (_, r2) <- pollUntilFinished handle2
@@ -124,10 +131,12 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle0 :: handle <-
           enqueueTask pool z3 0 $
-            task addThenDoubleSpec addThenDoubleGen [] sharedSketch
+            return $
+              task addThenDoubleSpec addThenDoubleGen [] sharedSketch (con True)
         handle1 <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen [] sharedSketch
+            return $
+              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
         map <- HM.fromList <$> pollTasksUntilFinished [handle0, handle1]
         fuzzResult
           (snd $ fromRight undefined $ map HM.! handle0)
@@ -145,7 +154,8 @@ baseTaskHandleTestCommon name _ =
         -- we can cancel the task.
         handle1 :: handle <-
           enqueueTaskWithTimeout 10000 pool z3 0 $
-            task divModTwiceSpec divModTwiceGen [] sharedSketch
+            return $
+              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
         r0 <- pollUntilFinished handle1
         case r0 of
           Left e -> fromException e @?= Just SynthesisTaskTimeout
@@ -154,7 +164,8 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle1 :: handle <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen [] sharedSketch
+            return $
+              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
         -- The delay is necessary due to
         -- https://github.com/jwiegley/async-pool/issues/31
         -- It cannot be too long, either, otherwise the task may finish before
@@ -169,7 +180,8 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle :: handle <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen [] sharedSketch
+            return $
+              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
         _ <- waitCatch handle
         startTime <- startTime handle
         expectedEndTime <- getCurrentTime
@@ -184,7 +196,8 @@ baseTaskHandleTestCommon name _ =
         pool <- newThreadPool 2
         handle :: handle <-
           enqueueTask pool z3 0 $
-            task divModTwiceSpec divModTwiceGen [] sharedSketch
+            return $
+              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
         threadDelay 100000
         cancel handle
         startTime <- startTime handle
@@ -203,15 +216,15 @@ baseTaskHandleTestCommon name _ =
               progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
                 SymbolicContext SymInteger
         handle :: handle <-
-          enqueueTaskPrecond
+          enqueueTask
             pool
             z3
             0
-            (task times4Spec times4Gen [] times4Sketch)
-            $ atomically
             $ do
-              cost <- readTMVar expectedCost
-              return $ sketchCost .== return cost
+              cost <- atomically $ readTMVar expectedCost
+              return $
+                task times4Spec times4Gen [] times4Sketch $
+                  sketchCost .== return cost
         atomically $ putTMVar expectedCost 4
         Right (_, SynthesisSuccess prog) <- waitCatch handle
         progCost (PerStmtCostObj TestSemanticsCost) prog

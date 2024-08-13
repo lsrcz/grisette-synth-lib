@@ -10,7 +10,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
 where
 
 import Data.Data (Typeable)
-import Grisette (SymBool, SymInteger, Union, mrgIf, z3)
+import Grisette (Solvable (con), SymBool, SymInteger, Union, mrgIf, z3)
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.ByteCodeSketch
   ( Prog (Prog),
@@ -40,6 +40,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisTask
       ( SynthesisTask,
         synthesisInitialExamples,
+        synthesisPrecondition,
         synthesisSketch,
         synthesisVerifiers
       ),
@@ -146,7 +147,8 @@ byteCodeSketchTest =
           SynthesisTask
             { synthesisVerifiers = [SomeVerifier verifier],
               synthesisInitialExamples = [],
-              synthesisSketch = sketch
+              synthesisSketch = sketch,
+              synthesisPrecondition = con True
             }
     return $ testCase name $ do
       SynthesisSuccess (prog :: ConProg) <- runSynthesisTask z3 task

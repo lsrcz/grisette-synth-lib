@@ -24,12 +24,12 @@ import Control.Concurrent.STM
 import qualified Control.Exception as C
 import Data.Hashable (Hashable)
 import Data.Typeable (Typeable)
-import Grisette (ConfigurableSolver, Solver (solverAssert), withSolver)
+import Grisette (ConfigurableSolver, withSolver)
 import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( BaseTaskHandle
       ( cancelWith,
         endTimeSTM,
-        enqueueTaskPrecondMaybeTimeout,
+        enqueueTaskMaybeTimeout,
         pollSTM,
         startTimeSTM,
         waitCatchSTM
@@ -58,14 +58,13 @@ instance
   (Typeable symProg, Typeable conProg) =>
   BaseTaskHandle (SynthesisTaskHandle symProg conProg) symProg conProg
   where
-  enqueueTaskPrecondMaybeTimeout timeout pool config priority task precond =
+  enqueueTaskMaybeTimeout timeout pool config priority ioTask =
     enqueueActionImpl
       timeout
       pool
       priority
       ( withSolver config $ \solver -> do
-          precondition <- precond
-          solverAssert solver precondition
+          task <- ioTask
           solverRunSynthesisTaskExtractCex solver task
       )
   startTimeSTM = Pool.startTimeSTM . _underlyingHandle

@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -18,7 +19,8 @@ where
 
 import Data.Data (Proxy (Proxy), Typeable)
 import Grisette
-  ( SolvingFailure (Unsat),
+  ( Solvable (con),
+    SolvingFailure (Unsat),
     SymBool,
     SymInteger,
     Union,
@@ -59,20 +61,29 @@ import Grisette.Lib.Synth.Reasoning.Fuzzing
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher), Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( Example (Example, exampleContext, exampleIOPair, exampleMatcher, exampleSymSemantics),
+  ( Example
+      ( Example,
+        exampleContext,
+        exampleIOPair,
+        exampleMatcher,
+        exampleSymSemantics
+      ),
     SomeVerifier (SomeVerifier),
     SynthesisMinimalCostTask
       ( SynthesisMinimalCostTask,
-        synthesisMinimalCostTaskConCostObj,
-        synthesisMinimalCostTaskInitialMaxCost,
-        synthesisMinimalCostTaskSymCostObj,
-        synthesisMinimalCostTaskSymProg,
-        synthesisMinimalCostTaskVerifiers
+        synthesisConCostObj,
+        synthesisInitialExamples,
+        synthesisMaybeInitialMaxCost,
+        synthesisPrecondition,
+        synthesisSketch,
+        synthesisSymCostObj,
+        synthesisVerifiers
       ),
     SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
         synthesisInitialExamples,
+        synthesisPrecondition,
         synthesisSketch,
         synthesisVerifiers
       ),
@@ -293,12 +304,14 @@ task ::
   Gen [ConVal] ->
   [Example SymProg] ->
   SymProg ->
+  SymBool ->
   SynthesisTask SymProg ConProg
-task spec gen initialExamples sketch =
+task spec gen initialExamples sketch precond =
   SynthesisTask
     { synthesisVerifiers = [SomeVerifier $ verifier spec gen],
       synthesisInitialExamples = initialExamples,
-      synthesisSketch = sketch
+      synthesisSketch = sketch,
+      synthesisPrecondition = precond
     }
 
 componentSketchTest :: Test
@@ -351,7 +364,9 @@ componentSketchTest =
                 ]
 
             return $ testCase (name <> namePostFix) $ do
-              result <- runSynthesisTask z3 $ task spec synthGen examples sketch
+              result <-
+                runSynthesisTask z3 $
+                  task spec synthGen examples sketch (con True)
               fuzzResult result fuzzGen spec
         )
           ++ [ testCase "Add then DivMod with must be after constraint" $ do
@@ -362,6 +377,7 @@ componentSketchTest =
                        addThenDivModGen
                        []
                        addThenDivModSketch
+                       (con True)
                  fuzzingResult <-
                    fuzzingTestProg
                      addThenDivModGen
@@ -378,6 +394,7 @@ componentSketchTest =
                        addThenDivModGen
                        []
                        addThenDivModSketchBadMustBeAfter
+                       (con True)
                  return ()
              ],
       testGroup
@@ -385,14 +402,16 @@ componentSketchTest =
         [ testCase "refinement" $ do
             let task =
                   SynthesisMinimalCostTask
-                    { synthesisMinimalCostTaskVerifiers =
+                    { synthesisVerifiers =
                         [SomeVerifier $ verifier times4Spec times4Gen],
-                      synthesisMinimalCostTaskSymProg = times4Sketch,
-                      synthesisMinimalCostTaskInitialMaxCost =
+                      synthesisInitialExamples = [],
+                      synthesisSketch = times4Sketch,
+                      synthesisPrecondition = con True,
+                      synthesisMaybeInitialMaxCost =
                         Nothing :: Maybe SymInteger,
-                      synthesisMinimalCostTaskConCostObj =
+                      synthesisConCostObj =
                         PerStmtCostObj TestSemanticsCost,
-                      synthesisMinimalCostTaskSymCostObj =
+                      synthesisSymCostObj =
                         PerStmtCostObj TestSemanticsCost
                     }
             let expectedSynthesizedProg =
@@ -411,14 +430,16 @@ componentSketchTest =
           testCase "initial" $ do
             let task =
                   SynthesisMinimalCostTask
-                    { synthesisMinimalCostTaskVerifiers =
+                    { synthesisVerifiers =
                         [SomeVerifier $ verifier times4Spec times4Gen],
-                      synthesisMinimalCostTaskSymProg = times4Sketch,
-                      synthesisMinimalCostTaskInitialMaxCost =
+                      synthesisInitialExamples = [],
+                      synthesisSketch = times4Sketch,
+                      synthesisPrecondition = con True,
+                      synthesisMaybeInitialMaxCost =
                         Just 2 :: Maybe SymInteger,
-                      synthesisMinimalCostTaskConCostObj =
+                      synthesisConCostObj =
                         PerStmtCostObj TestSemanticsCost,
-                      synthesisMinimalCostTaskSymCostObj =
+                      synthesisSymCostObj =
                         PerStmtCostObj TestSemanticsCost
                     }
             result <- runSynthesisTask z3 task

@@ -12,6 +12,7 @@ import Data.Typeable (Proxy (Proxy))
 import GHC.Stack (HasCallStack)
 import Grisette
   ( ITEOp (symIte),
+    Solvable (con),
     SolvingFailure (Unsat),
     SymEq ((.==)),
     SymInteger,
@@ -104,7 +105,8 @@ refinableTaskHandleTest =
         pool <- newThreadPool 2
         handle :: Handle <-
           enqueueTask pool z3 0 $
-            task times4Spec times4Gen [] times4Sketch
+            return $
+              task times4Spec times4Gen [] times4Sketch (con True)
         r <- waitCatch handle
         case r of
           Right (_, SynthesisSuccess prog) -> do
@@ -125,7 +127,8 @@ refinableTaskHandleTest =
         pool <- newThreadPool 2
         handle :: Handle <-
           enqueueTask pool z3 0 $
-            task times4Spec times4Gen [] times4Sketch
+            return $
+              task times4Spec times4Gen [] times4Sketch (con True)
         let newCost =
               progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
                 SymbolicContext SymInteger

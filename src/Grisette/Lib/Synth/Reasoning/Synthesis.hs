@@ -142,7 +142,8 @@ data SynthesisTask symProg conProg where
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
       synthesisInitialExamples :: [Example symProg],
-      synthesisSketch :: symProg
+      synthesisSketch :: symProg,
+      synthesisPrecondition :: SymBool
     } ->
     SynthesisTask symProg conProg
 
@@ -157,6 +158,7 @@ data SynthesisBoundCostTask symProg conProg where
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
       synthesisInitialExamples :: [Example symProg],
       synthesisSketch :: symProg,
+      synthesisPrecondition :: SymBool,
       synthesisInitialMaxCost :: cost,
       synthesisSymCostObj :: symCostObj
     } ->
@@ -174,6 +176,7 @@ data SynthesisMinimalCostTask symProg conProg where
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
       synthesisInitialExamples :: [Example symProg],
       synthesisSketch :: symProg,
+      synthesisPrecondition :: SymBool,
       synthesisMaybeInitialMaxCost :: Maybe cost,
       synthesisConCostObj :: conCostObj,
       synthesisSymCostObj :: symCostObj
@@ -217,7 +220,7 @@ instance
     ( SynthesisBoundCostTask
         verifiers
         examples
-        symProg
+        symProg precond
         (initialMaxCost :: cost)
         symCostObj
       ) = do
@@ -228,7 +231,7 @@ instance
         solverGenericCEGIS
           solver
           True
-          (symAnd initialExampleConstraints .&& costConstraint)
+          (precond .&& symAnd initialExampleConstraints .&& costConstraint)
           (synthesisConstraintFun symProg)
           ( concatMap
               (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
@@ -262,6 +265,7 @@ instance
         verifiers
         examples
         symProg
+        precond
         (initialMaxCost :: Maybe cost)
         conCostObj
         symCostObj
@@ -275,7 +279,7 @@ instance
         solverGenericCEGISWithRefinement
           solver
           True
-          (symAnd initialExampleConstraints .&& costConstraint)
+          (precond .&& symAnd initialExampleConstraints .&& costConstraint)
           (synthesisConstraintFun symProg)
           (Just refineFun)
           ( concatMap
@@ -312,14 +316,14 @@ instance
   where
   solverRunSynthesisTaskExtractCex
     solver
-    (SynthesisTask verifiers examples symProg) = do
+    (SynthesisTask verifiers examples symProg precond) = do
       initialExampleConstraints <-
         traverse (synthesisConstraintFun symProg) examples
       (cex, r) <-
         solverGenericCEGIS
           solver
           True
-          (symAnd initialExampleConstraints)
+          (precond .&& symAnd initialExampleConstraints)
           (synthesisConstraintFun symProg)
           ( concatMap
               (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
