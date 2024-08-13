@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -13,12 +14,13 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
     IsVerifier (..),
     SomeVerifier (..),
     Example (..),
-    SynthesisTask (..),
-    RunSynthesisTask (..),
     synthesisConstraintFun,
+    RunSynthesisTask (..),
     solverRunSynthesisTask,
     runSynthesisTask,
     runSynthesisTaskExtractCex,
+    SynthesisTask (..),
+    SynthesisBoundCostTask (..),
     SynthesisMinimalCostTask (..),
   )
 where
@@ -30,6 +32,7 @@ import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
     EvalSym,
+    LogicalOp ((.&&)),
     Mergeable,
     PPrint (pformat),
     Solvable (con),
@@ -143,6 +146,22 @@ data SynthesisTask symProg conProg where
     } ->
     SynthesisTask symProg conProg
 
+data SynthesisBoundCostTask symProg conProg where
+  SynthesisBoundCostTask ::
+    forall symProg conProg cost symCostObj.
+    ( EvalSym symProg,
+      ToCon symProg conProg,
+      ProgCost symCostObj symProg cost AngelicContext,
+      SymOrd cost
+    ) =>
+    { synthesisVerifiers :: [SomeVerifier symProg conProg],
+      synthesisInitialExamples :: [Example symProg],
+      synthesisSketch :: symProg,
+      synthesisInitialMaxCost :: cost,
+      synthesisSymCostObj :: symCostObj
+    } ->
+    SynthesisBoundCostTask symProg conProg
+
 data SynthesisMinimalCostTask symProg conProg where
   SynthesisMinimalCostTask ::
     forall symProg conProg cost conCostObj symCostObj.
@@ -152,11 +171,12 @@ data SynthesisMinimalCostTask symProg conProg where
       ProgCost symCostObj symProg cost AngelicContext,
       SymOrd cost
     ) =>
-    { synthesisMinimalCostTaskVerifiers :: [SomeVerifier symProg conProg],
-      synthesisMinimalCostTaskSymProg :: symProg,
-      synthesisMinimalCostTaskInitialMaxCost :: Maybe cost,
-      synthesisMinimalCostTaskConCostObj :: conCostObj,
-      synthesisMinimalCostTaskSymCostObj :: symCostObj
+    { synthesisVerifiers :: [SomeVerifier symProg conProg],
+      synthesisInitialExamples :: [Example symProg],
+      synthesisSketch :: symProg,
+      synthesisMaybeInitialMaxCost :: Maybe cost,
+      synthesisConCostObj :: conCostObj,
+      synthesisSymCostObj :: symCostObj
     } ->
     SynthesisMinimalCostTask symProg conProg
 
@@ -190,25 +210,72 @@ class RunSynthesisTask task symProg conProg | task -> symProg conProg where
 
 instance
   (Typeable symProg) =>
+  RunSynthesisTask (SynthesisBoundCostTask symProg conProg) symProg conProg
+  where
+  solverRunSynthesisTaskExtractCex
+    solver
+    ( SynthesisBoundCostTask
+        verifiers
+        examples
+        symProg
+        (initialMaxCost :: cost)
+        symCostObj
+      ) = do
+      initialExampleConstraints <-
+        traverse (synthesisConstraintFun symProg) examples
+      let costConstraint = symProgCostLessThanMaxCost initialMaxCost
+      (cex, r) <-
+        solverGenericCEGIS
+          solver
+          True
+          (symAnd initialExampleConstraints .&& costConstraint)
+          (synthesisConstraintFun symProg)
+          ( concatMap
+              (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
+              verifiers
+          )
+      case r of
+        CEGISSuccess model ->
+          return (cex, SynthesisSuccess $ evalSymToCon model symProg)
+        CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
+        CEGISSolverFailure failure ->
+          return (cex, SynthesisSolverFailure failure)
+      where
+        symProgCost =
+          flip runFreshT "cost" $ progCost symCostObj symProg ::
+            SymbolicContext cost
+        symProgCostLessThanMaxCost :: cost -> SymBool
+        symProgCostLessThanMaxCost maxCost = simpleMerge $ do
+          eitherCost <- runExceptT symProgCost
+          case eitherCost of
+            Left _ -> return $ con False
+            Right cost -> return $ cost .< maxCost
+  taskRefinable _ = True
+
+instance
+  (Typeable symProg) =>
   RunSynthesisTask (SynthesisMinimalCostTask symProg conProg) symProg conProg
   where
   solverRunSynthesisTaskExtractCex
     solver
     ( SynthesisMinimalCostTask
         verifiers
+        examples
         symProg
         (initialMaxCost :: Maybe cost)
         conCostObj
         symCostObj
       ) = do
+      initialExampleConstraints <-
+        traverse (synthesisConstraintFun symProg) examples
+      let costConstraint = case initialMaxCost of
+            Nothing -> con True
+            Just maxCost -> symProgCostLessThanMaxCost maxCost
       (cex, r) <-
         solverGenericCEGISWithRefinement
           solver
           True
-          ( case initialMaxCost of
-              Nothing -> con True
-              Just maxCost -> symProgCostLessThanMaxCost maxCost
-          )
+          (symAnd initialExampleConstraints .&& costConstraint)
           (synthesisConstraintFun symProg)
           (Just refineFun)
           ( concatMap
