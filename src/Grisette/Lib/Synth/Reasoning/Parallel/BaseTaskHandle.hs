@@ -32,8 +32,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example,
+    RunSynthesisTask,
     SynthesisResult,
-    SynthesisTask,
   )
 
 class
@@ -42,12 +42,12 @@ class
     | handle -> symProg conProg
   where
   enqueueTaskPrecondMaybeTimeout ::
-    (ConfigurableSolver config solver) =>
+    (ConfigurableSolver config solver, RunSynthesisTask task symProg conProg) =>
     Maybe Int ->
     Pool.ThreadPool ->
     config ->
     Double ->
-    SynthesisTask symProg conProg ->
+    task ->
     IO SymBool ->
     IO handle
   startTimeSTM :: handle -> STM UTCTime
@@ -153,34 +153,43 @@ pollAny ::
 pollAny = atomically . pollAnySTM
 
 enqueueTaskPrecond ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
+  ( ConfigurableSolver config solver,
+    BaseTaskHandle handle symProg conProg,
+    RunSynthesisTask task symProg conProg
+  ) =>
   Pool.ThreadPool ->
   config ->
   Double ->
-  SynthesisTask symProg conProg ->
+  task ->
   IO SymBool ->
   IO handle
 enqueueTaskPrecond = enqueueTaskPrecondMaybeTimeout Nothing
 
 enqueueTaskPrecondWithTimeout ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
+  ( ConfigurableSolver config solver,
+    BaseTaskHandle handle symProg conProg,
+    RunSynthesisTask task symProg conProg
+  ) =>
   Int ->
   Pool.ThreadPool ->
   config ->
   Double ->
-  SynthesisTask symProg conProg ->
+  task ->
   IO SymBool ->
   IO handle
 enqueueTaskPrecondWithTimeout timeout =
   enqueueTaskPrecondMaybeTimeout (Just timeout)
 
 enqueueTaskMaybeTimeout ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
+  ( ConfigurableSolver config solver,
+    BaseTaskHandle handle symProg conProg,
+    RunSynthesisTask task symProg conProg
+  ) =>
   Maybe Int ->
   Pool.ThreadPool ->
   config ->
   Double ->
-  SynthesisTask symProg conProg ->
+  task ->
   IO handle
 enqueueTaskMaybeTimeout maybeTimeout pool config priority task =
   enqueueTaskPrecondMaybeTimeout
@@ -192,20 +201,26 @@ enqueueTaskMaybeTimeout maybeTimeout pool config priority task =
     (return $ con True)
 
 enqueueTask ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
+  ( ConfigurableSolver config solver,
+    BaseTaskHandle handle symProg conProg,
+    RunSynthesisTask task symProg conProg
+  ) =>
   Pool.ThreadPool ->
   config ->
   Double ->
-  SynthesisTask symProg conProg ->
+  task ->
   IO handle
 enqueueTask = enqueueTaskMaybeTimeout Nothing
 
 enqueueTaskWithTimeout ::
-  (ConfigurableSolver config solver, BaseTaskHandle handle symProg conProg) =>
+  ( ConfigurableSolver config solver,
+    BaseTaskHandle handle symProg conProg,
+    RunSynthesisTask task symProg conProg
+  ) =>
   Int ->
   Pool.ThreadPool ->
   config ->
   Double ->
-  SynthesisTask symProg conProg ->
+  task ->
   IO handle
 enqueueTaskWithTimeout timeout = enqueueTaskMaybeTimeout (Just timeout)

@@ -76,7 +76,6 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
         synthesisSketch,
         synthesisVerifiers
       ),
-    runSynthesisMinimalCostTask,
     runSynthesisTask,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
@@ -404,7 +403,7 @@ componentSketchTest =
                       Concrete.Stmt Double [1] [2]
                     ]
                     [Concrete.ProgRes 2 IntType]
-            result <- runSynthesisMinimalCostTask z3 task
+            result <- runSynthesisTask z3 task
             case result of
               SynthesisSuccess prog ->
                 flattenProg prog @?= Right expectedSynthesizedProg
@@ -422,7 +421,7 @@ componentSketchTest =
                       synthesisMinimalCostTaskSymCostObj =
                         PerStmtCostObj TestSemanticsCost
                     }
-            result <- runSynthesisMinimalCostTask z3 task
+            result <- runSynthesisTask z3 task
             case result of
               SynthesisSolverFailure Unsat -> return ()
               _ -> fail "Unexpected result"

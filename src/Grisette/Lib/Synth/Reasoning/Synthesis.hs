@@ -14,16 +14,12 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
     SomeVerifier (..),
     Example (..),
     SynthesisTask (..),
+    RunSynthesisTask (..),
     synthesisConstraintFun,
+    solverRunSynthesisTask,
     runSynthesisTask,
     runSynthesisTaskExtractCex,
-    solverRunRefinableSynthesisTask,
-    solverRunRefinableSynthesisTaskExtractCex,
     SynthesisMinimalCostTask (..),
-    runSynthesisMinimalCostTask,
-    runSynthesisMinimalCostTaskExtractCex,
-    solverRunSynthesisMinimalCostTask,
-    solverRunSynthesisMinimalCostTaskExtractCex,
   )
 where
 
@@ -183,128 +179,121 @@ data SynthesisResult conProg
   | SynthesisSolverFailure SolvingFailure
   deriving (Show)
 
-runSynthesisMinimalCostTask ::
-  (ConfigurableSolver config h, Typeable symProg) =>
-  config ->
-  SynthesisMinimalCostTask symProg conProg ->
-  IO (SynthesisResult conProg)
-runSynthesisMinimalCostTask config task =
-  snd <$> runSynthesisMinimalCostTaskExtractCex config task
+class RunSynthesisTask task symProg conProg | task -> symProg conProg where
+  solverRunSynthesisTaskExtractCex ::
+    forall solver.
+    (Solver solver) =>
+    solver ->
+    task ->
+    IO ([Example symProg], SynthesisResult conProg)
+  taskRefinable :: task -> Bool
 
-runSynthesisMinimalCostTaskExtractCex ::
-  forall config h symProg conProg.
-  (ConfigurableSolver config h, Typeable symProg) =>
-  config ->
-  SynthesisMinimalCostTask symProg conProg ->
-  IO ([Example symProg], SynthesisResult conProg)
-runSynthesisMinimalCostTaskExtractCex config task =
-  withSolver config $ \solver ->
-    solverRunSynthesisMinimalCostTaskExtractCex solver task
+instance
+  (Typeable symProg) =>
+  RunSynthesisTask (SynthesisMinimalCostTask symProg conProg) symProg conProg
+  where
+  solverRunSynthesisTaskExtractCex
+    solver
+    ( SynthesisMinimalCostTask
+        verifiers
+        symProg
+        (initialMaxCost :: Maybe cost)
+        conCostObj
+        symCostObj
+      ) = do
+      (cex, r) <-
+        solverGenericCEGISWithRefinement
+          solver
+          True
+          ( case initialMaxCost of
+              Nothing -> con True
+              Just maxCost -> symProgCostLessThanMaxCost maxCost
+          )
+          (synthesisConstraintFun symProg)
+          (Just refineFun)
+          ( concatMap
+              (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
+              verifiers
+          )
+      case r of
+        CEGISSuccess model ->
+          return (cex, SynthesisSuccess $ evalSymToCon model symProg)
+        CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
+        CEGISSolverFailure failure ->
+          return (cex, SynthesisSolverFailure failure)
+      where
+        symProgCost =
+          flip runFreshT "cost" $ progCost symCostObj symProg ::
+            SymbolicContext cost
+        symProgCostLessThanMaxCost :: cost -> SymBool
+        symProgCostLessThanMaxCost maxCost = simpleMerge $ do
+          eitherCost <- runExceptT symProgCost
+          case eitherCost of
+            Left _ -> return $ con False
+            Right cost -> return $ cost .< maxCost
+        refineFun model = do
+          let conProg = evalSymToCon model symProg :: conProg
+          let conCost = progCost conCostObj conProg :: ConcreteContext cost
+          case conCost of
+            Left _ -> return $ con False
+            Right cost -> return $ symProgCostLessThanMaxCost cost
+  taskRefinable _ = False
 
-solverRunSynthesisMinimalCostTask ::
-  (Solver solver, Typeable symProg) =>
+instance
+  (Typeable symProg) =>
+  RunSynthesisTask (SynthesisTask symProg conProg) symProg conProg
+  where
+  solverRunSynthesisTaskExtractCex
+    solver
+    (SynthesisTask verifiers examples symProg) = do
+      initialExampleConstraints <-
+        traverse (synthesisConstraintFun symProg) examples
+      (cex, r) <-
+        solverGenericCEGIS
+          solver
+          True
+          (symAnd initialExampleConstraints)
+          (synthesisConstraintFun symProg)
+          ( concatMap
+              (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
+              verifiers
+          )
+      case r of
+        CEGISSuccess model ->
+          return (cex, SynthesisSuccess $ evalSymToCon model symProg)
+        CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
+        CEGISSolverFailure failure ->
+          return (cex, SynthesisSolverFailure failure)
+  taskRefinable _ = True
+
+solverRunSynthesisTask ::
+  ( Solver solver,
+    RunSynthesisTask task symProg conProg
+  ) =>
   solver ->
-  SynthesisMinimalCostTask symProg conProg ->
+  task ->
   IO (SynthesisResult conProg)
-solverRunSynthesisMinimalCostTask solver task =
-  snd <$> solverRunSynthesisMinimalCostTaskExtractCex solver task
-
-solverRunSynthesisMinimalCostTaskExtractCex ::
-  forall solver symProg conProg.
-  (Solver solver, Typeable symProg) =>
-  solver ->
-  SynthesisMinimalCostTask symProg conProg ->
-  IO ([Example symProg], SynthesisResult conProg)
-solverRunSynthesisMinimalCostTaskExtractCex
-  solver
-  ( SynthesisMinimalCostTask
-      verifiers
-      symProg
-      (initialMaxCost :: Maybe cost)
-      conCostObj
-      symCostObj
-    ) = do
-    (cex, r) <-
-      solverGenericCEGISWithRefinement
-        solver
-        True
-        ( case initialMaxCost of
-            Nothing -> con True
-            Just maxCost -> symProgCostLessThanMaxCost maxCost
-        )
-        (synthesisConstraintFun symProg)
-        (Just refineFun)
-        ( concatMap
-            (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
-            verifiers
-        )
-    case r of
-      CEGISSuccess model ->
-        return (cex, SynthesisSuccess $ evalSymToCon model symProg)
-      CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
-      CEGISSolverFailure failure -> return (cex, SynthesisSolverFailure failure)
-    where
-      symProgCost =
-        flip runFreshT "cost" $ progCost symCostObj symProg ::
-          SymbolicContext cost
-      symProgCostLessThanMaxCost :: cost -> SymBool
-      symProgCostLessThanMaxCost maxCost = simpleMerge $ do
-        eitherCost <- runExceptT symProgCost
-        case eitherCost of
-          Left _ -> return $ con False
-          Right cost -> return $ cost .< maxCost
-      refineFun model = do
-        let conProg = evalSymToCon model symProg :: conProg
-        let conCost = progCost conCostObj conProg :: ConcreteContext cost
-        case conCost of
-          Left _ -> return $ con False
-          Right cost -> return $ symProgCostLessThanMaxCost cost
+solverRunSynthesisTask solver task =
+  snd <$> solverRunSynthesisTaskExtractCex solver task
 
 runSynthesisTask ::
-  (ConfigurableSolver config h) =>
+  ( ConfigurableSolver config h,
+    RunSynthesisTask task symProg conProg
+  ) =>
   config ->
-  SynthesisTask symProg conProg ->
+  task ->
   IO (SynthesisResult conProg)
-runSynthesisTask config task = snd <$> runSynthesisTaskExtractCex config task
+runSynthesisTask config task =
+  snd <$> runSynthesisTaskExtractCex config task
 
 runSynthesisTaskExtractCex ::
-  (ConfigurableSolver config h) =>
+  forall config h task symProg conProg.
+  ( ConfigurableSolver config h,
+    RunSynthesisTask task symProg conProg
+  ) =>
   config ->
-  SynthesisTask symProg conProg ->
+  task ->
   IO ([Example symProg], SynthesisResult conProg)
-runSynthesisTaskExtractCex config task = withSolver config $ \solver ->
-  solverRunRefinableSynthesisTaskExtractCex solver task
-
-solverRunRefinableSynthesisTask ::
-  (Solver solver) =>
-  solver ->
-  SynthesisTask symProg conProg ->
-  IO (SynthesisResult conProg)
-solverRunRefinableSynthesisTask solver task =
-  snd <$> solverRunRefinableSynthesisTaskExtractCex solver task
-
-solverRunRefinableSynthesisTaskExtractCex ::
-  (Solver solver) =>
-  solver ->
-  SynthesisTask symProg conProg ->
-  IO ([Example symProg], SynthesisResult conProg)
-solverRunRefinableSynthesisTaskExtractCex
-  solver
-  (SynthesisTask verifiers examples symProg) = do
-    initialExampleConstraints <-
-      traverse (synthesisConstraintFun symProg) examples
-    (cex, r) <-
-      solverGenericCEGIS
-        solver
-        True
-        (symAnd initialExampleConstraints)
-        (synthesisConstraintFun symProg)
-        ( concatMap
-            (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
-            verifiers
-        )
-    case r of
-      CEGISSuccess model ->
-        return (cex, SynthesisSuccess $ evalSymToCon model symProg)
-      CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
-      CEGISSolverFailure failure -> return (cex, SynthesisSolverFailure failure)
+runSynthesisTaskExtractCex config task =
+  withSolver config $ \solver ->
+    solverRunSynthesisTaskExtractCex solver task

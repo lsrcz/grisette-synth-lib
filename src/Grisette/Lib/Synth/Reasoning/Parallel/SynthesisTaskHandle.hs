@@ -7,8 +7,6 @@
 
 module Grisette.Lib.Synth.Reasoning.Parallel.SynthesisTaskHandle
   ( SynthesisTaskHandle,
-    enqueueMinimalCostTask,
-    enqueueMinimalCostTaskWithTimeout,
     alterTaskIfPending,
     alterTaskIfPendingWithTimeout,
   )
@@ -44,12 +42,10 @@ import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (ThreadHandle)
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example,
-    SynthesisMinimalCostTask,
+    RunSynthesisTask (solverRunSynthesisTaskExtractCex),
     SynthesisResult,
     SynthesisTask,
-    runSynthesisMinimalCostTaskExtractCex,
     runSynthesisTaskExtractCex,
-    solverRunRefinableSynthesisTaskExtractCex,
   )
 
 newtype SynthesisTaskHandle symProg conProg = SynthesisTaskHandle
@@ -70,7 +66,7 @@ instance
       ( withSolver config $ \solver -> do
           precondition <- precond
           solverAssert solver precondition
-          solverRunRefinableSynthesisTaskExtractCex solver task
+          solverRunSynthesisTaskExtractCex solver task
       )
   startTimeSTM = Pool.startTimeSTM . _underlyingHandle
   endTimeSTM = Pool.endTimeSTM . _underlyingHandle
@@ -115,53 +111,6 @@ enqueueActionImpl
     let taskHandle = SynthesisTaskHandle handle
     atomically $ putTMVar taskHandleTMVar taskHandle
     return taskHandle
-
--- | Add a task to the synthesis server.
-enqueueAction ::
-  (Typeable symProg, Typeable conProg) =>
-  Pool.ThreadPool ->
-  Double ->
-  IO ([Example symProg], SynthesisResult conProg) ->
-  IO (SynthesisTaskHandle symProg conProg)
-enqueueAction = enqueueActionImpl Nothing
-
--- | Add a task to the synthesis server.
-enqueueActionWithTimeout ::
-  (Typeable symProg, Typeable conProg) =>
-  Int ->
-  Pool.ThreadPool ->
-  Double ->
-  IO ([Example symProg], SynthesisResult conProg) ->
-  IO (SynthesisTaskHandle symProg conProg)
-enqueueActionWithTimeout timeout = enqueueActionImpl (Just timeout)
-
-enqueueMinimalCostTask ::
-  (ConfigurableSolver config solver, Typeable symProg, Typeable conProg) =>
-  Pool.ThreadPool ->
-  config ->
-  Double ->
-  SynthesisMinimalCostTask symProg conProg ->
-  IO (SynthesisTaskHandle symProg conProg)
-enqueueMinimalCostTask pool config priority task =
-  enqueueAction
-    pool
-    priority
-    (runSynthesisMinimalCostTaskExtractCex config task)
-
-enqueueMinimalCostTaskWithTimeout ::
-  (ConfigurableSolver config solver, Typeable symProg, Typeable conProg) =>
-  Int ->
-  Pool.ThreadPool ->
-  config ->
-  Double ->
-  SynthesisMinimalCostTask symProg conProg ->
-  IO (SynthesisTaskHandle symProg conProg)
-enqueueMinimalCostTaskWithTimeout timeout pool config priority task =
-  enqueueActionWithTimeout
-    timeout
-    pool
-    priority
-    (runSynthesisMinimalCostTaskExtractCex config task)
 
 alterTaskIfPendingImpl ::
   (ConfigurableSolver config h, Typeable symProg, Typeable conProg) =>

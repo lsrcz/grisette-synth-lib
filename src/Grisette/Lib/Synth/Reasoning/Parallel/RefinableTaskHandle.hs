@@ -37,6 +37,7 @@ import Control.Concurrent.STM
   )
 import Control.Exception (Exception (toException), mask, throwIO)
 import qualified Control.Exception as C
+import Control.Monad (unless)
 import Data.Foldable (traverse_)
 import Data.Hashable (Hashable (hashWithSalt))
 import Data.Typeable (Typeable)
@@ -73,16 +74,15 @@ import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example,
+    RunSynthesisTask (solverRunSynthesisTaskExtractCex, taskRefinable),
     SynthesisResult (SynthesisSuccess),
-    SynthesisTask,
-    solverRunRefinableSynthesisTaskExtractCex,
   )
 
 data RefinableTaskHandle symProg conProg where
   RefinableTaskHandle ::
-    (Solver solver) =>
+    (Solver solver, RunSynthesisTask task symProg conProg) =>
     { _initialThreadHandleId :: Int,
-      _initialSynthesisTask :: SynthesisTask symProg conProg,
+      _initialSynthesisTask :: task,
       _underlyingHandles ::
         TVar [ThreadHandle ([Example symProg], SynthesisResult conProg)],
       _maxSucceedIndex :: TVar Int,
@@ -108,6 +108,8 @@ instance
     priority
     _initialSynthesisTask
     precond = do
+      unless (taskRefinable _initialSynthesisTask) $
+        fail "Task is not refinable"
       solverHandle <- newSolver config
       _solverHandle <- newTMVarIO solverHandle
       taskHandleTMVar <- newEmptyTMVarIO
@@ -123,7 +125,7 @@ instance
             ( \solver -> do
                 precondition <- precond
                 solverAssert solver precondition
-                solverRunRefinableSynthesisTaskExtractCex
+                solverRunSynthesisTaskExtractCex
                   solver
                   _initialSynthesisTask
             )
@@ -289,7 +291,7 @@ enqueueRefineCondMaybeTimeout
               solver
               ( \solver -> do
                   solverAssert solver =<< cond
-                  solverRunRefinableSynthesisTaskExtractCex
+                  solverRunSynthesisTaskExtractCex
                     solver
                     _initialSynthesisTask
               )
