@@ -73,7 +73,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
       ( SynthesisMinimalCostTask,
         synthesisConCostObj,
         synthesisInitialExamples,
-        synthesisMaybeInitialMaxCost,
+        synthesisInitialMaxCost,
         synthesisPrecondition,
         synthesisSketch,
         synthesisSymCostObj,
@@ -407,7 +407,7 @@ componentSketchTest =
                       synthesisInitialExamples = [],
                       synthesisSketch = times4Sketch,
                       synthesisPrecondition = con True,
-                      synthesisMaybeInitialMaxCost =
+                      synthesisInitialMaxCost =
                         Nothing :: Maybe SymInteger,
                       synthesisConCostObj =
                         PerStmtCostObj TestSemanticsCost,
@@ -435,7 +435,7 @@ componentSketchTest =
                       synthesisInitialExamples = [],
                       synthesisSketch = times4Sketch,
                       synthesisPrecondition = con True,
-                      synthesisMaybeInitialMaxCost =
+                      synthesisInitialMaxCost =
                         Just 2 :: Maybe SymInteger,
                       synthesisConCostObj =
                         PerStmtCostObj TestSemanticsCost,

@@ -23,7 +23,7 @@ jobs:
               ismain: false,
               experimental: false,
               ghc: "8107",
-              cachekey: "stack-8107",
+              cachekey: "stack-810",
             }
           - {
               build: stack,
@@ -31,7 +31,7 @@ jobs:
               ismain: false,
               experimental: false,
               ghc: "8107",
-              cachekey: "stack-8107-lowerbound",
+              cachekey: "stack-810-lowerbound",
             }
           - {
               build: stack,
@@ -39,7 +39,7 @@ jobs:
               ismain: false,
               experimental: false,
               ghc: "902",
-              cachekey: "stack-902",
+              cachekey: "stack-90",
             }
           - {
               build: stack,
@@ -47,7 +47,7 @@ jobs:
               ismain: false,
               experimental: false,
               ghc: "928",
-              cachekey: "stack-928",
+              cachekey: "stack-92",
             }
           - {
               build: stack,
@@ -55,31 +55,31 @@ jobs:
               ismain: false,
               experimental: false,
               ghc: "948",
-              cachekey: "stack-948",
+              cachekey: "stack-94",
+            }
+          - {
+              build: stack,
+              arg: "--stack-yaml stack-lts-22.33.yaml",
+              ismain: false,
+              experimental: false,
+              ghc: "96",
+              cachekey: "stack-96",
             }
           - {
               build: stack,
               arg: "",
               ismain: true,
               experimental: false,
-              ghc: "964",
-              cachekey: "stack-964",
-            }
-          - {
-              build: stack,
-              arg: "--stack-yaml stack-nightly.yaml",
-              ismain: false,
-              experimental: false,
-              ghc: "982",
-              cachekey: "stack-982",
+              ghc: "98",
+              cachekey: "stack-98",
             }
           - {
               build: cabal,
               arg: "",
               ismain: false,
               experimental: false,
-              ghc: "964",
-              cachekey: "cabal-964",
+              ghc: "9101",
+              cachekey: "cabal-910",
             }
         include:
           - os: macOS-latest
@@ -89,8 +89,8 @@ jobs:
                 arg: "",
                 ismain: true,
                 experimental: false,
-                ghc: "964",
-                cachekey: "stack-964",
+                ghc: "98",
+                cachekey: "stack-98",
               }
 
 
