@@ -159,7 +159,7 @@ data SynthesisBoundCostTask symProg conProg where
       synthesisInitialExamples :: [Example symProg],
       synthesisSketch :: symProg,
       synthesisPrecondition :: SymBool,
-      synthesisInitialMaxCost :: cost,
+      synthesisInitialMaxCost :: Maybe cost,
       synthesisSymCostObj :: symCostObj
     } ->
     SynthesisBoundCostTask symProg conProg
@@ -177,7 +177,7 @@ data SynthesisMinimalCostTask symProg conProg where
       synthesisInitialExamples :: [Example symProg],
       synthesisSketch :: symProg,
       synthesisPrecondition :: SymBool,
-      synthesisMaybeInitialMaxCost :: Maybe cost,
+      synthesisInitialMaxCost :: Maybe cost,
       synthesisConCostObj :: conCostObj,
       synthesisSymCostObj :: symCostObj
     } ->
@@ -222,7 +222,7 @@ instance
         examples
         symProg
         precond
-        (initialMaxCost :: cost)
+        (initialMaxCost :: Maybe cost)
         symCostObj
       ) = do
       initialExampleConstraints <-
@@ -248,8 +248,9 @@ instance
         symProgCost =
           flip runFreshT "cost" $ progCost symCostObj symProg ::
             SymbolicContext cost
-        symProgCostLessThanMaxCost :: cost -> SymBool
-        symProgCostLessThanMaxCost maxCost = simpleMerge $ do
+        symProgCostLessThanMaxCost :: Maybe cost -> SymBool
+        symProgCostLessThanMaxCost Nothing = con True
+        symProgCostLessThanMaxCost (Just maxCost) = simpleMerge $ do
           eitherCost <- runExceptT symProgCost
           case eitherCost of
             Left _ -> return $ con False
