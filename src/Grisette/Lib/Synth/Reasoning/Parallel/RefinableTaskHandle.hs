@@ -33,7 +33,6 @@ import Control.Concurrent.STM
     readTVarIO,
     tryReadTMVar,
     tryTakeTMVar,
-    writeTMVar,
     writeTVar,
   )
 import Control.Exception (Exception (toException), mask, throwIO)
@@ -125,7 +124,7 @@ instance
                 task <- ioTask
                 unless (taskRefinable task) $
                   fail "Task is not refinable"
-                atomically $ writeTMVar _initialSynthesisTask task
+                atomically $ putTMVar _initialSynthesisTask task
                 solverRunSynthesisTaskExtractCex solver task
             )
       _underlyingHandles <- newTVarIO [handle]
