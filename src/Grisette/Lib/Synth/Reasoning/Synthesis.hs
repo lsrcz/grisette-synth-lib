@@ -238,12 +238,14 @@ instance
               (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
               verifiers
           )
+      let allCexes = examples ++ cex
       case r of
         CEGISSuccess model ->
-          return (cex, SynthesisSuccess $ evalSymToCon model symProg)
-        CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
+          return (allCexes, SynthesisSuccess $ evalSymToCon model symProg)
+        CEGISVerifierFailure () ->
+          return (allCexes, SynthesisVerifierFailure)
         CEGISSolverFailure failure ->
-          return (cex, SynthesisSolverFailure failure)
+          return (allCexes, SynthesisSolverFailure failure)
       where
         symProgCost =
           flip runFreshT "cost" $ progCost symCostObj symProg ::
@@ -288,12 +290,13 @@ instance
               (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
               verifiers
           )
+      let allCexes = examples ++ cex
       case r of
         CEGISSuccess model ->
-          return (cex, SynthesisSuccess $ evalSymToCon model symProg)
-        CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
+          return (allCexes, SynthesisSuccess $ evalSymToCon model symProg)
+        CEGISVerifierFailure () -> return (allCexes, SynthesisVerifierFailure)
         CEGISSolverFailure failure ->
-          return (cex, SynthesisSolverFailure failure)
+          return (allCexes, SynthesisSolverFailure failure)
       where
         symProgCost =
           flip runFreshT "cost" $ progCost symCostObj symProg ::
@@ -331,12 +334,13 @@ instance
               (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
               verifiers
           )
+      let allCexes = examples ++ cex
       case r of
         CEGISSuccess model ->
-          return (cex, SynthesisSuccess $ evalSymToCon model symProg)
-        CEGISVerifierFailure () -> return (cex, SynthesisVerifierFailure)
+          return (allCexes, SynthesisSuccess $ evalSymToCon model symProg)
+        CEGISVerifierFailure () -> return (allCexes, SynthesisVerifierFailure)
         CEGISSolverFailure failure ->
-          return (cex, SynthesisSolverFailure failure)
+          return (allCexes, SynthesisSolverFailure failure)
   taskRefinable _ = True
 
 solverRunSynthesisTask ::
