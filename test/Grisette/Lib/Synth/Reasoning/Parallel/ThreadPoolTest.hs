@@ -6,7 +6,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPoolTest
   )
 where
 
-import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay, newMVar)
+import Control.Concurrent (newEmptyMVar, newMVar, putMVar, takeMVar, threadDelay)
 import Control.Exception (throw)
 import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
