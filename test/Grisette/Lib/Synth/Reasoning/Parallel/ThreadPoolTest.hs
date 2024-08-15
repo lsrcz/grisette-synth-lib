@@ -6,7 +6,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPoolTest
   )
 where
 
-import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
+import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay, newMVar)
 import Control.Exception (throw)
 import Control.Monad (replicateM, replicateM_, unless, when)
 import Data.Foldable (traverse_)
@@ -24,6 +24,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
     cancelWith,
     elapsedTime,
     endTime,
+    freezePool,
     maybeElapsedTime,
     maybeEndTime,
     maybeStartTime,
@@ -33,6 +34,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
     numOfRunningThreads,
     poll,
     startTime,
+    unfreezePool,
     waitCatch,
   )
 import Test.Framework
@@ -307,5 +309,16 @@ threadPoolTest =
               let cancellationOrder =
                     fmap snd $ sortOn fst $ zip position allHandles
               traverse_ (cancelWith SynthesisTaskCancelled) cancellationOrder
-              traverse_ waitCatch allHandles
+              traverse_ waitCatch allHandles,
+        testCase "freezePool" $ do
+          mvar <- newMVar ()
+          pool <- newThreadPool 2
+          freezePool pool
+          handle <- newThread pool 0 $ takeMVar mvar >> return (42 :: Int)
+          numOfRunningThreads pool >>= (@?= 0)
+          unfreezePool pool
+          numOfRunningThreads pool >>= (@?= 1)
+          putMVar mvar ()
+          Right r <- waitCatch handle
+          r @?= 42
       ]

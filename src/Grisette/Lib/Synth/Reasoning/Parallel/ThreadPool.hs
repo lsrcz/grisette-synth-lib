@@ -34,6 +34,8 @@ module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
     maybeEndTime,
     maybeElapsedTime,
     printThreadPoolStatus,
+    freezePool,
+    unfreezePool,
   )
 where
 
@@ -55,7 +57,7 @@ import Control.Exception
     mask,
     throwIO,
   )
-import Control.Monad (filterM, when)
+import Control.Monad (filterM, unless, when)
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.HashPSQ as PSQ
 import qualified Data.HashSet as HS
@@ -126,7 +128,8 @@ data ThreadPool = ThreadPool
     -- | Thread id, priority, pending thread. Smaller number is higher priority.
     queue :: IORef (PSQ.HashPSQ ThreadId Double SomePendingThread),
     childrenQueue :: IORef (HM.HashMap ThreadId SomeChildrenPendingThread),
-    children :: IORef (HM.HashMap ThreadId (HS.HashSet ThreadId))
+    children :: IORef (HM.HashMap ThreadId (HS.HashSet ThreadId)),
+    frozen :: IORef Bool
   }
 
 printThreadPoolStatus :: ThreadPool -> IO ()
@@ -193,6 +196,7 @@ newThreadPool poolSize = do
   queue <- newIORef PSQ.empty
   childrenQueue <- newIORef HM.empty
   children <- newIORef HM.empty
+  frozen <- newIORef False
   return ThreadPool {..}
 
 cleanupChildrenImpl :: ThreadPool -> ThreadId -> IO ()
@@ -250,23 +254,33 @@ threadFun pool@ThreadPool {..} PendingThread {..} cancellable =
 
 startIfHaveSpaceImpl :: ThreadPool -> IO ()
 startIfHaveSpaceImpl pool@ThreadPool {..} = do
-  oldRunning <- readIORef running
-  when (HM.size oldRunning < poolSize) $ do
-    oldQueue <- readIORef queue
-    case PSQ.findMin oldQueue of
-      Just (_, _, SomePendingThread pendingThread@PendingThread {..}) -> do
-        exception <- atomically $ tryReadTMVar threadResult
-        writeIORef queue $ PSQ.delete threadId oldQueue
-        case exception of
-          Just _ -> return ()
-          Nothing -> do
-            cancellable <- newEmptyMVar
-            threadAsync <-
-              Async.async $ threadFun pool pendingThread cancellable
-            writeIORef running $
-              HM.insert threadId (Thread threadAsync cancellable) oldRunning
-        startIfHaveSpaceImpl pool
-      _ -> return ()
+  isFrozen <- readIORef frozen
+  unless isFrozen $ do
+    oldRunning <- readIORef running
+    when (HM.size oldRunning < poolSize) $ do
+      oldQueue <- readIORef queue
+      case PSQ.findMin oldQueue of
+        Just (_, _, SomePendingThread pendingThread@PendingThread {..}) -> do
+          exception <- atomically $ tryReadTMVar threadResult
+          writeIORef queue $ PSQ.delete threadId oldQueue
+          case exception of
+            Just _ -> return ()
+            Nothing -> do
+              cancellable <- newEmptyMVar
+              threadAsync <-
+                Async.async $ threadFun pool pendingThread cancellable
+              writeIORef running $
+                HM.insert threadId (Thread threadAsync cancellable) oldRunning
+          startIfHaveSpaceImpl pool
+        _ -> return ()
+
+freezePool :: ThreadPool -> IO ()
+freezePool pool = withLockedPool pool False $ do
+  writeIORef (frozen pool) True
+
+unfreezePool :: ThreadPool -> IO ()
+unfreezePool pool = withLockedPool pool True $ do
+  writeIORef (frozen pool) False
 
 taskNotYetFinishedImpl :: ThreadPool -> ThreadId -> IO Bool
 taskNotYetFinishedImpl ThreadPool {..} threadId = do
