@@ -84,7 +84,7 @@ library
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
-    , grisette ==0.8.*
+    , grisette ==0.9.*
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
     , ordered-containers >=0.2.3 && <0.3
@@ -115,7 +115,7 @@ executable arith
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
-    , grisette ==0.8.*
+    , grisette ==0.9.*
     , grisette-synth-lib
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
@@ -151,7 +151,7 @@ executable control
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
-    , grisette ==0.8.*
+    , grisette ==0.9.*
     , grisette-synth-lib
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4
@@ -233,7 +233,7 @@ test-suite spec
     , deepseq
     , extra
     , graphviz >=2999.20.0.4 && <3000
-    , grisette ==0.8.*
+    , grisette ==0.9.*
     , grisette-synth-lib
     , hashable >=1.3 && <1.5
     , mtl >=2.2.2 && <2.4

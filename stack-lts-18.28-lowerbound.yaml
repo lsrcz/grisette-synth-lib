@@ -77,7 +77,8 @@ extra-deps:
   - quickcheck-with-counterexamples-1.2
   - graphviz-2999.20.0.4
   - dlist-0.8.0.8
-  - grisette-0.8.0.0
+  - git: https://github.com/lsrcz/grisette.git
+    commit: 73f625ab23eec6f5aa5b8e5fd24e1a2ee18d57de
 
 
 # Override default flag values for local packages and extra-deps
