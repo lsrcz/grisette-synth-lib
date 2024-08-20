@@ -20,6 +20,7 @@ module Grisette.Lib.Synth.Reasoning.Fuzzing
   )
 where
 
+import Control.Exception.Safe (Exception (fromException), throw)
 import Data.Data (Typeable)
 import Data.Proxy (Proxy (Proxy))
 import Grisette
@@ -42,7 +43,11 @@ import Grisette.Lib.Synth.Program.ProgConstraints
   )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
-import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher), Matcher (match))
+import Grisette.Lib.Synth.Reasoning.Matcher
+  ( EqMatcher (EqMatcher),
+    Matcher (match),
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (CancellingException)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example (Example),
     IsVerifier (toVerifierFuns),
@@ -53,9 +58,10 @@ import Test.QuickCheck.Counterexamples
   ( Args (chatty),
     Gen,
     PropertyOf,
+    Result (Failure, theException),
     Testable (Counterexample),
     forAll,
-    quickCheckWith,
+    quickCheckWithResult,
     stdArgs,
     withMaxSuccess,
     type (:&:) ((:&:)),
@@ -71,10 +77,16 @@ fuzzingTestProg' ::
   ([conVal] -> ([conVal], matcher)) ->
   IO (Maybe (IOPair conVal, matcher))
 fuzzingTestProg' prop spec = do
-  maybeCex <- quickCheckWith stdArgs {chatty = False} prop
+  (maybeCex, result) <- quickCheckWithResult stdArgs {chatty = False} prop
   case maybeCex of
     Nothing -> return Nothing
     Just (cex :&: _) -> do
+      case result of
+        Failure {theException = Just e} ->
+          case fromException e of
+            Just (se :: CancellingException) -> throw se
+            _ -> return ()
+        _ -> return ()
       let (outputs, matcher) = spec cex
       return $ Just (IOPair cex outputs, matcher)
 

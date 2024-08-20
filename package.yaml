@@ -34,6 +34,7 @@ dependencies:
   - async
   - time
   - psqueues
+  - safe-exceptions
 
 ghc-options:
   - -Wextra

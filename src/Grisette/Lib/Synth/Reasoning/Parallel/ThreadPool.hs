@@ -3,12 +3,14 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
-  ( ThreadHandle (threadId, threadPool),
+  ( CancellingException,
+    ThreadHandle (threadId, threadPool),
     ThreadPool,
     newThreadPool,
     newThread,
@@ -81,14 +83,6 @@ instance Show CancellingException where
   show (CancellingException e) = show e
 
 instance Exception CancellingException
-
-data PropagatedException where
-  PropagatedException :: (Exception e) => e -> PropagatedException
-
-instance Show PropagatedException where
-  show (PropagatedException e) = show e
-
-instance Exception PropagatedException
 
 data PendingThread a = PendingThread
   { threadId :: ThreadId,
@@ -229,28 +223,35 @@ cleanupChildrenImpl ThreadPool {..} threadId = do
       writeIORef children $ HM.delete threadId oldChildren
     Nothing -> return ()
 
-threadFun :: ThreadPool -> PendingThread a -> MVar () -> IO ()
-threadFun pool@ThreadPool {..} PendingThread {..} cancellable =
-  mask $ \restore -> do
-    putMVar cancellable ()
-    let writeResult result = do
-          modifyIORef' running $ HM.delete threadId
-          cleanupChildrenImpl pool threadId
-          atomically $ tryPutTMVar threadResult result
-          getCurrentTime >>= atomically . tryPutTMVar threadEndTime
-    getCurrentTime >>= atomically . tryPutTMVar threadStartTime
-    let handler (e :: SomeException) =
-          ( do
-              getCurrentTime >>= atomically . tryPutTMVar threadEndTime
-              case fromException e of
-                Just (CancellingException e1) ->
-                  writeResult (Left $ toException e1)
-                Nothing -> withLockedPool pool True $ writeResult (Left e)
-          )
-            `catch` handler
-    (restore threadAction >>= withLockedPool pool True . writeResult . Right)
-      `catch` handler
-    return ()
+threadFun ::
+  forall a.
+  (forall x. IO x -> IO x) ->
+  ThreadPool ->
+  PendingThread a ->
+  MVar () ->
+  IO ()
+threadFun unmask pool@ThreadPool {..} PendingThread {..} cancellable = do
+  putMVar cancellable ()
+  let writeResult :: Either SomeException a -> IO ()
+      writeResult result = do
+        modifyIORef' running $ HM.delete threadId
+        cleanupChildrenImpl pool threadId
+        atomically $ tryPutTMVar threadResult result
+        getCurrentTime >>= atomically . tryPutTMVar threadEndTime
+        return ()
+  getCurrentTime >>= atomically . tryPutTMVar threadStartTime
+  let handler (e :: SomeException) =
+        ( do
+            getCurrentTime >>= atomically . tryPutTMVar threadEndTime
+            case fromException e of
+              Just (CancellingException e1) ->
+                writeResult (Left $ toException e1)
+              Nothing -> withLockedPool pool True $ writeResult (Left e)
+        )
+          `catch` handler
+  unmask
+    (threadAction >>= withLockedPool pool True . writeResult . Right)
+    `catch` handler
 
 startIfHaveSpaceImpl :: ThreadPool -> IO ()
 startIfHaveSpaceImpl pool@ThreadPool {..} = do
@@ -268,7 +269,8 @@ startIfHaveSpaceImpl pool@ThreadPool {..} = do
             Nothing -> do
               cancellable <- newEmptyMVar
               threadAsync <-
-                Async.async $ threadFun pool pendingThread cancellable
+                Async.asyncWithUnmask $ \unmask ->
+                  threadFun unmask pool pendingThread cancellable
               writeIORef running $
                 HM.insert threadId (Thread threadAsync cancellable) oldRunning
           startIfHaveSpaceImpl pool
