@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -42,6 +43,7 @@ import Data.Typeable
     typeRep,
     type (:~:) (Refl),
   )
+import GHC.Generics (Generic)
 import Grisette
   ( Identifier (Identifier, IdentifierWithInfo),
     Mergeable,
@@ -96,6 +98,8 @@ instance
     constrainProg (obj1, (obj2, obj3, obj4))
 
 data WithConstraints semObj constObj = WithConstraints semObj constObj
+  deriving (Generic)
+  deriving anyclass (NFData)
 
 runProgWithConstraints ::
   (ProgConstraints constObj prog ctx, ProgSemantics semObj prog val ctx) =>

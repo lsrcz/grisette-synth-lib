@@ -9,6 +9,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
   )
 where
 
+import Control.DeepSeq (NFData)
 import Data.Data (Typeable)
 import Grisette (Solvable (con), SymBool, SymInteger, Union, mrgIf, z3)
 import Grisette.Lib.Synth.Context (SymbolicContext)
@@ -97,7 +98,8 @@ data ByteCodeSynthesisTestCase where
     forall matcher.
     ( Matcher matcher Bool Integer,
       Matcher matcher SymBool SymInteger,
-      Typeable matcher
+      Typeable matcher,
+      NFData matcher
     ) =>
     { byteCodeSynthesisTestCaseName :: String,
       byteCodeSynthesisTestCaseSketch :: SymProg,

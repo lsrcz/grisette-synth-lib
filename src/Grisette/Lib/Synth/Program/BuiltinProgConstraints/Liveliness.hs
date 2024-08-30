@@ -48,6 +48,7 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
 where
 
 import Control.Arrow (Arrow (second))
+import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Error.Class (MonadError (throwError))
 import Data.Foldable (foldl')
 import Data.Maybe (catMaybes)
@@ -173,6 +174,9 @@ data Use varId res = Use
   deriving (Mergeable, SymEq, EvalSym) via (Default (Use varId res))
 
 newtype Liveliness livelinessObj = Liveliness livelinessObj
+
+instance (NFData constrObj) => NFData (Liveliness constrObj) where
+  rnf (Liveliness obj) = rnf obj
 
 type UnionDef varId res = Union [Def varId res]
 

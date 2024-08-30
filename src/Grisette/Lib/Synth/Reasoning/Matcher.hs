@@ -7,12 +7,16 @@ module Grisette.Lib.Synth.Reasoning.Matcher
   )
 where
 
+import Control.DeepSeq (NFData (rnf))
 import Grisette (SymBool, SymEq ((.==)))
 
 class Matcher matcher bool a where
   match :: matcher -> [a] -> [a] -> bool
 
 data EqMatcher = EqMatcher
+
+instance NFData EqMatcher where
+  rnf EqMatcher = ()
 
 instance (SymEq a) => Matcher EqMatcher SymBool a where
   match _ = (.==)

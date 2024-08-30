@@ -16,6 +16,7 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduct
   )
 where
 
+import Control.DeepSeq (NFData (rnf))
 import Grisette
   ( LogicalOp (symImplies, symNot, (.&&), (.||)),
     Mergeable,
@@ -202,6 +203,9 @@ canonicalOrderConstraint obj prog = do
 
 newtype ComponentSymmetryReduction constrObj
   = ComponentSymmetryReduction constrObj
+
+instance (NFData constrObj) => NFData (ComponentSymmetryReduction constrObj) where
+  rnf (ComponentSymmetryReduction obj) = rnf obj
 
 instance
   ( ProgConstraints constrObj (Concrete.Prog op conVarId ty) ctx,

@@ -16,6 +16,7 @@ module Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   )
 where
 
+import Control.DeepSeq (NFData (rnf))
 import Control.Exception (ArithException)
 import Control.Monad (when)
 import Control.Monad.Except (runExceptT)
@@ -67,6 +68,9 @@ instance
   OpSubProgConstraints constrObj TestSemanticsOp ctx
 
 data TestSemanticsObj = TestSemanticsObj
+
+instance NFData TestSemanticsObj where
+  rnf TestSemanticsObj = ()
 
 data TestSemanticsType = IntType
   deriving (Show, Eq, Generic)

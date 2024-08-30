@@ -15,6 +15,7 @@ module Grisette.Lib.Synth.Operator.OpSemantics
   )
 where
 
+import Control.DeepSeq (NFData (rnf))
 import qualified Data.Text as T
 import Grisette (Mergeable, MonadUnion, Union, liftUnion, mrgReturn, tryMerge)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
@@ -100,3 +101,6 @@ instance
     applyOp semObj op' args
 
 data DefaultSem = DefaultSem
+
+instance NFData DefaultSem where
+  rnf DefaultSem = ()

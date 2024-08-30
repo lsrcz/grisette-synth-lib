@@ -20,6 +20,7 @@ module Grisette.Lib.Synth.Reasoning.Fuzzing
   )
 where
 
+import Control.DeepSeq (NFData)
 import Control.Exception.Safe (Exception (fromException), throw)
 import Data.Data (Typeable)
 import Data.Proxy (Proxy (Proxy))
@@ -166,7 +167,11 @@ data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
       Typeable symSemObj,
       Typeable symConstObj,
       Typeable symVal,
-      Typeable matcher
+      Typeable matcher,
+      NFData symSemObj,
+      NFData symConstObj,
+      NFData symVal,
+      NFData matcher
     ) =>
     { quickCheckFuzzerSymSemantics :: WithConstraints symSemObj symConstObj,
       quickCheckFuzzerConSemantics :: conSemObj,
@@ -222,7 +227,10 @@ defaultQuickCheckFuzzerWithConstraint ::
     PPrint symVal,
     Eq conVal,
     ProgConstraints constObj symProg AngelicContext,
-    Typeable constObj
+    Typeable constObj,
+    NFData symVal,
+    NFData semObj,
+    NFData constObj
   ) =>
   semObj ->
   constObj ->
@@ -256,7 +264,9 @@ defaultQuickCheckFuzzer ::
     Show symVal,
     PPrint symVal,
     SymEq symVal,
-    Eq conVal
+    Eq conVal,
+    NFData symVal,
+    NFData semObj
   ) =>
   semObj ->
   Gen [conVal] ->
@@ -279,7 +289,8 @@ defaultSemQuickCheckFuzzer ::
     Show symVal,
     PPrint symVal,
     SymEq symVal,
-    Eq conVal
+    Eq conVal,
+    NFData symVal
   ) =>
   Gen [conVal] ->
   ([conVal] -> [conVal]) ->

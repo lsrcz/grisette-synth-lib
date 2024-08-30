@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -25,6 +26,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
   )
 where
 
+import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Except (runExceptT)
 import Data.Data (Typeable)
 import Data.Proxy (Proxy)
@@ -104,7 +106,11 @@ data Example symProg where
       Typeable symVal,
       Show symVal,
       PPrint symVal,
-      Typeable matcher
+      Typeable matcher,
+      NFData symSemObj,
+      NFData symConstObj,
+      NFData symVal,
+      NFData matcher
     ) =>
     { exampleContext :: Proxy ctx,
       exampleSymSemantics :: WithConstraints symSemObj symConstObj,
@@ -118,6 +124,10 @@ instance Show (Example symProg) where
 
 instance PPrint (Example symProg) where
   pformat (Example _ _ iop _) = pformat iop
+
+instance NFData (Example symProg) where
+  rnf (Example p s iop matcher) =
+    rnf p `seq` rnf s `seq` rnf iop `seq` rnf matcher
 
 class
   IsVerifier verifier symProg conProg

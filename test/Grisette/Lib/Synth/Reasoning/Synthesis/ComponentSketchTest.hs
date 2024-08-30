@@ -17,6 +17,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   )
 where
 
+import Control.DeepSeq (NFData)
 import Data.Data (Proxy (Proxy), Typeable)
 import Grisette
   ( Solvable (con),
@@ -236,7 +237,8 @@ data ComponentSynthesisTestCase where
     forall matcher.
     ( Matcher matcher Bool Integer,
       Matcher matcher SymBool SymInteger,
-      Typeable matcher
+      Typeable matcher,
+      NFData matcher
     ) =>
     { componentSynthesisTestCaseName :: String,
       componentSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
@@ -281,7 +283,11 @@ example iop =
     }
 
 verifier ::
-  (Matcher matcher SymBool SymVal, Matcher matcher Bool ConVal, Typeable matcher) =>
+  ( Matcher matcher SymBool SymVal,
+    Matcher matcher Bool ConVal,
+    Typeable matcher,
+    NFData matcher
+  ) =>
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->
   QuickCheckFuzzer SymVal ConVal SymProg ConProg AngelicContext
@@ -298,7 +304,8 @@ verifier spec gen =
 task ::
   ( Matcher matcher SymBool SymVal,
     Matcher matcher Bool ConVal,
-    Typeable matcher
+    Typeable matcher,
+    NFData matcher
   ) =>
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->

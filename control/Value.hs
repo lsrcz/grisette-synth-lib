@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,6 +15,7 @@ module Value
   )
 where
 
+import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
@@ -33,6 +35,7 @@ data Value intVal boolVal
   = IntValue intVal
   | BoolValue boolVal
   deriving (Show, Eq, Generic)
+  deriving anyclass (NFData)
   deriving
     (Mergeable, SymEq, ToSym (Value symIntVal symBoolVal), PPrint)
     via (Default (Value intVal boolVal))
