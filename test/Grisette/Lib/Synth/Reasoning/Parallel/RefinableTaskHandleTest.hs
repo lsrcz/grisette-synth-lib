@@ -43,7 +43,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandle
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (newThreadPool)
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( Example,
+  ( SomeExample,
     SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
@@ -70,7 +70,7 @@ shouldHaveCost ::
       SymInteger
       ConcreteContext
   ) =>
-  Either C.SomeException ([Example symProg], SynthesisResult conProg) ->
+  Either C.SomeException ([SomeExample symProg], SynthesisResult conProg) ->
   SymInteger ->
   Assertion
 shouldHaveCost (Right (_, SynthesisSuccess prog)) cost = do
@@ -82,14 +82,14 @@ shouldHaveCost r _ = error $ "Unexpected result " <> show (snd <$> r)
 
 shouldUnsat ::
   (HasCallStack, Show conProg) =>
-  Either C.SomeException ([Example symProg], SynthesisResult conProg) ->
+  Either C.SomeException ([SomeExample symProg], SynthesisResult conProg) ->
   Assertion
 shouldUnsat (Right (_, SynthesisSolverFailure Unsat)) = return ()
 shouldUnsat r = error $ "Unexpected result " <> show (snd <$> r)
 
 shouldSolverDead ::
   (HasCallStack, Show conProg) =>
-  Either C.SomeException ([Example symProg], SynthesisResult conProg) ->
+  Either C.SomeException ([SomeExample symProg], SynthesisResult conProg) ->
   Assertion
 shouldSolverDead (Left e) = case C.fromException e of
   Just SynthesisTaskSolverDead -> return ()

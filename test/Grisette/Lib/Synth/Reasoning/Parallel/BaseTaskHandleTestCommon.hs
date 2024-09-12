@@ -42,7 +42,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (newThreadPool)
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( Example,
+  ( SomeExample,
     SynthesisResult (SynthesisSuccess),
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
@@ -72,7 +72,7 @@ import Test.HUnit (assertBool, (@?=))
 pollUntilFinished ::
   (BaseTaskHandle handle SymProg ConProg) =>
   handle ->
-  IO (Either SomeException ([Example SymProg], SynthesisResult ConProg))
+  IO (Either SomeException ([SomeExample SymProg], SynthesisResult ConProg))
 pollUntilFinished handle = do
   r <- poll handle
   case r of
@@ -84,7 +84,7 @@ pollTasksUntilFinished ::
   [handle] ->
   IO
     [ ( handle,
-        Either SomeException ([Example SymProg], SynthesisResult ConProg)
+        Either SomeException ([SomeExample SymProg], SynthesisResult ConProg)
       )
     ]
 pollTasksUntilFinished taskSet = do

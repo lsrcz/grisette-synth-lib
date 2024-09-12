@@ -31,6 +31,9 @@ module Grisette.Lib.Synth.Program.ProgConstraints
 where
 
 import Control.DeepSeq (NFData)
+import qualified Data.Binary as Binary
+import Data.Bytes.Serial (Serial (deserialize, serialize))
+import qualified Data.Serialize as Cereal
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
@@ -88,7 +91,21 @@ instance
 
 data WithConstraints semObj constObj = WithConstraints semObj constObj
   deriving (Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (Serial, NFData)
+
+instance
+  (Serial semObj, Serial constObj) =>
+  Cereal.Serialize (WithConstraints semObj constObj)
+  where
+  put = serialize
+  get = deserialize
+
+instance
+  (Serial semObj, Serial constObj) =>
+  Binary.Binary (WithConstraints semObj constObj)
+  where
+  put = serialize
+  get = deserialize
 
 runProgWithConstraints ::
   (ProgConstraints constObj prog ctx, ProgSemantics semObj prog val ctx) =>

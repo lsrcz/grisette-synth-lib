@@ -52,6 +52,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (CancellingException)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example (Example),
     IsVerifier (toVerifierFuns),
+    SomeExample (SomeExample),
     SomeVerifier (SomeVerifier),
     SynthesisContext,
   )
@@ -202,11 +203,11 @@ instance
         Just (ioPair, matcher) ->
           return
             ( CEGISVerifierFoundCex $
-                Example
-                  (Proxy :: Proxy symCtx)
-                  symSem
-                  (toSym ioPair :: IOPair symVal)
-                  matcher
+                SomeExample (Proxy :: Proxy symCtx) $
+                  Example
+                    symSem
+                    (toSym ioPair :: IOPair symVal)
+                    matcher
             )
         Nothing -> return CEGISVerifierNoCex
 

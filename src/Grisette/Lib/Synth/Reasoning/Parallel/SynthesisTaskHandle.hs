@@ -41,8 +41,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (ThreadHandle)
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( Example,
-    RunSynthesisTask (solverRunSynthesisTaskExtractCex),
+  ( RunSynthesisTask (solverRunSynthesisTaskExtractCex),
+    SomeExample,
     SynthesisResult,
     SynthesisTask,
     runSynthesisTaskExtractCex,
@@ -50,7 +50,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
 
 newtype SynthesisTaskHandle symProg conProg = SynthesisTaskHandle
   { _underlyingHandle ::
-      ThreadHandle ([Example symProg], SynthesisResult conProg)
+      ThreadHandle ([SomeExample symProg], SynthesisResult conProg)
   }
   deriving newtype (Eq, Hashable)
 
@@ -77,8 +77,8 @@ actionWithTimeout ::
   (Typeable symProg, Typeable conProg) =>
   Maybe Int ->
   TMVar (SynthesisTaskHandle symProg conProg) ->
-  IO ([Example symProg], SynthesisResult conProg) ->
-  IO ([Example symProg], SynthesisResult conProg)
+  IO ([SomeExample symProg], SynthesisResult conProg) ->
+  IO ([SomeExample symProg], SynthesisResult conProg)
 actionWithTimeout maybeTimeout taskHandleTMVar action =
   C.mask $ \restore -> do
     selfHandle <- atomically $ readTMVar taskHandleTMVar
@@ -96,7 +96,7 @@ enqueueActionImpl ::
   Maybe Int ->
   Pool.ThreadPool ->
   Double ->
-  IO ([Example symProg], SynthesisResult conProg) ->
+  IO ([SomeExample symProg], SynthesisResult conProg) ->
   IO (SynthesisTaskHandle symProg conProg)
 enqueueActionImpl
   maybeTimeout

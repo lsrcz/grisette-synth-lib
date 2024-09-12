@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -15,6 +17,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
     IsVerifier (..),
     SomeVerifier (..),
     Example (..),
+    SomeExample (..),
     synthesisConstraintFun,
     RunSynthesisTask (..),
     solverRunSynthesisTask,
@@ -28,8 +31,12 @@ where
 
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Except (runExceptT)
+import qualified Data.Binary as Binary
+import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Data (Typeable)
 import Data.Proxy (Proxy)
+import qualified Data.Serialize as Cereal
+import GHC.Generics (Generic)
 import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
@@ -93,8 +100,51 @@ instance SynthesisContext AngelicContext where
     ident <- uniqueIdentifier "synth"
     genSynthesisConstraint matcher (runFreshT actual ident) expectedOutputs
 
-data Example symProg where
+data Example symSemObj symConstObj symVal matcher where
   Example ::
+    { exampleSymSemantics :: WithConstraints symSemObj symConstObj,
+      exampleIOPair :: IOPair symVal,
+      exampleMatcher :: matcher
+    } ->
+    Example symSemObj symConstObj symVal matcher
+  deriving (Generic)
+  deriving anyclass (Serial)
+
+instance
+  (Serial symSemObj, Serial symConstObj, Serial symVal, Serial matcher) =>
+  Cereal.Serialize (Example symSemObj symConstObj symVal matcher)
+  where
+  put = serialize
+  get = deserialize
+
+instance
+  (Serial symSemObj, Serial symConstObj, Serial symVal, Serial matcher) =>
+  Binary.Binary (Example symSemObj symConstObj symVal matcher)
+  where
+  put = serialize
+  get = deserialize
+
+instance
+  (Show symVal) =>
+  Show (Example symSemObj symConstObj symVal matcher)
+  where
+  show (Example _ iop _) = show iop
+
+instance
+  (PPrint symVal) =>
+  PPrint (Example symSemObj symConstObj symVal matcher)
+  where
+  pformat (Example _ iop _) = pformat iop
+
+instance
+  (NFData symSemObj, NFData symConstObj, NFData symVal, NFData matcher) =>
+  NFData (Example symSemObj symConstObj symVal matcher)
+  where
+  rnf (Example s iop matcher) =
+    rnf s `seq` rnf iop `seq` rnf matcher
+
+data SomeExample symProg where
+  SomeExample ::
     forall symSemObj symConstObj symProg symVal ctx matcher.
     ( ProgSemantics symSemObj symProg symVal ctx,
       ProgConstraints symConstObj symProg ctx,
@@ -112,29 +162,25 @@ data Example symProg where
       NFData symVal,
       NFData matcher
     ) =>
-    { exampleContext :: Proxy ctx,
-      exampleSymSemantics :: WithConstraints symSemObj symConstObj,
-      exampleIOPair :: IOPair symVal,
-      exampleMatcher :: matcher
-    } ->
-    Example symProg
+    Proxy ctx ->
+    Example symSemObj symConstObj symVal matcher ->
+    SomeExample symProg
 
-instance Show (Example symProg) where
-  show (Example _ _ iop _) = show iop
+instance Show (SomeExample symProg) where
+  show (SomeExample _ ex) = show ex
 
-instance PPrint (Example symProg) where
-  pformat (Example _ _ iop _) = pformat iop
+instance PPrint (SomeExample symProg) where
+  pformat (SomeExample _ ex) = pformat ex
 
-instance NFData (Example symProg) where
-  rnf (Example p s iop matcher) =
-    rnf p `seq` rnf s `seq` rnf iop `seq` rnf matcher
+instance NFData (SomeExample symProg) where
+  rnf (SomeExample p ex) = rnf p `seq` rnf ex
 
 class
   IsVerifier verifier symProg conProg
     | verifier -> symProg conProg
   where
   toVerifierFuns ::
-    verifier -> symProg -> [VerifierFun (Example symProg) ()]
+    verifier -> symProg -> [VerifierFun (SomeExample symProg) ()]
 
 data SomeVerifier symProg conProg where
   SomeVerifier ::
@@ -151,7 +197,7 @@ data SynthesisTask symProg conProg where
       Typeable symProg
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
-      synthesisInitialExamples :: [Example symProg],
+      synthesisInitialExamples :: [SomeExample symProg],
       synthesisSketch :: symProg,
       synthesisPrecondition :: SymBool
     } ->
@@ -166,7 +212,7 @@ data SynthesisBoundCostTask symProg conProg where
       SymOrd cost
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
-      synthesisInitialExamples :: [Example symProg],
+      synthesisInitialExamples :: [SomeExample symProg],
       synthesisSketch :: symProg,
       synthesisPrecondition :: SymBool,
       synthesisInitialMaxCost :: Maybe cost,
@@ -184,7 +230,7 @@ data SynthesisMinimalCostTask symProg conProg where
       SymOrd cost
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
-      synthesisInitialExamples :: [Example symProg],
+      synthesisInitialExamples :: [SomeExample symProg],
       synthesisSketch :: symProg,
       synthesisPrecondition :: SymBool,
       synthesisInitialMaxCost :: Maybe cost,
@@ -197,10 +243,10 @@ synthesisConstraintFun ::
   forall symProg.
   (Typeable symProg) =>
   symProg ->
-  SynthesisConstraintFun (Example symProg)
+  SynthesisConstraintFun (SomeExample symProg)
 synthesisConstraintFun
   prog
-  (Example (_ :: Proxy ctx) symSem (iop :: IOPair symVal) matcher) =
+  (SomeExample (_ :: Proxy ctx) (Example symSem (iop :: IOPair symVal) matcher)) =
     genSynthesisConstraint
       matcher
       (runProgWithConstraints symSem prog (ioPairInputs iop) :: ctx [symVal])
@@ -210,7 +256,16 @@ data SynthesisResult conProg
   = SynthesisSuccess conProg
   | SynthesisVerifierFailure
   | SynthesisSolverFailure SolvingFailure
-  deriving (Show)
+  deriving (Show, Generic)
+  deriving (Serial, NFData)
+
+instance (Serial conProg) => Cereal.Serialize (SynthesisResult conProg) where
+  put = serialize
+  get = deserialize
+
+instance (Serial conProg) => Binary.Binary (SynthesisResult conProg) where
+  put = serialize
+  get = deserialize
 
 class RunSynthesisTask task symProg conProg | task -> symProg conProg where
   solverRunSynthesisTaskExtractCex ::
@@ -218,7 +273,7 @@ class RunSynthesisTask task symProg conProg | task -> symProg conProg where
     (Solver solver) =>
     solver ->
     task ->
-    IO ([Example symProg], SynthesisResult conProg)
+    IO ([SomeExample symProg], SynthesisResult conProg)
   taskRefinable :: task -> Bool
 
 instance
@@ -380,7 +435,7 @@ runSynthesisTaskExtractCex ::
   ) =>
   config ->
   task ->
-  IO ([Example symProg], SynthesisResult conProg)
+  IO ([SomeExample symProg], SynthesisResult conProg)
 runSynthesisTaskExtractCex config task =
   withSolver config $ \solver ->
     solverRunSynthesisTaskExtractCex solver task

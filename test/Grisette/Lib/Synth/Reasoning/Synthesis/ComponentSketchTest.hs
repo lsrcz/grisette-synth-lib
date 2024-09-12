@@ -64,11 +64,11 @@ import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher), Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example
       ( Example,
-        exampleContext,
         exampleIOPair,
         exampleMatcher,
         exampleSymSemantics
       ),
+    SomeExample (SomeExample),
     SomeVerifier (SomeVerifier),
     SynthesisMinimalCostTask
       ( SynthesisMinimalCostTask,
@@ -242,7 +242,7 @@ data ComponentSynthesisTestCase where
     ) =>
     { componentSynthesisTestCaseName :: String,
       componentSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
-      componentSynthesisTestCaseInitialExamples :: [Example SymProg],
+      componentSynthesisTestCaseInitialExamples :: [SomeExample SymProg],
       componentSynthesisTestCaseSynthGen :: Gen [Integer],
       componentSynthesisTestCaseFuzzGen :: Gen [Integer]
     } ->
@@ -270,17 +270,17 @@ fuzzResult (SynthesisSuccess prog) gen spec = do
   fst <$> fuzzingResult @?= Nothing
 fuzzResult r _ _ = fail $ "Unexpected result: " <> show r
 
-example :: IOPair SymInteger -> Example SymProg
+example :: IOPair SymInteger -> SomeExample SymProg
 example iop =
-  Example
-    { exampleContext = Proxy :: Proxy AngelicContext,
-      exampleSymSemantics =
-        WithConstraints
-          TestSemanticsObj
-          (ComponentSymmetryReduction ()),
-      exampleIOPair = iop,
-      exampleMatcher = EqMatcher
-    }
+  SomeExample (Proxy :: Proxy AngelicContext) $
+    Example
+      { exampleSymSemantics =
+          WithConstraints
+            TestSemanticsObj
+            (ComponentSymmetryReduction ()),
+        exampleIOPair = iop,
+        exampleMatcher = EqMatcher
+      }
 
 verifier ::
   ( Matcher matcher SymBool SymVal,
@@ -309,7 +309,7 @@ task ::
   ) =>
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->
-  [Example SymProg] ->
+  [SomeExample SymProg] ->
   SymProg ->
   SymBool ->
   SynthesisTask SymProg ConProg

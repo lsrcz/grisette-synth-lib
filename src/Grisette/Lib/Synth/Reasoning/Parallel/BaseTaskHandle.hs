@@ -28,8 +28,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Exception
   )
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool as Pool
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( Example,
-    RunSynthesisTask,
+  ( RunSynthesisTask,
+    SomeExample,
     SynthesisResult,
   )
 
@@ -57,11 +57,11 @@ class
     handle ->
     STM
       ( Maybe
-          (Either C.SomeException ([Example symProg], SynthesisResult conProg))
+          (Either C.SomeException ([SomeExample symProg], SynthesisResult conProg))
       )
   waitCatchSTM ::
     handle ->
-    STM (Either C.SomeException ([Example symProg], SynthesisResult conProg))
+    STM (Either C.SomeException ([SomeExample symProg], SynthesisResult conProg))
   cancelWith :: (C.Exception e) => handle -> e -> IO ()
 
 startTime :: (BaseTaskHandle task symProg conProg) => task -> IO UTCTime
@@ -106,14 +106,17 @@ poll ::
   task ->
   IO
     ( Maybe
-        (Either C.SomeException ([Example symProg], SynthesisResult conProg))
+        ( Either
+            C.SomeException
+            ([SomeExample symProg], SynthesisResult conProg)
+        )
     )
 poll = atomically . pollSTM
 
 waitCatch ::
   (BaseTaskHandle task symProg conProg) =>
   task ->
-  IO (Either C.SomeException ([Example symProg], SynthesisResult conProg))
+  IO (Either C.SomeException ([SomeExample symProg], SynthesisResult conProg))
 waitCatch = atomically . waitCatchSTM
 
 cancel :: (BaseTaskHandle task symProg conProg) => task -> IO ()
@@ -125,7 +128,9 @@ pollAnySTM ::
   STM
     ( [task],
       [ ( task,
-          Either C.SomeException ([Example symProg], SynthesisResult conProg)
+          Either
+            C.SomeException
+            ([SomeExample symProg], SynthesisResult conProg)
         )
       ]
     )
@@ -142,7 +147,9 @@ pollAny ::
   IO
     ( [task],
       [ ( task,
-          Either C.SomeException ([Example symProg], SynthesisResult conProg)
+          Either
+            C.SomeException
+            ([SomeExample symProg], SynthesisResult conProg)
         )
       ]
     )
