@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -29,6 +30,7 @@ import Grisette
     Mergeable,
     MonadFresh,
     MonadUnion,
+    SExpr (List),
     SimpleMergeable (mrgIte),
     Solvable (con, isym),
     SymBool,
@@ -43,7 +45,7 @@ import Grisette
     mrgIf,
     mrgReturn,
     runFreshT,
-    withInfo,
+    withMetadata,
   )
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context
@@ -85,9 +87,10 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
-  ( ConstraintHierarchy (ConstraintHierarchy),
+  ( -- ConstraintHierarchy (ConstraintHierarchy),
     OpSubProgConstraints (constrainOpSubProg),
     ProgConstraints (constrainProg),
+    pattern ConstraintHierarchy,
   )
 import Grisette.Lib.Synth.Program.SubProg (HasSubProgs (getSubProgs))
 import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
@@ -268,12 +271,12 @@ opNone = mrgReturn OpNone
 opUseDef :: Union Op
 opUseDef = mrgReturn OpUseDef
 
-livelinessIdentifier :: Identifier -> [T.Text] -> Identifier
+livelinessIdentifier :: T.Text -> [T.Text] -> Identifier
 livelinessIdentifier base reversePath =
-  withInfo base $
-    ConstraintHierarchy (reverse reversePath) "Liveliness" ()
+  withMetadata base $
+    ConstraintHierarchy (reverse reversePath) "Liveliness" (List [])
 
-anyResource :: Identifier -> [T.Text] -> Int -> Resources
+anyResource :: T.Text -> [T.Text] -> Int -> Resources
 anyResource base reversePath idx =
   mrgIte
     (isym (livelinessIdentifier base reversePath) idx)
