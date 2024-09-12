@@ -50,6 +50,8 @@ import Control.Monad.State
     StateT,
     evalStateT,
   )
+import qualified Data.Binary as Bytes
+import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Either.Extra (mapLeft)
 import Data.Foldable (traverse_)
 import Data.GraphViz
@@ -74,6 +76,7 @@ import Data.GraphViz.Attributes.Complete
 import qualified Data.HashMap.Lazy as HM
 import Data.Hashable (Hashable)
 import qualified Data.Map.Ordered as OM
+import qualified Data.Serialize as Cereal
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import GHC.Generics (Generic)
@@ -159,8 +162,16 @@ data Stmt op varId = Stmt
     stmtResIds :: [varId]
   }
   deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData)
+  deriving anyclass (Hashable, NFData, Serial)
   deriving (EvalSym) via (Default (Stmt op varId))
+
+instance (Serial op, Serial varId) => Cereal.Serialize (Stmt op varId) where
+  put = serialize
+  get = deserialize
+
+instance (Serial op, Serial varId) => Bytes.Binary (Stmt op varId) where
+  put = serialize
+  get = deserialize
 
 instance
   (ToCon symOp conOp) =>
@@ -184,8 +195,16 @@ data ProgArg varId ty = ProgArg
     progArgType :: ty
   }
   deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData)
+  deriving anyclass (Hashable, NFData, Serial)
   deriving (EvalSym, Mergeable) via (Default (ProgArg varId ty))
+
+instance (Serial varId, Serial ty) => Cereal.Serialize (ProgArg varId ty) where
+  put = serialize
+  get = deserialize
+
+instance (Serial varId, Serial ty) => Bytes.Binary (ProgArg varId ty) where
+  put = serialize
+  get = deserialize
 
 instance
   (ToCon symTy conTy) =>
@@ -204,8 +223,16 @@ data ProgRes varId ty = ProgRes
     progResType :: ty
   }
   deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData)
+  deriving anyclass (Hashable, NFData, Serial)
   deriving (EvalSym, Mergeable) via (Default (ProgRes varId ty))
+
+instance (Serial varId, Serial ty) => Cereal.Serialize (ProgRes varId ty) where
+  put = serialize
+  get = deserialize
+
+instance (Serial varId, Serial ty) => Bytes.Binary (ProgRes varId ty) where
+  put = serialize
+  get = deserialize
 
 instance
   (ToCon symTy conTy) =>
@@ -226,8 +253,22 @@ data Prog op varId ty = Prog
     progResList :: [ProgRes varId ty]
   }
   deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData)
+  deriving anyclass (Hashable, NFData, Serial)
   deriving (EvalSym) via (Default (Prog op varId ty))
+
+instance
+  (Serial op, Serial varId, Serial ty) =>
+  Cereal.Serialize (Prog op varId ty)
+  where
+  put = serialize
+  get = deserialize
+
+instance
+  (Serial op, Serial varId, Serial ty) =>
+  Bytes.Binary (Prog op varId ty)
+  where
+  put = serialize
+  get = deserialize
 
 instance
   (ToCon symOp conOp, ToCon symTy conTy) =>

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,10 +17,15 @@ module Grisette.Lib.Synth.Program.ByteCodeSketch.Program
   )
 where
 
+import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.State (MonadState (get), MonadTrans (lift), StateT)
+import qualified Data.Binary as Bytes
+import Data.Bytes.Serial (Serial (deserialize, serialize))
 import qualified Data.HashMap.Lazy as HM
+import Data.Hashable (Hashable)
+import qualified Data.Serialize as Cereal
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
@@ -78,7 +84,22 @@ data Stmt op conVarId symVarId = Stmt
     stmtResNum :: symVarId
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable, NFData, Serial)
   deriving (EvalSym) via (Default (Stmt op conVarId symVarId))
+
+instance
+  (Serial op, Serial conVarId, Serial symVarId) =>
+  Cereal.Serialize (Stmt op conVarId symVarId)
+  where
+  put = serialize
+  get = deserialize
+
+instance
+  (Serial op, Serial conVarId, Serial symVarId) =>
+  Bytes.Binary (Stmt op conVarId symVarId)
+  where
+  put = serialize
+  get = deserialize
 
 instance
   (ToCon conOp symOp, RelatedVarId conVarId symVarId, Mergeable conOp) =>
@@ -100,7 +121,22 @@ data ProgArg conVarId ty = ProgArg
     progArgType :: ty
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable, NFData, Serial)
   deriving (EvalSym) via (Default (ProgArg conVarId ty))
+
+instance
+  (Serial op, Serial conVarId) =>
+  Cereal.Serialize (ProgArg op conVarId)
+  where
+  put = serialize
+  get = deserialize
+
+instance
+  (Serial op, Serial conVarId) =>
+  Bytes.Binary (ProgArg op conVarId)
+  where
+  put = serialize
+  get = deserialize
 
 instance
   (ToCon symTy conTy) =>
@@ -116,7 +152,22 @@ data ProgRes symVarId ty = ProgRes
     progResType :: ty
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable, NFData, Serial)
   deriving (EvalSym) via (Default (ProgRes symVarId ty))
+
+instance
+  (Serial op, Serial symVarId) =>
+  Cereal.Serialize (ProgRes op symVarId)
+  where
+  put = serialize
+  get = deserialize
+
+instance
+  (Serial op, Serial symVarId) =>
+  Bytes.Binary (ProgRes op symVarId)
+  where
+  put = serialize
+  get = deserialize
 
 instance
   (RelatedVarId conVarId symVarId, ToCon symTy conTy) =>
@@ -141,7 +192,22 @@ data Prog op conVarId symVarId ty = Prog
     progResList :: [ProgRes symVarId ty]
   }
   deriving (Show, Eq, Generic)
+  deriving anyclass (Hashable, NFData, Serial)
   deriving (EvalSym) via (Default (Prog op conVarId symVarId ty))
+
+instance
+  (Serial op, Serial conVarId, Serial symVarId, Serial ty) =>
+  Cereal.Serialize (Prog op conVarId symVarId ty)
+  where
+  put = serialize
+  get = deserialize
+
+instance
+  (Serial op, Serial conVarId, Serial symVarId, Serial ty) =>
+  Bytes.Binary (Prog op conVarId symVarId ty)
+  where
+  put = serialize
+  get = deserialize
 
 deriving via
   (Default (Concrete.Prog conOp conVarId conTy))

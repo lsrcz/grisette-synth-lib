@@ -80,6 +80,9 @@ library
       QuickCheck ==2.14.*
     , async
     , base >=4.14 && <5
+    , binary
+    , bytes
+    , cereal
     , containers
     , deepseq
     , extra
@@ -112,6 +115,9 @@ executable arith
       QuickCheck ==2.14.*
     , async
     , base >=4.14 && <5
+    , binary
+    , bytes
+    , cereal
     , containers
     , deepseq
     , extra
@@ -149,6 +155,9 @@ executable control
       QuickCheck ==2.14.*
     , async
     , base >=4.14 && <5
+    , binary
+    , bytes
+    , cereal
     , containers
     , deepseq
     , extra
@@ -232,6 +241,9 @@ test-suite spec
     , QuickCheck ==2.14.*
     , async
     , base >=4.14 && <5
+    , binary
+    , bytes
+    , cereal
     , containers
     , deepseq
     , extra

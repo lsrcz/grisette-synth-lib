@@ -35,6 +35,9 @@ dependencies:
   - time
   - psqueues
   - safe-exceptions
+  - cereal
+  - bytes
+  - binary
 
 ghc-options:
   - -Wextra
