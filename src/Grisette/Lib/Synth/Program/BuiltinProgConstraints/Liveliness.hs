@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -50,6 +51,7 @@ where
 import Control.Arrow (Arrow (second))
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Error.Class (MonadError (throwError))
+import Data.Bytes.Serial (Serial)
 import Data.Foldable (foldl')
 import Data.Maybe (catMaybes)
 import qualified Data.Text as T
@@ -174,9 +176,8 @@ data Use varId res = Use
   deriving (Mergeable, SymEq, EvalSym) via (Default (Use varId res))
 
 newtype Liveliness livelinessObj = Liveliness livelinessObj
-
-instance (NFData constrObj) => NFData (Liveliness constrObj) where
-  rnf (Liveliness obj) = rnf obj
+  deriving (Generic)
+  deriving anyclass (NFData, Serial)
 
 type UnionDef varId res = Union [Def varId res]
 

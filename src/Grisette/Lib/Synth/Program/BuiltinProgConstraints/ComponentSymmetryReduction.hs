@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -16,7 +19,9 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduct
   )
 where
 
-import Control.DeepSeq (NFData (rnf))
+import Control.DeepSeq (NFData)
+import Data.Bytes.Serial (Serial)
+import GHC.Generics (Generic)
 import Grisette
   ( LogicalOp (symImplies, symNot, (.&&), (.||)),
     Mergeable,
@@ -203,9 +208,8 @@ canonicalOrderConstraint obj prog = do
 
 newtype ComponentSymmetryReduction constrObj
   = ComponentSymmetryReduction constrObj
-
-instance (NFData constrObj) => NFData (ComponentSymmetryReduction constrObj) where
-  rnf (ComponentSymmetryReduction obj) = rnf obj
+  deriving (Generic)
+  deriving anyclass (NFData, Serial)
 
 instance
   ( ProgConstraints constrObj (Concrete.Prog op conVarId ty) ctx,
