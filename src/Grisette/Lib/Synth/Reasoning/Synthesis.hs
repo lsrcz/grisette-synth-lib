@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -40,6 +40,7 @@ import GHC.Generics (Generic)
 import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
+    Default (Default),
     EvalSym,
     LogicalOp ((.&&)),
     Mergeable,
@@ -258,6 +259,7 @@ data SynthesisResult conProg
   | SynthesisSolverFailure SolvingFailure
   deriving (Show, Generic)
   deriving (Serial, NFData)
+  deriving (PPrint) via (Default (SynthesisResult conProg))
 
 instance (Serial conProg) => Cereal.Serialize (SynthesisResult conProg) where
   put = serialize
