@@ -68,13 +68,9 @@ import Grisette.Lib.Synth.Context
     ConcreteContext,
     SymbolicContext,
   )
-import Grisette.Lib.Synth.Program.ProgConstraints
-  ( ProgConstraints,
-    WithConstraints,
-    runProgWithConstraints,
-  )
+import Grisette.Lib.Synth.Program.ProgConstraints (WithConstraints)
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics)
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.IOPair
   ( IOPair (ioPairInputs, ioPairOutputs),
   )
@@ -141,8 +137,7 @@ instance
 data SomeExample symProg where
   SomeExample ::
     forall symSemObj symConstObj symProg symVal ctx matcher.
-    ( ProgSemantics symSemObj symProg symVal ctx,
-      ProgConstraints symConstObj symProg ctx,
+    ( ProgSemantics (WithConstraints symSemObj symConstObj) symProg symVal ctx,
       SynthesisContext ctx,
       Matcher matcher SymBool symVal,
       Mergeable symVal,
@@ -244,7 +239,7 @@ synthesisConstraintFun
   (SomeExample (_ :: Proxy ctx) (Example symSem (iop :: IOPair symVal) matcher)) =
     genSynthesisConstraint
       matcher
-      (runProgWithConstraints symSem prog (ioPairInputs iop) :: ctx [symVal])
+      (runProg symSem prog (ioPairInputs iop) :: ctx [symVal])
       (ioPairOutputs iop)
 
 data SynthesisResult conProg

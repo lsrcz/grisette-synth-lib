@@ -15,7 +15,6 @@ module Grisette.Lib.Synth.Program.ProgConstraints
   ( ProgConstraints (..),
     WithConstraints (..),
     addPathLocalIdent,
-    runProgWithConstraints,
     OpSubProgConstraints (..),
     pattern ConstraintHierarchy,
     setConstraintKind,
@@ -51,7 +50,6 @@ import Grisette
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Util.Show (showText)
 
 class (MonadContext ctx) => ProgConstraints constObj prog ctx where
@@ -107,16 +105,6 @@ instance
   where
   put = serialize
   get = deserialize
-
-runProgWithConstraints ::
-  (ProgConstraints constObj prog ctx, ProgSemantics semObj prog val ctx) =>
-  WithConstraints semObj constObj ->
-  prog ->
-  [val] ->
-  ctx [val]
-runProgWithConstraints (WithConstraints semObj constObj) prog inputs = do
-  constrainProg constObj prog
-  runProg semObj prog inputs
 
 class (MonadContext ctx) => OpSubProgConstraints constObj op ctx where
   constrainOpSubProg :: constObj -> op -> ctx ()

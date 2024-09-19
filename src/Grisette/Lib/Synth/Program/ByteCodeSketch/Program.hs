@@ -51,6 +51,7 @@ import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints (constrainProg), WithConstraints (WithConstraints))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
@@ -286,6 +287,7 @@ takeNumArg n l =
       mrgIf (n .== i) (mrgReturn list) (go rest)
 
 instance
+  {-# OVERLAPPABLE #-}
   ( OpSemantics semObj op val ctx,
     RelatedVarId conVarId symVarId,
     MonadUnion ctx,
@@ -315,6 +317,24 @@ instance
     flip mrgEvalStateT initialEnv $ do
       mrgTraverse_ runStmt stmts
       mrgTraverse (lookupVal . progResId) ret
+
+instance
+  ( OpSemantics semObj op val ctx,
+    RelatedVarId conVarId symVarId,
+    MonadUnion ctx,
+    SimpleMergeable val,
+    Mergeable op,
+    ProgConstraints constObj (Prog op conVarId symVarId ty) ctx
+  ) =>
+  ProgSemantics
+    (WithConstraints semObj constObj)
+    (Prog op conVarId symVarId ty)
+    val
+    ctx
+  where
+  runProg (WithConstraints semObj constObj) prog inputs = do
+    constrainProg constObj prog
+    runProg semObj prog inputs
 
 instance
   (Mergeable ty) =>

@@ -81,6 +81,7 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( OpCost (opCost),
     PerStmtCostObj (PerStmtCostObj),
   )
+import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints (constrainProg), WithConstraints (WithConstraints))
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
@@ -536,6 +537,7 @@ defDistinct = do
     $ def
 
 instance
+  {-# OVERLAPPABLE #-}
   ( SymbolicVarId symVarId,
     GenIntermediate sem ty val,
     OpSemantics sem op val ctx,
@@ -567,6 +569,22 @@ instance
       connected
       defDistinct
       mrgReturn resVals
+
+instance
+  ( SymbolicVarId symVarId,
+    GenIntermediate sem ty val,
+    OpSemantics sem op val ctx,
+    OpTyping op ty ctx,
+    Mergeable op,
+    SymEq val,
+    MonadAngelicContext ctx,
+    ProgConstraints constObj (Prog op symVarId ty) ctx
+  ) =>
+  ProgSemantics (WithConstraints sem constObj) (Prog op symVarId ty) val ctx
+  where
+  runProg (WithConstraints semObj constObj) prog inputs = do
+    constrainProg constObj prog
+    runProg semObj prog inputs
 
 instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
   typeProg prog =

@@ -39,8 +39,7 @@ import Grisette
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Program.ProgConstraints
-  ( ProgConstraints,
-    WithConstraints (WithConstraints),
+  ( WithConstraints (WithConstraints),
   )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
@@ -151,11 +150,10 @@ fuzzingTestSymProgWithModel gen spec maxTests _ sem prog model = do
 
 data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
   QuickCheckFuzzer ::
-    ( ProgSemantics symSemObj symProg symVal symCtx,
-      ProgConstraints symConstObj symProg symCtx,
+    ( ProgSemantics (WithConstraints symSemObj symConstObj) symProg symVal symCtx,
       ProgSemantics conSemObj conProg conVal ConcreteContext,
       Matcher matcher SymBool symVal,
-      Matcher matcher Bool conVal ,
+      Matcher matcher Bool conVal,
       Typeable symSemObj,
       Typeable symConstObj,
       Typeable matcher,
@@ -213,7 +211,11 @@ instance
 
 defaultQuickCheckFuzzerWithConstraint ::
   forall symVal conVal symProg conProg semObj constObj.
-  ( ProgSemantics semObj symProg symVal AngelicContext,
+  ( ProgSemantics
+      (WithConstraints semObj constObj)
+      symProg
+      symVal
+      AngelicContext,
     ProgSemantics semObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
@@ -227,7 +229,6 @@ defaultQuickCheckFuzzerWithConstraint ::
     Show symVal,
     PPrint symVal,
     Eq conVal,
-    ProgConstraints constObj symProg AngelicContext,
     Typeable constObj,
     NFData symVal,
     NFData semObj,
@@ -252,7 +253,11 @@ defaultQuickCheckFuzzerWithConstraint semObj constObj gen spec =
 
 defaultQuickCheckFuzzer ::
   forall symVal conVal symProg conProg semObj.
-  ( ProgSemantics semObj symProg symVal AngelicContext,
+  ( ProgSemantics
+      (WithConstraints semObj ())
+      symProg
+      symVal
+      AngelicContext,
     ProgSemantics semObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
@@ -278,7 +283,11 @@ defaultQuickCheckFuzzer semObj =
 
 defaultSemQuickCheckFuzzer ::
   forall symVal conVal symProg conProg.
-  ( ProgSemantics DefaultSem symProg symVal AngelicContext,
+  ( ProgSemantics
+      (WithConstraints DefaultSem ())
+      symProg
+      symVal
+      AngelicContext,
     ProgSemantics DefaultSem conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,

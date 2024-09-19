@@ -109,6 +109,7 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( OpCost (opCost),
     PerStmtCostObj (PerStmtCostObj),
   )
+import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints (constrainProg), WithConstraints (WithConstraints))
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgPPrint
@@ -612,6 +613,7 @@ lookupVal varId = do
     Just val -> return val
 
 instance
+  {-# OVERLAPPABLE #-}
   ( OpSemantics semObj op val ctx,
     ConcreteVarId varId,
     Mergeable val
@@ -635,6 +637,18 @@ instance
     flip evalStateT initialEnv $ do
       traverse_ runStmt stmts
       traverse (lookupVal . progResId) ret
+
+instance
+  ( ProgConstraints constObj (Prog op varId ty) ctx,
+    OpSemantics semObj op val ctx,
+    ConcreteVarId varId,
+    Mergeable val
+  ) =>
+  ProgSemantics (WithConstraints semObj constObj) (Prog op varId ty) val ctx
+  where
+  runProg (WithConstraints semObj constObj) prog inputs = do
+    constrainProg constObj prog
+    runProg semObj prog inputs
 
 instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
   typeProg prog =

@@ -49,7 +49,7 @@ module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
 where
 
 import Control.Arrow (Arrow (second))
-import Control.DeepSeq (NFData (rnf))
+import Control.DeepSeq (NFData)
 import Control.Monad.Error.Class (MonadError (throwError))
 import Data.Bytes.Serial (Serial)
 import Data.Foldable (foldl')
