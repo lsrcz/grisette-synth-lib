@@ -155,7 +155,7 @@ data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
       ProgConstraints symConstObj symProg symCtx,
       ProgSemantics conSemObj conProg conVal ConcreteContext,
       Matcher matcher SymBool symVal,
-      Matcher matcher Bool conVal ,
+      Matcher matcher Bool conVal,
       Typeable symSemObj,
       Typeable symConstObj,
       Typeable matcher,
