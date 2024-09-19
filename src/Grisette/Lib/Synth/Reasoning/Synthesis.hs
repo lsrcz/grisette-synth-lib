@@ -68,7 +68,6 @@ import Grisette.Lib.Synth.Context
     ConcreteContext,
     SymbolicContext,
   )
-import Grisette.Lib.Synth.Program.ProgConstraints (WithConstraints)
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Reasoning.IOPair
@@ -98,62 +97,60 @@ instance SynthesisContext AngelicContext where
     ident <- uniqueIdentifier "synth"
     genSynthesisConstraint matcher (runFreshT actual ident) expectedOutputs
 
-data Example symSemObj symConstObj symVal matcher where
+data Example symSemObj symVal matcher where
   Example ::
-    { exampleSymSemantics :: WithConstraints symSemObj symConstObj,
+    { exampleSymSemantics :: symSemObj,
       exampleIOPair :: IOPair symVal,
       exampleMatcher :: matcher
     } ->
-    Example symSemObj symConstObj symVal matcher
+    Example symSemObj symVal matcher
   deriving (Eq, Generic)
   deriving anyclass (Serial, NFData, Hashable)
 
 instance
-  (Serial symSemObj, Serial symConstObj, Serial symVal, Serial matcher) =>
-  Cereal.Serialize (Example symSemObj symConstObj symVal matcher)
+  (Serial symSemObj, Serial symVal, Serial matcher) =>
+  Cereal.Serialize (Example symSemObj symVal matcher)
   where
   put = serialize
   get = deserialize
 
 instance
-  (Serial symSemObj, Serial symConstObj, Serial symVal, Serial matcher) =>
-  Binary.Binary (Example symSemObj symConstObj symVal matcher)
+  (Serial symSemObj, Serial symVal, Serial matcher) =>
+  Binary.Binary (Example symSemObj symVal matcher)
   where
   put = serialize
   get = deserialize
 
 instance
   (Show symVal) =>
-  Show (Example symSemObj symConstObj symVal matcher)
+  Show (Example symSemObj symVal matcher)
   where
   show (Example _ iop _) = show iop
 
 instance
   (PPrint symVal) =>
-  PPrint (Example symSemObj symConstObj symVal matcher)
+  PPrint (Example symSemObj symVal matcher)
   where
   pformat (Example _ iop _) = pformat iop
 
 data SomeExample symProg where
   SomeExample ::
-    forall symSemObj symConstObj symProg symVal ctx matcher.
-    ( ProgSemantics (WithConstraints symSemObj symConstObj) symProg symVal ctx,
+    forall symSemObj symProg symVal ctx matcher.
+    ( ProgSemantics symSemObj symProg symVal ctx,
       SynthesisContext ctx,
       Matcher matcher SymBool symVal,
       Mergeable symVal,
       Typeable symSemObj,
-      Typeable symConstObj,
       Typeable symVal,
       Typeable matcher,
       Show symVal,
       PPrint symVal,
       NFData symSemObj,
-      NFData symConstObj,
       NFData symVal,
       NFData matcher
     ) =>
     Proxy ctx ->
-    Example symSemObj symConstObj symVal matcher ->
+    Example symSemObj symVal matcher ->
     SomeExample symProg
 
 instance Show (SomeExample symProg) where

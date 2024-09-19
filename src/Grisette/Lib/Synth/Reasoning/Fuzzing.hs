@@ -150,18 +150,16 @@ fuzzingTestSymProgWithModel gen spec maxTests _ sem prog model = do
 
 data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
   QuickCheckFuzzer ::
-    ( ProgSemantics (WithConstraints symSemObj symConstObj) symProg symVal symCtx,
+    ( ProgSemantics symSemObj symProg symVal symCtx,
       ProgSemantics conSemObj conProg conVal ConcreteContext,
       Matcher matcher SymBool symVal,
       Matcher matcher Bool conVal,
       Typeable symSemObj,
-      Typeable symConstObj,
       Typeable matcher,
       NFData symSemObj,
-      NFData symConstObj,
       NFData matcher
     ) =>
-    { quickCheckFuzzerSymSemantics :: WithConstraints symSemObj symConstObj,
+    { quickCheckFuzzerSymSemantics :: symSemObj,
       quickCheckFuzzerConSemantics :: conSemObj,
       quickCheckFuzzerMaxTests :: Int,
       quickCheckFuzzerGenerators :: [Gen [conVal]],
