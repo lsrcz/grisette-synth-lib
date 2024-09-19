@@ -72,7 +72,7 @@ import Test.HUnit (assertBool, (@?=))
 pollUntilFinished ::
   (BaseTaskHandle handle SymProg ConProg) =>
   handle ->
-  IO (Either SomeException ([SomeExample SymProg], SynthesisResult ConProg))
+  IO (Either SomeException ([SomeExample SymProg ConProg], SynthesisResult ConProg))
 pollUntilFinished handle = do
   r <- poll handle
   case r of
@@ -84,7 +84,7 @@ pollTasksUntilFinished ::
   [handle] ->
   IO
     [ ( handle,
-        Either SomeException ([SomeExample SymProg], SynthesisResult ConProg)
+        Either SomeException ([SomeExample SymProg ConProg], SynthesisResult ConProg)
       )
     ]
 pollTasksUntilFinished taskSet = do

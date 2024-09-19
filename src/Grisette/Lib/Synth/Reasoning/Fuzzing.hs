@@ -32,7 +32,7 @@ import Grisette
     SymBool,
     SymEq,
     ToCon,
-    ToSym (toSym),
+    ToSym,
     VerifierResult (CEGISVerifierFoundCex, CEGISVerifierNoCex),
     evalSymToCon,
   )
@@ -153,12 +153,15 @@ data QuickCheckFuzzer symVal conVal symProg conProg where
       ProgSemantics conSemObj conProg conVal ConcreteContext,
       Matcher matcher SymBool symVal,
       Matcher matcher Bool conVal,
+      Eq conSemObj,
+      Typeable conSemObj,
       Typeable symSemObj,
       Typeable matcher,
+      NFData conSemObj,
       NFData symSemObj,
       NFData matcher,
+      Eq conSemObj,
       Eq symSemObj,
-      Eq symVal,
       Eq matcher
     ) =>
     { quickCheckFuzzerSymSemantics :: symSemObj,
@@ -175,8 +178,10 @@ instance
     EvalSym symProg,
     Mergeable symVal,
     Show symVal,
-    PPrint symVal,
-    NFData symVal,
+    PPrint conVal,
+    Eq conVal,
+    NFData conVal,
+    Typeable conVal,
     Typeable symVal,
     ToSym conVal symVal
   ) =>
@@ -202,8 +207,10 @@ instance
             ( CEGISVerifierFoundCex $
                 SomeExample $
                   Example
+                    conSem
                     symSem
-                    (toSym ioPair :: IOPair symVal)
+                    (Proxy :: Proxy symVal)
+                    (ioPair :: IOPair conVal)
                     matcher
             )
         Nothing -> return CEGISVerifierNoCex
@@ -223,17 +230,18 @@ defaultQuickCheckFuzzerWithConstraint ::
     Mergeable symVal,
     Typeable symProg,
     Typeable semObj,
+    Typeable conVal,
     Typeable symVal,
     SymEq symVal,
     Show symVal,
-    PPrint symVal,
+    PPrint conVal,
     Eq conVal,
     Typeable constObj,
-    NFData symVal,
+    NFData conVal,
     NFData semObj,
     NFData constObj,
     Eq semObj,
-    Eq symVal,
+    Eq conVal,
     Eq constObj
   ) =>
   semObj ->
@@ -269,11 +277,12 @@ defaultQuickCheckFuzzer ::
     Typeable symProg,
     Typeable semObj,
     Typeable symVal,
+    Typeable conVal,
     Show symVal,
-    PPrint symVal,
+    PPrint conVal,
     SymEq symVal,
     Eq conVal,
-    NFData symVal,
+    NFData conVal,
     NFData semObj,
     Eq semObj,
     Eq symVal
@@ -299,12 +308,13 @@ defaultSemQuickCheckFuzzer ::
     Show conVal,
     Mergeable symVal,
     Typeable symProg,
+    Typeable conVal,
     Typeable symVal,
     Show symVal,
-    PPrint symVal,
+    PPrint conVal,
     SymEq symVal,
     Eq conVal,
-    NFData symVal,
+    NFData conVal,
     Eq symVal
   ) =>
   Gen [conVal] ->

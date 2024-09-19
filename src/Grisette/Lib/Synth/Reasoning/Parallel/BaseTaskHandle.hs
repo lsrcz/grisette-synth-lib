@@ -57,11 +57,11 @@ class
     handle ->
     STM
       ( Maybe
-          (Either C.SomeException ([SomeExample symProg], SynthesisResult conProg))
+          (Either C.SomeException ([SomeExample symProg conProg], SynthesisResult conProg))
       )
   waitCatchSTM ::
     handle ->
-    STM (Either C.SomeException ([SomeExample symProg], SynthesisResult conProg))
+    STM (Either C.SomeException ([SomeExample symProg conProg], SynthesisResult conProg))
   cancelWith :: (C.Exception e) => handle -> e -> IO ()
 
 startTime :: (BaseTaskHandle task symProg conProg) => task -> IO UTCTime
@@ -108,7 +108,7 @@ poll ::
     ( Maybe
         ( Either
             C.SomeException
-            ([SomeExample symProg], SynthesisResult conProg)
+            ([SomeExample symProg conProg], SynthesisResult conProg)
         )
     )
 poll = atomically . pollSTM
@@ -116,7 +116,7 @@ poll = atomically . pollSTM
 waitCatch ::
   (BaseTaskHandle task symProg conProg) =>
   task ->
-  IO (Either C.SomeException ([SomeExample symProg], SynthesisResult conProg))
+  IO (Either C.SomeException ([SomeExample symProg conProg], SynthesisResult conProg))
 waitCatch = atomically . waitCatchSTM
 
 cancel :: (BaseTaskHandle task symProg conProg) => task -> IO ()
@@ -130,7 +130,7 @@ pollAnySTM ::
       [ ( task,
           Either
             C.SomeException
-            ([SomeExample symProg], SynthesisResult conProg)
+            ([SomeExample symProg conProg], SynthesisResult conProg)
         )
       ]
     )
@@ -149,7 +149,7 @@ pollAny ::
       [ ( task,
           Either
             C.SomeException
-            ([SomeExample symProg], SynthesisResult conProg)
+            ([SomeExample symProg conProg], SynthesisResult conProg)
         )
       ]
     )

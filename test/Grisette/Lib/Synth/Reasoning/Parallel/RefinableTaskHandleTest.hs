@@ -70,7 +70,7 @@ shouldHaveCost ::
       SymInteger
       ConcreteContext
   ) =>
-  Either C.SomeException ([SomeExample symProg], SynthesisResult conProg) ->
+  Either C.SomeException ([SomeExample symProg conProg], SynthesisResult conProg) ->
   SymInteger ->
   Assertion
 shouldHaveCost (Right (_, SynthesisSuccess prog)) cost = do
@@ -82,14 +82,14 @@ shouldHaveCost r _ = error $ "Unexpected result " <> show (snd <$> r)
 
 shouldUnsat ::
   (HasCallStack, Show conProg) =>
-  Either C.SomeException ([SomeExample symProg], SynthesisResult conProg) ->
+  Either C.SomeException ([SomeExample symProg conProg], SynthesisResult conProg) ->
   Assertion
 shouldUnsat (Right (_, SynthesisSolverFailure Unsat)) = return ()
 shouldUnsat r = error $ "Unexpected result " <> show (snd <$> r)
 
 shouldSolverDead ::
   (HasCallStack, Show conProg) =>
-  Either C.SomeException ([SomeExample symProg], SynthesisResult conProg) ->
+  Either C.SomeException ([SomeExample symProg conProg], SynthesisResult conProg) ->
   Assertion
 shouldSolverDead (Left e) = case C.fromException e of
   Just SynthesisTaskSolverDead -> return ()

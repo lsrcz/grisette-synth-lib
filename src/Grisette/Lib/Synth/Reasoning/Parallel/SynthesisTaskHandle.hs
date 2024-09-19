@@ -50,7 +50,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
 
 newtype SynthesisTaskHandle symProg conProg = SynthesisTaskHandle
   { _underlyingHandle ::
-      ThreadHandle ([SomeExample symProg], SynthesisResult conProg)
+      ThreadHandle ([SomeExample symProg conProg], SynthesisResult conProg)
   }
   deriving newtype (Eq, Hashable)
 
@@ -77,8 +77,8 @@ actionWithTimeout ::
   (Typeable symProg, Typeable conProg) =>
   Maybe Int ->
   TMVar (SynthesisTaskHandle symProg conProg) ->
-  IO ([SomeExample symProg], SynthesisResult conProg) ->
-  IO ([SomeExample symProg], SynthesisResult conProg)
+  IO ([SomeExample symProg conProg], SynthesisResult conProg) ->
+  IO ([SomeExample symProg conProg], SynthesisResult conProg)
 actionWithTimeout maybeTimeout taskHandleTMVar action =
   C.mask $ \restore -> do
     selfHandle <- atomically $ readTMVar taskHandleTMVar
@@ -96,7 +96,7 @@ enqueueActionImpl ::
   Maybe Int ->
   Pool.ThreadPool ->
   Double ->
-  IO ([SomeExample symProg], SynthesisResult conProg) ->
+  IO ([SomeExample symProg conProg], SynthesisResult conProg) ->
   IO (SynthesisTaskHandle symProg conProg)
 enqueueActionImpl
   maybeTimeout

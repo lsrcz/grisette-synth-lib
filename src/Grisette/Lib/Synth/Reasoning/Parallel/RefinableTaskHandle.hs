@@ -84,7 +84,7 @@ data RefinableTaskHandle symProg conProg where
     { _initialThreadHandleId :: Int,
       _initialSynthesisTask :: TMVar task,
       _underlyingHandles ::
-        TVar [ThreadHandle ([SomeExample symProg], SynthesisResult conProg)],
+        TVar [ThreadHandle ([SomeExample symProg conProg], SynthesisResult conProg)],
       _maxSucceedIndex :: TVar Int,
       _solverHandle :: TMVar solver
     } ->
@@ -166,7 +166,7 @@ pollAtIndexSTM ::
     ( Maybe
         ( Either
             C.SomeException
-            ([SomeExample symProg], SynthesisResult conProg)
+            ([SomeExample symProg conProg], SynthesisResult conProg)
         )
     )
 pollAtIndexSTM RefinableTaskHandle {..} index = do
@@ -183,7 +183,7 @@ pollAtIndex ::
     ( Maybe
         ( Either
             C.SomeException
-            ([SomeExample symProg], SynthesisResult conProg)
+            ([SomeExample symProg conProg], SynthesisResult conProg)
         )
     )
 pollAtIndex handle index = atomically $ pollAtIndexSTM handle index
@@ -192,7 +192,7 @@ waitCatchAtIndexSTM ::
   (Typeable symProg, Typeable conProg) =>
   RefinableTaskHandle symProg conProg ->
   Int ->
-  STM (Either C.SomeException ([SomeExample symProg], SynthesisResult conProg))
+  STM (Either C.SomeException ([SomeExample symProg conProg], SynthesisResult conProg))
 waitCatchAtIndexSTM RefinableTaskHandle {..} index = do
   handles <- readTVar _underlyingHandles
   if index >= length handles || index < 0
@@ -203,7 +203,7 @@ waitCatchAtIndex ::
   (Typeable symProg, Typeable conProg) =>
   RefinableTaskHandle symProg conProg ->
   Int ->
-  IO (Either C.SomeException ([SomeExample symProg], SynthesisResult conProg))
+  IO (Either C.SomeException ([SomeExample symProg conProg], SynthesisResult conProg))
 waitCatchAtIndex handle index = atomically $ waitCatchAtIndexSTM handle index
 
 checkRefinableSolverAlive :: RefinableTaskHandle symProg conProg -> IO Bool
@@ -240,8 +240,8 @@ actionWithTimeout ::
   Int ->
   TVar Int ->
   solver ->
-  (solver -> IO ([SomeExample symProg], SynthesisResult conProg)) ->
-  IO ([SomeExample symProg], SynthesisResult conProg)
+  (solver -> IO ([SomeExample symProg conProg], SynthesisResult conProg)) ->
+  IO ([SomeExample symProg conProg], SynthesisResult conProg)
 actionWithTimeout
   maybeTimeout
   taskHandleTMVar

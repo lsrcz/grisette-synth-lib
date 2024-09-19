@@ -19,6 +19,7 @@ where
 
 import Control.DeepSeq (NFData)
 import Data.Data (Typeable)
+import Data.Proxy (Proxy (Proxy))
 import Grisette
   ( Solvable (con),
     SolvingFailure (Unsat),
@@ -64,9 +65,11 @@ import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher), Matcher)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example
       ( Example,
+        exampleConSemantics,
         exampleIOPair,
         exampleMatcher,
-        exampleSymSemantics
+        exampleSymSemantics,
+        exampleSymValType
       ),
     SomeExample (SomeExample),
     SomeVerifier (SomeVerifier),
@@ -243,7 +246,7 @@ data ComponentSynthesisTestCase where
     ) =>
     { componentSynthesisTestCaseName :: String,
       componentSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
-      componentSynthesisTestCaseInitialExamples :: [SomeExample SymProg],
+      componentSynthesisTestCaseInitialExamples :: [SomeExample SymProg ConProg],
       componentSynthesisTestCaseSynthGen :: Gen [Integer],
       componentSynthesisTestCaseFuzzGen :: Gen [Integer]
     } ->
@@ -271,14 +274,16 @@ fuzzResult (SynthesisSuccess prog) gen spec = do
   fst <$> fuzzingResult @?= Nothing
 fuzzResult r _ _ = fail $ "Unexpected result: " <> show r
 
-example :: IOPair SymInteger -> SomeExample SymProg
+example :: IOPair Integer -> SomeExample SymProg ConProg
 example iop =
   SomeExample $
     Example
-      { exampleSymSemantics =
+      { exampleConSemantics = TestSemanticsObj,
+        exampleSymSemantics =
           WithConstraints
             TestSemanticsObj
             (ComponentSymmetryReduction ()),
+        exampleSymValType = Proxy :: Proxy SymInteger,
         exampleIOPair = iop,
         exampleMatcher = EqMatcher
       }
@@ -312,7 +317,7 @@ task ::
   ) =>
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->
-  [SomeExample SymProg] ->
+  [SomeExample SymProg ConProg] ->
   SymProg ->
   SymBool ->
   SynthesisTask SymProg ConProg
