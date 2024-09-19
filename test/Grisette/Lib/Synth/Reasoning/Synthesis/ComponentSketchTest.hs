@@ -18,7 +18,7 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
 where
 
 import Control.DeepSeq (NFData)
-import Data.Data (Proxy (Proxy), Typeable)
+import Data.Data (Typeable)
 import Grisette
   ( Solvable (con),
     SolvingFailure (Unsat),
@@ -29,7 +29,7 @@ import Grisette
     mrgReturn,
     z3,
   )
-import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext)
+import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction
   ( ComponentSymmetryReduction (ComponentSymmetryReduction),
   )
@@ -238,7 +238,8 @@ data ComponentSynthesisTestCase where
     ( Matcher matcher Bool Integer,
       Matcher matcher SymBool SymInteger,
       Typeable matcher,
-      NFData matcher
+      NFData matcher,
+      Eq matcher
     ) =>
     { componentSynthesisTestCaseName :: String,
       componentSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
@@ -272,7 +273,7 @@ fuzzResult r _ _ = fail $ "Unexpected result: " <> show r
 
 example :: IOPair SymInteger -> SomeExample SymProg
 example iop =
-  SomeExample (Proxy :: Proxy AngelicContext) $
+  SomeExample $
     Example
       { exampleSymSemantics =
           WithConstraints
@@ -286,11 +287,12 @@ verifier ::
   ( Matcher matcher SymBool SymVal,
     Matcher matcher Bool ConVal,
     Typeable matcher,
-    NFData matcher
+    NFData matcher,
+    Eq matcher
   ) =>
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->
-  QuickCheckFuzzer SymVal ConVal SymProg ConProg AngelicContext
+  QuickCheckFuzzer SymVal ConVal SymProg ConProg
 verifier spec gen =
   QuickCheckFuzzer
     { quickCheckFuzzerSymSemantics =
@@ -305,7 +307,8 @@ task ::
   ( Matcher matcher SymBool SymVal,
     Matcher matcher Bool ConVal,
     Typeable matcher,
-    NFData matcher
+    NFData matcher,
+    Eq matcher
   ) =>
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->

@@ -7,7 +7,7 @@ import Control.DeepSeq (NFData (rnf))
 import Grisette (SymBool, SymEq ((.==)))
 import Grisette.Lib.Synth.Reasoning.Matcher (Matcher (match))
 
-data ReverseMatcher = ReverseMatcher
+data ReverseMatcher = ReverseMatcher deriving (Eq)
 
 instance (Eq a) => Matcher ReverseMatcher Bool a where
   match _ actual expected = actual == reverse expected

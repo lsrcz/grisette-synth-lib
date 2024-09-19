@@ -100,7 +100,7 @@ instance
     op' <- liftUnion op
     applyOp semObj op' args
 
-data DefaultSem = DefaultSem
+data DefaultSem = DefaultSem deriving (Eq)
 
 instance NFData DefaultSem where
   rnf DefaultSem = ()

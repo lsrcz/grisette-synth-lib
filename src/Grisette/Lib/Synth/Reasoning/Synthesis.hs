@@ -35,8 +35,8 @@ import qualified Data.Binary as Binary
 import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Data (Typeable)
 import Data.Hashable (Hashable)
-import Data.Proxy (Proxy)
 import qualified Data.Serialize as Cereal
+import Data.Typeable (cast)
 import GHC.Generics (Generic)
 import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
@@ -135,11 +135,13 @@ instance
 
 data SomeExample symProg where
   SomeExample ::
-    forall symSemObj symProg symVal ctx matcher.
-    ( ProgSemantics symSemObj symProg symVal ctx,
-      SynthesisContext ctx,
+    forall symSemObj symProg symVal matcher.
+    ( ProgSemantics symSemObj symProg symVal AngelicContext,
       Matcher matcher SymBool symVal,
       Mergeable symVal,
+      Eq symSemObj,
+      Eq symVal,
+      Eq matcher,
       Typeable symSemObj,
       Typeable symVal,
       Typeable matcher,
@@ -149,18 +151,26 @@ data SomeExample symProg where
       NFData symVal,
       NFData matcher
     ) =>
-    Proxy ctx ->
     Example symSemObj symVal matcher ->
     SomeExample symProg
 
 instance Show (SomeExample symProg) where
-  show (SomeExample _ ex) = show ex
+  show (SomeExample ex) = show ex
 
 instance PPrint (SomeExample symProg) where
-  pformat (SomeExample _ ex) = pformat ex
+  pformat (SomeExample ex) = pformat ex
+
+eqHetero :: (Typeable a, Typeable b, Eq a) => a -> b -> Bool
+eqHetero a b = case cast b of
+  Just b' -> a == b'
+  Nothing -> False
+
+instance Eq (SomeExample symProg) where
+  (SomeExample ex1) == (SomeExample ex2) =
+    eqHetero ex1 ex2
 
 instance NFData (SomeExample symProg) where
-  rnf (SomeExample p ex) = rnf p `seq` rnf ex
+  rnf (SomeExample ex) = rnf ex
 
 class
   IsVerifier verifier symProg conProg
@@ -233,10 +243,10 @@ synthesisConstraintFun ::
   SynthesisConstraintFun (SomeExample symProg)
 synthesisConstraintFun
   prog
-  (SomeExample (_ :: Proxy ctx) (Example symSem (iop :: IOPair symVal) matcher)) =
+  (SomeExample (Example symSem (iop :: IOPair symVal) matcher)) =
     genSynthesisConstraint
       matcher
-      (runProg symSem prog (ioPairInputs iop) :: ctx [symVal])
+      (runProg symSem prog (ioPairInputs iop) :: AngelicContext [symVal])
       (ioPairOutputs iop)
 
 data SynthesisResult conProg
@@ -417,7 +427,6 @@ runSynthesisTask config task =
   snd <$> runSynthesisTaskExtractCex config task
 
 runSynthesisTaskExtractCex ::
-  forall config h task symProg conProg.
   ( ConfigurableSolver config h,
     RunSynthesisTask task symProg conProg
   ) =>

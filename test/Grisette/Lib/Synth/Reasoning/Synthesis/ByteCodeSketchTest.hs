@@ -12,7 +12,6 @@ where
 import Control.DeepSeq (NFData)
 import Data.Data (Typeable)
 import Grisette (Solvable (con), SymBool, SymInteger, Union, mrgIf, z3)
-import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.ByteCodeSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -99,7 +98,8 @@ data ByteCodeSynthesisTestCase where
     ( Matcher matcher Bool Integer,
       Matcher matcher SymBool SymInteger,
       Typeable matcher,
-      NFData matcher
+      NFData matcher,
+      Eq matcher
     ) =>
     { byteCodeSynthesisTestCaseName :: String,
       byteCodeSynthesisTestCaseSketch :: SymProg,
@@ -144,7 +144,7 @@ byteCodeSketchTest =
               quickCheckFuzzerGenerators = [gen],
               quickCheckFuzzerSpec = spec
             } ::
-            QuickCheckFuzzer SymVal ConVal SymProg ConProg SymbolicContext
+            QuickCheckFuzzer SymVal ConVal SymProg ConProg
     let task =
           SynthesisTask
             { synthesisVerifiers = [SomeVerifier verifier],

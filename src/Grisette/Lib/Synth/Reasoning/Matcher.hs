@@ -13,7 +13,7 @@ import Grisette (SymBool, SymEq ((.==)))
 class Matcher matcher bool a where
   match :: matcher -> [a] -> [a] -> bool
 
-data EqMatcher = EqMatcher
+data EqMatcher = EqMatcher deriving (Eq, Show)
 
 instance NFData EqMatcher where
   rnf EqMatcher = ()

@@ -53,7 +53,6 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     IsVerifier (toVerifierFuns),
     SomeExample (SomeExample),
     SomeVerifier (SomeVerifier),
-    SynthesisContext,
   )
 import Test.QuickCheck.Counterexamples
   ( Args (chatty),
@@ -148,16 +147,19 @@ fuzzingTestSymProgWithModel gen spec maxTests _ sem prog model = do
     sem
     (evalSymToCon model prog :: conProg)
 
-data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
+data QuickCheckFuzzer symVal conVal symProg conProg where
   QuickCheckFuzzer ::
-    ( ProgSemantics symSemObj symProg symVal symCtx,
+    ( ProgSemantics symSemObj symProg symVal AngelicContext,
       ProgSemantics conSemObj conProg conVal ConcreteContext,
       Matcher matcher SymBool symVal,
       Matcher matcher Bool conVal,
       Typeable symSemObj,
       Typeable matcher,
       NFData symSemObj,
-      NFData matcher
+      NFData matcher,
+      Eq symSemObj,
+      Eq symVal,
+      Eq matcher
     ) =>
     { quickCheckFuzzerSymSemantics :: symSemObj,
       quickCheckFuzzerConSemantics :: conSemObj,
@@ -165,13 +167,12 @@ data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
       quickCheckFuzzerGenerators :: [Gen [conVal]],
       quickCheckFuzzerSpec :: [conVal] -> ([conVal], matcher)
     } ->
-    QuickCheckFuzzer symVal conVal symProg conProg symCtx
+    QuickCheckFuzzer symVal conVal symProg conProg
 
 instance
   ( Show conVal,
     ToCon symProg conProg,
     EvalSym symProg,
-    SynthesisContext symCtx,
     Mergeable symVal,
     Show symVal,
     PPrint symVal,
@@ -180,7 +181,7 @@ instance
     ToSym conVal symVal
   ) =>
   IsVerifier
-    (QuickCheckFuzzer symVal conVal symProg conProg symCtx)
+    (QuickCheckFuzzer symVal conVal symProg conProg)
     symProg
     conProg
   where
@@ -199,7 +200,7 @@ instance
         Just (ioPair, matcher) ->
           return
             ( CEGISVerifierFoundCex $
-                SomeExample (Proxy :: Proxy symCtx) $
+                SomeExample $
                   Example
                     symSem
                     (toSym ioPair :: IOPair symVal)
@@ -230,7 +231,10 @@ defaultQuickCheckFuzzerWithConstraint ::
     Typeable constObj,
     NFData symVal,
     NFData semObj,
-    NFData constObj
+    NFData constObj,
+    Eq semObj,
+    Eq symVal,
+    Eq constObj
   ) =>
   semObj ->
   constObj ->
@@ -246,7 +250,7 @@ defaultQuickCheckFuzzerWithConstraint semObj constObj gen spec =
           quickCheckFuzzerGenerators = [gen],
           quickCheckFuzzerSpec = (,EqMatcher) . spec
         } ::
-        QuickCheckFuzzer symVal conVal symProg conProg AngelicContext
+        QuickCheckFuzzer symVal conVal symProg conProg
     )
 
 defaultQuickCheckFuzzer ::
@@ -270,7 +274,9 @@ defaultQuickCheckFuzzer ::
     SymEq symVal,
     Eq conVal,
     NFData symVal,
-    NFData semObj
+    NFData semObj,
+    Eq semObj,
+    Eq symVal
   ) =>
   semObj ->
   Gen [conVal] ->
@@ -298,7 +304,8 @@ defaultSemQuickCheckFuzzer ::
     PPrint symVal,
     SymEq symVal,
     Eq conVal,
-    NFData symVal
+    NFData symVal,
+    Eq symVal
   ) =>
   Gen [conVal] ->
   ([conVal] -> [conVal]) ->

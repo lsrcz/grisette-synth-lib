@@ -176,7 +176,7 @@ data Use varId res = Use
   deriving (Mergeable, SymEq, EvalSym) via (Default (Use varId res))
 
 newtype Liveliness livelinessObj = Liveliness livelinessObj
-  deriving (Generic)
+  deriving (Eq, Generic)
   deriving anyclass (NFData, Serial)
 
 type UnionDef varId res = Union [Def varId res]

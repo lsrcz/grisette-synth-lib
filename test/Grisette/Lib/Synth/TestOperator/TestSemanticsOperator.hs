@@ -67,7 +67,7 @@ instance
   (MonadContext ctx) =>
   OpSubProgConstraints constrObj TestSemanticsOp ctx
 
-data TestSemanticsObj = TestSemanticsObj
+data TestSemanticsObj = TestSemanticsObj deriving (Eq)
 
 instance NFData TestSemanticsObj where
   rnf TestSemanticsObj = ()

@@ -208,7 +208,7 @@ canonicalOrderConstraint obj prog = do
 
 newtype ComponentSymmetryReduction constrObj
   = ComponentSymmetryReduction constrObj
-  deriving (Generic)
+  deriving (Eq, Generic)
   deriving anyclass (NFData, Serial)
 
 instance
