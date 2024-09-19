@@ -30,6 +30,13 @@ packages:
   original:
     hackage: quickcheck-with-counterexamples-1.2
 - completed:
+    hackage: unordered-containers-0.2.17.0@sha256:50d72c7945df6389d0bb683dea1c7529b28b26f8c632de186437d1e866af8cf8,3302
+    pantry-tree:
+      sha256: b556ac42b7294152a7a6854689310ba70ad7fb1462f5cb0051a188b83433f45c
+      size: 1517
+  original:
+    hackage: unordered-containers-0.2.17.0
+- completed:
     hackage: ordered-containers-0.2.3@sha256:89e2aca36de1335c3464c0f4893cbf791cadf9df36b2fb5e07a0e2d92f1e0cb6,810
     pantry-tree:
       sha256: 7b3cafa50f564930339d8839bf8a7dcee7fb0e1590b8421f145e0150a3972c38
