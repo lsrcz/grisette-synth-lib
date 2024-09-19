@@ -33,6 +33,7 @@ where
 import Control.DeepSeq (NFData)
 import qualified Data.Binary as Binary
 import Data.Bytes.Serial (Serial (deserialize, serialize))
+import Data.Hashable (Hashable)
 import qualified Data.Serialize as Cereal
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -90,8 +91,8 @@ instance
     constrainProg (obj1, (obj2, obj3, obj4))
 
 data WithConstraints semObj constObj = WithConstraints semObj constObj
-  deriving (Generic)
-  deriving anyclass (Serial, NFData)
+  deriving (Eq, Generic)
+  deriving anyclass (Serial, NFData, Hashable)
 
 instance
   (Serial semObj, Serial constObj) =>

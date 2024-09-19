@@ -34,6 +34,7 @@ import Control.Monad.Except (runExceptT)
 import qualified Data.Binary as Binary
 import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Data (Typeable)
+import Data.Hashable (Hashable)
 import Data.Proxy (Proxy)
 import qualified Data.Serialize as Cereal
 import GHC.Generics (Generic)
@@ -108,8 +109,8 @@ data Example symSemObj symConstObj symVal matcher where
       exampleMatcher :: matcher
     } ->
     Example symSemObj symConstObj symVal matcher
-  deriving (Generic)
-  deriving anyclass (Serial)
+  deriving (Eq, Generic)
+  deriving anyclass (Serial, NFData, Hashable)
 
 instance
   (Serial symSemObj, Serial symConstObj, Serial symVal, Serial matcher) =>
@@ -136,13 +137,6 @@ instance
   PPrint (Example symSemObj symConstObj symVal matcher)
   where
   pformat (Example _ iop _) = pformat iop
-
-instance
-  (NFData symSemObj, NFData symConstObj, NFData symVal, NFData matcher) =>
-  NFData (Example symSemObj symConstObj symVal matcher)
-  where
-  rnf (Example s iop matcher) =
-    rnf s `seq` rnf iop `seq` rnf matcher
 
 data SomeExample symProg where
   SomeExample ::
