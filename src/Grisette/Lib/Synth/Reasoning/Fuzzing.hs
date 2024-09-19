@@ -154,24 +154,13 @@ data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
     ( ProgSemantics symSemObj symProg symVal symCtx,
       ProgConstraints symConstObj symProg symCtx,
       ProgSemantics conSemObj conProg conVal ConcreteContext,
-      ToCon symProg conProg,
-      ToSym conVal symVal,
-      EvalSym symProg,
-      SynthesisContext symCtx,
       Matcher matcher SymBool symVal,
-      Matcher matcher Bool conVal,
-      Show conVal,
-      Mergeable symVal,
-      Show symVal,
-      PPrint symVal,
-      Typeable symProg,
+      Matcher matcher Bool conVal ,
       Typeable symSemObj,
       Typeable symConstObj,
-      Typeable symVal,
       Typeable matcher,
       NFData symSemObj,
       NFData symConstObj,
-      NFData symVal,
       NFData matcher
     ) =>
     { quickCheckFuzzerSymSemantics :: WithConstraints symSemObj symConstObj,
@@ -183,6 +172,17 @@ data QuickCheckFuzzer symVal conVal symProg conProg symCtx where
     QuickCheckFuzzer symVal conVal symProg conProg symCtx
 
 instance
+  ( Show conVal,
+    ToCon symProg conProg,
+    EvalSym symProg,
+    SynthesisContext symCtx,
+    Mergeable symVal,
+    Show symVal,
+    PPrint symVal,
+    NFData symVal,
+    Typeable symVal,
+    ToSym conVal symVal
+  ) =>
   IsVerifier
     (QuickCheckFuzzer symVal conVal symProg conProg symCtx)
     symProg
