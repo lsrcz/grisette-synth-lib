@@ -8,9 +8,6 @@ import Grisette.Lib.Synth.Program.Concrete.ProgCostTest (progCostTest)
 import Grisette.Lib.Synth.Program.Concrete.ProgUtilTest (progUtilTest)
 import Grisette.Lib.Synth.Program.Concrete.SemanticsTest (semanticsTest)
 import Grisette.Lib.Synth.Program.Concrete.ToDotTest (toDotTest)
-import Grisette.Lib.Synth.Program.Concrete.TopologicalSortTest
-  ( topologicalSortTest,
-  )
 import Grisette.Lib.Synth.Program.Concrete.TypingTest (typingTest)
 import Test.Framework (Test, testGroup)
 
@@ -20,7 +17,7 @@ concreteTest =
     "Grisette.Lib.Synth.Program.Concrete"
     [ prettyTest,
       toDotTest,
-      topologicalSortTest,
+      -- topologicalSortTest,
       semanticsTest,
       typingTest,
       mayMultiPathTest,

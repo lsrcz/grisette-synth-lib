@@ -9,7 +9,9 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch.Program
   ( Stmt (..),
@@ -69,7 +71,7 @@ import Grisette.Lib.Control.Monad.State.Class (mrgModify)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT)
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
 import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
   ( GenIntermediate,
     Intermediates (Intermediates),
@@ -81,22 +83,33 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( OpCost (opCost),
     PerStmtCostObj (PerStmtCostObj),
   )
-import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints (constrainProg), WithConstraints (WithConstraints))
+import Grisette.Lib.Synth.Program.ProgConstraints
+  ( ProgConstraints (constrainProg),
+    WithConstraints (WithConstraints),
+  )
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.ProgSemantics (EvaledSymbolTable, ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable, ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
   ( ProgUtil
-      ( ProgTypeType,
-        getProgArgIds,
+      ( ProgOpType,
+        ProgStmtType,
+        ProgTypeType,
+        ProgVarIdType
+      ),
+    ProgUtilImpl
+      ( getProgArgIds,
         getProgNumStmts,
         getProgResIds,
         getProgStmtAtIdx
       ),
     StmtUtil
       ( StmtOpType,
-        getStmtArgIds,
+        StmtVarIdType
+      ),
+    StmtUtilImpl
+      ( getStmtArgIds,
         getStmtDisabled,
         getStmtOp,
         getStmtResIds
@@ -437,23 +450,25 @@ symAll :: (Foldable t) => (a -> SymBool) -> t a -> SymBool
 symAll f = foldl' (\acc v -> acc .&& f v) (con True)
 
 constrainStmt ::
-  forall sem op ty val ctx p symVarId.
+  forall sem ctx op symVarId val.
   ( SymbolicVarId symVarId,
-    GenIntermediate sem ty val,
+    GenIntermediate sem (OpTypeType op) val,
     OpSemantics sem op val ctx,
-    OpTyping op ty ctx,
+    OpTyping op ctx,
     Mergeable op,
     SymEq val,
     MonadAngelicContext ctx
   ) =>
-  p ty ->
   sem ->
+  EvaledSymbolTable val ctx ->
+  ProgTypeTable (OpTypeType op) ->
   Int ->
   Stmt op symVarId ->
   StateT (CollectedDefUse symVarId val) ctx ()
 constrainStmt
-  p
   sem
+  table
+  tyTable
   idBound
   (Stmt opUnion argIds argNum resIds resNum disabled mustBeAfters) = do
     symAssertWith "Out-of-bound statement results." $
@@ -463,10 +478,11 @@ constrainStmt
       symAll (\(i, isucc) -> isucc .== i + 1) $
         zip resIds (tail resIds)
 
-    signature <- lift $ typeOp opUnion
-    Intermediates argVals resVals <- lift $ genOpIntermediates p sem signature
+    signature <- lift $ typeOp tyTable opUnion
+    Intermediates argVals resVals <-
+      lift $ genOpIntermediates (Proxy @(OpTypeType op)) sem signature
     mrgIf disabled (return ()) $ do
-      computedResVals <- lift $ applyOp sem opUnion argVals
+      computedResVals <- lift $ applyOp sem table tyTable opUnion argVals
       symAssertWith "Incorrect results." $ resVals .== computedResVals
 
     let getIdValPairs _ [] [] = mrgReturn []
@@ -541,14 +557,16 @@ instance
   ( SymbolicVarId symVarId,
     GenIntermediate sem ty val,
     OpSemantics sem op val ctx,
-    OpTyping op ty ctx,
+    OpTyping op ctx,
     Mergeable op,
     SymEq val,
-    MonadAngelicContext ctx
+    MonadAngelicContext ctx,
+    Mergeable ty,
+    OpTypeType op ~ ty
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx
   where
-  runProg sem (Prog _ arg stmts ret) inputs =
+  runProg sem table tyTable (Prog _ arg stmts ret) inputs =
     flip mrgEvalStateT (CollectedDefUse [] []) $ do
       symAssertWith
         ( "Expected "
@@ -561,7 +579,7 @@ instance
       addProgArgs inputs
 
       let bound = length inputs + sum (length . stmtResIds <$> stmts)
-      mrgTraverse_ (constrainStmt (Proxy :: Proxy ty) sem bound) stmts
+      mrgTraverse_ (constrainStmt sem table tyTable bound) stmts
       resVals <- genProgResVals sem ret
       symAssertWith "Variable is undefined." $
         symAll (inBound bound) $
@@ -574,19 +592,24 @@ instance
   ( SymbolicVarId symVarId,
     GenIntermediate sem ty val,
     OpSemantics sem op val ctx,
-    OpTyping op ty ctx,
+    OpTyping op ctx,
     Mergeable op,
     SymEq val,
     MonadAngelicContext ctx,
-    ProgConstraints constObj (Prog op symVarId ty) ctx
+    ProgConstraints constObj (Prog op symVarId ty) ctx,
+    Mergeable ty,
+    OpTypeType op ~ ty
   ) =>
   ProgSemantics (WithConstraints sem constObj) (Prog op symVarId ty) val ctx
   where
-  runProg (WithConstraints semObj constObj) prog inputs = do
-    constrainProg constObj prog
-    runProg semObj prog inputs
+  runProg (WithConstraints semObj constObj) table tyTable prog inputs = do
+    constrainProg constObj tyTable prog
+    runProg semObj table tyTable prog inputs
 
-instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
+instance
+  (Mergeable ty, SymbolicVarId varId) =>
+  ProgTyping (Prog op varId ty)
+  where
   typeProg prog =
     mrgReturn $
       TypeSignature
@@ -596,24 +619,32 @@ instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName
 
-instance StmtUtil (Stmt op varId) varId where
-  type StmtOpType (Stmt op varId) = op
+instance StmtUtilImpl (Stmt op varId) op varId where
   getStmtArgIds = stmtArgIds
   getStmtResIds = stmtResIds
   getStmtOp = stmtOp
   getStmtDisabled = stmtDisabled
 
+instance StmtUtil (Stmt op varId) where
+  type StmtOpType (Stmt op varId) = op
+  type StmtVarIdType (Stmt op varId) = varId
+
 instance
   (SymbolicVarId varId) =>
-  ProgUtil (Prog op varId ty) (Stmt op varId) varId
+  ProgUtilImpl (Prog op varId ty) op (Stmt op varId) varId
   where
-  type ProgTypeType (Prog op varId ty) = ty
   getProgArgIds prog = fst <$> zip (fromIntegral <$> [0 ..]) (progArgList prog)
   getProgResIds = map progResId . progResList
   getProgNumStmts = length . progStmtList
   getProgStmtAtIdx prog idx
     | idx >= getProgNumStmts prog = throwError "Statement index out of bounds."
     | otherwise = return $ progStmtList prog !! idx
+
+instance (SymbolicVarId varId) => ProgUtil (Prog op varId ty) where
+  type ProgTypeType (Prog op varId ty) = ty
+  type ProgStmtType (Prog op varId ty) = Stmt op varId
+  type ProgVarIdType (Prog op varId ty) = varId
+  type ProgOpType (Prog op varId ty) = op
 
 instance
   ( MonadContext ctx,
@@ -624,11 +655,11 @@ instance
   ) =>
   ProgCost (PerStmtCostObj opCostObj) (Prog op varId ty) cost ctx
   where
-  progCost (PerStmtCostObj obj) prog = do
+  progCost (PerStmtCostObj obj) table prog = do
     stmtCosts <-
       traverse
         ( \stmt ->
-            mrgIf (stmtDisabled stmt) (return 0) $ opCost obj $ stmtOp stmt
+            mrgIf (stmtDisabled stmt) (return 0) $ opCost obj table $ stmtOp stmt
         )
         (progStmtList prog)
     return $ sum stmtCosts

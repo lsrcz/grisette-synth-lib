@@ -3,6 +3,9 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.SumProg (SumProg (..)) where
 
@@ -11,12 +14,48 @@ import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Grisette (Default (Default), EvalSym, Mergeable, ToCon, ToSym)
 import Grisette.Lib.Synth.Program.Concrete.Program
-  ( ProgPPrint (topologicalPFormatProg),
-    ProgToDot (topologicalProgToDot),
+  ( ProgPPrint (pformatProg),
+    ProgToDot (toDotProg),
   )
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.ProgUtil
+  ( ProgUtil
+      ( ProgOpType,
+        ProgStmtType,
+        ProgTypeType,
+        ProgVarIdType
+      ),
+    ProgUtilImpl
+      ( getProgArgIds,
+        getProgNumStmts,
+        getProgResIds,
+        getProgStmtAtIdx
+      ),
+    StmtUtil
+      ( StmtOpType,
+        StmtVarIdType
+      ),
+    StmtUtilImpl
+      ( getStmtArgIds,
+        getStmtDisabled,
+        getStmtOp,
+        getStmtResIds
+      ),
+  )
+
+data SumVarId l r = SumVarIdL l | SumVarIdR r
+  deriving (Eq, Generic)
+  deriving anyclass (NFData, Hashable)
+
+data SumOp l r = SumOpL l | SumOpR r
+  deriving (Eq, Generic)
+  deriving anyclass (NFData, Hashable)
+
+data SumStmt l r = SumStmtL l | SumStmtR r
+  deriving (Eq, Generic)
+  deriving anyclass (NFData, Hashable)
 
 data SumProg l r
   = SumProgL l
@@ -36,24 +75,113 @@ instance (Show l, Show r) => Show (SumProg l r) where
   show (SumProgR r) = show r
 
 instance
-  (ProgSemantics semObj l val ctx, ProgSemantics semObj r val ctx) =>
+  ( ProgSemantics semObj l val ctx,
+    ProgSemantics semObj r val ctx,
+    ProgTypeType l ~ ProgTypeType r
+  ) =>
   ProgSemantics semObj (SumProg l r) val ctx
   where
-  runProg semObj (SumProgL l) = runProg semObj l
-  runProg semObj (SumProgR r) = runProg semObj r
+  runProg semObj table tyTable (SumProgL l) = runProg semObj table tyTable l
+  runProg semObj table tyTable (SumProgR r) = runProg semObj table tyTable r
 
 instance (ProgNaming l, ProgNaming r) => ProgNaming (SumProg l r) where
   nameProg (SumProgL l) = nameProg l
   nameProg (SumProgR r) = nameProg r
 
-instance (ProgTyping l ty, ProgTyping r ty) => ProgTyping (SumProg l r) ty where
+instance
+  ( ProgTyping l,
+    ProgTyping r,
+    ProgTypeType l ~ ProgTypeType r
+  ) =>
+  ProgTyping (SumProg l r)
+  where
   typeProg (SumProgL l) = typeProg l
   typeProg (SumProgR r) = typeProg r
 
-instance (ProgPPrint l, ProgPPrint r) => ProgPPrint (SumProg l r) where
-  topologicalPFormatProg (SumProgL l) = topologicalPFormatProg l
-  topologicalPFormatProg (SumProgR r) = topologicalPFormatProg r
+instance
+  ( ProgPPrint l,
+    ProgPPrint r,
+    ProgTypeType l ~ ProgTypeType r
+  ) =>
+  ProgPPrint (SumProg l r)
+  where
+  pformatProg table (SumProgL l) = pformatProg table l
+  pformatProg table (SumProgR r) = pformatProg table r
 
-instance (ProgToDot l, ProgToDot r) => ProgToDot (SumProg l r) where
-  topologicalProgToDot (SumProgL l) = topologicalProgToDot l
-  topologicalProgToDot (SumProgR r) = topologicalProgToDot r
+instance
+  ( ProgToDot l,
+    ProgToDot r,
+    ProgTypeType l ~ ProgTypeType r
+  ) =>
+  ProgToDot (SumProg l r)
+  where
+  toDotProg table (SumProgL l) = toDotProg table l
+  toDotProg table (SumProgR r) = toDotProg table r
+
+instance
+  ( StmtUtil l,
+    StmtUtil r,
+    lop ~ StmtOpType l,
+    rop ~ StmtOpType r,
+    lid ~ StmtVarIdType l,
+    rid ~ StmtVarIdType r
+  ) =>
+  StmtUtilImpl (SumStmt l r) (SumOp lop rop) (SumVarId lid rid)
+  where
+  getStmtArgIds (SumStmtL l) = SumVarIdL <$> getStmtArgIds l
+  getStmtArgIds (SumStmtR r) = SumVarIdR <$> getStmtArgIds r
+  getStmtResIds (SumStmtL l) = SumVarIdL <$> getStmtResIds l
+  getStmtResIds (SumStmtR r) = SumVarIdR <$> getStmtResIds r
+  getStmtOp (SumStmtL l) = SumOpL $ getStmtOp l
+  getStmtOp (SumStmtR r) = SumOpR $ getStmtOp r
+  getStmtDisabled (SumStmtL l) = getStmtDisabled l
+  getStmtDisabled (SumStmtR r) = getStmtDisabled r
+
+instance (StmtUtil l, StmtUtil r) => StmtUtil (SumStmt l r) where
+  type
+    StmtVarIdType (SumStmt l r) =
+      SumVarId (StmtVarIdType l) (StmtVarIdType r)
+  type
+    StmtOpType (SumStmt l r) =
+      SumOp (StmtOpType l) (StmtOpType r)
+
+instance
+  ( ProgUtil l,
+    ProgUtil r,
+    lop ~ ProgOpType l,
+    rop ~ ProgOpType r,
+    lid ~ ProgVarIdType l,
+    rid ~ ProgVarIdType r,
+    lstmt ~ ProgStmtType l,
+    rstmt ~ ProgStmtType r,
+    ProgTypeType l ~ ProgTypeType r
+  ) =>
+  ProgUtilImpl
+    (SumProg l r)
+    (SumOp lop rop)
+    (SumStmt lstmt rstmt)
+    (SumVarId lid rid)
+  where
+  getProgArgIds (SumProgL l) = SumVarIdL <$> getProgArgIds l
+  getProgArgIds (SumProgR r) = SumVarIdR <$> getProgArgIds r
+  getProgResIds (SumProgL l) = SumVarIdL <$> getProgResIds l
+  getProgResIds (SumProgR r) = SumVarIdR <$> getProgResIds r
+  getProgNumStmts (SumProgL l) = getProgNumStmts l
+  getProgNumStmts (SumProgR r) = getProgNumStmts r
+  getProgStmtAtIdx (SumProgL l) i = SumStmtL <$> getProgStmtAtIdx l i
+  getProgStmtAtIdx (SumProgR r) i = SumStmtR <$> getProgStmtAtIdx r i
+
+instance
+  (ProgUtil l, ProgUtil r, ProgTypeType l ~ ProgTypeType r) =>
+  ProgUtil (SumProg l r)
+  where
+  type ProgTypeType (SumProg l r) = ProgTypeType l
+  type
+    ProgStmtType (SumProg l r) =
+      SumStmt (ProgStmtType l) (ProgStmtType r)
+  type
+    ProgVarIdType (SumProg l r) =
+      SumVarId (ProgVarIdType l) (ProgVarIdType r)
+  type
+    ProgOpType (SumProg l r) =
+      SumOp (ProgOpType l) (ProgOpType r)

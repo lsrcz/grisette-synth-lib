@@ -1,4 +1,6 @@
-module Grisette.Lib.Synth.Program.ProgToDot (ProgToDot (..), progToDot) where
+{-# LANGUAGE UndecidableInstances #-}
+
+module Grisette.Lib.Synth.Program.ProgToDot (ProgToDot (..)) where
 
 import Data.GraphViz
   ( DotGraph
@@ -12,30 +14,37 @@ import Data.GraphViz
     DotSubGraph,
     PrintDot (unqtDot),
   )
-import Data.GraphViz.Printing (DotCode)
-import qualified Data.Map.Ordered as OM
 import qualified Data.Text as T
+import Grisette.Lib.Synth.Program.ProgTyping
+  ( ProgTypeTable,
+    ProgTyping,
+    typeSymbolTable,
+  )
+import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil (ProgTypeType))
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 
 class ProgToDot prog where
-  topologicalProgToDot ::
+  toDotProg ::
+    ProgTypeTable (ProgTypeType prog) ->
     prog ->
-    OM.OMap T.Text (DotSubGraph T.Text) ->
-    OM.OMap T.Text (DotSubGraph T.Text)
+    DotSubGraph T.Text
 
-progToDot :: (ProgToDot prog) => prog -> DotCode
-progToDot prog = unqtDot dotGraph
+instance
+  (ProgToDot prog, ProgUtil prog, ProgTyping prog) =>
+  PrintDot (SymbolTable prog)
   where
-    allDots = topologicalProgToDot prog OM.empty
-    dotGraph =
-      DotGraph
-        { strictGraph = False,
-          directedGraph = True,
-          graphID = Nothing,
-          graphStatements =
-            DotStmts
-              { attrStmts = [],
-                subGraphs = snd <$> OM.assocs allDots,
-                nodeStmts = [],
-                edgeStmts = []
-              }
-        }
+  unqtDot table@(SymbolTable lst) =
+    let tyTable = typeSymbolTable table
+     in unqtDot $
+          DotGraph
+            { strictGraph = False,
+              directedGraph = True,
+              graphID = Nothing,
+              graphStatements =
+                DotStmts
+                  { attrStmts = [],
+                    subGraphs = toDotProg tyTable . snd <$> lst,
+                    nodeStmts = [],
+                    edgeStmts = []
+                  }
+            }

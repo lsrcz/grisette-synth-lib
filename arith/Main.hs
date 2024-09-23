@@ -5,15 +5,14 @@
 module Main (main) where
 
 import Arith (OpCode (Minus, Mul, Plus))
-import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
-import qualified Data.Text.Lazy as TL
 import Grisette (PPrint (pformat), Solvable (con), SymInteger, z3)
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgSemantics (runSymbol)
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( defaultSemQuickCheckFuzzer,
   )
@@ -23,7 +22,8 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
       ( SynthesisTask,
         synthesisInitialExamples,
         synthesisPrecondition,
-        synthesisSketch,
+        synthesisSketchSymbol,
+        synthesisSketchTable,
         synthesisVerifiers
       ),
     runSynthesisTask,
@@ -39,23 +39,28 @@ type Sketch = Component.Prog OpCode SymInteger DefaultType
 -- names manually (e.g. @stmt1'arg0@).
 --
 -- A generator for a sketch with components is under development.
-sketch :: Sketch
-sketch =
-  Component.mkSimpleSketch
-    -- The name of the program. If your program supports procedure calls, you
-    -- should make sure that the programs has a unique name.
-    "test"
-    -- The types of the arguments to the program.
-    [DefaultType, DefaultType]
-    -- The components of the program. Each component is a statement.
-    --
-    -- The synthesizer could
-    -- \* reorder the components, and
-    -- \* choose whether or now to disable a component, and
-    -- \* choose the arguments of a component.
-    [Minus, Mul, Plus]
-    -- The program result type.
-    [DefaultType]
+sketchTable :: SymbolTable Sketch
+sketchTable =
+  SymbolTable
+    [ ( "prog",
+        Component.mkSimpleSketch
+          sketchTable
+          -- The name of the program. If your program supports procedure calls, you
+          -- should make sure that the programs has a unique name.
+          "test"
+          -- The types of the arguments to the program.
+          [DefaultType, DefaultType]
+          -- The components of the program. Each component is a statement.
+          --
+          -- The synthesizer could
+          -- \* reorder the components, and
+          -- \* choose whether or now to disable a component, and
+          -- \* choose the arguments of a component.
+          [Minus, Mul, Plus]
+          -- The program result type.
+          [DefaultType]
+      )
+    ]
 
 -- The specification specifies the expected behavior. Here, we want to synthesis
 -- a program that computes the expression a * (a + b) - b.
@@ -70,26 +75,26 @@ gen = vectorOf 2 arbitrary
 
 main :: IO ()
 main = do
-  print sketch
   r <-
     runSynthesisTask z3 $
       SynthesisTask
         { synthesisVerifiers =
             [defaultSemQuickCheckFuzzer @SymInteger gen spec],
           synthesisInitialExamples = [],
-          synthesisSketch = sketch,
+          synthesisSketchTable = sketchTable,
+          synthesisSketchSymbol = "prog",
           synthesisPrecondition = con True
         }
   case r of
-    SynthesisSuccess (prog :: ConProg) -> do
+    SynthesisSuccess (table :: SymbolTable ConProg) -> do
       -- def test(x: int, y: int):
       --   r2 = plus(lhs=y, rhs=x)
       --   r3 = mul(lhs=r2, rhs=x)
       --   r4 = minus(lhs=r3, rhs=y)
       --   return r4
-      print $ pformat prog
-      writeFile "/tmp/arith.dot" $ TL.unpack $ renderDot $ toDot prog
+      print $ pformat table
+      -- writeFile "/tmp/arith.dot" $ TL.unpack $ renderDot $ toDot prog
       let input = [5, 20]
       print $ spec input
-      print (runProg DefaultSem prog input :: ConcreteContext [Integer])
+      print (runSymbol DefaultSem table "prog" input :: ConcreteContext [Integer])
     _ -> print r

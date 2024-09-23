@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Program.ByteCodeSketch.Program
   ( Stmt (..),
@@ -50,6 +51,7 @@ import Grisette.Lib.Data.Foldable (mrgTraverse_)
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints (constrainProg), WithConstraints (WithConstraints))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
@@ -57,15 +59,23 @@ import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
   ( ProgUtil
-      ( ProgTypeType,
-        getProgArgIds,
+      ( ProgOpType,
+        ProgStmtType,
+        ProgTypeType,
+        ProgVarIdType
+      ),
+    ProgUtilImpl
+      ( getProgArgIds,
         getProgNumStmts,
         getProgResIds,
         getProgStmtAtIdx
       ),
     StmtUtil
       ( StmtOpType,
-        getStmtArgIds,
+        StmtVarIdType
+      ),
+    StmtUtilImpl
+      ( getStmtArgIds,
         getStmtDisabled,
         getStmtOp,
         getStmtResIds
@@ -292,11 +302,13 @@ instance
     RelatedVarId conVarId symVarId,
     MonadUnion ctx,
     SimpleMergeable val,
-    Mergeable op
+    Mergeable op,
+    Mergeable ty,
+    ty ~ OpTypeType op
   ) =>
   ProgSemantics semObj (Prog op conVarId symVarId ty) val ctx
   where
-  runProg sem (Prog _ arg stmts ret) inputs = do
+  runProg sem table tyTable (Prog _ arg stmts ret) inputs = do
     when (length inputs /= length arg) . mrgThrowError $
       "Expected "
         <> showText (length arg)
@@ -308,7 +320,7 @@ instance
           args <- mrgTraverse lookupVal argIds
           res <- lift $ do
             keptArgs <- takeNumArg argNum args
-            applyOp sem op keptArgs
+            applyOp sem table tyTable op keptArgs
           symAssertWith "Incorrect number of results." $
             resNum .== fromIntegral (length res)
           symAssertWith "Insufficient result IDs." $
@@ -324,7 +336,9 @@ instance
     MonadUnion ctx,
     SimpleMergeable val,
     Mergeable op,
-    ProgConstraints constObj (Prog op conVarId symVarId ty) ctx
+    ProgConstraints constObj (Prog op conVarId symVarId ty) ctx,
+    Mergeable ty,
+    ty ~ OpTypeType op
   ) =>
   ProgSemantics
     (WithConstraints semObj constObj)
@@ -332,13 +346,13 @@ instance
     val
     ctx
   where
-  runProg (WithConstraints semObj constObj) prog inputs = do
-    constrainProg constObj prog
-    runProg semObj prog inputs
+  runProg (WithConstraints semObj constObj) table tyTable prog inputs = do
+    constrainProg constObj tyTable prog
+    runProg semObj table tyTable prog inputs
 
 instance
-  (Mergeable ty) =>
-  ProgTyping (Prog op conVarId symVarId ty) ty
+  (Mergeable ty, RelatedVarId conVarId symVarId) =>
+  ProgTyping (Prog op conVarId symVarId ty)
   where
   typeProg prog =
     mrgReturn $
@@ -351,9 +365,8 @@ instance ProgNaming (Prog op conVarId symVarId ty) where
 
 instance
   (RelatedVarId conVarId symVarId) =>
-  StmtUtil (Stmt op conVarId symVarId) symVarId
+  StmtUtilImpl (Stmt op conVarId symVarId) op symVarId
   where
-  type StmtOpType (Stmt op conVarId symVarId) = op
   getStmtArgIds = stmtArgIds
   getStmtResIds = toSym . stmtResIds
   getStmtOp = stmtOp
@@ -361,15 +374,31 @@ instance
 
 instance
   (RelatedVarId conVarId symVarId) =>
-  ProgUtil
+  ProgUtilImpl
     (Prog op conVarId symVarId ty)
+    op
     (Stmt op conVarId symVarId)
     symVarId
   where
-  type ProgTypeType (Prog op conVarId symVarId ty) = ty
   getProgArgIds = toSym . map progArgId . progArgList
   getProgResIds = map progResId . progResList
   getProgNumStmts = length . progStmtList
   getProgStmtAtIdx prog idx
     | idx >= getProgNumStmts prog = throwError "Statement index out of bounds."
     | otherwise = return $ progStmtList prog !! idx
+
+instance
+  (RelatedVarId conVarId symVarId) =>
+  ProgUtil (Prog op conVarId symVarId ty)
+  where
+  type ProgTypeType (Prog op conVarId symVarId ty) = ty
+  type ProgStmtType (Prog op conVarId symVarId ty) = Stmt op conVarId symVarId
+  type ProgVarIdType (Prog op conVarId symVarId ty) = symVarId
+  type ProgOpType (Prog op conVarId symVarId ty) = op
+
+instance
+  (RelatedVarId conVarId symVarId) =>
+  StmtUtil (Stmt op conVarId symVarId)
+  where
+  type StmtOpType (Stmt op conVarId symVarId) = op
+  type StmtVarIdType (Stmt op conVarId symVarId) = symVarId

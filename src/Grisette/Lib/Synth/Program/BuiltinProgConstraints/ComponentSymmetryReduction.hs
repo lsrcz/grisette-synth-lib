@@ -7,6 +7,7 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction
@@ -43,7 +44,7 @@ import Grisette
     symOr,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
   ( ComponentProgDefUse (ComponentProgDefUse),
     ComponentStmtDefUse
@@ -66,8 +67,9 @@ import Grisette.Lib.Synth.Program.ProgConstraints
     ProgConstraints (constrainProg),
     progStmtLocalIdent,
   )
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable)
 import Grisette.Lib.Synth.Program.ProgUtil
-  ( ProgUtil (getProgNumStmts, getProgStmtAtIdx),
+  ( ProgUtilImpl (getProgNumStmts, getProgStmtAtIdx),
   )
 import Grisette.Lib.Synth.VarId (SymbolicVarId)
 
@@ -120,6 +122,7 @@ class
   componentStatementUnreorderable ::
     (SymbolicVarId symVarId) =>
     constrObj ->
+    ProgTypeTable ty ->
     Component.Prog op symVarId ty ->
     Int ->
     Int ->
@@ -148,11 +151,12 @@ componentStatementUnreorderable' ::
     SymbolicVarId symVarId
   ) =>
   constrObj ->
+  ProgTypeTable ty ->
   Component.Prog op symVarId ty ->
   Int ->
   Int ->
   ctx SymBool
-componentStatementUnreorderable' obj prog i j
+componentStatementUnreorderable' obj table prog i j
   | i == j = mrgReturn $ con True
   | i >= length (Component.progStmtList prog) = mrgReturn $ con True
   | j >= length (Component.progStmtList prog) = mrgReturn $ con True
@@ -160,7 +164,7 @@ componentStatementUnreorderable' obj prog i j
       let firstStmt = Component.progStmtList prog !! i
           secondStmt = Component.progStmtList prog !! j
        in do
-            unreorderable <- componentStatementUnreorderable obj prog i j
+            unreorderable <- componentStatementUnreorderable obj table prog i j
             mrgIf
               (stmtDisabled firstStmt .|| stmtDisabled secondStmt)
               (return $ con False)
@@ -179,16 +183,16 @@ componentStatementUnreorderable' obj prog i j
 -- * they are unreorderable, or
 -- * @stmt0@ has the smaller index than @stmt1@.
 canonicalOrderConstraint ::
-  forall constrObj op symVarId ty ctx.
   ( SymbolicVarId symVarId,
     MonadContext ctx,
     MonadUnion ctx,
     ComponentStatementUnreorderable constrObj op ty ctx
   ) =>
   constrObj ->
+  ProgTypeTable ty ->
   Component.Prog op symVarId ty ->
   ctx ()
-canonicalOrderConstraint obj prog = do
+canonicalOrderConstraint obj table prog = do
   conds <-
     mrgTraverse
       (uncurry cond)
@@ -201,7 +205,7 @@ canonicalOrderConstraint obj prog = do
       | i == j = mrgReturn $ con True
       | otherwise = do
           unreorderable <-
-            componentStatementUnreorderable' obj prog i j :: ctx SymBool
+            componentStatementUnreorderable' obj table prog i j -- :: ctx SymBool
           mrgReturn $
             statementsAdjacent (stmts !! i) (stmts !! j)
               `symImplies` unreorderable
@@ -221,7 +225,7 @@ instance
     (Concrete.Prog op conVarId ty)
     ctx
   where
-  constrainProg obj prog =
+  constrainProg obj _ prog =
     mrgTraverse_
       ( \i -> do
           Concrete.Stmt op _ _ <- getProgStmtAtIdx prog i
@@ -244,9 +248,9 @@ instance
     (Component.Prog op symVarId ty)
     ctx
   where
-  constrainProg obj@(ComponentSymmetryReduction constrObj) prog = do
-    constrainProg constrObj prog
-    canonicalOrderConstraint constrObj prog
+  constrainProg obj@(ComponentSymmetryReduction constrObj) table prog = do
+    constrainProg constrObj table prog
+    canonicalOrderConstraint constrObj table prog
     mrgTraverse_
       ( \i -> do
           Component.Stmt op _ _ _ _ stmtDisabled _ <-
@@ -257,10 +261,10 @@ instance
       [0 .. getProgNumStmts prog - 1]
 
 instance
-  (MonadContext ctx, MonadUnion ctx, OpTyping op ty ctx) =>
+  (MonadContext ctx, MonadUnion ctx, OpTyping op ctx, ty ~ OpTypeType op) =>
   ComponentStatementUnreorderable () op ty ctx
   where
-  componentStatementUnreorderable _ _ _ _ = mrgReturn $ con False
+  componentStatementUnreorderable _ _ _ _ _ = mrgReturn $ con False
 
 instance
   ( LivelinessConstraint livelinessObj op ty res ctx,
@@ -278,6 +282,7 @@ instance
   where
   componentStatementUnreorderable
     (Liveliness obj)
+    table
     prog
     firstStmtPos
     secondStmtPos
@@ -287,7 +292,7 @@ instance
           mrgReturn $ con True
       | otherwise = do
           ComponentProgDefUse _ stmtDefUses _ <-
-            livelinessComponentProgDefUses obj prog (con False)
+            livelinessComponentProgDefUses obj table prog (con False)
           let firstStmtDefUse = stmtDefUses !! firstStmtPos
           let firstInvalidated = componentStmtInvalidatingDef firstStmtDefUse
           let firstUses = componentStmtUse firstStmtDefUse
@@ -350,9 +355,9 @@ instance
     ty
     ctx
   where
-  componentStatementUnreorderable (obj1, obj2) prog i j = do
-    unreorderable1 <- componentStatementUnreorderable obj1 prog i j
-    unreorderable2 <- componentStatementUnreorderable obj2 prog i j
+  componentStatementUnreorderable (obj1, obj2) table prog i j = do
+    unreorderable1 <- componentStatementUnreorderable obj1 table prog i j
+    unreorderable2 <- componentStatementUnreorderable obj2 table prog i j
     mrgReturn $ unreorderable1 .|| unreorderable2
 
 instance
@@ -366,10 +371,10 @@ instance
     ty
     ctx
   where
-  componentStatementUnreorderable (obj1, obj2, obj3) prog i j = do
-    unreorderable1 <- componentStatementUnreorderable obj1 prog i j
-    unreorderable2 <- componentStatementUnreorderable obj2 prog i j
-    unreorderable3 <- componentStatementUnreorderable obj3 prog i j
+  componentStatementUnreorderable (obj1, obj2, obj3) table prog i j = do
+    unreorderable1 <- componentStatementUnreorderable obj1 table prog i j
+    unreorderable2 <- componentStatementUnreorderable obj2 table prog i j
+    unreorderable3 <- componentStatementUnreorderable obj3 table prog i j
     mrgReturn $ unreorderable1 .|| unreorderable2 .|| unreorderable3
 
 statementsDirectDep ::

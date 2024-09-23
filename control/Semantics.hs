@@ -30,7 +30,10 @@ import Grisette
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgSemantics
+  ( EvaledSymbolTable,
+    runEvaledSymbol,
+  )
 import Grisette.Lib.Synth.Util.Show (showText)
 import Value
   ( ValueBuilder (BoolValType, IntValType, mkBool, mkInt),
@@ -119,16 +122,18 @@ applyIntConst i [] = mrgReturn [mkInt i]
 applyIntConst _ _ = mrgThrowError "const op should accept no operands"
 
 applyIf ::
-  ( HasSemantics val ctx,
-    ProgSemantics semObj prog val ctx
+  ( HasSemantics val ctx
   ) =>
-  semObj ->
-  prog ->
-  prog ->
+  EvaledSymbolTable val ctx ->
+  T.Text ->
+  T.Text ->
   [val] ->
   ctx [val]
-applyIf sem progTrue progFalse (cond : operands) = do
+applyIf table symbolTrue symbolFalse (cond : operands) = do
   c <- getBool cond
-  ifC c (runProg sem progTrue operands) (runProg sem progFalse operands)
+  ifC
+    c
+    (runEvaledSymbol table symbolTrue operands)
+    (runEvaledSymbol table symbolFalse operands)
 applyIf _ _ _ _ =
   mrgThrowError "the first operand to the if op must be a boolean value"

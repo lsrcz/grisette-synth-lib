@@ -13,6 +13,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Operator.OpTyping
@@ -45,6 +47,7 @@ import Grisette
     tryMerge,
   )
 import Grisette.Lib.Synth.Context (MonadContext, SymbolicContext)
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable)
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -56,14 +59,19 @@ simpleTyping ::
   ctx (TypeSignature ty)
 simpleTyping f = mrgReturn . f
 
-class (MonadContext ctx) => OpTyping op ty ctx | op -> ty where
-  typeOp :: op -> ctx (TypeSignature ty)
+class (MonadContext ctx) => OpTyping op ctx where
+  type OpTypeType op
+  typeOp ::
+    ProgTypeTable (OpTypeType op) ->
+    op ->
+    ctx (TypeSignature (OpTypeType op))
 
 instance
-  (MonadUnion ctx, OpTyping op ty ctx, Mergeable op, Mergeable ty) =>
-  OpTyping (Union op) ty ctx
+  (MonadUnion ctx, OpTyping op ctx, Mergeable op, Mergeable (OpTypeType op)) =>
+  OpTyping (Union op) ctx
   where
-  typeOp op = tryMerge $ liftUnion op >>= typeOp
+  type OpTypeType (Union op) = OpTypeType op
+  typeOp table op = tryMerge $ liftUnion op >>= typeOp table
 
 newtype MaxAcrossBranches = MaxAcrossBranches {unMaxAcrossBranches :: Int}
 
@@ -74,18 +82,26 @@ instance SimpleMergeable MaxAcrossBranches where
   mrgIte _ (MaxAcrossBranches a) (MaxAcrossBranches b) =
     MaxAcrossBranches (max a b)
 
-symOpMaximumArgNum :: (OpTyping op ty SymbolicContext) => op -> Int
-symOpMaximumArgNum op =
+symOpMaximumArgNum ::
+  (OpTyping op SymbolicContext) =>
+  ProgTypeTable (OpTypeType op) ->
+  op ->
+  Int
+symOpMaximumArgNum table op =
   unMaxAcrossBranches $ simpleMerge $ mrgFmap MaxAcrossBranches $ do
-    ty <- runExceptT $ typeOp op
+    ty <- runExceptT $ typeOp table op
     case ty of
       Left _ -> return 0 :: Union Int
       Right (TypeSignature argTypes _) -> return $ length argTypes
 
-symOpMaximumResNum :: (OpTyping op ty SymbolicContext) => op -> Int
-symOpMaximumResNum op =
+symOpMaximumResNum ::
+  (OpTyping op SymbolicContext) =>
+  ProgTypeTable (OpTypeType op) ->
+  op ->
+  Int
+symOpMaximumResNum table op =
   unMaxAcrossBranches $ simpleMerge $ mrgFmap MaxAcrossBranches $ do
-    ty <- runExceptT $ typeOp op
+    ty <- runExceptT $ typeOp table op
     case ty of
       Left _ -> return 0 :: Union Int
       Right (TypeSignature _ resTypes) -> return $ length resTypes

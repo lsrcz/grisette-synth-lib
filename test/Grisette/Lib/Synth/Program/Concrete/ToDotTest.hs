@@ -175,7 +175,7 @@ toDotTest =
               }
             ]
         return $ testCase name $ do
-          let actual = flip runStateT env $ stmtToDotNode "prog" index stmt
+          let actual = flip runStateT env $ stmtToDotNode mempty "prog" index stmt
           actual @?= (,newMap) <$> expected,
       testGroup "progToDotSubGraph" $ do
         ProgToDotTestCase name prog expected <-
@@ -308,6 +308,6 @@ toDotTest =
               }
             ]
         return $ testCase name $ do
-          let actual = progToDotSubGraph prog
+          let actual = progToDotSubGraph mempty prog
           actual @?= expected
     ]

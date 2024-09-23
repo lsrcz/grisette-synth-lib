@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch.Builder
   ( StmtExtraConstraint (..),
@@ -39,7 +40,7 @@ import Grisette
   )
 import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTyping,
+  ( OpTyping (OpTypeType),
     symOpMaximumArgNum,
     symOpMaximumResNum,
   )
@@ -50,6 +51,9 @@ import Grisette.Lib.Synth.Program.ComponentSketch.Program
     Stmt (Stmt, stmtDisabled, stmtMustBeAfter, stmtResIds),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping, typeSymbolTable)
+import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil (ProgTypeType))
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Util.Show (showText)
 
 newtype StmtExtraConstraint op symVarId = StmtExtraConstraint
@@ -57,15 +61,21 @@ newtype StmtExtraConstraint op symVarId = StmtExtraConstraint
   }
 
 simpleFreshStmt' ::
-  (OpTyping op ty SymbolicContext, GenSymSimple () symVarId) =>
+  ( OpTyping op SymbolicContext,
+    GenSymSimple () symVarId,
+    ProgTyping prog,
+    ProgTypeType prog ~ OpTypeType op
+  ) =>
+  SymbolTable prog ->
   op ->
   StmtExtraConstraint op symVarId ->
   Fresh [Stmt op symVarId]
-simpleFreshStmt' op (StmtExtraConstraint mustBeAfterStmts) = do
-  let maxArgNum = symOpMaximumArgNum op
+simpleFreshStmt' table op (StmtExtraConstraint mustBeAfterStmts) = do
+  let tyTable = typeSymbolTable table
+  let maxArgNum = symOpMaximumArgNum tyTable op
   argIds <- replicateM maxArgNum (simpleFresh ())
   argNum <- simpleFresh ()
-  let maxResNum = symOpMaximumResNum op
+  let maxResNum = symOpMaximumResNum tyTable op
   resIds <- replicateM maxResNum (simpleFresh ())
   resNum <- simpleFresh ()
   disabled <- simpleFresh ()
@@ -93,59 +103,100 @@ augmentDisabled = go (con False)
        in stmt {stmtDisabled = newDisabled} : go newDisabled stmts
 
 simpleFreshStmts' ::
-  (OpTyping op ty SymbolicContext, GenSymSimple () symVarId) =>
+  ( OpTyping op SymbolicContext,
+    GenSymSimple () symVarId,
+    ProgTyping prog,
+    ProgTypeType prog ~ OpTypeType op
+  ) =>
+  SymbolTable prog ->
   Int ->
   op ->
   StmtExtraConstraint op symVarId ->
   Fresh [Stmt op symVarId]
-simpleFreshStmts' num op extraConstraint = do
-  stmts <- concat <$> replicateM num (simpleFreshStmt' op extraConstraint)
+simpleFreshStmts' table num op extraConstraint = do
+  stmts <- concat <$> replicateM num (simpleFreshStmt' table op extraConstraint)
   return $ augmentDisabled $ augmentMustBeAfterForStmts stmts
 
 simpleFreshStmt ::
-  (OpTyping op ty SymbolicContext, GenSymSimple () symVarId) =>
+  ( OpTyping op SymbolicContext,
+    GenSymSimple () symVarId,
+    ProgTyping prog,
+    ProgTypeType prog ~ OpTypeType op
+  ) =>
+  SymbolTable prog ->
   op ->
   Fresh [Stmt op symVarId]
-simpleFreshStmt op = simpleFreshStmt' op (StmtExtraConstraint [])
+simpleFreshStmt table op = simpleFreshStmt' table op (StmtExtraConstraint [])
 
 simpleFreshStmts ::
-  (OpTyping op ty SymbolicContext, GenSymSimple () symVarId) =>
+  ( OpTyping op SymbolicContext,
+    GenSymSimple () symVarId,
+    ProgTyping prog,
+    ProgTypeType prog ~ OpTypeType op
+  ) =>
+  SymbolTable prog ->
   Int ->
   op ->
   Fresh [Stmt op symVarId]
-simpleFreshStmts num op = simpleFreshStmts' num op (StmtExtraConstraint [])
+simpleFreshStmts table num op =
+  simpleFreshStmts' table num op (StmtExtraConstraint [])
 
 freshStmt' ::
-  (OpTyping op ty SymbolicContext, Mergeable op, GenSymSimple () symVarId) =>
+  ( OpTyping op SymbolicContext,
+    Mergeable op,
+    GenSymSimple () symVarId,
+    ProgTyping prog,
+    ProgTypeType prog ~ OpTypeType op
+  ) =>
+  SymbolTable prog ->
   Fresh op ->
   StmtExtraConstraint op symVarId ->
   Fresh [Stmt op symVarId]
-freshStmt' freshOp extraConstraint = do
+freshStmt' table freshOp extraConstraint = do
   op <- freshOp
-  simpleFreshStmt' op extraConstraint
+  simpleFreshStmt' table op extraConstraint
 
 freshStmts' ::
-  (OpTyping op ty SymbolicContext, Mergeable op, GenSymSimple () symVarId) =>
+  ( OpTyping op SymbolicContext,
+    Mergeable op,
+    GenSymSimple () symVarId,
+    ProgTyping prog,
+    ProgTypeType prog ~ OpTypeType op
+  ) =>
+  SymbolTable prog ->
   Int ->
   Fresh op ->
   StmtExtraConstraint op symVarId ->
   Fresh [Stmt op symVarId]
-freshStmts' num freshOp extraConstraint = do
-  stmts <- concat <$> replicateM num (freshStmt' freshOp extraConstraint)
+freshStmts' table num freshOp extraConstraint = do
+  stmts <- concat <$> replicateM num (freshStmt' table freshOp extraConstraint)
   return $ augmentDisabled $ augmentMustBeAfterForStmts stmts
 
 freshStmt ::
-  (OpTyping op ty SymbolicContext, Mergeable op, GenSymSimple () symVarId) =>
+  ( OpTyping op SymbolicContext,
+    Mergeable op,
+    GenSymSimple () symVarId,
+    ProgTyping prog,
+    ProgTypeType prog ~ OpTypeType op
+  ) =>
+  SymbolTable prog ->
   Fresh op ->
   Fresh [Stmt op symVarId]
-freshStmt freshOp = freshStmt' freshOp (StmtExtraConstraint [])
+freshStmt table freshOp = freshStmt' table freshOp (StmtExtraConstraint [])
 
 freshStmts ::
-  (OpTyping op ty SymbolicContext, Mergeable op, GenSymSimple () symVarId) =>
+  ( OpTyping op SymbolicContext,
+    Mergeable op,
+    GenSymSimple () symVarId,
+    ProgTyping prog,
+    ProgTypeType prog ~ OpTypeType op
+  ) =>
+  SymbolTable prog ->
   Int ->
   Fresh op ->
   Fresh [Stmt op symVarId]
-freshStmts num freshOp = freshStmts' num freshOp (StmtExtraConstraint [])
+freshStmts table num freshOp =
+  freshStmts' table num freshOp (StmtExtraConstraint [])
 
 class MkProg prog stmts op symVarId ty | prog -> stmts op symVarId ty where
   mkProg ::
@@ -168,8 +219,7 @@ instance
     ty
   where
   mkProg name args stmts rets =
-    Prog name (uncurry ProgArg <$> args)
-      <$> (concat <$> sequence stmts)
+    (Prog name (uncurry ProgArg <$> args) . concat <$> sequence stmts)
       <*> traverse
         (\(freshVarId, ty) -> ProgRes <$> freshVarId <*> return ty)
         rets
@@ -178,43 +228,53 @@ class MkFreshProg prog stmt op ty | prog -> stmt op ty where
   mkFreshProg :: T.Text -> [ty] -> [Fresh [stmt]] -> [ty] -> Fresh prog
 
 mkSimpleFreshProg ::
-  forall prog op ty symVarId.
+  forall prog0 prog op ty symVarId.
   ( MkFreshProg prog (Stmt op symVarId) op ty,
-    OpTyping op ty SymbolicContext,
-    GenSymSimple () symVarId
+    OpTyping op SymbolicContext,
+    GenSymSimple () symVarId,
+    ProgTyping prog0,
+    ProgTypeType prog0 ~ OpTypeType op,
+    ProgUtil prog0
   ) =>
+  SymbolTable prog0 ->
   T.Text ->
   [ty] ->
   [op] ->
   [ty] ->
   Fresh prog
-mkSimpleFreshProg name argTypes ops =
+mkSimpleFreshProg table name argTypes ops =
   mkFreshProg
     name
     argTypes
-    (simpleFreshStmt <$> ops :: [Fresh [Stmt op symVarId]])
+    (simpleFreshStmt table <$> ops :: [Fresh [Stmt op symVarId]])
 
 instance
   (GenSymSimple () symVarId) =>
   MkFreshProg (Prog op symVarId ty) (Stmt op symVarId) op ty
   where
   mkFreshProg name argTypes freshStmts retTypes =
-    Prog
-      name
-      [ProgArg ("arg" <> showText n) ty | (n, ty) <- zip [0 ..] argTypes]
-      <$> (concat <$> sequence freshStmts)
+    ( ( Prog
+          name
+          [ProgArg ("arg" <> showText n) ty | (n, ty) <- zip [0 ..] argTypes]
+      )
+        . concat
+        <$> sequence freshStmts
+    )
       <*> sequence [ProgRes <$> simpleFresh () <*> return ty | ty <- retTypes]
 
 fromConcrete ::
-  forall symOp symVarId symTy conOp conVarId conTy.
+  forall prog symOp symVarId symTy conOp conVarId conTy.
   ( ToSym conTy symTy,
     ToSym conOp symOp,
-    OpTyping symOp symTy SymbolicContext,
-    GenSymSimple () symVarId
+    OpTyping symOp SymbolicContext,
+    GenSymSimple () symVarId,
+    ProgTyping prog,
+    ProgTypeType prog ~ OpTypeType symOp
   ) =>
+  SymbolTable prog ->
   Concrete.Prog conOp conVarId conTy ->
   Fresh (Prog symOp symVarId symTy)
-fromConcrete (Concrete.Prog name argList stmtList resList) = do
+fromConcrete table (Concrete.Prog name argList stmtList resList) = do
   stmts <- concat <$> allFreshStmts
   Prog name args stmts <$> freshResults
   where
@@ -222,7 +282,7 @@ fromConcrete (Concrete.Prog name argList stmtList resList) = do
       (\(Concrete.ProgArg name _ ty) -> ProgArg name (toSym ty)) <$> argList
     allFreshStmts =
       traverse
-        (\(Concrete.Stmt op _ _) -> simpleFreshStmt (toSym op :: symOp))
+        (\(Concrete.Stmt op _ _) -> simpleFreshStmt table (toSym op :: symOp))
         stmtList
     freshResults =
       traverse
@@ -245,16 +305,19 @@ mkSketch name argTypes stmts retTypes =
     mkFreshProg name argTypes stmts retTypes
 
 mkSimpleSketch ::
-  forall prog op ty symVarId.
+  forall prog0 prog op ty symVarId.
   ( MkFreshProg prog (Stmt op symVarId) op ty,
-    OpTyping op ty SymbolicContext,
-    GenSymSimple () symVarId
+    OpTyping op SymbolicContext,
+    GenSymSimple () symVarId,
+    ProgTyping prog0,
+    ProgTypeType prog0 ~ OpTypeType op
   ) =>
+  SymbolTable prog0 ->
   T.Text ->
   [ty] ->
   [op] ->
   [ty] ->
   prog
-mkSimpleSketch name argTypes ops retTypes =
+mkSimpleSketch table name argTypes ops retTypes =
   flip runFresh (identifier name) $
-    mkSimpleFreshProg name argTypes ops retTypes
+    mkSimpleFreshProg table name argTypes ops retTypes

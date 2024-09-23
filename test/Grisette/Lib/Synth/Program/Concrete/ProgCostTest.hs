@@ -27,6 +27,6 @@ progCostTest = testCase "ProgCost" $ do
           ]
           []
   let cost =
-        progCost (PerStmtCostObj TestCost) prog ::
+        progCost (PerStmtCostObj TestCost) mempty prog ::
           ConcreteContext Integer
   cost @?= Right 30

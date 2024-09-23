@@ -11,7 +11,8 @@ import Grisette
   )
 import qualified Grisette.Lib.Synth.Program.ByteCodeSketch as ByteCodeSketch
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg), evalSymbolTable)
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( fuzzingTestProg,
     fuzzingTestSymProgWithModel,
@@ -45,6 +46,9 @@ conProg =
     ]
     [Concrete.ProgRes 4 IntType, Concrete.ProgRes 5 IntType]
 
+conProgTable :: SymbolTable ConProgType
+conProgTable = SymbolTable [("test", conProg)]
+
 type SymProgType =
   ByteCodeSketch.Prog TestSemanticsOp Integer SymInteger TestSemanticsType
 
@@ -59,6 +63,9 @@ symProg =
       ByteCodeSketch.Stmt DivMod [3, "x"] 2 [4, 5] 2
     ]
     [ByteCodeSketch.ProgRes 4 IntType, ByteCodeSketch.ProgRes 5 IntType]
+
+symProgTable :: SymbolTable SymProgType
+symProgTable = SymbolTable [("test", symProg)]
 
 model :: Model
 model = buildModel ("x" ::= (0 :: Integer))
@@ -90,17 +97,33 @@ fuzzingTest =
     [ testGroup
         "fuzzingTestProg"
         [ testCase "goodSpec" $ do
-            result <- fuzzingTestProg gen spec 100 TestSemanticsObj conProg
+            result <-
+              fuzzingTestProg
+                gen
+                spec
+                100
+                (evalSymbolTable TestSemanticsObj conProgTable)
+                "test"
             fst <$> result @?= Nothing,
           testCase "reverseSpec" $ do
             result <-
-              fuzzingTestProg gen reverseSpec 100 TestSemanticsObj conProg
+              fuzzingTestProg
+                gen
+                reverseSpec
+                100
+                (evalSymbolTable TestSemanticsObj conProgTable)
+                "test"
             fst <$> result @?= Nothing,
           testCase "badSpec" $ do
             Just (IOPair i o, _) <-
-              fuzzingTestProg gen badSpec 100 TestSemanticsObj conProg
+              fuzzingTestProg
+                gen
+                badSpec
+                100
+                (evalSymbolTable TestSemanticsObj conProgTable)
+                "test"
             fst (badSpec i) @?= o
-            (runProg TestSemanticsObj conProg i /= Right o)
+            (runProg TestSemanticsObj mempty mempty conProg i /= Right o)
               @? "Should fail the test."
         ],
       testGroup
@@ -113,7 +136,8 @@ fuzzingTest =
                 100
                 (Proxy :: Proxy ConProgType)
                 TestSemanticsObj
-                symProg
+                symProgTable
+                "test"
                 model
             fst <$> result @?= Nothing,
           testCase "badSpec" $ do
@@ -124,10 +148,11 @@ fuzzingTest =
                 100
                 (Proxy :: Proxy ConProgType)
                 TestSemanticsObj
-                symProg
+                symProgTable
+                "test"
                 model
             fst (badSpec i) @?= o
-            (runProg TestSemanticsObj conProg i /= Right o)
+            (runProg TestSemanticsObj mempty mempty conProg i /= Right o)
               @? "Should fail the test."
         ]
     ]

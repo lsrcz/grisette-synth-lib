@@ -4,11 +4,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.SubProg
-  ( HasSubProgs (..),
-    HasAnyPathSubProgs (..),
+  ( -- HasSubProgs (..),
+    -- HasAnyPathSubProgs (..),
   )
 where
 
+{-
 import Grisette
   ( Mergeable,
     MonadUnion,
@@ -44,3 +45,4 @@ instance
   where
   getAnyPathSubProgs op =
     concatMap getAnyPathSubProgs (overestimateUnionValues op)
+-}

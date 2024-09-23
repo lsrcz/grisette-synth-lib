@@ -24,6 +24,7 @@ import Control.DeepSeq (NFData)
 import Control.Exception.Safe (Exception (fromException), throw)
 import Data.Data (Typeable)
 import Data.Proxy (Proxy (Proxy))
+import qualified Data.Text as T
 import Grisette
   ( EvalSym,
     Mergeable,
@@ -41,7 +42,14 @@ import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( WithConstraints (WithConstraints),
   )
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgSemantics
+  ( EvaledSymbolTable,
+    ProgSemantics,
+    evalSymbolTable,
+    runEvaledSymbol,
+  )
+import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil)
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
 import Grisette.Lib.Synth.Reasoning.Matcher
   ( EqMatcher (EqMatcher),
@@ -93,18 +101,18 @@ fuzzingTestProg' prop spec = do
 propertyWithMatcher ::
   ( Matcher matcher Bool conVal,
     Show conVal,
-    ProgSemantics conSemObj conProg conVal ConcreteContext
+    Mergeable conVal
   ) =>
   Gen [conVal] ->
   ([conVal] -> ([conVal], matcher)) ->
   Int ->
-  conSemObj ->
-  conProg ->
+  EvaledSymbolTable conVal ConcreteContext ->
+  T.Text ->
   PropertyOf ([conVal] :&: ())
-propertyWithMatcher gen spec maxTests sem prog = forAll gen $ \inputs ->
+propertyWithMatcher gen spec maxTests table symbol = forAll gen $ \inputs ->
   withMaxSuccess maxTests $
     let (expectedOutputs, matcher) = spec inputs
-     in case runProg sem prog inputs of
+     in case runEvaledSymbol table symbol inputs of
           Left _ -> False
           Right actualOutputs ->
             match matcher actualOutputs expectedOutputs
@@ -112,16 +120,16 @@ propertyWithMatcher gen spec maxTests sem prog = forAll gen $ \inputs ->
 fuzzingTestProg ::
   ( Matcher matcher Bool conVal,
     Show conVal,
-    ProgSemantics conSemObj conProg conVal ConcreteContext
+    Mergeable conVal
   ) =>
   Gen [conVal] ->
   ([conVal] -> ([conVal], matcher)) ->
   Int ->
-  conSemObj ->
-  conProg ->
+  EvaledSymbolTable conVal ConcreteContext ->
+  T.Text ->
   IO (Maybe (IOPair conVal, matcher))
-fuzzingTestProg gen spec maxTests sem prog =
-  fuzzingTestProg' (propertyWithMatcher gen spec maxTests sem prog) spec
+fuzzingTestProg gen spec maxTests table symbol =
+  fuzzingTestProg' (propertyWithMatcher gen spec maxTests table symbol) spec
 
 fuzzingTestSymProgWithModel ::
   forall conVal conProg symProg matcher conSemObj p.
@@ -129,6 +137,8 @@ fuzzingTestSymProgWithModel ::
     Show conVal,
     ProgSemantics conSemObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
+    ProgUtil conProg,
+    Mergeable conVal,
     EvalSym symProg
   ) =>
   Gen [conVal] ->
@@ -136,24 +146,28 @@ fuzzingTestSymProgWithModel ::
   Int ->
   p conProg ->
   conSemObj ->
-  symProg ->
+  SymbolTable symProg ->
+  T.Text ->
   Model ->
   IO (Maybe (IOPair conVal, matcher))
-fuzzingTestSymProgWithModel gen spec maxTests _ sem prog model = do
+fuzzingTestSymProgWithModel gen spec maxTests _ sem table symbol model = do
   fuzzingTestProg
     gen
     spec
     maxTests
-    sem
-    (evalSymToCon model prog :: conProg)
+    (evalSymbolTable sem (evalSymToCon model table :: SymbolTable conProg))
+    symbol
 
 data QuickCheckFuzzer symVal conVal symProg conProg where
   QuickCheckFuzzer ::
     ( ProgSemantics symSemObj symProg symVal AngelicContext,
       ProgSemantics conSemObj conProg conVal ConcreteContext,
+      ProgUtil symProg,
+      ProgUtil conProg,
       Matcher matcher SymBool symVal,
       Matcher matcher Bool conVal,
       Eq conSemObj,
+      Mergeable conVal,
       Typeable conSemObj,
       Typeable symSemObj,
       Typeable matcher,
@@ -190,7 +204,7 @@ instance
     symProg
     conProg
   where
-  toVerifierFuns (QuickCheckFuzzer symSem conSem maxTests gens spec) prog =
+  toVerifierFuns (QuickCheckFuzzer symSem conSem maxTests gens spec) table sym =
     flip fmap gens $ \gen model -> do
       fuzzingResult <-
         fuzzingTestSymProgWithModel
@@ -199,7 +213,8 @@ instance
           maxTests
           (Proxy :: Proxy conProg)
           conSem
-          prog
+          table
+          sym
           model
       case fuzzingResult of
         Just (ioPair, matcher) ->
@@ -227,6 +242,9 @@ defaultQuickCheckFuzzerWithConstraint ::
     ToSym conVal symVal,
     EvalSym symProg,
     Show conVal,
+    ProgUtil symProg,
+    ProgUtil conProg,
+    Mergeable conVal,
     Mergeable symVal,
     Typeable symProg,
     Typeable semObj,
@@ -273,6 +291,9 @@ defaultQuickCheckFuzzer ::
     ToSym conVal symVal,
     EvalSym symProg,
     Show conVal,
+    ProgUtil symProg,
+    ProgUtil conProg,
+    Mergeable conVal,
     Mergeable symVal,
     Typeable symProg,
     Typeable semObj,
@@ -306,6 +327,9 @@ defaultSemQuickCheckFuzzer ::
     ToSym conVal symVal,
     EvalSym symProg,
     Show conVal,
+    ProgUtil symProg,
+    ProgUtil conProg,
+    Mergeable conVal,
     Mergeable symVal,
     Typeable symProg,
     Typeable conVal,

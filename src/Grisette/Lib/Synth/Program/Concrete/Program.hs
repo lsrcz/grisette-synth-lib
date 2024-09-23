@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- |
@@ -52,7 +53,6 @@ import Control.Monad.State
   )
 import qualified Data.Binary as Bytes
 import Data.Bytes.Serial (Serial (deserialize, serialize))
-import Data.Either.Extra (mapLeft)
 import Data.Foldable (traverse_)
 import Data.GraphViz
   ( DotEdge (DotEdge),
@@ -61,7 +61,6 @@ import Data.GraphViz
     DotSubGraph (DotSG, isCluster, subGraphID, subGraphStmts),
     GlobalAttributes (GraphAttrs),
     GraphID (Str),
-    PrintDot (unqtDot),
     Shape (Record),
     shape,
   )
@@ -75,7 +74,6 @@ import Data.GraphViz.Attributes.Complete
   )
 import qualified Data.HashMap.Lazy as HM
 import Data.Hashable (Hashable)
-import qualified Data.Map.Ordered as OM
 import qualified Data.Serialize as Cereal
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -91,8 +89,13 @@ import Grisette
     tryMerge,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
-import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+-- import Grisette.Lib.Synth.Program.SubProg
+--   ( HasAnyPathSubProgs (getAnyPathSubProgs),
+--   )
+
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( OpPPrint (pformatOp),
     OpPPrintError,
@@ -109,37 +112,43 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( OpCost (opCost),
     PerStmtCostObj (PerStmtCostObj),
   )
-import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints (constrainProg), WithConstraints (WithConstraints))
+import Grisette.Lib.Synth.Program.ProgConstraints
+  ( ProgConstraints (constrainProg),
+    WithConstraints (WithConstraints),
+  )
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgPPrint
-  ( ProgPPrint (topologicalPFormatProg),
-    pformatProg,
+  ( ProgPPrint (pformatProg),
   )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgToDot
-  ( ProgToDot (topologicalProgToDot),
-    progToDot,
+  ( ProgToDot (toDotProg),
   )
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable, ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
   ( ProgUtil
-      ( ProgTypeType,
-        getProgArgIds,
+      ( ProgOpType,
+        ProgStmtType,
+        ProgTypeType,
+        ProgVarIdType
+      ),
+    ProgUtilImpl
+      ( getProgArgIds,
         getProgNumStmts,
         getProgResIds,
         getProgStmtAtIdx
       ),
     StmtUtil
       ( StmtOpType,
-        getStmtArgIds,
+        StmtVarIdType
+      ),
+    StmtUtilImpl
+      ( getStmtArgIds,
         getStmtDisabled,
         getStmtOp,
         getStmtResIds
       ),
-  )
-import Grisette.Lib.Synth.Program.SubProg
-  ( HasAnyPathSubProgs (getAnyPathSubProgs),
   )
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
@@ -326,31 +335,40 @@ instance
     "Error while extracting sub-program: " <> pformat err
 
 prettyStmt ::
-  (ConcreteVarId varId, OpPPrint op) =>
+  ( ConcreteVarId varId,
+    OpPPrint op,
+    OpTyping op ConcreteContext
+  ) =>
+  ProgTypeTable (OpTypeType op) ->
   Int ->
   Stmt op varId ->
   StateT (VarIdMap varId) (Either (ProgPPrintError varId op)) (Doc ann)
-prettyStmt index stmt@(Stmt op argIds resIds) = do
+prettyStmt table index stmt@(Stmt op argIds resIds) = do
   map <- get
-  arpformat <- case prettyArguments op argIds map of
+  arpformat <- case prettyArguments table op argIds map of
     Left err -> throwError $ StmtPPrintError stmt index err
     Right arpformat -> pure arpformat
   let opPretty = pformatOp op
-  (newMap, resPretty) <- case prettyResults op resIds map of
+  (newMap, resPretty) <- case prettyResults table op resIds map of
     Left err -> throwError $ StmtPPrintError stmt index err
     Right resPretty -> pure resPretty
   put newMap
   return $ resPretty <> " = " <> opPretty <> arpformat
 
 prettyProg ::
-  (ConcreteVarId varId, OpPPrint op, PPrint ty) =>
+  ( ConcreteVarId varId,
+    OpPPrint op,
+    PPrint ty,
+    OpTyping op ConcreteContext
+  ) =>
+  ProgTypeTable (OpTypeType op) ->
   Prog op varId ty ->
   Either (ProgPPrintError varId op) (Doc ann)
-prettyProg (Prog name argList stmtList resList) = do
+prettyProg table (Prog name argList stmtList resList) = do
   let initMap =
         HM.fromList $ map (\arg -> (progArgId arg, progArgName arg)) argList
   flip evalStateT initMap $ do
-    stmtsPretty <- traverse (uncurry prettyStmt) (zip [0 ..] stmtList)
+    stmtsPretty <- traverse (uncurry $ prettyStmt table) (zip [0 ..] stmtList)
     let firstLine =
           nest (-2) $
             "def "
@@ -382,36 +400,33 @@ instance
     PPrint ty,
     Show op,
     Show ty,
-    HasAnyPathSubProgs op sub,
-    ProgPPrint sub
+    OpTyping op ConcreteContext,
+    OpTypeType op ~ ty
   ) =>
   ProgPPrint (Prog op varId ty)
   where
-  topologicalPFormatProg prog map
-    | OM.member (progName prog) map = map
-    | otherwise =
-        allSubProgramTopologicalSorted map OM.>| (progName prog, progDoc)
+  pformatProg table prog = progDoc
     where
-      allSubProgramTopologicalSorted ::
-        OM.OMap T.Text (Doc ann) -> OM.OMap T.Text (Doc ann)
-      allSubProgramTopologicalSorted map = do
-        let progs = concatMap (getAnyPathSubProgs . stmtOp) (progStmtList prog)
-         in foldl (flip topologicalPFormatProg) map progs
-      progDoc = case prettyProg prog of
+      progDoc = case prettyProg table prog of
         Left err ->
-          nest
-            2
-            ( "Error while pretty-printing program "
-                <> pformat (progName prog)
-                <> hardline
-                <> pformat err
-            )
-            <> hardline
-            <> nest 2 ("Raw program: " <> hardline <> pformat (show prog))
-        Right doc -> doc
+          Left $
+            nest
+              2
+              ( "Error while pretty-printing program "
+                  <> pformat (progName prog)
+                  <> hardline
+                  <> pformat err
+              )
+              <> hardline
+              <> nest 2 ("Raw program: " <> hardline <> pformat (show prog))
+        Right doc -> Right doc
 
 stmtToDotNode ::
-  (ConcreteVarId varId, OpPPrint op) =>
+  ( ConcreteVarId varId,
+    OpPPrint op,
+    OpTyping op ConcreteContext
+  ) =>
+  ProgTypeTable (OpTypeType op) ->
   T.Text ->
   Int ->
   Stmt op varId ->
@@ -419,16 +434,16 @@ stmtToDotNode ::
     (VarIdToLabel varId)
     (Either (ProgPPrintError varId op))
     (DotNode T.Text, [DotEdge T.Text])
-stmtToDotNode progName index stmt@(Stmt op argIds resIds) = do
+stmtToDotNode prog progName index stmt@(Stmt op argIds resIds) = do
   map <- get
   let nodeId = progName <> "_stmt" <> showText index
   (argFields, edges) <-
-    case argumentsToFieldEdges nodeId op argIds map of
+    case argumentsToFieldEdges prog nodeId op argIds map of
       Left err -> throwError $ StmtPPrintError stmt index err
       Right argFieldEdges -> pure argFieldEdges
   let opPretty = TL.fromStrict $ renderDoc 80 $ pformatOp op
   (newMap, resFields) <-
-    case resultsToFieldEdges nodeId op resIds map of
+    case resultsToFieldEdges prog nodeId op resIds map of
       Left err -> throwError $ StmtPPrintError stmt index err
       Right resFields -> pure resFields
   put newMap
@@ -448,10 +463,15 @@ stmtToDotNode progName index stmt@(Stmt op argIds resIds) = do
     )
 
 progToDotSubGraph ::
-  (ConcreteVarId varId, OpPPrint op, PPrint ty) =>
+  ( ConcreteVarId varId,
+    OpPPrint op,
+    PPrint ty,
+    OpTyping op ConcreteContext
+  ) =>
+  ProgTypeTable (OpTypeType op) ->
   Prog op varId ty ->
   Either (ProgPPrintError varId op) (DotSubGraph T.Text)
-progToDotSubGraph (Prog name argList stmtList resList) = do
+progToDotSubGraph table (Prog name argList stmtList resList) = do
   let buildArgField arg =
         let argName = TL.fromStrict $ progArgName arg
             argType = TL.fromStrict $ renderDoc 80 (pformat $ progArgType arg)
@@ -497,7 +517,8 @@ progToDotSubGraph (Prog name argList stmtList resList) = do
             )
             argList
   flip evalStateT initMap $ do
-    stmtsPretty <- traverse (uncurry $ stmtToDotNode name) (zip [0 ..] stmtList)
+    stmtsPretty <-
+      traverse (uncurry $ stmtToDotNode table name) (zip [0 ..] stmtList)
     let nodes = fst <$> stmtsPretty
     let edges = concatMap snd stmtsPretty
     allMap <- get
@@ -535,59 +556,42 @@ instance
     PPrint ty,
     Show op,
     Show ty,
-    HasAnyPathSubProgs op sub,
-    ProgToDot sub
+    OpTyping op ConcreteContext,
+    OpTypeType op ~ ty
   ) =>
   ProgToDot (Prog op varId ty)
   where
-  topologicalProgToDot prog map
-    | OM.member (progName prog) map = map
-    | otherwise =
-        allSub map OM.>| (progName prog, progSubGraph)
-    where
-      allSubProgramTopologicalSorted ::
-        OM.OMap T.Text (DotSubGraph T.Text) ->
-        Either (ProgPPrintError varId op) (OM.OMap T.Text (DotSubGraph T.Text))
-      allSubProgramTopologicalSorted map = mapLeft ExtractSubProgError $ do
-        let progs = concatMap (getAnyPathSubProgs . stmtOp) (progStmtList prog)
-        return $ foldl (flip topologicalProgToDot) map progs
-      allSub map = case allSubProgramTopologicalSorted map of
-        Left _ -> OM.empty
-        Right r -> r
-      progSubGraph =
-        case allSubProgramTopologicalSorted map >> progToDotSubGraph prog of
-          Left err ->
-            let errTxt =
-                  renderDoc 80 $
-                    nest
-                      2
-                      ( "Error while pretty-printing program "
-                          <> pformat (progName prog)
-                          <> hardline
-                          <> pformat err
-                      )
+  toDotProg table prog =
+    case progToDotSubGraph table prog of
+      Left err ->
+        let errTxt =
+              renderDoc 80 $
+                nest
+                  2
+                  ( "Error while pretty-printing program "
+                      <> pformat (progName prog)
                       <> hardline
-                      <> nest
-                        2
-                        ("Raw program: " <> hardline <> pformat (show prog))
-             in DotSG
-                  { isCluster = True,
-                    subGraphID = Just $ Str $ TL.fromStrict $ progName prog,
-                    subGraphStmts =
-                      DotStmts
-                        { attrStmts = [],
-                          subGraphs = [],
-                          nodeStmts = [DotNode errTxt []],
-                          edgeStmts = []
-                        }
-                  }
-          Right graph -> graph
+                      <> pformat err
+                  )
+                  <> hardline
+                  <> nest
+                    2
+                    ("Raw program: " <> hardline <> pformat (show prog))
+         in DotSG
+              { isCluster = True,
+                subGraphID = Just $ Str $ TL.fromStrict $ progName prog,
+                subGraphStmts =
+                  DotStmts
+                    { attrStmts = [],
+                      subGraphs = [],
+                      nodeStmts = [DotNode errTxt []],
+                      edgeStmts = []
+                    }
+              }
+      Right graph -> graph
 
-instance (ProgToDot (Prog op varId ty)) => PrintDot (Prog op varId ty) where
-  unqtDot = progToDot
-
-instance (ProgPPrint (Prog op varId ty)) => PPrint (Prog op varId ty) where
-  pformat = pformatProg
+-- instance (ProgPPrint (Prog op varId ty)) => PPrint (Prog op varId ty) where
+--   pformat = pformatProg
 
 type Env varId val = HM.HashMap varId val
 
@@ -616,11 +620,13 @@ instance
   {-# OVERLAPPABLE #-}
   ( OpSemantics semObj op val ctx,
     ConcreteVarId varId,
-    Mergeable val
+    Mergeable val,
+    Mergeable ty,
+    ty ~ OpTypeType op
   ) =>
   ProgSemantics semObj (Prog op varId ty) val ctx
   where
-  runProg sem (Prog _ arg stmts ret) inputs = tryMerge $ do
+  runProg sem table tyTable (Prog _ arg stmts ret) inputs = tryMerge $ do
     when (length inputs /= length arg) . throwError $
       "Expected "
         <> showText (length arg)
@@ -630,7 +636,7 @@ instance
     let initialEnv = HM.fromList $ zip (progArgId <$> arg) inputs
     let runStmt (Stmt op argIds resIds) = do
           args <- traverse lookupVal argIds
-          res <- lift $ applyOp sem op args
+          res <- lift $ applyOp sem table tyTable op args
           when (length res /= length resIds) . throwError $
             "Incorrect number of results."
           traverse_ (uncurry addVal) $ zip resIds res
@@ -642,15 +648,17 @@ instance
   ( ProgConstraints constObj (Prog op varId ty) ctx,
     OpSemantics semObj op val ctx,
     ConcreteVarId varId,
-    Mergeable val
+    Mergeable val,
+    Mergeable ty,
+    ty ~ OpTypeType op
   ) =>
   ProgSemantics (WithConstraints semObj constObj) (Prog op varId ty) val ctx
   where
-  runProg (WithConstraints semObj constObj) prog inputs = do
-    constrainProg constObj prog
-    runProg semObj prog inputs
+  runProg (WithConstraints semObj constObj) table tyTable prog inputs = do
+    constrainProg constObj tyTable prog
+    runProg semObj table tyTable prog inputs
 
-instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
+instance (Mergeable ty) => ProgTyping (Prog op varId ty) where
   typeProg prog =
     mrgReturn $
       TypeSignature
@@ -660,15 +668,17 @@ instance (Mergeable ty) => ProgTyping (Prog op varId ty) ty where
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName
 
-instance StmtUtil (Stmt op varId) varId where
-  type StmtOpType (Stmt op varId) = op
+instance StmtUtilImpl (Stmt op varId) op varId where
   getStmtArgIds = stmtArgIds
   getStmtResIds = stmtResIds
   getStmtOp = stmtOp
   getStmtDisabled _ = toSym False
 
-instance ProgUtil (Prog op varId ty) (Stmt op varId) varId where
-  type ProgTypeType (Prog op varId ty) = ty
+instance StmtUtil (Stmt op varId) where
+  type StmtVarIdType (Stmt op varId) = varId
+  type StmtOpType (Stmt op varId) = op
+
+instance ProgUtilImpl (Prog op varId ty) op (Stmt op varId) varId where
   getProgArgIds = map progArgId . progArgList
   getProgResIds = map progResId . progResList
   getProgNumStmts = length . progStmtList
@@ -676,10 +686,16 @@ instance ProgUtil (Prog op varId ty) (Stmt op varId) varId where
     | idx >= getProgNumStmts prog = throwError "Statement index out of bounds."
     | otherwise = return $ progStmtList prog !! idx
 
+instance ProgUtil (Prog op varId ty) where
+  type ProgTypeType (Prog op varId ty) = ty
+  type ProgStmtType (Prog op varId ty) = Stmt op varId
+  type ProgVarIdType (Prog op varId ty) = varId
+  type ProgOpType (Prog op varId ty) = op
+
 instance
   (MonadContext ctx, OpCost opCostObj op cost ctx, Num cost) =>
   ProgCost (PerStmtCostObj opCostObj) (Prog op varId ty) cost ctx
   where
-  progCost (PerStmtCostObj obj) (Prog _ _ stmts _) = do
-    stmtCosts <- traverse (opCost obj . stmtOp) stmts
+  progCost (PerStmtCostObj obj) table (Prog _ _ stmts _) = do
+    stmtCosts <- traverse (opCost obj table . stmtOp) stmts
     return $ sum stmtCosts

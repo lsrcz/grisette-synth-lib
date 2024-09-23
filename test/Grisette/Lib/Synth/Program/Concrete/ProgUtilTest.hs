@@ -11,8 +11,8 @@ import Grisette.Lib.Synth.Program.Concrete
     Stmt (Stmt),
   )
 import Grisette.Lib.Synth.Program.ProgUtil
-  ( ProgUtil (getProgArgIds, getProgNumStmts, getProgResIds, getProgStmtAtIdx),
-    StmtUtil (getStmtArgIds, getStmtDisabled, getStmtOp, getStmtResIds),
+  ( ProgUtilImpl (getProgArgIds, getProgNumStmts, getProgResIds, getProgStmtAtIdx),
+    StmtUtilImpl (getStmtArgIds, getStmtDisabled, getStmtOp, getStmtResIds),
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)

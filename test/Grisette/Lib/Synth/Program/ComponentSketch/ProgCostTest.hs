@@ -28,6 +28,6 @@ progCostTest = testCase "ProgCost" $ do
           ]
           []
   let cost =
-        progCost (PerStmtCostObj TestCost) prog ::
+        progCost (PerStmtCostObj TestCost) mempty prog ::
           SymbolicContext SymInteger
   cost .@?= return (symIte "x" 0 10 + symIte "y" 0 20)

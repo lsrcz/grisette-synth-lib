@@ -1,9 +1,84 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (..)) where
+module Grisette.Lib.Synth.Program.ProgSemantics
+  ( ProgSemantics (..),
+    EvaledSymbolTable (..),
+    evalSymbolTable,
+    runEvaledSymbol,
+    runSymbol,
+  )
+where
 
+import Data.Bifunctor (Bifunctor (second))
+import qualified Data.Text as T
+import Grisette (Mergeable)
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Program.ProgTyping
+  ( ProgTypeTable,
+    ProgTyping,
+    typeSymbolTable,
+  )
+import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil (ProgTypeType))
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 
-class (MonadContext ctx) => ProgSemantics semObj prog val ctx where
-  runProg :: semObj -> prog -> [val] -> ctx [val]
+class
+  (MonadContext ctx, ProgTyping prog) =>
+  ProgSemantics semObj prog val ctx
+  where
+  runProg ::
+    semObj ->
+    EvaledSymbolTable val ctx ->
+    ProgTypeTable (ProgTypeType prog) ->
+    prog ->
+    [val] ->
+    ctx [val]
+
+newtype EvaledSymbolTable val ctx
+  = EvaledSymbolTable [(T.Text, [val] -> ctx [val])]
+  deriving newtype (Semigroup, Monoid)
+
+evalSymbolTable ::
+  ( ProgSemantics semObj prog val ctx,
+    ProgUtil prog,
+    ProgTyping prog
+  ) =>
+  semObj ->
+  SymbolTable prog ->
+  EvaledSymbolTable val ctx
+evalSymbolTable semObj t@(SymbolTable table) =
+  let res =
+        EvaledSymbolTable $
+          fmap
+            (second $ runProg semObj res (typeSymbolTable t))
+            table
+   in res
+
+runEvaledSymbol ::
+  (MonadContext ctx, Mergeable val) =>
+  EvaledSymbolTable val ctx ->
+  T.Text ->
+  [val] ->
+  ctx [val]
+runEvaledSymbol (EvaledSymbolTable table) symbol inputs = go table
+  where
+    go [] = mrgThrowError $ "Symbol " <> symbol <> "not found"
+    go ((sym, f) : rest) = if sym == symbol then f inputs else go rest
+
+runSymbol ::
+  ( MonadContext ctx,
+    Mergeable val,
+    ProgSemantics sem prog val ctx,
+    ProgUtil prog,
+    ProgTyping prog
+  ) =>
+  sem ->
+  SymbolTable prog ->
+  T.Text ->
+  [val] ->
+  ctx [val]
+runSymbol sem table = runEvaledSymbol (evalSymbolTable sem table)

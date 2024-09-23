@@ -42,7 +42,7 @@ genIntermediateTest =
       testCase "genOpIntermediates" $ do
         let actual =
               flip runFreshT "x" $
-                typeOp DivMod
+                typeOp mempty DivMod
                   >>= genOpIntermediates
                     (Proxy :: Proxy TestSemanticsType)
                     TestSemanticsObj ::

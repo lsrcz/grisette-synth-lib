@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -8,6 +9,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandleTest
 where
 
 import qualified Control.Exception as C
+import qualified Data.Text as T
 import Data.Typeable (Proxy (Proxy))
 import GHC.Stack (HasCallStack)
 import Grisette
@@ -22,7 +24,7 @@ import Grisette.Lib.Synth.Context (ConcreteContext, SymbolicContext)
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( PerStmtCostObj (PerStmtCostObj),
   )
-import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
+import Grisette.Lib.Synth.Program.ProgCost (ProgCost, symbolCost)
 import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( cancel,
     enqueueTask,
@@ -50,7 +52,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( ConProg,
     SymProg,
     task,
-    times4Sketch,
+    times4SketchTable,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem (times4Gen, times4Spec)
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
@@ -71,14 +73,15 @@ shouldHaveCost ::
       ConcreteContext
   ) =>
   Either C.SomeException ([SomeExample symProg conProg], SynthesisResult conProg) ->
+  T.Text ->
   SymInteger ->
   Assertion
-shouldHaveCost (Right (_, SynthesisSuccess prog)) cost = do
+shouldHaveCost (Right (_, SynthesisSuccess result)) symbol cost = do
   let Right finalCost =
-        progCost (PerStmtCostObj TestSemanticsCost) prog ::
+        symbolCost (PerStmtCostObj TestSemanticsCost) result symbol ::
           ConcreteContext SymInteger
   finalCost @?= cost
-shouldHaveCost r _ = error $ "Unexpected result " <> show (snd <$> r)
+shouldHaveCost r _ _ = error $ "Unexpected result " <> show (snd <$> r)
 
 shouldUnsat ::
   (HasCallStack, Show conProg) =>
@@ -106,20 +109,23 @@ refinableTaskHandleTest =
         handle :: Handle <-
           enqueueTask pool z3 0 $
             return $
-              task times4Spec times4Gen [] times4Sketch (con True)
+              task times4Spec times4Gen [] times4SketchTable "test" (con True)
         r <- waitCatch handle
         case r of
-          Right (_, SynthesisSuccess prog) -> do
+          Right (_, SynthesisSuccess result) -> do
             let Right cost =
-                  progCost (PerStmtCostObj TestSemanticsCost) prog ::
+                  symbolCost (PerStmtCostObj TestSemanticsCost) result "test" ::
                     ConcreteContext SymInteger
             enqueueRefineCond 0 handle $ do
               let newCost =
-                    progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
+                    symbolCost
+                      (PerStmtCostObj TestSemanticsCost)
+                      times4SketchTable
+                      "test" ::
                       SymbolicContext SymInteger
               return $ newCost .== return (symIte (cost .== 2) 3 2)
             r <- waitCatch handle
-            shouldHaveCost r $ symIte (cost .== 2) 3 2
+            shouldHaveCost r "test" $ symIte (cost .== 2) 3 2
             checkRefinableSolverAlive handle >>= (@?= True)
           _ -> fail "Unexpected result"
         cancel handle,
@@ -128,26 +134,26 @@ refinableTaskHandleTest =
         handle :: Handle <-
           enqueueTask pool z3 0 $
             return $
-              task times4Spec times4Gen [] times4Sketch (con True)
+              task times4Spec times4Gen [] times4SketchTable "test" (con True)
         let newCost =
-              progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
+              symbolCost (PerStmtCostObj TestSemanticsCost) times4SketchTable "test" ::
                 SymbolicContext SymInteger
         enqueueRefineCond 0 handle $ return $ newCost .== return 2
         enqueueRefineCond 0 handle $ return $ newCost .== return 3
         enqueueRefineCond 0 handle $ return $ newCost .== return 2
 
         r <- waitCatch handle
-        shouldHaveCost r 2
+        shouldHaveCost r "test" 2
         Just r1 <- pollAtIndex handle 1
         Just r2 <- pollAtIndex handle 2
         Just r3 <- pollAtIndex handle 3
-        shouldHaveCost r1 2
+        shouldHaveCost r1 "test" 2
         shouldUnsat r2
         shouldSolverDead r3
         r1 <- waitCatchAtIndex handle 1
         r2 <- waitCatchAtIndex handle 2
         r3 <- waitCatchAtIndex handle 3
-        shouldHaveCost r1 2
+        shouldHaveCost r1 "test" 2
         shouldUnsat r2
         shouldSolverDead r3
         checkRefinableSolverAlive handle >>= (@?= False)

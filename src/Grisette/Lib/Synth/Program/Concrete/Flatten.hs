@@ -1,12 +1,15 @@
-{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.Concrete.Flatten
   ( OpFlatten (..),
-    flattenProg,
+    flattenSymbolTable,
   )
 where
 
@@ -23,163 +26,477 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Program.Concrete.Program
-  ( Prog (Prog, progArgList, progResList, progStmtList),
+  ( Prog (Prog),
     ProgArg (ProgArg, progArgId),
     ProgRes (ProgRes, progResId),
     Stmt (Stmt),
   )
-import Grisette.Lib.Synth.Program.SubProg (HasSubProgs (getSubProgs))
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
-class (ConcreteVarId varId) => OpFlatten op varId ty | op -> ty where
-  opForwardedSubProg :: op -> ConcreteContext (Maybe (Prog op varId ty))
-  default opForwardedSubProg ::
-    (HasSubProgs op (Prog op varId ty) ConcreteContext) =>
-    op ->
-    ConcreteContext (Maybe (Prog op varId ty))
-  opForwardedSubProg op = do
-    subProgs <- getSubProgs op
-    case subProgs of
-      [] -> return Nothing
-      [prog] -> return $ Just prog
-      _ ->
-        throwError $
-          "opForwardedSubProg: multiple sub-programs, we don't know how to "
-            <> "forward as a single concrete program. Please manually "
-            <> "implement the opForwardedSubProg function."
+newtype FlattenedProgramMap op varId newVarId ty
+  = FlattenedProgramMap
+      [ ( T.Text,
+          [newVarId] ->
+          StateT
+            (FlattenState varId newVarId)
+            ConcreteContext
+            ([newVarId], [Stmt op newVarId]),
+          [ProgArg newVarId ty],
+          [newVarId] -> [ProgRes newVarId ty]
+        )
+      ]
+
+getFlattenedProgramInner ::
+  (ConcreteVarId varId, ConcreteVarId newVarId) =>
+  FlattenedProgramMap op varId newVarId ty ->
+  T.Text ->
+  [newVarId] ->
+  StateT
+    (FlattenState varId newVarId)
+    ConcreteContext
+    ([newVarId], [Stmt op newVarId])
+getFlattenedProgramInner (FlattenedProgramMap table) symbol args = do
+  r <- go table
+  r args
+  where
+    go [] = throwError $ "getFlattenedProgram: " <> symbol <> " not found"
+    go ((sym, ext, _, _) : xs) = if sym == symbol then return ext else go xs
+
+getFlattenedProgram ::
+  (ConcreteVarId varId, ConcreteVarId newVarId) =>
+  FlattenedProgramMap op varId newVarId ty ->
+  T.Text ->
+  ConcreteContext (Prog op newVarId ty)
+getFlattenedProgram t@(FlattenedProgramMap table) symbol = do
+  progArgs <- args table
+  let initialState =
+        FlattenState
+          { nextId = fromIntegral $ length progArgs,
+            localIdMapping = HM.empty
+          }
+  (newRess, stmts) <-
+    evalStateT (getFlattenedProgramInner t symbol $ progArgId <$> progArgs) initialState
+  progRess <- ress table
+  return $ Prog symbol progArgs stmts (progRess newRess)
+  where
+    args [] = throwError $ "getFlattenedProgram: " <> symbol <> " not found"
+    args ((sym, _, tableArg, _) : xs) =
+      if sym == symbol then return tableArg else args xs
+    ress [] = throwError $ "getFlattenedProgram: " <> symbol <> " not found"
+    ress ((sym, _, _, tableRes) : xs) =
+      if sym == symbol then return tableRes else ress xs
 
 data FlattenState varId newVarId = FlattenState
   { nextId :: newVarId,
-    idMapping :: HM.HashMap varId newVarId
+    localIdMapping :: HM.HashMap varId newVarId
   }
   deriving (Show)
+
+class OpFlatten op flatOp where
+  opForwardedSubProg :: op -> ConcreteContext (Either T.Text flatOp)
+
+getExistingId ::
+  (ConcreteVarId varId, ConcreteVarId newVarId) =>
+  varId ->
+  StateT
+    (FlattenState varId newVarId)
+    ConcreteContext
+    newVarId
+getExistingId varId = do
+  state <- get
+  case HM.lookup varId (localIdMapping state) of
+    Just newId -> return newId
+    Nothing ->
+      throwError $
+        "getExistingId: id not found in mapping, the program isn't "
+          <> "well-formed: "
+          <> T.pack (show varId)
 
 remapNewId ::
   (ConcreteVarId varId, ConcreteVarId newVarId) =>
   varId ->
-  StateT (FlattenState varId newVarId) ConcreteContext newVarId
+  StateT
+    (FlattenState varId newVarId)
+    ConcreteContext
+    newVarId
 remapNewId origId = do
   state <- get
   let newId = nextId state
   put $
     state
       { nextId = succ newId,
-        idMapping = HM.insert origId newId (idMapping state)
+        localIdMapping = HM.insert origId newId (localIdMapping state)
       }
   return newId
 
-remapExistingId ::
-  (ConcreteVarId varId, ConcreteVarId newVarId) =>
-  varId ->
-  StateT (FlattenState varId newVarId) ConcreteContext newVarId
-remapExistingId varId = do
+remapProg ::
+  (ConcreteVarId varId, ConcreteVarId newVarId, OpFlatten op flatOp) =>
+  FlattenedProgramMap flatOp varId newVarId ty ->
+  Prog op varId ty ->
+  [newVarId] ->
+  StateT
+    (FlattenState varId newVarId)
+    ConcreteContext
+    ([newVarId], [Stmt flatOp newVarId])
+remapProg flattened (Prog _ args stmts ress) newArgs = do
   state <- get
-  case HM.lookup varId (idMapping state) of
-    Just newId -> return newId
-    Nothing ->
-      throwError $
-        "remapExistingId: id not found in mapping, the program isn't "
-          <> "well-formed: "
-          <> T.pack (show varId)
+  put $ state {localIdMapping = HM.fromList $ zip (progArgId <$> args) newArgs}
+  newStmts <- concat <$> traverse (remapUpToOneSubProgStmt flattened) stmts
+  newRess <- traverse (getExistingId . progResId) ress
+  modify $ \newState -> newState {localIdMapping = localIdMapping state}
+  return (newRess, newStmts)
 
-remapProgArgs ::
-  (ConcreteVarId varId, ConcreteVarId newVarId) =>
-  [ProgArg varId ty] ->
-  StateT (FlattenState varId newVarId) ConcreteContext [ProgArg newVarId ty]
-remapProgArgs = do
-  traverse
-    ( \(ProgArg name argId ty) -> do
-        newId <- remapExistingId argId
-        return $ ProgArg name newId ty
-    )
+flattenSymbolTable ::
+  (ConcreteVarId varId, ConcreteVarId newVarId, OpFlatten op flatOp) =>
+  SymbolTable (Prog op varId ty) ->
+  ConcreteContext (SymbolTable (Prog flatOp newVarId ty))
+flattenSymbolTable t =
+  let ft = flattenSymbolTable' t
+   in do
+        let keys = (\(k, _, _, _) -> k) <$> (\(FlattenedProgramMap x) -> x) ft
+        progs <- traverse (getFlattenedProgram ft) keys
+        return $ SymbolTable $ zip keys progs
 
-flattenStmt ::
-  (OpFlatten op varId ty, ConcreteVarId newVarId) =>
+flattenSymbolTable' ::
+  (ConcreteVarId varId, ConcreteVarId newVarId, OpFlatten op flatOp) =>
+  SymbolTable (Prog op varId ty) ->
+  FlattenedProgramMap flatOp varId newVarId ty
+flattenSymbolTable' (SymbolTable table) =
+  let res =
+        FlattenedProgramMap $
+          fmap
+            ( \(symbol, prog@(Prog _ args _ ress)) ->
+                ( symbol,
+                  \newArgs -> do
+                    when (length args /= length newArgs) $
+                      throwError $
+                        "flattenSymbolTable: argument count mismatch. "
+                          <> "Supplied "
+                          <> T.pack (show $ length newArgs)
+                          <> " arguments, but the program has "
+                          <> T.pack (show $ length args)
+                          <> " arguments."
+                    remapProg res prog newArgs,
+                  zipWith
+                    (\(ProgArg name _ ty) i -> ProgArg name i ty)
+                    args
+                    [0 ..],
+                  zipWith
+                    (\(ProgRes _ ty) i -> ProgRes i ty)
+                    ress
+                )
+            )
+            table
+   in res
+
+remapUpToOneSubProgStmt ::
+  (ConcreteVarId varId, ConcreteVarId newVarId, OpFlatten op flatOp) =>
+  FlattenedProgramMap flatOp varId newVarId ty ->
   Stmt op varId ->
-  StateT (FlattenState varId newVarId) ConcreteContext [Stmt op newVarId]
-flattenStmt (Stmt op argIds resIds) = do
-  maybeProg :: Maybe (Prog op varId ty) <- lift $ opForwardedSubProg op
-  case maybeProg of
-    Nothing -> do
-      newArgIds <- traverse remapExistingId argIds
-      newResIds <- traverse remapNewId resIds
-      return [Stmt op newArgIds newResIds]
-    Just prog -> do
-      state <- get
-      subProgArgIds <- traverse remapExistingId argIds
-      when (length argIds /= length subProgArgIds) $
-        throwError $
-          "flattenStmt: forwarded sub-program argument count mismatch. "
-            <> "Supplied "
-            <> T.pack (show argIds)
-            <> " arguments, but the sub-program has "
-            <> T.pack (show subProgArgIds)
-            <> " arguments."
-      let newState =
-            state
-              { idMapping =
-                  HM.fromList $
-                    zip (progArgId <$> progArgList prog) subProgArgIds
-              }
-      put newState
-      flattenedSubProg <- flattenSubProg prog
-      let subProgRemappedResIds = progResId <$> progResList flattenedSubProg
+  StateT (FlattenState varId newVarId) ConcreteContext [Stmt flatOp newVarId]
+remapUpToOneSubProgStmt flattened (Stmt op argIds resIds) = do
+  r <- lift $ opForwardedSubProg op
+  case r of
+    Left subProgSymbol -> do
+      newArgIds <- traverse getExistingId argIds
+      (newResIds, newStmts) <-
+        getFlattenedProgramInner flattened subProgSymbol newArgIds
       when
-        (length resIds /= length subProgRemappedResIds)
+        (length resIds /= length newResIds)
         $ throwError
-        $ "flattenStmt: forwarded sub-program result count mismatch. "
+        $ "remapUpToOneSubProgStmt: forwarded sub-program result count mismatch. "
           <> "Supplied "
           <> T.pack (show resIds)
           <> " results, but the sub-program has "
-          <> T.pack (show subProgRemappedResIds)
+          <> T.pack (show newResIds)
           <> " results."
-      when (any (\i -> HM.member i (idMapping state)) resIds) $
-        throwError $
-          "flattenStmt: result id already exists in the mapping. The original "
-            <> "program isn't well-formed"
       modify $ \st ->
         st
-          { idMapping =
-              HM.union
-                (idMapping state)
-                ( HM.fromList $
-                    zip resIds (progResId <$> progResList flattenedSubProg)
-                )
+          { localIdMapping =
+              HM.union (localIdMapping st) $
+                HM.fromList $
+                  zip resIds newResIds
           }
-      return $ progStmtList flattenedSubProg
+      return newStmts
+    Right flatOp -> do
+      newArgIds <- traverse getExistingId argIds
+      newResIds <- traverse remapNewId resIds
+      return [Stmt flatOp newArgIds newResIds]
 
-remapProgRess ::
+{-
+
+data X
+  = X
+  | XF T.Text
+  deriving (Show)
+
+instance PPrint X where
+  pformat X = "X"
+  pformat (XF v) = pformat v
+
+instance PrefixByType XType where
+  prefixByType _ = "r"
+
+instance OpPPrint X
+
+instance OpFlatten X where
+  opForwardedSubProg X = return Nothing
+  opForwardedSubProg (XF v) = return $ Just v
+
+data XType = XType
+  deriving (Show, Generic)
+  deriving (Mergeable) via (Default XType)
+
+instance PPrint XType where
+  pformat XType = "XType"
+
+instance (MonadContext ctx) => OpTyping X ctx where
+  type OpTypeType X = XType
+  typeOp _ X = return $ TypeSignature [XType, XType] [XType, XType]
+  typeOp table (XF symbol) = liftEither $ lookupType table symbol
+
+x :: SymbolTable (Prog X Int XType)
+x =
+  SymbolTable
+    [ ( "a",
+        Prog
+          "a"
+          [ProgArg "x" 0 XType, ProgArg "y" 1 XType]
+          [ Stmt X [0, 1] [2, 3],
+            Stmt X [1, 2] [4, 5]
+          ]
+          [ProgRes 4 XType, ProgRes 5 XType]
+      ),
+      ( "b",
+        Prog
+          "b"
+          [ProgArg "x" 0 XType, ProgArg "y" 1 XType]
+          [ Stmt (XF "a") [0, 1] [2, 3],
+            Stmt X [1, 2] [4, 5]
+          ]
+          [ProgRes 4 XType, ProgRes 5 XType]
+      ),
+      ( "c",
+        Prog
+          "c"
+          [ProgArg "x" 0 XType, ProgArg "y" 1 XType]
+          [ Stmt (XF "b") [0, 1] [2, 3],
+            Stmt (XF "a") [1, 2] [4, 5]
+          ]
+          [ProgRes 4 XType, ProgRes 5 XType]
+      )
+    ]
+
+xf :: ConcreteContext (SymbolTable (Prog X Int XType))
+xf = flattenSymbolTable x
+
+-- xa :: ConcreteContext (Prog X Int XType)
+-- xa = getFlattenedProgram xf "a"
+--
+-- xb :: ConcreteContext (Prog X Int XType)
+-- xb = getFlattenedProgram xf "b"
+--
+-- xc :: ConcreteContext (Prog X Int XType)
+-- xc = getFlattenedProgram xf "c"
+
+newtype FlattenedProgramMap op varId newVarId ty
+  = FlattenedProgramMap
+      [ ( T.Text,
+          [newVarId] ->
+          StateT
+            (FlattenState varId newVarId)
+            ConcreteContext
+            ([newVarId], [Stmt op newVarId]),
+          [ProgArg newVarId ty],
+          [newVarId] -> [ProgRes newVarId ty]
+        )
+      ]
+
+getFlattenedProgramInner ::
   (ConcreteVarId varId, ConcreteVarId newVarId) =>
-  [ProgRes varId ty] ->
-  StateT (FlattenState varId newVarId) ConcreteContext [ProgRes newVarId ty]
-remapProgRess = do
-  traverse
-    ( \(ProgRes argId ty) -> do
-        newId <- remapExistingId argId
-        return $ ProgRes newId ty
-    )
+  FlattenedProgramMap op varId newVarId ty ->
+  T.Text ->
+  [newVarId] ->
+  StateT
+    (FlattenState varId newVarId)
+    ConcreteContext
+    ([newVarId], [Stmt op newVarId])
+getFlattenedProgramInner (FlattenedProgramMap table) symbol args = do
+  r <- go table
+  r args
+  where
+    go [] = throwError $ "getFlattenedProgram: " <> symbol <> " not found"
+    go ((sym, ext, _, _) : xs) = if sym == symbol then return ext else go xs
 
-flattenSubProg ::
-  (OpFlatten op varId ty, ConcreteVarId newVarId) =>
-  Prog op varId ty ->
-  StateT (FlattenState varId newVarId) ConcreteContext (Prog op newVarId ty)
-flattenSubProg (Prog name args stmts ress) = do
-  newArgs <- remapProgArgs args
-  newStmts <- concat <$> traverse flattenStmt stmts
-  newRess <- remapProgRess ress
-  return $ Prog name newArgs newStmts newRess
-
-flattenProg ::
-  (OpFlatten op varId ty, ConcreteVarId newVarId) =>
-  Prog op varId ty ->
+getFlattenedProgram ::
+  (ConcreteVarId varId, ConcreteVarId newVarId) =>
+  FlattenedProgramMap op varId newVarId ty ->
+  T.Text ->
   ConcreteContext (Prog op newVarId ty)
-flattenProg prog = do
+getFlattenedProgram t@(FlattenedProgramMap table) symbol = do
+  progArgs <- args table
   let initialState =
         FlattenState
-          { nextId = fromIntegral $ length $ progArgList prog,
-            idMapping =
-              HM.fromList $
-                zip (progArgId <$> progArgList prog) $
-                  fromIntegral <$> [0 ..]
+          { nextId = fromIntegral $ length progArgs,
+            localIdMapping = HM.empty
           }
-  evalStateT (flattenSubProg prog) initialState
+  (newRess, stmts) <-
+    evalStateT (getFlattenedProgramInner t symbol $ progArgId <$> progArgs) initialState
+  progRess <- ress table
+  return $ Prog symbol progArgs stmts (progRess newRess)
+  where
+    args [] = throwError $ "getFlattenedProgram: " <> symbol <> " not found"
+    args ((sym, _, tableArg, _) : xs) =
+      if sym == symbol then return tableArg else args xs
+    ress [] = throwError $ "getFlattenedProgram: " <> symbol <> " not found"
+    ress ((sym, _, _, tableRes) : xs) =
+      if sym == symbol then return tableRes else ress xs
+
+data FlattenState varId newVarId = FlattenState
+  { nextId :: newVarId,
+    localIdMapping :: HM.HashMap varId newVarId
+  }
+  deriving (Show)
+
+class OpFlatten op where
+  opForwardedSubProg :: op -> ConcreteContext (Maybe T.Text)
+
+getExistingId ::
+  (ConcreteVarId varId, ConcreteVarId newVarId) =>
+  varId ->
+  StateT
+    (FlattenState varId newVarId)
+    ConcreteContext
+    newVarId
+getExistingId varId = do
+  state <- get
+  case HM.lookup varId (localIdMapping state) of
+    Just newId -> return newId
+    Nothing ->
+      throwError $
+        "getExistingId: id not found in mapping, the program isn't "
+          <> "well-formed: "
+          <> T.pack (show varId)
+
+remapNewId ::
+  (ConcreteVarId varId, ConcreteVarId newVarId) =>
+  varId ->
+  StateT
+    (FlattenState varId newVarId)
+    ConcreteContext
+    newVarId
+remapNewId origId = do
+  state <- get
+  let newId = nextId state
+  put $
+    state
+      { nextId = succ newId,
+        localIdMapping = HM.insert origId newId (localIdMapping state)
+      }
+  return newId
+
+remapSimpleStatement ::
+  (ConcreteVarId varId, ConcreteVarId newVarId) =>
+  Stmt op varId ->
+  StateT
+    (FlattenState varId newVarId)
+    ConcreteContext
+    [Stmt op newVarId]
+remapSimpleStatement (Stmt op argIds resIds) = do
+  newArgIds <- traverse getExistingId argIds
+  newResIds <- traverse remapNewId resIds
+  return [Stmt op newArgIds newResIds]
+
+remapProg ::
+  (ConcreteVarId varId, ConcreteVarId newVarId, OpFlatten op) =>
+  FlattenedProgramMap op varId newVarId ty ->
+  Prog op varId ty ->
+  [newVarId] ->
+  StateT
+    (FlattenState varId newVarId)
+    ConcreteContext
+    ([newVarId], [Stmt op newVarId])
+remapProg flattened (Prog _ args stmts ress) newArgs = do
+  state <- get
+  put $ state {localIdMapping = HM.fromList $ zip (progArgId <$> args) newArgs}
+  newStmts <- concat <$> traverse (remapUpToOneSubProgStmt flattened) stmts
+  newRess <- traverse (getExistingId . progResId) ress
+  modify $ \newState -> newState {localIdMapping = localIdMapping state}
+  return (newRess, newStmts)
+
+flattenSymbolTable ::
+  (ConcreteVarId varId, ConcreteVarId newVarId, OpFlatten op) =>
+  SymbolTable (Prog op varId ty) ->
+  ConcreteContext (SymbolTable (Prog op newVarId ty))
+flattenSymbolTable t =
+  let ft = flattenSymbolTable' t
+   in do
+        let keys = (\(k, _, _, _) -> k) <$> (\(FlattenedProgramMap x) -> x) ft
+        progs <- traverse (getFlattenedProgram ft) keys
+        return $ SymbolTable $ zip keys progs
+
+flattenSymbolTable' ::
+  (ConcreteVarId varId, ConcreteVarId newVarId, OpFlatten op) =>
+  SymbolTable (Prog op varId ty) ->
+  FlattenedProgramMap op varId newVarId ty
+flattenSymbolTable' (SymbolTable table) =
+  let res =
+        FlattenedProgramMap $
+          fmap
+            ( \(symbol, prog@(Prog _ args _ ress)) ->
+                ( symbol,
+                  \newArgs -> do
+                    when (length args /= length newArgs) $
+                      throwError $
+                        "flattenSymbolTable: argument count mismatch. "
+                          <> "Supplied "
+                          <> T.pack (show $ length newArgs)
+                          <> " arguments, but the program has "
+                          <> T.pack (show $ length args)
+                          <> " arguments."
+                    remapProg res prog newArgs,
+                  zipWith
+                    (\(ProgArg name _ ty) i -> ProgArg name i ty)
+                    args
+                    [0 ..],
+                  zipWith
+                    (\(ProgRes _ ty) i -> ProgRes i ty)
+                    ress
+                )
+            )
+            table
+   in res
+
+remapUpToOneSubProgStmt ::
+  (ConcreteVarId varId, ConcreteVarId newVarId, OpFlatten op) =>
+  FlattenedProgramMap op varId newVarId ty ->
+  Stmt op varId ->
+  StateT (FlattenState varId newVarId) ConcreteContext [Stmt op newVarId]
+remapUpToOneSubProgStmt flattened stmt@(Stmt op argIds resIds) = do
+  r <- lift $ opForwardedSubProg op
+  case r of
+    Just subProgSymbol -> do
+      newArgIds <- traverse getExistingId argIds
+      (newResIds, newStmts) <-
+        getFlattenedProgramInner flattened subProgSymbol newArgIds
+      when
+        (length resIds /= length newResIds)
+        $ throwError
+        $ "remapUpToOneSubProgStmt: forwarded sub-program result count mismatch. "
+          <> "Supplied "
+          <> T.pack (show resIds)
+          <> " results, but the sub-program has "
+          <> T.pack (show newResIds)
+          <> " results."
+      modify $ \st ->
+        st
+          { localIdMapping =
+              HM.union (localIdMapping st) $
+                HM.fromList $
+                  zip resIds newResIds
+          }
+      return newStmts
+    Nothing -> remapSimpleStatement stmt
+
+-}

@@ -19,6 +19,8 @@ import Grisette.Lib.Synth.Program.Concrete
     prettyProg,
     prettyStmt,
   )
+import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   ( TestPrettyExtOp (TestPrettyExtOp),
     TestPrettyOp (PrettyInvokeExtOp, PrettyInvokeOp, PrettyOp1, PrettyOp2, PrettyOp2NoDescNoPrefix),
@@ -135,7 +137,7 @@ prettyTest =
               }
             ]
         return $ testGroup groupName $ do
-          let doc = flip runStateT env $ prettyStmt index stmt
+          let doc = flip runStateT env $ prettyStmt mempty index stmt
           [ testCase "loose" $ do
               first (renderDoc 80) <$> doc @?= ((,newMap) <$> loose),
             testCase "compact" $
@@ -255,7 +257,7 @@ prettyTest =
               }
             ]
         return $ testGroup groupName $ do
-          let doc = prettyProg prog
+          let doc = prettyProg mempty prog
           [ testCase "loose" $ renderDoc 80 <$> doc @?= loose,
             testCase "compact" $ renderDoc 1 <$> doc @?= compact
             ],
@@ -264,35 +266,41 @@ prettyTest =
               Prog
                 "ext"
                 [ProgArg "x" 0 PrettyType1]
-                [Stmt TestPrettyExtOp [0] [1, 2]]
+                [Stmt TestPrettyExtOp [0 :: Int] [1, 2]]
                 [ProgRes 1 PrettyType1]
         let prog1 =
               Prog
                 "prog1"
                 [ProgArg "x" 0 PrettyType1]
-                [Stmt (PrettyInvokeExtOp progExt) [0] [1]]
+                [Stmt (PrettyInvokeExtOp "ext") [0] [1]]
                 [ProgRes 1 PrettyType1]
         let prog2 =
               Prog
                 "prog2"
                 [ProgArg "x" (0 :: Int) PrettyType1]
-                [ Stmt (PrettyInvokeExtOp progExt) [0] [1],
-                  Stmt (PrettyInvokeOp prog1) [1] [2]
+                [ Stmt (PrettyInvokeExtOp "ext") [0] [1],
+                  Stmt (PrettyInvokeOp "prog1") [1] [2]
                 ]
                 [ProgRes 2 PrettyType1]
-        let doc = pformat prog2
+        let table =
+              SymbolTable
+                [ ("ext", SumProgL progExt),
+                  ("prog1", SumProgR prog1),
+                  ("prog2", SumProgR prog2)
+                ]
+        let doc = pformat table
         [ testCase "loose" $ do
             let actual = renderDoc 80 doc
             let expected =
                   T.intercalate
                     "\n"
-                    [ "def ext(x: PrettyType1) -> PrettyType1:",
+                    [ "ext: def ext(x: PrettyType1) -> PrettyType1:",
                       "  (t1_1, t2_2) = ext(x)",
                       "  return t1_1",
-                      "def prog1(x: PrettyType1) -> PrettyType1:",
+                      "prog1: def prog1(x: PrettyType1) -> PrettyType1:",
                       "  t1_1 = invoke_ext(ext)(x)",
                       "  return t1_1",
-                      "def prog2(x: PrettyType1) -> PrettyType1:",
+                      "prog2: def prog2(x: PrettyType1) -> PrettyType1:",
                       "  t1_1 = invoke_ext(ext)(x)",
                       "  t1_2 = invoke(prog1)(t1_1)",
                       "  return t1_2"

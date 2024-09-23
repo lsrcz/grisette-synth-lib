@@ -14,4 +14,4 @@ instance
   (MonadContext ctx, Mergeable cost, Num cost) =>
   ProgCost NoCostObj prog cost ctx
   where
-  progCost _ _ = mrgReturn 0
+  progCost _ _ _ = mrgReturn 0

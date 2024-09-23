@@ -13,6 +13,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
@@ -50,7 +51,7 @@ where
 
 import Control.Arrow (Arrow (second))
 import Control.DeepSeq (NFData)
-import Control.Monad.Error.Class (MonadError (throwError))
+import Control.Monad.Error.Class (MonadError (throwError), liftEither)
 import Data.Bytes.Serial (Serial)
 import Data.Foldable (foldl')
 import Data.Maybe (catMaybes)
@@ -84,10 +85,9 @@ import Grisette
     (.>>=),
   )
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (typeOp))
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch.Program as Component
 import qualified Grisette.Lib.Synth.Program.Concrete.Program as Concrete
-import Grisette.Lib.Synth.Program.NullProg (NullProg)
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( OpSubProgConstraints (constrainOpSubProg),
     ProgConstraints (constrainProg),
@@ -97,24 +97,22 @@ import Grisette.Lib.Synth.Program.ProgConstraints
     setConstraintKind,
   )
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming)
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable, ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
-  ( ProgUtil
-      ( ProgTypeType,
-        getProgArgIds,
+  ( ProgUtil (ProgOpType, ProgTypeType, ProgVarIdType),
+    ProgUtilImpl
+      ( getProgArgIds,
         getProgNumStmts,
         getProgResIds,
         getProgStmtAtIdx
       ),
-    StmtUtil
-      ( StmtOpType,
-        getStmtArgIds,
+    StmtUtilImpl
+      ( getStmtArgIds,
         getStmtDisabled,
         getStmtOp,
         getStmtResIds
       ),
   )
-import Grisette.Lib.Synth.Program.SubProg (HasSubProgs)
 import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature, argTypes, resTypes),
@@ -244,18 +242,18 @@ data ProgDefUse varId res = ProgDefUse
 
 livelinessOpDefUsesByType ::
   ( Mergeable varId,
-    OpTyping op ty ctx,
-    HasSubProgs op subProg ctx,
-    LivelinessTypeResource livelinessObj res ty ctx
+    OpTyping op ctx,
+    LivelinessTypeResource livelinessObj res (OpTypeType op) ctx
   ) =>
   livelinessObj ->
+  ProgTypeTable (OpTypeType op) ->
   op ->
   [varId] ->
   [varId] ->
   SymBool ->
   ctx (StmtDefUse varId res)
-livelinessOpDefUsesByType livelinessObj op argIds resIds disabled = do
-  ty <- typeOp op
+livelinessOpDefUsesByType livelinessObj table op argIds resIds disabled = do
+  ty <- typeOp table op
   defs <- livelinessTypeDefs livelinessObj (resTypes ty) resIds disabled
   uses <- livelinessTypeUses livelinessObj (argTypes ty) argIds disabled
   mrgReturn $ StmtDefUse defs defs uses
@@ -275,6 +273,7 @@ class
   livelinessOpDefUses ::
     (Mergeable varId) =>
     livelinessObj ->
+    ProgTypeTable (OpTypeType op) ->
     op ->
     [varId] ->
     [varId] ->
@@ -282,11 +281,11 @@ class
     ctx (StmtDefUse varId res)
   default livelinessOpDefUses ::
     ( Mergeable varId,
-      OpTyping op ty ctx,
-      HasSubProgs op NullProg ctx,
-      LivelinessTypeResource livelinessObj res ty ctx
+      OpTyping op ctx,
+      LivelinessTypeResource livelinessObj res (OpTypeType op) ctx
     ) =>
     livelinessObj ->
+    ProgTypeTable (OpTypeType op) ->
     op ->
     [varId] ->
     [varId] ->
@@ -301,16 +300,18 @@ instance
   ) =>
   LivelinessOpResource livelinessObj (Union op) res ctx
   where
-  livelinessOpDefUses livelinessObj opUnion argIds resIds disabled =
+  livelinessOpDefUses livelinessObj table opUnion argIds resIds disabled =
     liftUnion opUnion
-      .>>= \op -> livelinessOpDefUses livelinessObj op argIds resIds disabled
+      .>>= \op ->
+        livelinessOpDefUses livelinessObj table op argIds resIds disabled
 
 livelinessProgArgDefs ::
-  forall livelinessObj prog stmt varId res ctx.
+  forall livelinessObj prog varId res ctx.
   ( Mergeable varId,
-    ProgUtil prog stmt varId,
+    varId ~ ProgVarIdType prog,
+    ProgUtil prog,
     LivelinessTypeResource livelinessObj res (ProgTypeType prog) ctx,
-    ProgTyping prog (ProgTypeType prog),
+    ProgTyping prog,
     MonadFresh ctx,
     ProgNaming prog
   ) =>
@@ -320,18 +321,18 @@ livelinessProgArgDefs ::
   ctx (UnionDef varId res)
 livelinessProgArgDefs livelinessObj prog disabled =
   progArgLocalIdent prog $ setConstraintKind "Liveliness" $ do
-    TypeSignature argTypes _ <- typeProg prog
+    TypeSignature argTypes _ <- liftEither $ typeProg prog
     livelinessTypeDefs
       livelinessObj
       (argTypes :: [ProgTypeType prog])
-      (getProgArgIds prog)
+      (getProgArgIds prog :: [varId])
       disabled
 
 livelinessSubProgArgUses ::
   forall livelinessObj prog useVarId res ctx.
   ( Mergeable useVarId,
     LivelinessTypeResource livelinessObj res (ProgTypeType prog) ctx,
-    ProgTyping prog (ProgTypeType prog),
+    ProgTyping prog,
     MonadFresh ctx,
     ProgNaming prog
   ) =>
@@ -342,7 +343,7 @@ livelinessSubProgArgUses ::
   ctx (UnionUse useVarId res)
 livelinessSubProgArgUses livelinessObj prog useVarIds disabled =
   progArgLocalIdent prog $ setConstraintKind "Liveliness" $ do
-    TypeSignature argTypes _ <- typeProg prog
+    TypeSignature argTypes _ <- liftEither $ typeProg prog
     livelinessTypeUses
       livelinessObj
       (argTypes :: [ProgTypeType prog])
@@ -350,10 +351,11 @@ livelinessSubProgArgUses livelinessObj prog useVarIds disabled =
       disabled
 
 livelinessProgResUses ::
-  forall livelinessObj prog stmt varId res ctx.
-  ( ProgUtil prog stmt varId,
+  forall livelinessObj prog varId res ctx.
+  ( ProgUtil prog,
+    varId ~ ProgVarIdType prog,
     LivelinessTypeResource livelinessObj res (ProgTypeType prog) ctx,
-    ProgTyping prog (ProgTypeType prog),
+    ProgTyping prog,
     MonadFresh ctx,
     ProgNaming prog,
     Mergeable varId
@@ -364,7 +366,7 @@ livelinessProgResUses ::
   ctx (UnionUse varId res)
 livelinessProgResUses livelinessObj prog disabled =
   progResLocalIdent prog $ setConstraintKind "Liveliness" $ do
-    TypeSignature _ resTypes <- typeProg prog
+    TypeSignature _ resTypes <- liftEither $ typeProg prog
     livelinessTypeUses
       livelinessObj
       (resTypes :: [ProgTypeType prog])
@@ -375,7 +377,7 @@ livelinessSubProgResDefs ::
   forall livelinessObj prog defVarId res ctx.
   ( Mergeable defVarId,
     LivelinessTypeResource livelinessObj res (ProgTypeType prog) ctx,
-    ProgTyping prog (ProgTypeType prog),
+    ProgTyping prog,
     MonadFresh ctx,
     ProgNaming prog
   ) =>
@@ -386,7 +388,7 @@ livelinessSubProgResDefs ::
   ctx (UnionDef defVarId res)
 livelinessSubProgResDefs livelinessObj prog defVarIds disabled =
   progResLocalIdent prog $ setConstraintKind "Liveliness" $ do
-    TypeSignature _ resTypes <- typeProg prog
+    TypeSignature _ resTypes <- liftEither $ typeProg prog
     livelinessTypeDefs
       livelinessObj
       (resTypes :: [ProgTypeType prog])
@@ -399,15 +401,18 @@ livelinessProgStmtDefUses ::
     MonadContext ctx,
     MonadFresh ctx,
     ProgNaming prog,
-    ProgUtil prog stmt varId,
-    LivelinessOpResource livelinessObj (StmtOpType stmt) res ctx
+    ProgUtil prog,
+    LivelinessOpResource livelinessObj (ProgOpType prog) res ctx,
+    varId ~ ProgVarIdType prog,
+    OpTypeType (ProgOpType prog) ~ ProgTypeType prog
   ) =>
   livelinessObj ->
+  ProgTypeTable (ProgTypeType prog) ->
   prog ->
   Int ->
   SymBool ->
   ctx (StmtDefUse varId res)
-livelinessProgStmtDefUses livelinessObj prog idx disabled =
+livelinessProgStmtDefUses livelinessObj table prog idx disabled =
   progStmtLocalIdent prog idx $ setConstraintKind "Liveliness" $ do
     stmt <- getProgStmtAtIdx prog idx
     let op = getStmtOp stmt
@@ -417,6 +422,7 @@ livelinessProgStmtDefUses livelinessObj prog idx disabled =
     StmtDefUse stmtDef stmtInvalidatingDef stmtUse <-
       livelinessOpDefUses
         livelinessObj
+        table
         op
         argIds
         resIds
@@ -426,23 +432,26 @@ livelinessProgStmtDefUses livelinessObj prog idx disabled =
 
 livelinessProgDefUses ::
   ( Mergeable varId,
-    ProgUtil prog stmt varId,
+    ProgUtil prog,
     LivelinessTypeResource livelinessObj res (ProgTypeType prog) ctx,
-    ProgTyping prog (ProgTypeType prog),
+    ProgTyping prog,
     MonadFresh ctx,
     MonadUnion ctx,
     ProgNaming prog,
-    LivelinessOpResource livelinessObj (StmtOpType stmt) res ctx
+    varId ~ ProgVarIdType prog,
+    LivelinessOpResource livelinessObj (ProgOpType prog) res ctx,
+    OpTypeType (ProgOpType prog) ~ ProgTypeType prog
   ) =>
   livelinessObj ->
+  ProgTypeTable (ProgTypeType prog) ->
   prog ->
   SymBool ->
   ctx (ProgDefUse varId res)
-livelinessProgDefUses livelinessObj prog disabled = do
+livelinessProgDefUses livelinessObj table prog disabled = do
   argDefs <- livelinessProgArgDefs livelinessObj prog disabled
   stmtDefUses <-
     mrgTraverse
-      (\i -> livelinessProgStmtDefUses livelinessObj prog i disabled)
+      (\i -> livelinessProgStmtDefUses livelinessObj table prog i disabled)
       [0 .. getProgNumStmts prog - 1]
   resUses <- livelinessProgResUses livelinessObj prog disabled
   mrgReturn $ ProgDefUse argDefs stmtDefUses resUses
@@ -450,23 +459,26 @@ livelinessProgDefUses livelinessObj prog disabled = do
 livelinessSubProgInvalidatingDefs ::
   ( Mergeable outerVarId,
     ProgNaming prog,
-    ProgTyping prog (ProgTypeType prog),
+    ProgTyping prog,
     LivelinessTypeResource livelinessObj res (ProgTypeType prog) ctx,
-    LivelinessOpResource livelinessObj (StmtOpType stmt) res ctx,
-    ProgUtil prog stmt varId,
+    LivelinessOpResource livelinessObj (ProgOpType prog) res ctx,
+    ProgUtil prog,
     Mergeable outerVarId,
     Mergeable varId,
+    varId ~ ProgVarIdType prog,
     MonadFresh ctx,
-    MonadUnion ctx
+    MonadUnion ctx,
+    OpTypeType (ProgOpType prog) ~ ProgTypeType prog
   ) =>
   livelinessObj ->
+  ProgTypeTable (ProgTypeType prog) ->
   prog ->
   [outerVarId] ->
   SymBool ->
   ctx (UnionDef outerVarId res)
-livelinessSubProgInvalidatingDefs livelinessObj prog varId disabled = do
+livelinessSubProgInvalidatingDefs livelinessObj table prog varId disabled = do
   ProgDefUse _ stmtDefUses _ <-
-    livelinessProgDefUses livelinessObj prog disabled
+    livelinessProgDefUses livelinessObj table prog disabled
   let MergeResourceListWithDisabled lst =
         mconcat $
           mergeResourceListFromDefList . stmtInvalidatingDef <$> stmtDefUses
@@ -475,25 +487,28 @@ livelinessSubProgInvalidatingDefs livelinessObj prog varId disabled = do
 livelinessSubProgDefUses ::
   ( Mergeable outerVarId,
     ProgNaming prog,
-    ProgTyping prog (ProgTypeType prog),
+    ProgTyping prog,
     LivelinessTypeResource livelinessObj res (ProgTypeType prog) ctx,
-    LivelinessOpResource livelinessObj (StmtOpType stmt) res ctx,
-    ProgUtil prog stmt varId,
+    LivelinessOpResource livelinessObj (ProgOpType prog) res ctx,
+    ProgUtil prog,
     Mergeable outerVarId,
     Mergeable varId,
+    varId ~ ProgVarIdType prog,
     MonadFresh ctx,
-    MonadUnion ctx
+    MonadUnion ctx,
+    OpTypeType (ProgOpType prog) ~ ProgTypeType prog
   ) =>
   livelinessObj ->
+  ProgTypeTable (ProgTypeType prog) ->
   prog ->
   [outerVarId] ->
   [outerVarId] ->
   SymBool ->
   ctx (StmtDefUse outerVarId res)
-livelinessSubProgDefUses livelinessObj prog argIds resIds disabled = do
+livelinessSubProgDefUses livelinessObj table prog argIds resIds disabled = do
   resDefs <- livelinessSubProgResDefs livelinessObj prog resIds disabled
   invalidatingDefs <-
-    livelinessSubProgInvalidatingDefs livelinessObj prog resIds disabled
+    livelinessSubProgInvalidatingDefs livelinessObj table prog resIds disabled
   argUses <- livelinessSubProgArgUses livelinessObj prog argIds disabled
   mrgReturn $ StmtDefUse resDefs invalidatingDefs argUses
 
@@ -502,16 +517,15 @@ instance
     OpSubProgConstraints (Liveliness livelinessObj) op ctx,
     ConcreteVarId conVarId,
     ToSym conVarId conVarId,
-    MonadFresh ctx,
     Mergeable ty,
-    MonadUnion ctx,
-    HasSubProgs op subProg ctx,
-    ProgConstraints (Liveliness livelinessObj) subProg ctx
+    MonadFresh ctx,
+    MonadUnion ctx
   ) =>
   ProgConstraints (Liveliness livelinessObj) (Concrete.Prog op conVarId ty) ctx
   where
   constrainProg
     obj@(Liveliness livelinessObj)
+    table
     prog = do
       argDefs <- livelinessProgArgDefs livelinessObj prog (toSym False)
       resUses <- livelinessProgResUses livelinessObj prog (toSym False)
@@ -553,7 +567,7 @@ instance
           | i == getProgNumStmts prog = mrgReturn allDefs
           | otherwise = do
               StmtDefUse defs invalidatingDefs uses <-
-                livelinessProgStmtDefUses livelinessObj prog i (toSym False)
+                livelinessProgStmtDefUses livelinessObj table prog i (toSym False)
               cannotUseInvalidated uses allDefs
               let invalidatedDefs = invalidate invalidatingDefs allDefs
               let newDefs = mrgFmap (fmap (,toSym False)) defs : invalidatedDefs
@@ -572,9 +586,11 @@ class
 
 type LivelinessConstraint livelinessObj op ty res ctx =
   ( LivelinessOpResource livelinessObj op res ctx,
-    LivelinessTypeResource livelinessObj res ty ctx,
+    LivelinessTypeResource livelinessObj res (OpTypeType op) ctx,
     Mergeable op,
-    OpTyping op ty ctx
+    Mergeable ty,
+    OpTyping op ctx,
+    ty ~ OpTypeType op
   )
 
 invalidateSingle ::
@@ -690,17 +706,19 @@ livelinessComponentProgStmtDefUses ::
     MonadUnion ctx,
     MonadContext ctx,
     MonadFresh ctx,
-    LivelinessOpResource livelinessObj op res ctx
+    LivelinessOpResource livelinessObj op res ctx,
+    ty ~ OpTypeType op
   ) =>
   livelinessObj ->
+  ProgTypeTable ty ->
   Component.Prog op varId ty ->
   Int ->
   SymBool ->
   ctx (ComponentStmtDefUse varId res)
-livelinessComponentProgStmtDefUses livelinessObj prog idx disabled = do
+livelinessComponentProgStmtDefUses livelinessObj table prog idx disabled = do
   stmt <- getProgStmtAtIdx prog idx
   StmtDefUse defs invalidateDefs uses <-
-    livelinessProgStmtDefUses livelinessObj prog idx disabled
+    livelinessProgStmtDefUses livelinessObj table prog idx disabled
   mrgReturn $ ComponentStmtDefUse defs invalidateDefs $ do
     useList <- uses
     mrgReturn $
@@ -719,17 +737,21 @@ livelinessComponentProgDefUses ::
     LivelinessTypeResource livelinessObj res ty ctx,
     MonadFresh ctx,
     MonadUnion ctx,
-    LivelinessOpResource livelinessObj op res ctx
+    LivelinessOpResource livelinessObj op res ctx,
+    ty ~ OpTypeType op
   ) =>
   livelinessObj ->
+  ProgTypeTable ty ->
   Component.Prog op varId ty ->
   SymBool ->
   ctx (ComponentProgDefUse varId res)
-livelinessComponentProgDefUses livelinessObj prog disabled = do
+livelinessComponentProgDefUses livelinessObj table prog disabled = do
   argDefs <- livelinessProgArgDefs livelinessObj prog disabled
   stmtDefUses <-
     mrgTraverse
-      (\i -> livelinessComponentProgStmtDefUses livelinessObj prog i disabled)
+      ( \i ->
+          livelinessComponentProgStmtDefUses livelinessObj table prog i disabled
+      )
       [0 .. getProgNumStmts prog - 1]
   resUses <- livelinessProgResUses livelinessObj prog disabled
   let resEffectiveDefId =
@@ -755,6 +777,7 @@ instance
     SymbolicVarId symVarId,
     MonadUnion ctx,
     Mergeable ty,
+    ty ~ OpTypeType op,
     MonadFresh ctx,
     Show res
   ) =>
@@ -763,9 +786,9 @@ instance
     (Component.Prog op symVarId ty)
     ctx
   where
-  constrainProg obj@(Liveliness livelinessObj) sketch = do
+  constrainProg obj@(Liveliness livelinessObj) table sketch = do
     ComponentProgDefUse arg stmt res <-
-      livelinessComponentProgDefUses livelinessObj sketch (con False)
+      livelinessComponentProgDefUses livelinessObj table sketch (con False)
     let invalidatingDefs = componentStmtInvalidatingDef <$> stmt
     let defs = arg : (componentStmtDef <$> stmt)
     let uses = res : (componentStmtUse <$> stmt)
@@ -830,12 +853,13 @@ instance
 
 instance
   ( ProgConstraints (Liveliness livelinessObj) l ctx,
-    ProgConstraints (Liveliness livelinessObj) r ctx
+    ProgConstraints (Liveliness livelinessObj) r ctx,
+    ProgTypeType l ~ ProgTypeType r
   ) =>
   ProgConstraints
     (Liveliness livelinessObj)
     (SumProg l r)
     ctx
   where
-  constrainProg obj (SumProgL prog) = constrainProg obj prog
-  constrainProg obj (SumProgR prog) = constrainProg obj prog
+  constrainProg obj table (SumProgL prog) = constrainProg obj table prog
+  constrainProg obj table (SumProgR prog) = constrainProg obj table prog

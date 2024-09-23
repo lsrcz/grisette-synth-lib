@@ -3,8 +3,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( VarIdMap,
@@ -27,7 +30,11 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (Default (Default), Mergeable, PPrint (pformat))
 import Grisette.Lib.Synth.Context (ConcreteContext)
-import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType), OpTyping (typeOp))
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( DefaultType (DefaultType),
+    OpTyping (OpTypeType, typeOp),
+  )
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable)
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Util.Pretty
   ( Doc,
@@ -90,33 +97,49 @@ instance PrefixByType DefaultType where
   prefixByType DefaultType = "r"
 
 allPrefixesByTypes ::
-  (OpTyping op ty ConcreteContext, PrefixByType ty) =>
+  forall op varId.
+  ( OpTyping op ConcreteContext,
+    PrefixByType (OpTypeType op)
+  ) =>
+  ProgTypeTable (OpTypeType op) ->
   op ->
   Either (OpPPrintError varId op) [T.Text]
-allPrefixesByTypes op = case typeOp op of
+allPrefixesByTypes table op = case typeOp table op of
   Right (TypeSignature _ resTypes) ->
     return $ prefixByType <$> resTypes
   Left err -> throwError $ PPrintTypingError op err
 
 noArgumentsDescription ::
-  (OpTyping op ty ConcreteContext) =>
+  (OpTyping op ConcreteContext) =>
+  ProgTypeTable (OpTypeType op) ->
   op ->
   Either (OpPPrintError varId op) [Maybe T.Text]
-noArgumentsDescription op = case typeOp op of
+noArgumentsDescription table op = case typeOp table op of
   Right (TypeSignature argTypes _) ->
     return $ Nothing <$ argTypes
   Left err -> throwError $ PPrintTypingError op err
 
 class OpPPrint op where
-  prefixResults :: op -> Either (OpPPrintError varId op) [T.Text]
+  prefixResults ::
+    (OpTyping op ConcreteContext) =>
+    ProgTypeTable (OpTypeType op) ->
+    op ->
+    Either (OpPPrintError varId op) [T.Text]
   default prefixResults ::
-    (OpTyping op ty ConcreteContext, PrefixByType ty) =>
+    ( OpTyping op ConcreteContext,
+      PrefixByType (OpTypeType op)
+    ) =>
+    ProgTypeTable (OpTypeType op) ->
     op ->
     Either (OpPPrintError varId op) [T.Text]
   prefixResults = allPrefixesByTypes
-  describeArguments :: op -> Either (OpPPrintError varId op) [Maybe T.Text]
+  describeArguments ::
+    ProgTypeTable (OpTypeType op) ->
+    op ->
+    Either (OpPPrintError varId op) [Maybe T.Text]
   default describeArguments ::
-    (OpTyping op ty ConcreteContext) =>
+    (OpTyping op ConcreteContext) =>
+    ProgTypeTable (OpTypeType op) ->
     op ->
     Either (OpPPrintError varId op) [Maybe T.Text]
   describeArguments = noArgumentsDescription
@@ -130,18 +153,19 @@ prettyArguments ::
   ( ConcreteVarId varId,
     OpPPrint op
   ) =>
+  ProgTypeTable (OpTypeType op) ->
   op ->
   [varId] ->
   VarIdMap varId ->
   Either (OpPPrintError varId op) (Doc ann)
-prettyArguments op varIds map = do
+prettyArguments table op varIds map = do
   let lookupVarId (idx, varId) =
         maybe
           (throwError $ UndefinedArgument idx varId)
           return
           (HM.lookup varId map)
   argNames <- traverse lookupVarId $ zip [0 ..] varIds
-  argDescriptions <- describeArguments op
+  argDescriptions <- describeArguments table op
   when
     (length argNames /= length argDescriptions && not (null argDescriptions))
     $ throwError
@@ -156,17 +180,19 @@ prettyArguments op varIds map = do
 
 prettyResults ::
   ( ConcreteVarId varId,
-    OpPPrint op
+    OpPPrint op,
+    OpTyping op ConcreteContext
   ) =>
+  ProgTypeTable (OpTypeType op) ->
   op ->
   [varId] ->
   VarIdMap varId ->
   Either (OpPPrintError varId op) (VarIdMap varId, Doc ann)
-prettyResults op varIds map = do
+prettyResults table op varIds map = do
   let ensureNotRedefined (idx, varId) =
         when (HM.member varId map) $ throwError $ RedefinedResult idx varId
   traverse_ ensureNotRedefined $ zip [0 ..] varIds
-  prefixes <- prefixResults op
+  prefixes <- prefixResults table op
   when (length varIds /= length prefixes && not (null prefixes)) $
     throwError $
       IncorrectNumberOfResults op (length prefixes) (length varIds)

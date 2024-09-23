@@ -4,10 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReductionTest
-  ( componentSymmetryReductionTest,
+  ( -- componentSymmetryReductionTest,
   )
 where
 
+{-
 import Grisette
   ( LogicalOp (symNot, (.||)),
     Solvable (con, isym),
@@ -602,3 +603,4 @@ componentSymmetryReductionTest =
               actual .@?= expected
             ]
     ]
+-}

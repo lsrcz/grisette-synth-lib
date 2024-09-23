@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Operator.OpSemantics
   ( OpSemantics (..),
@@ -20,10 +21,19 @@ import qualified Data.Text as T
 import Grisette (Mergeable, MonadUnion, Union, liftUnion, mrgReturn, tryMerge)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
+import Grisette.Lib.Synth.Program.ProgSemantics (EvaledSymbolTable)
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable)
 import Grisette.Lib.Synth.Util.Show (showText)
 
-class (MonadContext ctx) => OpSemantics semObj op val ctx where
-  applyOp :: semObj -> op -> [val] -> ctx [val]
+class (MonadContext ctx, OpTyping op ctx) => OpSemantics semObj op val ctx where
+  applyOp ::
+    semObj ->
+    EvaledSymbolTable val ctx ->
+    ProgTypeTable (OpTypeType op) ->
+    op ->
+    [val] ->
+    ctx [val]
 
 pureUnaryOp ::
   (MonadContext ctx, Mergeable val) =>
@@ -92,13 +102,14 @@ instance
   ( MonadUnion ctx,
     OpSemantics semObj op val ctx,
     Mergeable op,
-    Mergeable val
+    Mergeable val,
+    Mergeable (OpTypeType op)
   ) =>
   OpSemantics semObj (Union op) val ctx
   where
-  applyOp semObj op args = tryMerge $ do
+  applyOp semObj table tyTable op args = tryMerge $ do
     op' <- liftUnion op
-    applyOp semObj op' args
+    applyOp semObj table tyTable op' args
 
 data DefaultSem = DefaultSem deriving (Eq)
 

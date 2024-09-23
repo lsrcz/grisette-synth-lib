@@ -9,18 +9,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
-  ( Op (..),
-    Type (..),
-    LivelinessOp (..),
-    livelinessIdentifier,
-    livelinessTest,
-    anyResource,
+  ( -- Op (..),
+  -- Type (..),
+  -- LivelinessOp (..),
+  -- livelinessIdentifier,
+  -- livelinessTest,
+  -- anyResource,
   )
 where
 
+{-
+-- ConstraintHierarchy (ConstraintHierarchy),
+
+import Control.Monad.Error.Class (liftEither)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
@@ -54,7 +59,7 @@ import Grisette.Lib.Synth.Context
     SymbolicContext,
   )
 import Grisette.Lib.Synth.Operator.OpTyping
-  ( OpTyping (typeOp),
+  ( OpTyping (OpTypeType, typeOp),
     simpleTyping,
   )
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
@@ -87,12 +92,11 @@ import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
-  ( -- ConstraintHierarchy (ConstraintHierarchy),
-    OpSubProgConstraints (constrainOpSubProg),
+  ( OpSubProgConstraints (constrainOpSubProg),
     ProgConstraints (constrainProg),
     pattern ConstraintHierarchy,
   )
-import Grisette.Lib.Synth.Program.SubProg (HasSubProgs (getSubProgs))
+import Grisette.Lib.Synth.Program.ProgTyping (lookupType)
 import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature, argTypes, resTypes),
@@ -130,24 +134,27 @@ data Op
   | OpDefAny
   | OpUseAny
   | OpUseDefAny
-  | OpSubProg (Concrete.Prog Op (WordN 8) Type)
-  | OpComponentSubProg (Component.Prog Op (SymWordN 8) Type)
-  deriving (Show, Generic)
+  | OpSubProg T.Text
+  deriving
+    ( -- | OpComponentSubProg (Component.Prog Op (SymWordN 8) Type)
+      Show,
+      Generic
+    )
   deriving (Mergeable, ToCon Op, ToSym Op) via (Default Op)
 
-instance
-  (MonadContext ctx) =>
-  HasSubProgs
-    Op
-    ( SumProg
-        (Concrete.Prog Op (WordN 8) Type)
-        (Component.Prog Op (SymWordN 8) Type)
-    )
-    ctx
-  where
-  getSubProgs (OpSubProg prog) = mrgReturn [SumProgL prog]
-  getSubProgs (OpComponentSubProg prog) = mrgReturn [SumProgR prog]
-  getSubProgs _ = mrgReturn []
+-- instance
+--   (MonadContext ctx) =>
+--   HasSubProgs
+--     Op
+--     ( SumProg
+--         (Concrete.Prog Op (WordN 8) Type)
+--         (Component.Prog Op (SymWordN 8) Type)
+--     )
+--     ctx
+--   where
+--   getSubProgs (OpSubProg prog) = mrgReturn [SumProgL prog]
+--   getSubProgs (OpComponentSubProg prog) = mrgReturn [SumProgR prog]
+--   getSubProgs _ = mrgReturn []
 
 data Type = ConstrainedType | ConstrainedType2 | OtherType | AnyType
   deriving (Show, Generic)
@@ -158,8 +165,11 @@ data LivelinessOp = LivelinessOp
 instance LivelinessName LivelinessOp where
   livelinessName LivelinessOp = "ConstrainedType"
 
-instance (MonadContext ctx) => OpTyping Op Type ctx where
-  typeOp = simpleTyping $ \case
+instance (MonadContext ctx) => OpTyping Op ctx where
+  type OpTypeType Op = Type
+  typeOp table (OpSubProg sym) = liftEither $ lookupType table sym
+  -- typeOp table (OpComponentSubProg sym) = undefined
+  typeOp _ op = flip simpleTyping op $ \case
     OpUse -> TypeSignature [OtherType, ConstrainedType] [OtherType]
     OpDef -> TypeSignature [OtherType] [OtherType, ConstrainedType]
     OpNone -> TypeSignature [OtherType] [OtherType]
@@ -175,14 +185,7 @@ instance (MonadContext ctx) => OpTyping Op Type ctx where
     OpUseDefAny -> TypeSignature [AnyType] [AnyType]
     OpDefShareScope2 ->
       TypeSignature [ConstrainedType2] [ConstrainedType2]
-    (OpSubProg prog) ->
-      TypeSignature
-        (Concrete.progArgType <$> Concrete.progArgList prog)
-        (Concrete.progResType <$> Concrete.progResList prog)
-    (OpComponentSubProg prog) ->
-      TypeSignature
-        (Component.progArgType <$> Component.progArgList prog)
-        (Component.progResType <$> Component.progResList prog)
+    _ -> error "unreachable"
 
 instance
   ( MonadContext ctx,
@@ -196,27 +199,40 @@ instance
   ) =>
   LivelinessOpResource LivelinessOp Op Resources ctx
   where
-  livelinessOpDefUses LivelinessOp OpDefNoInvalidate argIds resIds disabled = do
-    ty <- typeOp OpDefNoInvalidate
+  livelinessOpDefUses LivelinessOp table OpDefNoInvalidate argIds resIds disabled = do
+    ty <- typeOp table OpDefNoInvalidate
     defs <- livelinessTypeDefs LivelinessOp (resTypes ty) resIds disabled
     uses <- livelinessTypeUses LivelinessOp (argTypes ty) argIds disabled
     mrgReturn $ StmtDefUse defs (mrgReturn []) uses
-  livelinessOpDefUses LivelinessOp OpDefShareScope argIds resIds disabled = do
-    ty <- typeOp OpDefNoInvalidate
+  livelinessOpDefUses LivelinessOp table OpDefShareScope argIds resIds disabled = do
+    ty <- typeOp table OpDefNoInvalidate
     defs <- livelinessTypeDefs LivelinessOp (resTypes ty) resIds disabled
     uses <- livelinessTypeUses LivelinessOp (argTypes ty) argIds disabled
     mrgReturn $ StmtDefUse defs (mrgReturn []) uses
-  livelinessOpDefUses LivelinessOp (OpSubProg prog) argIds resIds disabled =
-    livelinessSubProgDefUses LivelinessOp prog argIds resIds disabled
-  livelinessOpDefUses
-    LivelinessOp
-    (OpComponentSubProg prog)
-    argIds
-    resIds
-    disabled =
-      livelinessSubProgDefUses LivelinessOp prog argIds resIds disabled
-  livelinessOpDefUses LivelinessOp op argIds resIds disabled =
-    livelinessOpDefUsesByType LivelinessOp op argIds resIds disabled
+  livelinessOpDefUses LivelinessOp table (OpSubProg prog) argIds resIds disabled =
+    livelinessSubProgDefUses LivelinessOp table prog argIds resIds disabled
+  -- livelinessOpDefUses
+  --   LivelinessOp
+  --   (OpComponentSubProg prog)
+  --   argIds
+  --   resIds
+  --   disabled =
+  --     livelinessSubProgDefUses LivelinessOp prog argIds resIds disabled
+  livelinessOpDefUses LivelinessOp table op argIds resIds disabled =
+    livelinessOpDefUsesByType LivelinessOp table op argIds resIds disabled
+
+instance
+  (MonadContext ctx, MonadFresh ctx, MonadUnion ctx) =>
+  LivelinessTypeResource LivelinessOp Resources Type ctx
+  where
+  livelinessTypeDefResource LivelinessOp ConstrainedType =
+    mrgReturn $ Just mkResource1
+  livelinessTypeDefResource LivelinessOp ConstrainedType2 =
+    mrgReturn $ Just mkResource2
+  livelinessTypeDefResource LivelinessOp OtherType = mrgReturn Nothing
+  livelinessTypeDefResource LivelinessOp AnyType = do
+    chosen <- chooseFresh [Just mkResource1, Just mkResource2]
+    liftUnion chosen
 
 instance
   ( ProgConstraints
@@ -234,19 +250,6 @@ instance
   constrainOpSubProg obj (OpSubProg prog) = constrainProg obj prog
   constrainOpSubProg obj (OpComponentSubProg prog) = constrainProg obj prog
   constrainOpSubProg _ _ = mrgReturn ()
-
-instance
-  (MonadContext ctx, MonadFresh ctx, MonadUnion ctx) =>
-  LivelinessTypeResource LivelinessOp Resources Type ctx
-  where
-  livelinessTypeDefResource LivelinessOp ConstrainedType =
-    mrgReturn $ Just mkResource1
-  livelinessTypeDefResource LivelinessOp ConstrainedType2 =
-    mrgReturn $ Just mkResource2
-  livelinessTypeDefResource LivelinessOp OtherType = mrgReturn Nothing
-  livelinessTypeDefResource LivelinessOp AnyType = do
-    chosen <- chooseFresh [Just mkResource1, Just mkResource2]
-    liftUnion chosen
 
 data LivelinessTest where
   LivelinessTest ::
@@ -1163,3 +1166,4 @@ livelinessTest =
             let actual = flip runFreshT "x" $ constrainProg obj prog
             actual .@?= assertion
     ]
+-}

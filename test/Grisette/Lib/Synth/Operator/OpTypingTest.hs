@@ -25,13 +25,14 @@ opTypingTest =
     [ testCase "Default OpTyping" $ do
         let expected =
               Right $ TypeSignature [IntType, IntType] [IntType]
-        typeOp Add @?= expected,
+        typeOp mempty Add @?= expected,
       testCase "Union OpTyping" $ do
         let op =
               mrgIf "a" (mrgReturn Add) (mrgReturn DivMod) ::
                 Union TestSemanticsOp
         let actual =
-              typeOp op :: SymbolicContext (TypeSignature TestSemanticsType)
+              typeOp mempty op ::
+                SymbolicContext (TypeSignature TestSemanticsType)
         let expected =
               mrgIf
                 "a"
@@ -41,15 +42,17 @@ opTypingTest =
                 )
         actual @?= expected,
       testCase "Default SymOpLimits" $ do
-        symOpMaximumArgNum Add @?= 2
-        symOpMaximumResNum Add @?= 1,
+        symOpMaximumArgNum mempty Add @?= 2
+        symOpMaximumResNum mempty Add @?= 1,
       testCase "Union SymOpLimits" $ do
         symOpMaximumArgNum
+          mempty
           ( mrgIf "a" (mrgReturn Add) (mrgReturn Inc) ::
               Union TestSemanticsOp
           )
           @?= 2
         symOpMaximumResNum
+          mempty
           ( mrgIf "a" (mrgReturn Add) (mrgReturn DivMod) ::
               Union TestSemanticsOp
           )

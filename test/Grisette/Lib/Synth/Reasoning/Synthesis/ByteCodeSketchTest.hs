@@ -22,6 +22,8 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( WithConstraints (WithConstraints),
   )
+import Grisette.Lib.Synth.Program.ProgSemantics (evalSymbolTable)
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( QuickCheckFuzzer
       ( QuickCheckFuzzer,
@@ -41,7 +43,8 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
       ( SynthesisTask,
         synthesisInitialExamples,
         synthesisPrecondition,
-        synthesisSketch,
+        synthesisSketchSymbol,
+        synthesisSketchTable,
         synthesisVerifiers
       ),
     runSynthesisTask,
@@ -149,16 +152,17 @@ byteCodeSketchTest =
           SynthesisTask
             { synthesisVerifiers = [SomeVerifier verifier],
               synthesisInitialExamples = [],
-              synthesisSketch = sketch,
+              synthesisSketchTable = SymbolTable [("test", sketch)],
+              synthesisSketchSymbol = "test",
               synthesisPrecondition = con True
             }
     return $ testCase name $ do
-      SynthesisSuccess (prog :: ConProg) <- runSynthesisTask z3 task
+      SynthesisSuccess (result :: SymbolTable ConProg) <- runSynthesisTask z3 task
       fuzzingResult <-
         fuzzingTestProg
           gen
           spec
           100
-          TestSemanticsObj
-          prog
+          (evalSymbolTable TestSemanticsObj result)
+          "test"
       fst <$> fuzzingResult @?= Nothing

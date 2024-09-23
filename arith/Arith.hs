@@ -8,12 +8,16 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Arith (OpCode (..)) where
 
+import Control.Monad.Error.Class (MonadError (throwError))
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
@@ -32,19 +36,19 @@ import Grisette.Lib.Synth.Operator.OpSemantics
   )
 import Grisette.Lib.Synth.Operator.OpTyping
   ( DefaultType,
-    OpTyping (typeOp),
+    OpTyping (OpTypeType, typeOp),
     binaryDefaultType,
     simpleTyping,
     unaryDefaultType,
   )
 import Grisette.Lib.Synth.Program.Concrete
-  ( OpPPrint (describeArguments),
+  ( OpPPrint (describeArguments, prefixResults),
+    OpPPrintError (PPrintTypingError),
+    PrefixByType (prefixByType),
+    allPrefixesByTypes,
   )
 import Grisette.Lib.Synth.Program.NullProg (NullProg)
-import Grisette.Lib.Synth.Program.SubProg
-  ( HasAnyPathSubProgs (getAnyPathSubProgs),
-    HasSubProgs (getSubProgs),
-  )
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 
 -- * Operators
 
@@ -78,10 +82,10 @@ instance
   (MonadContext ctx, Num a, Mergeable a) =>
   OpSemantics DefaultSem OpCode a ctx
   where
-  applyOp _ Plus = pureBinaryOp "Plus" (+)
-  applyOp _ Mul = pureBinaryOp "Mul" (*)
-  applyOp _ Minus = pureBinaryOp "Minus" (-)
-  applyOp _ UMinus = pureUnaryOp "UMinus" negate
+  applyOp _ _ _ Plus = pureBinaryOp "Plus" (+)
+  applyOp _ _ _ Mul = pureBinaryOp "Mul" (*)
+  applyOp _ _ _ Minus = pureBinaryOp "Minus" (-)
+  applyOp _ _ _ UMinus = pureUnaryOp "UMinus" negate
 
 -- | The component encoding
 -- (https://ieeexplore.ieee.org/abstract/document/6062089) needs to generate
@@ -91,8 +95,9 @@ instance
 -- Since here we only have one type, the integer type, we can use the
 -- 'DefaultType'. It can be used to generate intermediate symbolic integers
 -- along with the 'DefaultSem'.
-instance (MonadContext ctx) => OpTyping OpCode DefaultType ctx where
-  typeOp = simpleTyping $ \case
+instance (MonadContext ctx) => OpTyping OpCode ctx where
+  type OpTypeType OpCode = DefaultType
+  typeOp _ = simpleTyping $ \case
     Plus -> binaryDefaultType
     Mul -> binaryDefaultType
     Minus -> binaryDefaultType
@@ -106,13 +111,12 @@ instance PPrint OpCode where
   pformat UMinus = "uminus"
 
 instance OpPPrint OpCode where
-  describeArguments Plus = Right [Just "lhs", Just "rhs"]
-  describeArguments Mul = Right [Just "lhs", Just "rhs"]
-  describeArguments Minus = Right [Just "lhs", Just "rhs"]
-  describeArguments UMinus = Right [Nothing]
+  describeArguments _ Plus = Right [Just "lhs", Just "rhs"]
+  describeArguments _ Mul = Right [Just "lhs", Just "rhs"]
+  describeArguments _ Minus = Right [Just "lhs", Just "rhs"]
+  describeArguments _ UMinus = Right [Nothing]
 
-instance (MonadContext ctx) => HasSubProgs OpCode NullProg ctx where
-  getSubProgs _ = mrgReturn []
-
-instance HasAnyPathSubProgs OpCode NullProg where
-  getAnyPathSubProgs _ = []
+-- prefixResults table op = case typeOp table op of
+--   Right (TypeSignature _ resTypes) ->
+--     return $ prefixByType <$> resTypes
+--   Left err -> throwError $ PPrintTypingError op err

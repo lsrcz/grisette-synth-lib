@@ -113,11 +113,22 @@ semanticsTest =
         ]
     [ testCase name $ do
         let actual =
-              runProg TestSemanticsObj prog args :: ConcreteContext [Integer]
+              runProg
+                TestSemanticsObj
+                mempty
+                mempty
+                prog
+                args ::
+                ConcreteContext [Integer]
         actual @?= expected,
       testCase (name <> "-ProgMayMultiPath") $ do
         let actual =
-              runProg TestSemanticsObj (ProgMayMultiPath prog) (toSym args) ::
+              runProg
+                TestSemanticsObj
+                mempty
+                mempty
+                (ProgMayMultiPath prog)
+                (toSym args) ::
                 SymbolicContext [SymInteger]
         actual @?= toSym (liftEither expected :: SymbolicContext [Integer])
       ]

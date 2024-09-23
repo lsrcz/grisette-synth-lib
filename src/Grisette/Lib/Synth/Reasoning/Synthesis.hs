@@ -9,7 +9,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisContext (..),
@@ -36,6 +38,7 @@ import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Data (Typeable)
 import Data.Hashable (Hashable)
 import qualified Data.Serialize as Cereal
+import qualified Data.Text as T
 import Data.Typeable (Proxy (Proxy), cast)
 import GHC.Generics (Generic)
 import Grisette
@@ -69,8 +72,12 @@ import Grisette.Lib.Synth.Context
     ConcreteContext,
     SymbolicContext,
   )
-import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.Concrete.Program (ProgPPrint)
+import Grisette.Lib.Synth.Program.ProgCost (ProgCost, symbolCost)
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics, runSymbol)
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping)
+import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil)
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.IOPair
   ( IOPair (ioPairInputs, ioPairOutputs),
   )
@@ -156,6 +163,8 @@ data SomeExample symProg conProg where
     forall symSemObj symProg symVal conSemObj conProg conVal matcher.
     ( ProgSemantics symSemObj symProg symVal AngelicContext,
       ProgSemantics conSemObj conProg conVal ConcreteContext,
+      ProgUtil symProg,
+      ProgUtil conProg,
       Matcher matcher SymBool symVal,
       Matcher matcher Bool conVal,
       Mergeable symVal,
@@ -202,7 +211,10 @@ class
     | verifier -> symProg conProg
   where
   toVerifierFuns ::
-    verifier -> symProg -> [VerifierFun (SomeExample symProg conProg) ()]
+    verifier ->
+    SymbolTable symProg ->
+    T.Text ->
+    [VerifierFun (SomeExample symProg conProg) ()]
 
 data SomeVerifier symProg conProg where
   SomeVerifier ::
@@ -220,7 +232,8 @@ data SynthesisTask symProg conProg where
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
       synthesisInitialExamples :: [SomeExample symProg conProg],
-      synthesisSketch :: symProg,
+      synthesisSketchTable :: SymbolTable symProg,
+      synthesisSketchSymbol :: T.Text,
       synthesisPrecondition :: SymBool
     } ->
     SynthesisTask symProg conProg
@@ -231,11 +244,13 @@ data SynthesisBoundCostTask symProg conProg where
     ( EvalSym symProg,
       ToCon symProg conProg,
       ProgCost symCostObj symProg cost AngelicContext,
-      SymOrd cost
+      SymOrd cost,
+      Mergeable cost
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
       synthesisInitialExamples :: [SomeExample symProg conProg],
-      synthesisSketch :: symProg,
+      synthesisSketchTable :: SymbolTable symProg,
+      synthesisSketchSymbol :: T.Text,
       synthesisPrecondition :: SymBool,
       synthesisInitialMaxCost :: Maybe cost,
       synthesisSymCostObj :: symCostObj
@@ -249,11 +264,13 @@ data SynthesisMinimalCostTask symProg conProg where
       ToCon symProg conProg,
       ProgCost conCostObj conProg cost ConcreteContext,
       ProgCost symCostObj symProg cost AngelicContext,
-      SymOrd cost
+      SymOrd cost,
+      Mergeable cost
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
       synthesisInitialExamples :: [SomeExample symProg conProg],
-      synthesisSketch :: symProg,
+      synthesisSketchTable :: SymbolTable symProg,
+      synthesisSketchSymbol :: T.Text,
       synthesisPrecondition :: SymBool,
       synthesisInitialMaxCost :: Maybe cost,
       synthesisConCostObj :: conCostObj,
@@ -264,10 +281,12 @@ data SynthesisMinimalCostTask symProg conProg where
 synthesisConstraintFun ::
   forall symProg conProg.
   (Typeable symProg) =>
-  symProg ->
+  SymbolTable symProg ->
+  T.Text ->
   SynthesisConstraintFun (SomeExample symProg conProg)
 synthesisConstraintFun
-  prog
+  table
+  symbol
   ( SomeExample
       ( Example _ symSem _ (iop :: IOPair conVal) matcher ::
           Example symSemObj symVal conSemObj conVal matcher
@@ -275,18 +294,23 @@ synthesisConstraintFun
     ) =
     genSynthesisConstraint
       matcher
-      ( runProg symSem prog (toSym $ ioPairInputs iop :: [symVal]) ::
+      ( runSymbol symSem table symbol (toSym $ ioPairInputs iop :: [symVal]) ::
           AngelicContext [symVal]
       )
       (toSym $ ioPairOutputs iop :: [symVal])
 
 data SynthesisResult conProg
-  = SynthesisSuccess conProg
+  = SynthesisSuccess (SymbolTable conProg)
   | SynthesisVerifierFailure
   | SynthesisSolverFailure SolvingFailure
   deriving (Show, Generic)
   deriving (Serial, NFData)
-  deriving (PPrint) via (Default (SynthesisResult conProg))
+
+deriving via
+  (Default (SynthesisResult conProg))
+  instance
+    (ProgPPrint conProg, ProgUtil conProg, ProgTyping conProg) =>
+    (PPrint (SynthesisResult conProg))
 
 instance (Serial conProg) => Cereal.Serialize (SynthesisResult conProg) where
   put = serialize
@@ -314,35 +338,36 @@ instance
     ( SynthesisBoundCostTask
         verifiers
         examples
-        symProg
+        table
+        symbol
         precond
         (initialMaxCost :: Maybe cost)
         symCostObj
       ) = do
       initialExampleConstraints <-
-        traverse (synthesisConstraintFun symProg) examples
+        traverse (synthesisConstraintFun table symbol) examples
       let costConstraint = symProgCostLessThanMaxCost initialMaxCost
       (cex, r) <-
         solverGenericCEGIS
           solver
           True
           (precond .&& symAnd initialExampleConstraints .&& costConstraint)
-          (synthesisConstraintFun symProg)
+          (synthesisConstraintFun table symbol)
           ( concatMap
-              (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
+              (\(SomeVerifier verifier) -> toVerifierFuns verifier table symbol)
               verifiers
           )
       let allCexes = examples ++ cex
       case r of
         CEGISSuccess model ->
-          return (allCexes, SynthesisSuccess $ evalSymToCon model symProg)
+          return (allCexes, SynthesisSuccess $ evalSymToCon model table)
         CEGISVerifierFailure () ->
           return (allCexes, SynthesisVerifierFailure)
         CEGISSolverFailure failure ->
           return (allCexes, SynthesisSolverFailure failure)
       where
         symProgCost =
-          flip runFreshT "cost" $ progCost symCostObj symProg ::
+          flip runFreshT "cost" $ symbolCost symCostObj table symbol ::
             SymbolicContext cost
         symProgCostLessThanMaxCost :: Maybe cost -> SymBool
         symProgCostLessThanMaxCost Nothing = con True
@@ -362,14 +387,15 @@ instance
     ( SynthesisMinimalCostTask
         verifiers
         examples
-        symProg
+        table
+        symbol
         precond
         (initialMaxCost :: Maybe cost)
         conCostObj
         symCostObj
       ) = do
       initialExampleConstraints <-
-        traverse (synthesisConstraintFun symProg) examples
+        traverse (synthesisConstraintFun table symbol) examples
       let costConstraint = case initialMaxCost of
             Nothing -> con True
             Just maxCost -> symProgCostLessThanMaxCost maxCost
@@ -378,22 +404,22 @@ instance
           solver
           True
           (precond .&& symAnd initialExampleConstraints .&& costConstraint)
-          (synthesisConstraintFun symProg)
+          (synthesisConstraintFun table symbol)
           (Just refineFun)
           ( concatMap
-              (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
+              (\(SomeVerifier verifier) -> toVerifierFuns verifier table symbol)
               verifiers
           )
       let allCexes = examples ++ cex
       case r of
         CEGISSuccess model ->
-          return (allCexes, SynthesisSuccess $ evalSymToCon model symProg)
+          return (allCexes, SynthesisSuccess $ evalSymToCon model table)
         CEGISVerifierFailure () -> return (allCexes, SynthesisVerifierFailure)
         CEGISSolverFailure failure ->
           return (allCexes, SynthesisSolverFailure failure)
       where
         symProgCost =
-          flip runFreshT "cost" $ progCost symCostObj symProg ::
+          flip runFreshT "cost" $ symbolCost symCostObj table symbol ::
             SymbolicContext cost
         symProgCostLessThanMaxCost :: cost -> SymBool
         symProgCostLessThanMaxCost maxCost = simpleMerge $ do
@@ -402,8 +428,9 @@ instance
             Left _ -> return $ con False
             Right cost -> return $ cost .< maxCost
         refineFun model = do
-          let conProg = evalSymToCon model symProg :: conProg
-          let conCost = progCost conCostObj conProg :: ConcreteContext cost
+          let conTable = evalSymToCon model table :: SymbolTable conProg
+          let conCost =
+                symbolCost conCostObj conTable symbol :: ConcreteContext cost
           case conCost of
             Left _ -> return $ con False
             Right cost -> return $ symProgCostLessThanMaxCost cost
@@ -415,23 +442,23 @@ instance
   where
   solverRunSynthesisTaskExtractCex
     solver
-    (SynthesisTask verifiers examples symProg precond) = do
+    (SynthesisTask verifiers examples table symbol precond) = do
       initialExampleConstraints <-
-        traverse (synthesisConstraintFun symProg) examples
+        traverse (synthesisConstraintFun table symbol) examples
       (cex, r) <-
         solverGenericCEGIS
           solver
           True
           (precond .&& symAnd initialExampleConstraints)
-          (synthesisConstraintFun symProg)
+          (synthesisConstraintFun table symbol)
           ( concatMap
-              (\(SomeVerifier verifier) -> toVerifierFuns verifier symProg)
+              (\(SomeVerifier verifier) -> toVerifierFuns verifier table symbol)
               verifiers
           )
       let allCexes = examples ++ cex
       case r of
         CEGISSuccess model ->
-          return (allCexes, SynthesisSuccess $ evalSymToCon model symProg)
+          return (allCexes, SynthesisSuccess $ evalSymToCon model table)
         CEGISVerifierFailure () -> return (allCexes, SynthesisVerifierFailure)
         CEGISSolverFailure failure ->
           return (allCexes, SynthesisSolverFailure failure)

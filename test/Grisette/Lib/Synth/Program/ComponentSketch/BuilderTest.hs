@@ -44,6 +44,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch.Builder
     simpleFreshStmt',
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (Add, DivMod),
     TestSemanticsType (IntType),
@@ -57,8 +58,11 @@ builderTest =
   testGroup
     "Builder"
     [ testCase "simpleFreshStmt" $ do
+        let table =
+              mempty ::
+                SymbolTable (Prog (Union TestSemanticsOp) SymInteger TestSemanticsType)
         let actual =
-              simpleFreshStmt Add :: Fresh [Stmt TestSemanticsOp SymInteger]
+              simpleFreshStmt table Add :: Fresh [Stmt TestSemanticsOp SymInteger]
         let expected =
               Stmt
                 { stmtOp = Add,
@@ -71,12 +75,16 @@ builderTest =
                 }
         runFresh actual "x" @?= [expected],
       testCase "simpleFreshStmt'" $ do
+        let table =
+              mempty ::
+                SymbolTable (Prog (Union TestSemanticsOp) SymInteger TestSemanticsType)
         let actual = do
               precursor <-
-                simpleFreshStmt DivMod ::
+                simpleFreshStmt table DivMod ::
                   Fresh [Stmt TestSemanticsOp SymInteger]
-              precursor2 <- simpleFreshStmt DivMod
+              precursor2 <- simpleFreshStmt table DivMod
               simpleFreshStmt'
+                table
                 Add
                 ( StmtExtraConstraint
                     { stmtMustBeAfterStmts = precursor ++ precursor2
@@ -95,8 +103,11 @@ builderTest =
                 }
         runFresh actual "x" @?= [expected],
       testCase "freshStmt" $ do
+        let table =
+              mempty ::
+                SymbolTable (Prog (Union TestSemanticsOp) SymInteger TestSemanticsType)
         let actual =
-              freshStmt (chooseFresh [Add, DivMod]) ::
+              freshStmt table (chooseFresh [Add, DivMod]) ::
                 Fresh [Stmt (Union TestSemanticsOp) SymInteger]
         let expected =
               Stmt
@@ -110,12 +121,16 @@ builderTest =
                 }
         runFresh actual "x" @?= [expected],
       testCase "freshStmt'" $ do
+        let table =
+              mempty ::
+                SymbolTable (Prog (Union TestSemanticsOp) SymInteger TestSemanticsType)
         let actual = do
               precursor <-
-                simpleFreshStmt $ mrgReturn DivMod ::
+                simpleFreshStmt table $ mrgReturn DivMod ::
                   Fresh [Stmt (Union TestSemanticsOp) SymInteger]
-              precursor2 <- simpleFreshStmt $ mrgReturn DivMod
+              precursor2 <- simpleFreshStmt table $ mrgReturn DivMod
               freshStmt'
+                table
                 (chooseFresh [Add, DivMod])
                 ( StmtExtraConstraint
                     { stmtMustBeAfterStmts = precursor ++ precursor2
@@ -134,12 +149,16 @@ builderTest =
                 }
         runFresh actual "x" @?= [expected],
       testCase "freshStmts'" $ do
+        let table =
+              mempty ::
+                SymbolTable (Prog (Union TestSemanticsOp) SymInteger TestSemanticsType)
         let actual = do
               precursor <-
-                simpleFreshStmt (mrgReturn DivMod) ::
+                simpleFreshStmt table (mrgReturn DivMod) ::
                   Fresh [Stmt (Union TestSemanticsOp) SymInteger]
-              precursor2 <- simpleFreshStmt (mrgReturn DivMod)
+              precursor2 <- simpleFreshStmt table (mrgReturn DivMod)
               freshStmts'
+                table
                 3
                 (chooseFresh [Add, DivMod])
                 ( StmtExtraConstraint
@@ -216,16 +235,18 @@ builderTest =
                     [ProgRes "n" IntType, ProgRes "o" IntType]
             actual @?= expected,
           testCase "fresh" $ do
-            let actual =
-                  mkProg
-                    "test"
-                    [("x", IntType), ("y", IntType)]
-                    [simpleFreshStmt Add, simpleFreshStmt DivMod]
-                    [ (simpleFresh (), IntType),
-                      (simpleFresh (), IntType)
-                    ] ::
-                    Fresh
-                      (Prog TestSemanticsOp SymInteger TestSemanticsType)
+            let actual = flip runFresh "x" $ do
+                  prog <-
+                    mkProg
+                      "test"
+                      [("x", IntType), ("y", IntType)]
+                      [simpleFreshStmt actual Add, simpleFreshStmt actual DivMod]
+                      [ (simpleFresh (), IntType),
+                        (simpleFresh (), IntType)
+                      ] ::
+                      Fresh
+                        (Prog TestSemanticsOp SymInteger TestSemanticsType)
+                  return $ SymbolTable [("test", prog)]
             let expected =
                   Prog
                     "test"
@@ -250,16 +271,19 @@ builderTest =
                     [ ProgRes (isym "x" 13) IntType,
                       ProgRes (isym "x" 14) IntType
                     ]
-            runFresh actual "x" @?= expected
+            actual @?= SymbolTable [("test", expected)]
         ],
       testCase "MkFreshProg" $ do
         let actual =
-              mkFreshProg
-                "test"
-                [IntType, IntType]
-                [simpleFreshStmt Add, simpleFreshStmt DivMod]
-                [IntType, IntType] ::
-                Fresh (Prog TestSemanticsOp SymInteger TestSemanticsType)
+              flip runFresh "x" $ do
+                p <-
+                  mkFreshProg
+                    "test"
+                    [IntType, IntType]
+                    [simpleFreshStmt actual Add, simpleFreshStmt actual DivMod]
+                    [IntType, IntType] ::
+                    Fresh (Prog TestSemanticsOp SymInteger TestSemanticsType)
+                return $ SymbolTable [("test", p)]
         let expected =
               Prog
                 "test"
@@ -284,7 +308,7 @@ builderTest =
                 [ ProgRes (isym "x" 13) IntType,
                   ProgRes (isym "x" 14) IntType
                 ]
-        runFresh actual "x" @?= expected,
+        actual @?= SymbolTable [("test", expected)],
       testCase "fromConcrete" $ do
         let conProg =
               Concrete.Prog
@@ -297,8 +321,9 @@ builderTest =
                   Concrete.ProgRes 4 IntType,
                   Concrete.ProgRes 2 IntType
                 ]
+        let table = SymbolTable [("test", conProg)]
         let actual =
-              fromConcrete conProg ::
+              fromConcrete table conProg ::
                 Fresh (Prog TestSemanticsOp SymInteger TestSemanticsType)
         let expected =
               Prog

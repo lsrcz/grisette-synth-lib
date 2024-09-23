@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Main (main) where
 
 import qualified ConProg as C
 import Data.GraphViz.Printing (PrintDot (toDot), renderDot)
+import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Grisette
   ( Fresh,
@@ -13,13 +15,16 @@ import Grisette
     Solvable (con),
     SymBool,
     SymInteger,
+    freshString,
+    runFresh,
     z3,
   )
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgSemantics (runSymbol)
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( defaultSemQuickCheckFuzzer,
   )
@@ -29,7 +34,8 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
       ( SynthesisTask,
         synthesisInitialExamples,
         synthesisPrecondition,
-        synthesisSketch,
+        synthesisSketchSymbol,
+        synthesisSketchTable,
         synthesisVerifiers
       ),
     runSynthesisTask,
@@ -48,18 +54,6 @@ type ConProg = C.Prog Integer Integer
 type SymVal = SymValue SymInteger SymBool
 
 type Sketch = S.Prog SymInteger SymInteger
-
-trueBranch :: ConProg
-trueBranch = Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
-  \[a, b] ->
-    let [plus] = Concrete.node C.Plus 1 [a, b]
-     in [(plus, IntType)]
-
-falseBranch :: ConProg
-falseBranch = Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
-  \[a, b] ->
-    let [minus] = Concrete.node C.Minus 1 [a, b]
-     in [(minus, IntType)]
 
 -- We can use the following encoding:
 --
@@ -83,44 +77,78 @@ falseBranch = Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
 --   else:
 --     r3 = Minus(a, b)
 --   return r3
-conProg :: ConProg
-conProg = Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
-  \[a, b] ->
-    let [equals] = Concrete.node C.Equals 1 [a, b]
-        [res] = Concrete.node (C.If trueBranch falseBranch) 1 [equals, a, b]
-     in [(res, IntType)]
-
-trueBranchSketch :: Fresh Sketch
-trueBranchSketch =
-  Component.mkSimpleFreshProg
-    "trueBranch"
-    [IntType, IntType]
-    [ S.Plus,
-      S.Minus
+conProg :: SymbolTable ConProg
+conProg =
+  SymbolTable
+    [ ( "trueBranch",
+        Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
+          \[a, b] ->
+            let [plus] = Concrete.node C.Plus 1 [a, b]
+             in [(plus, IntType)]
+      ),
+      ( "falseBranch",
+        Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
+          \[a, b] ->
+            let [minus] = Concrete.node C.Minus 1 [a, b]
+             in [(minus, IntType)]
+      ),
+      ( "prog",
+        Concrete.buildProg "prog" [("a", IntType), ("b", IntType)] $
+          \[a, b] ->
+            let [equals] = Concrete.node C.Equals 1 [a, b]
+                [res] =
+                  Concrete.node
+                    (C.If "trueBranch" "falseBranch")
+                    1
+                    [equals, a, b]
+             in [(res, IntType)]
+      )
     ]
-    [IntType]
 
-falseBranchSketch :: Fresh Sketch
-falseBranchSketch =
-  Component.mkSimpleFreshProg
-    "falseBranch"
-    [IntType, IntType]
-    [S.Plus, S.Minus]
-    [IntType]
+trueBranchSketch :: SymbolTable Sketch -> Fresh (T.Text, Sketch)
+trueBranchSketch tbl =
+  ("trueBranch",)
+    <$> Component.mkSimpleFreshProg
+      tbl
+      "trueBranch"
+      [IntType, IntType]
+      [ S.Plus,
+        S.Minus
+      ]
+      [IntType]
 
-sketch :: Sketch
-sketch =
-  Component.mkSketch
-    "prog"
-    [IntType, IntType]
-    [ Component.simpleFreshStmt S.Plus,
-      Component.simpleFreshStmt S.Plus,
-      Component.simpleFreshStmt S.Equals,
-      Component.freshStmt $ do
-        trueBranch <- trueBranchSketch
-        S.If trueBranch <$> falseBranchSketch
-    ]
-    [IntType]
+falseBranchSketch :: SymbolTable Sketch -> Fresh (T.Text, Sketch)
+falseBranchSketch tbl =
+  ("falseBranch",)
+    <$> Component.mkSimpleFreshProg
+      tbl
+      "falseBranch"
+      [IntType, IntType]
+      [S.Plus, S.Minus]
+      [IntType]
+
+sketch :: SymbolTable Sketch -> T.Text -> T.Text -> Fresh (T.Text, Sketch)
+sketch tbl t f = do
+  s :: T.Text <- freshString "prog"
+  sk <-
+    Component.mkFreshProg
+      s
+      [IntType, IntType]
+      [ Component.simpleFreshStmt tbl S.Plus,
+        Component.simpleFreshStmt tbl S.Plus,
+        Component.simpleFreshStmt tbl S.Equals,
+        Component.simpleFreshStmt tbl $ S.If t f
+      ]
+      [IntType]
+  return (s, sk)
+
+sketchSymbol :: T.Text
+sketchSpace :: SymbolTable Sketch
+(sketchSymbol, sketchSpace) = flip runFresh "sketch" $ do
+  (ts, t) <- trueBranchSketch sketchSpace
+  (fs, f) <- falseBranchSketch sketchSpace
+  (ps, p) <- sketch sketchSpace ts fs
+  return (ps, SymbolTable [(ts, t), (fs, f), (ps, p)])
 
 spec :: [ConVal] -> [ConVal]
 spec [IntValue a, IntValue b] = [IntValue $ if a == b then a + b else a - b]
@@ -132,24 +160,25 @@ gen = vectorOf 2 $ IntValue <$> arbitrary
 main :: IO ()
 main = do
   print $ pformat conProg
-  let a = runProg DefaultSem conProg [IntValue 2, IntValue 2] :: ConResult
+  let a = runSymbol DefaultSem conProg "prog" [IntValue 2, IntValue 2] :: ConResult
   print a
-  let b = runProg DefaultSem conProg [IntValue 1, IntValue 2] :: ConResult
+  let b = runSymbol DefaultSem conProg "prog" [IntValue 1, IntValue 2] :: ConResult
   print b
   let task =
         SynthesisTask
           { synthesisVerifiers = [defaultSemQuickCheckFuzzer @SymVal gen spec],
             synthesisInitialExamples = [],
-            synthesisSketch = sketch,
+            synthesisSketchTable = sketchSpace,
+            synthesisSketchSymbol = sketchSymbol,
             synthesisPrecondition = con True
           }
   r <- runSynthesisTask z3 task
   case r of
-    SynthesisSuccess (prog :: ConProg) -> do
-      print $ pformat prog
-      writeFile "/tmp/control.dot" $ TL.unpack $ renderDot $ toDot prog
+    SynthesisSuccess (table :: SymbolTable ConProg) -> do
+      print $ pformat table
+      writeFile "/tmp/control.dot" $ TL.unpack $ renderDot $ toDot table
       print $ spec [IntValue 5, IntValue 5]
-      print (runProg DefaultSem prog [IntValue 5, IntValue 5] :: ConResult)
+      print (runSymbol DefaultSem table sketchSymbol [IntValue 5, IntValue 5] :: ConResult)
       print $ spec [IntValue 5, IntValue 4]
-      print (runProg DefaultSem prog [IntValue 5, IntValue 4] :: ConResult)
+      print (runSymbol DefaultSem table sketchSymbol [IntValue 5, IntValue 4] :: ConResult)
     _ -> print r

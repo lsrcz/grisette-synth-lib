@@ -3,6 +3,8 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath
   ( ProgMayMultiPath (..),
@@ -34,8 +36,24 @@ import Grisette.Lib.Data.Foldable (mrgTraverse_)
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import Grisette.Lib.Synth.Program.Concrete.Program (Prog (Prog), ProgArg (progArgId), ProgRes (progResId), Stmt (Stmt))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.ProgUtil
+  ( ProgUtil
+      ( ProgOpType,
+        ProgStmtType,
+        ProgTypeType,
+        ProgVarIdType
+      ),
+    ProgUtilImpl
+      ( getProgArgIds,
+        getProgNumStmts,
+        getProgResIds,
+        getProgStmtAtIdx
+      ),
+  )
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
@@ -80,15 +98,20 @@ lookupValMayMultiPath varId = do
     Nothing -> mrgThrowError $ "Variable " <> showText varId <> " is undefined."
     Just val -> liftToMonadUnion val
 
+instance (Mergeable ty) => ProgTyping (ProgMayMultiPath op varId ty) where
+  typeProg (ProgMayMultiPath prog) = typeProg prog
+
 instance
   ( OpSemantics semObj op val ctx,
     ConcreteVarId varId,
     MonadUnion ctx,
-    Mergeable val
+    Mergeable val,
+    Mergeable ty,
+    ty ~ OpTypeType op
   ) =>
   ProgSemantics semObj (ProgMayMultiPath op varId ty) val ctx
   where
-  runProg sem (ProgMayMultiPath (Prog _ arg stmts ret)) inputs = merge $ do
+  runProg sem table tyTable (ProgMayMultiPath (Prog _ arg stmts ret)) inputs = merge $ do
     when (length inputs /= length arg) . mrgThrowError $
       "Expected "
         <> showText (length arg)
@@ -100,10 +123,32 @@ instance
             mrgReturn <$> inputs
     let runStmt (Stmt op argIds resIds) = do
           args <- mrgTraverse lookupValMayMultiPath argIds
-          res <- lift $ applyOp sem op args
+          res <- lift $ applyOp sem table tyTable op args
           when (length res /= length resIds) . throwError $
             "Incorrect number of results."
           mrgTraverse_ (uncurry addValMayMultiPath) $ zip resIds res
     flip evalStateT initialEnv $ do
       mrgTraverse_ runStmt stmts
       mrgTraverse (lookupValMayMultiPath . progResId) ret
+
+-- instance StmtUtilImpl (Stmt op varId) op varId where
+--   getStmtArgIds = stmtArgIds
+--   getStmtResIds = stmtResIds
+--   getStmtOp = stmtOp
+--   getStmtDisabled _ = toSym False
+--
+-- instance StmtUtil (Stmt op varId) where
+--   type StmtVarIdType (Stmt op varId) = varId
+--   type StmtOpType (Stmt op varId) = op
+
+instance ProgUtilImpl (ProgMayMultiPath op varId ty) op (Stmt op varId) varId where
+  getProgArgIds (ProgMayMultiPath prog) = getProgArgIds prog
+  getProgResIds (ProgMayMultiPath prog) = getProgResIds prog
+  getProgNumStmts (ProgMayMultiPath prog) = getProgNumStmts prog
+  getProgStmtAtIdx (ProgMayMultiPath prog) = getProgStmtAtIdx prog
+
+instance ProgUtil (ProgMayMultiPath op varId ty) where
+  type ProgTypeType (ProgMayMultiPath op varId ty) = ty
+  type ProgStmtType (ProgMayMultiPath op varId ty) = Stmt op varId
+  type ProgVarIdType (ProgMayMultiPath op varId ty) = varId
+  type ProgOpType (ProgMayMultiPath op varId ty) = op

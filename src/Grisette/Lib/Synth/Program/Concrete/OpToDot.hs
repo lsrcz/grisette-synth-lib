@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Program.Concrete.OpToDot
   ( VarIdToLabel,
@@ -22,6 +23,8 @@ import Data.GraphViz.Attributes.Complete
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import Grisette.Lib.Synth.Context (ConcreteContext)
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( OpPPrint (describeArguments, prefixResults),
     OpPPrintError
@@ -31,6 +34,7 @@ import Grisette.Lib.Synth.Program.Concrete.OpPPrint
         UndefinedArgument
       ),
   )
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable)
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
@@ -38,13 +42,14 @@ type VarIdToLabel varId = HM.HashMap varId (T.Text, PortName)
 
 argumentsToFieldEdges ::
   (ConcreteVarId varId, OpPPrint op) =>
+  ProgTypeTable (OpTypeType op) ->
   T.Text ->
   op ->
   [varId] ->
   VarIdToLabel varId ->
   Either (OpPPrintError varId op) (RecordFields, [DotEdge T.Text])
-argumentsToFieldEdges nodeId op argIds map = do
-  argDescriptions <- describeArguments op
+argumentsToFieldEdges table nodeId op argIds map = do
+  argDescriptions <- describeArguments table op
   when (length argIds /= length argDescriptions) $
     throwError $
       IncorrectNumberOfArguments op (length argDescriptions) (length argIds)
@@ -69,7 +74,11 @@ argumentsToFieldEdges nodeId op argIds map = do
   return (argLabel, zipWith preLabelToEdge argPreLabels [0 ..])
 
 resultsToFieldEdges ::
-  (ConcreteVarId varId, OpPPrint op) =>
+  ( ConcreteVarId varId,
+    OpPPrint op,
+    OpTyping op ConcreteContext
+  ) =>
+  ProgTypeTable (OpTypeType op) ->
   T.Text ->
   op ->
   [varId] ->
@@ -77,11 +86,11 @@ resultsToFieldEdges ::
   Either
     (OpPPrintError varId op)
     (VarIdToLabel varId, RecordFields)
-resultsToFieldEdges nodeId op resIds map = do
+resultsToFieldEdges table nodeId op resIds map = do
   let ensureNotRedefined (idx, varId) =
         when (HM.member varId map) $ throwError $ RedefinedResult idx varId
   traverse_ ensureNotRedefined $ zip [0 ..] resIds
-  prefixes <- prefixResults op
+  prefixes <- prefixResults table op
   when (length resIds /= length prefixes) $
     throwError $
       IncorrectNumberOfResults op (length prefixes) (length resIds)

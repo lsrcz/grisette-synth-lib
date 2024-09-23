@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -24,7 +25,7 @@ import Grisette.Lib.Synth.Context (SymbolicContext)
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( PerStmtCostObj (PerStmtCostObj),
   )
-import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
+import Grisette.Lib.Synth.Program.ProgCost (symbolCost)
 import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( BaseTaskHandle,
     cancel,
@@ -49,9 +50,9 @@ import Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
   ( ConProg,
     SymProg,
     fuzzResult,
-    sharedSketch,
+    sharedSketchTable,
     task,
-    times4Sketch,
+    times4SketchTable,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis.Problem
   ( addThenDoubleGen,
@@ -107,11 +108,17 @@ baseTaskHandleTestCommon name _ =
         handle0 :: handle <-
           enqueueTask pool z3 0 $
             return $
-              task addThenDoubleSpec addThenDoubleGen [] sharedSketch (con True)
+              task
+                addThenDoubleSpec
+                addThenDoubleGen
+                []
+                sharedSketchTable
+                "test"
+                (con True)
         handle1 :: handle <-
           enqueueTask pool z3 0 $
             return $
-              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
+              task divModTwiceSpec divModTwiceGen [] sharedSketchTable "test" (con True)
         handle2 :: handle <-
           enqueueTask pool z3 0 $
             return $
@@ -119,31 +126,34 @@ baseTaskHandleTestCommon name _ =
                 addThenDoubleReverseSpec
                 addThenDoubleGen
                 []
-                sharedSketch
+                sharedSketchTable
+                "test"
                 (con True)
         Right (_, r0) <- pollUntilFinished handle0
         Right (_, r1) <- pollUntilFinished handle1
         Right (_, r2) <- pollUntilFinished handle2
-        fuzzResult r0 addThenDoubleGen addThenDoubleSpec
-        fuzzResult r1 divModTwiceGen divModTwiceSpec
-        fuzzResult r2 addThenDoubleGen addThenDoubleReverseSpec,
+        fuzzResult r0 "test" addThenDoubleGen addThenDoubleSpec
+        fuzzResult r1 "test" divModTwiceGen divModTwiceSpec
+        fuzzResult r2 "test" addThenDoubleGen addThenDoubleReverseSpec,
       testCase "pollTasks" $ do
         pool <- newThreadPool 2
         handle0 :: handle <-
           enqueueTask pool z3 0 $
             return $
-              task addThenDoubleSpec addThenDoubleGen [] sharedSketch (con True)
+              task addThenDoubleSpec addThenDoubleGen [] sharedSketchTable "test" (con True)
         handle1 <-
           enqueueTask pool z3 0 $
             return $
-              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
+              task divModTwiceSpec divModTwiceGen [] sharedSketchTable "test" (con True)
         map <- HM.fromList <$> pollTasksUntilFinished [handle0, handle1]
         fuzzResult
           (snd $ fromRight undefined $ map HM.! handle0)
+          "test"
           addThenDoubleGen
           addThenDoubleSpec
         fuzzResult
           (snd $ fromRight undefined $ map HM.! handle1)
+          "test"
           divModTwiceGen
           divModTwiceSpec,
       testCase "enqueueTaskWithTimeout" $ do
@@ -155,7 +165,7 @@ baseTaskHandleTestCommon name _ =
         handle1 :: handle <-
           enqueueTaskWithTimeout 10000 pool z3 0 $
             return $
-              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
+              task divModTwiceSpec divModTwiceGen [] sharedSketchTable "test" (con True)
         r0 <- pollUntilFinished handle1
         case r0 of
           Left e -> fromException e @?= Just SynthesisTaskTimeout
@@ -165,7 +175,7 @@ baseTaskHandleTestCommon name _ =
         handle1 :: handle <-
           enqueueTask pool z3 0 $
             return $
-              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
+              task divModTwiceSpec divModTwiceGen [] sharedSketchTable "test" (con True)
         -- The delay is necessary due to
         -- https://github.com/jwiegley/async-pool/issues/31
         -- It cannot be too long, either, otherwise the task may finish before
@@ -181,7 +191,7 @@ baseTaskHandleTestCommon name _ =
         handle :: handle <-
           enqueueTask pool z3 0 $
             return $
-              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
+              task divModTwiceSpec divModTwiceGen [] sharedSketchTable "test" (con True)
         _ <- waitCatch handle
         startTime <- startTime handle
         expectedEndTime <- getCurrentTime
@@ -197,7 +207,7 @@ baseTaskHandleTestCommon name _ =
         handle :: handle <-
           enqueueTask pool z3 0 $
             return $
-              task divModTwiceSpec divModTwiceGen [] sharedSketch (con True)
+              task divModTwiceSpec divModTwiceGen [] sharedSketchTable "test" (con True)
         threadDelay 100000
         cancel handle
         startTime <- startTime handle
@@ -213,7 +223,7 @@ baseTaskHandleTestCommon name _ =
         expectedCost <- newEmptyTMVarIO
         pool <- newThreadPool 1
         let sketchCost =
-              progCost (PerStmtCostObj TestSemanticsCost) times4Sketch ::
+              symbolCost (PerStmtCostObj TestSemanticsCost) times4SketchTable "test" ::
                 SymbolicContext SymInteger
         handle :: handle <-
           enqueueTask
@@ -223,10 +233,10 @@ baseTaskHandleTestCommon name _ =
             $ do
               cost <- atomically $ readTMVar expectedCost
               return $
-                task times4Spec times4Gen [] times4Sketch $
+                task times4Spec times4Gen [] times4SketchTable "test" $
                   sketchCost .== return cost
         atomically $ putTMVar expectedCost 4
-        Right (_, SynthesisSuccess prog) <- waitCatch handle
-        progCost (PerStmtCostObj TestSemanticsCost) prog
+        Right (_, SynthesisSuccess result) <- waitCatch handle
+        symbolCost (PerStmtCostObj TestSemanticsCost) result "test"
           @?= Right (4 :: SymInteger)
     ]

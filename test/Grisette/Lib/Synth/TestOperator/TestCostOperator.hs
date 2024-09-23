@@ -22,4 +22,4 @@ instance
   (Num cost, MonadContext ctx, Mergeable cost) =>
   OpCost TestCost TestCostOperator cost ctx
   where
-  opCost _ (TestCostOperator x) = mrgReturn $ fromIntegral x
+  opCost _ _ (TestCostOperator x) = mrgReturn $ fromIntegral x

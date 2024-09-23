@@ -11,17 +11,19 @@ module Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest
     componentSketchTest,
     ComponentSynthesisTestCase (..),
     task,
-    sharedSketch,
+    sharedSketchTable,
     fuzzResult,
-    times4Sketch,
+    times4SketchTable,
   )
 where
 
 import Control.DeepSeq (NFData)
 import Data.Data (Typeable)
 import Data.Proxy (Proxy (Proxy))
+import qualified Data.Text as T
 import Grisette
-  ( Solvable (con),
+  ( Mergeable,
+    Solvable (con),
     SolvingFailure (Unsat),
     SymBool,
     SymInteger,
@@ -41,14 +43,15 @@ import Grisette.Lib.Synth.Program.ComponentSketch
     Stmt (Stmt),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.Concrete.Flatten (flattenProg)
+import Grisette.Lib.Synth.Program.Concrete.Flatten (flattenSymbolTable)
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( PerStmtCostObj (PerStmtCostObj),
   )
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( WithConstraints (WithConstraints),
   )
-import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics)
+import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics, evalSymbolTable)
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( QuickCheckFuzzer
       ( QuickCheckFuzzer,
@@ -79,7 +82,8 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
         synthesisInitialExamples,
         synthesisInitialMaxCost,
         synthesisPrecondition,
-        synthesisSketch,
+        synthesisSketchSymbol,
+        synthesisSketchTable,
         synthesisSymCostObj,
         synthesisVerifiers
       ),
@@ -88,7 +92,8 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
       ( SynthesisTask,
         synthesisInitialExamples,
         synthesisPrecondition,
-        synthesisSketch,
+        synthesisSketchSymbol,
+        synthesisSketchTable,
         synthesisVerifiers
       ),
     runSynthesisTask,
@@ -123,117 +128,133 @@ type ConProg = Concrete.Prog TestSemanticsOp Integer TestSemanticsType
 
 type SymProg = Prog (Union TestSemanticsOp) SymInteger TestSemanticsType
 
-sharedSketch :: SymProg
-sharedSketch =
-  Prog
-    "test"
-    [ProgArg "x" IntType, ProgArg "y" IntType]
-    [ Stmt
-        (mrgReturn Add)
-        ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
-        "stmt0'arg_num"
-        ["stmt0'ret0", "stmt0'ret1"]
-        "stmt0'ret_num"
-        "stmt0'dis"
-        [],
-      Stmt
-        (mrgReturn Add)
-        ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
-        "stmt1'arg_num"
-        ["stmt1'ret0"]
-        "stmt1'ret_num"
-        "stmt1'dis"
-        [],
-      Stmt
-        (mrgReturn DivMod)
-        ["stmt2'arg0", "stmt2'arg1"]
-        "stmt2'arg_num"
-        ["stmt2'ret0", "stmt2'ret1", "stmt2'ret2"]
-        "stmt2'ret_num"
-        "stmt2'dis"
-        [],
-      Stmt
-        (mrgReturn DivMod)
-        ["stmt3'arg0", "stmt3'arg1"]
-        "stmt3'arg_num"
-        ["stmt3'ret0", "stmt3'ret1"]
-        "stmt3'ret_num"
-        "stmt3'dis"
-        []
+sharedSketchTable :: SymbolTable SymProg
+sharedSketchTable =
+  SymbolTable
+    [ ( "test",
+        Prog
+          "test"
+          [ProgArg "x" IntType, ProgArg "y" IntType]
+          [ Stmt
+              (mrgReturn Add)
+              ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
+              "stmt0'arg_num"
+              ["stmt0'ret0", "stmt0'ret1"]
+              "stmt0'ret_num"
+              "stmt0'dis"
+              [],
+            Stmt
+              (mrgReturn Add)
+              ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
+              "stmt1'arg_num"
+              ["stmt1'ret0"]
+              "stmt1'ret_num"
+              "stmt1'dis"
+              [],
+            Stmt
+              (mrgReturn DivMod)
+              ["stmt2'arg0", "stmt2'arg1"]
+              "stmt2'arg_num"
+              ["stmt2'ret0", "stmt2'ret1", "stmt2'ret2"]
+              "stmt2'ret_num"
+              "stmt2'dis"
+              [],
+            Stmt
+              (mrgReturn DivMod)
+              ["stmt3'arg0", "stmt3'arg1"]
+              "stmt3'arg_num"
+              ["stmt3'ret0", "stmt3'ret1"]
+              "stmt3'ret_num"
+              "stmt3'dis"
+              []
+          ]
+          [ProgRes "res0" IntType, ProgRes "res1" IntType]
+      )
     ]
-    [ProgRes "res0" IntType, ProgRes "res1" IntType]
 
-sharedSketchUnion :: SymProg
-sharedSketchUnion =
-  Prog
-    "test"
-    [ProgArg "x" IntType, ProgArg "y" IntType]
-    [ Stmt
-        (mrgIf "stmt0'sel" (return Add) (return DivMod))
-        ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
-        "stmt0'arg_num"
-        ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
-        "stmt0'ret_num"
-        "stmt0'dis"
-        [],
-      Stmt
-        (mrgIf "stmt1'sel" (return Add) (return DivMod))
-        ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
-        "stmt1'arg_num"
-        ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"]
-        "stmt1'ret_num"
-        "stmt1'dis"
-        []
+sharedSketchUnionTable :: SymbolTable SymProg
+sharedSketchUnionTable =
+  SymbolTable
+    [ ( "test",
+        Prog
+          "test"
+          [ProgArg "x" IntType, ProgArg "y" IntType]
+          [ Stmt
+              (mrgIf "stmt0'sel" (return Add) (return DivMod))
+              ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
+              "stmt0'arg_num"
+              ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
+              "stmt0'ret_num"
+              "stmt0'dis"
+              [],
+            Stmt
+              (mrgIf "stmt1'sel" (return Add) (return DivMod))
+              ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
+              "stmt1'arg_num"
+              ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"]
+              "stmt1'ret_num"
+              "stmt1'dis"
+              []
+          ]
+          [ProgRes "res0" IntType, ProgRes "res1" IntType]
+      )
     ]
-    [ProgRes "res0" IntType, ProgRes "res1" IntType]
 
-addThenDivModSketch :: SymProg
-addThenDivModSketch =
-  Prog
-    "test"
-    [ProgArg "x" IntType, ProgArg "y" IntType, ProgArg "z" IntType]
-    [ Stmt
-        (mrgReturn Add)
-        ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
-        "stmt0'arg_num"
-        ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
-        "stmt0'ret_num"
-        "stmt0'dis"
-        [],
-      Stmt
-        (mrgReturn DivMod)
-        ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
-        "stmt1'arg_num"
-        ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"]
-        "stmt1'ret_num"
-        "stmt1'dis"
-        ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
+addThenDivModSketchTable :: SymbolTable SymProg
+addThenDivModSketchTable =
+  SymbolTable
+    [ ( "test",
+        Prog
+          "test"
+          [ProgArg "x" IntType, ProgArg "y" IntType, ProgArg "z" IntType]
+          [ Stmt
+              (mrgReturn Add)
+              ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
+              "stmt0'arg_num"
+              ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
+              "stmt0'ret_num"
+              "stmt0'dis"
+              [],
+            Stmt
+              (mrgReturn DivMod)
+              ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
+              "stmt1'arg_num"
+              ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"]
+              "stmt1'ret_num"
+              "stmt1'dis"
+              ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
+          ]
+          [ProgRes "res0" IntType, ProgRes "res1" IntType]
+      )
     ]
-    [ProgRes "res0" IntType, ProgRes "res1" IntType]
 
-addThenDivModSketchBadMustBeAfter :: SymProg
-addThenDivModSketchBadMustBeAfter =
-  Prog
-    "test"
-    [ProgArg "x" IntType, ProgArg "y" IntType, ProgArg "z" IntType]
-    [ Stmt
-        (return Add)
-        ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
-        "stmt0'arg_num"
-        ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
-        "stmt0'ret_num"
-        "stmt0'dis"
-        ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"],
-      Stmt
-        (return DivMod)
-        ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
-        "stmt1'arg_num"
-        ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"]
-        "stmt1'ret_num"
-        "stmt1'dis"
-        []
+addThenDivModSketchBadMustBeAfterTable :: SymbolTable SymProg
+addThenDivModSketchBadMustBeAfterTable =
+  SymbolTable
+    [ ( "test",
+        Prog
+          "test"
+          [ProgArg "x" IntType, ProgArg "y" IntType, ProgArg "z" IntType]
+          [ Stmt
+              (return Add)
+              ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
+              "stmt0'arg_num"
+              ["stmt0'ret0", "stmt0'ret1", "stmt0'ret2"]
+              "stmt0'ret_num"
+              "stmt0'dis"
+              ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"],
+            Stmt
+              (return DivMod)
+              ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
+              "stmt1'arg_num"
+              ["stmt1'ret0", "stmt1'ret1", "stmt1'ret2"]
+              "stmt1'ret_num"
+              "stmt1'dis"
+              []
+          ]
+          [ProgRes "res0" IntType, ProgRes "res1" IntType]
+      )
     ]
-    [ProgRes "res0" IntType, ProgRes "res1" IntType]
 
 data ComponentSynthesisTestCase where
   ComponentSynthesisTestCase ::
@@ -257,22 +278,24 @@ fuzzResult ::
     ProgSemantics TestSemanticsObj conProg conVal ConcreteContext,
     Eq conVal,
     Show conVal,
+    Mergeable conVal,
     Show conProg
   ) =>
   SynthesisResult conProg ->
+  T.Text ->
   Gen [conVal] ->
   ([conVal] -> ([conVal], b)) ->
   IO ()
-fuzzResult (SynthesisSuccess prog) gen spec = do
+fuzzResult (SynthesisSuccess prog) symbol gen spec = do
   fuzzingResult <-
     fuzzingTestProg
       gen
       spec
       100
-      TestSemanticsObj
-      prog
+      (evalSymbolTable TestSemanticsObj prog)
+      symbol
   fst <$> fuzzingResult @?= Nothing
-fuzzResult r _ _ = fail $ "Unexpected result: " <> show r
+fuzzResult r _ _ _ = fail $ "Unexpected result: " <> show r
 
 example :: IOPair Integer -> SomeExample SymProg ConProg
 example iop =
@@ -318,14 +341,16 @@ task ::
   ([ConVal] -> ([ConVal], matcher)) ->
   Gen [ConVal] ->
   [SomeExample SymProg ConProg] ->
-  SymProg ->
+  SymbolTable SymProg ->
+  T.Text ->
   SymBool ->
   SynthesisTask SymProg ConProg
-task spec gen initialExamples sketch precond =
+task spec gen initialExamples table symbol precond =
   SynthesisTask
     { synthesisVerifiers = [SomeVerifier $ verifier spec gen],
       synthesisInitialExamples = initialExamples,
-      synthesisSketch = sketch,
+      synthesisSketchTable = table,
+      synthesisSketchSymbol = symbol,
       synthesisPrecondition = precond
     }
 
@@ -335,9 +360,9 @@ componentSketchTest =
     "ComponentSketch"
     [ testGroup "general" $
         ( do
-            (sketch, namePostFix) <-
-              [ (sharedSketch, ""),
-                (sharedSketchUnion, "/union")
+            (sketchTable, namePostFix) <-
+              [ (sharedSketchTable, ""),
+                (sharedSketchUnionTable, "/union")
                 ]
             ComponentSynthesisTestCase
               name
@@ -381,25 +406,26 @@ componentSketchTest =
             return $ testCase (name <> namePostFix) $ do
               result <-
                 runSynthesisTask z3 $
-                  task spec synthGen examples sketch (con True)
-              fuzzResult result fuzzGen spec
+                  task spec synthGen examples sketchTable "test" (con True)
+              fuzzResult result "test" fuzzGen spec
         )
           ++ [ testCase "Add then DivMod with must be after constraint" $ do
-                 SynthesisSuccess prog <-
+                 SynthesisSuccess result <-
                    runSynthesisTask z3 $
                      task
                        addThenDivModSpec
                        addThenDivModGen
                        []
-                       addThenDivModSketch
+                       addThenDivModSketchTable
+                       "test"
                        (con True)
                  fuzzingResult <-
                    fuzzingTestProg
                      addThenDivModGen
                      addThenDivModSpec
                      100
-                     TestSemanticsObj
-                     prog
+                     (evalSymbolTable TestSemanticsObj result)
+                     "test"
                  fst <$> fuzzingResult @?= Nothing,
                testCase "Add then DivMod with bad must be after constraint" $ do
                  SynthesisSolverFailure Unsat <-
@@ -408,7 +434,8 @@ componentSketchTest =
                        addThenDivModSpec
                        addThenDivModGen
                        []
-                       addThenDivModSketchBadMustBeAfter
+                       addThenDivModSketchBadMustBeAfterTable
+                       "test"
                        (con True)
                  return ()
              ],
@@ -420,7 +447,8 @@ componentSketchTest =
                     { synthesisVerifiers =
                         [SomeVerifier $ verifier times4Spec times4Gen],
                       synthesisInitialExamples = [],
-                      synthesisSketch = times4Sketch,
+                      synthesisSketchTable = times4SketchTable,
+                      synthesisSketchSymbol = "test",
                       synthesisPrecondition = con True,
                       synthesisInitialMaxCost =
                         Nothing :: Maybe SymInteger,
@@ -432,15 +460,16 @@ componentSketchTest =
             let expectedSynthesizedProg =
                   Concrete.Prog
                     "test"
-                    [Concrete.ProgArg "x" (0 :: Int) IntType]
+                    [Concrete.ProgArg "x" (0 :: Integer) IntType]
                     [ Concrete.Stmt Double [0] [1],
                       Concrete.Stmt Double [1] [2]
                     ]
                     [Concrete.ProgRes 2 IntType]
             result <- runSynthesisTask z3 task
             case result of
-              SynthesisSuccess prog ->
-                flattenProg prog @?= Right expectedSynthesizedProg
+              SynthesisSuccess result ->
+                flattenSymbolTable result
+                  @?= Right (SymbolTable [("test", expectedSynthesizedProg)])
               _ -> fail "Unexpected result",
           testCase "initial" $ do
             let task =
@@ -448,7 +477,8 @@ componentSketchTest =
                     { synthesisVerifiers =
                         [SomeVerifier $ verifier times4Spec times4Gen],
                       synthesisInitialExamples = [],
-                      synthesisSketch = times4Sketch,
+                      synthesisSketchTable = times4SketchTable,
+                      synthesisSketchSymbol = "test",
                       synthesisPrecondition = con True,
                       synthesisInitialMaxCost =
                         Just 2 :: Maybe SymInteger,
@@ -464,42 +494,46 @@ componentSketchTest =
         ]
     ]
 
-times4Sketch :: SymProg
-times4Sketch =
-  Prog
-    "test"
-    [ProgArg "x" IntType]
-    [ Stmt
-        (mrgReturn Add)
-        ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
-        "stmt0'arg_num"
-        ["stmt0'ret0", "stmt0'ret1"]
-        "stmt0'ret_num"
-        "stmt0'dis"
-        [],
-      Stmt
-        (mrgReturn Add)
-        ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
-        "stmt1'arg_num"
-        ["stmt1'ret0"]
-        "stmt1'ret_num"
-        "stmt1'dis"
-        [],
-      Stmt
-        (mrgReturn Double)
-        ["stmt2'arg0", "stmt2'arg1"]
-        "stmt2'arg_num"
-        ["stmt2'ret0", "stmt2'ret1", "stmt2'ret2"]
-        "stmt2'ret_num"
-        "stmt2'dis"
-        [],
-      Stmt
-        (mrgReturn Double)
-        ["stmt3'arg0", "stmt3'arg1"]
-        "stmt3'arg_num"
-        ["stmt3'ret0", "stmt3'ret1"]
-        "stmt3'ret_num"
-        "stmt3'dis"
-        []
+times4SketchTable :: SymbolTable SymProg
+times4SketchTable =
+  SymbolTable
+    [ ( "test",
+        Prog
+          "test"
+          [ProgArg "x" IntType]
+          [ Stmt
+              (mrgReturn Add)
+              ["stmt0'arg0", "stmt0'arg1", "stmt0'arg2"]
+              "stmt0'arg_num"
+              ["stmt0'ret0", "stmt0'ret1"]
+              "stmt0'ret_num"
+              "stmt0'dis"
+              [],
+            Stmt
+              (mrgReturn Add)
+              ["stmt1'arg0", "stmt1'arg1", "stmt1'arg2"]
+              "stmt1'arg_num"
+              ["stmt1'ret0"]
+              "stmt1'ret_num"
+              "stmt1'dis"
+              [],
+            Stmt
+              (mrgReturn Double)
+              ["stmt2'arg0", "stmt2'arg1"]
+              "stmt2'arg_num"
+              ["stmt2'ret0", "stmt2'ret1", "stmt2'ret2"]
+              "stmt2'ret_num"
+              "stmt2'dis"
+              [],
+            Stmt
+              (mrgReturn Double)
+              ["stmt3'arg0", "stmt3'arg1"]
+              "stmt3'arg_num"
+              ["stmt3'ret0", "stmt3'ret1"]
+              "stmt3'ret_num"
+              "stmt3'dis"
+              []
+          ]
+          [ProgRes "res0" IntType]
+      )
     ]
-    [ProgRes "res0" IntType]
