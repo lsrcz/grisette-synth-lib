@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -12,7 +13,7 @@ module Grisette.Lib.Synth.Program.SumProg (SumProg (..)) where
 import Control.DeepSeq (NFData)
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
-import Grisette (Default (Default), EvalSym, Mergeable, ToCon, ToSym)
+import Grisette (Default (Default), EvalSym, Mergeable, ToCon (toCon), ToSym)
 import Grisette.Lib.Synth.Program.Concrete.Program
   ( ProgPPrint (pformatProg),
     ProgToDot (toDotProg),
@@ -65,10 +66,21 @@ data SumProg l r
   deriving
     ( EvalSym,
       Mergeable,
-      ToCon (SumProg sl sr),
       ToSym (SumProg cl cr)
     )
     via (Default (SumProg l r))
+
+instance (ToCon sl l, ToCon sr r) => ToCon (SumProg sl sr) (SumProg l r) where
+  toCon (SumProgL l) = SumProgL <$> toCon l
+  toCon (SumProgR r) = SumProgR <$> toCon r
+
+instance
+  {-# OVERLAPPABLE #-}
+  (ToCon l c, ToCon r c) =>
+  ToCon (SumProg l r) c
+  where
+  toCon (SumProgL l) = toCon l
+  toCon (SumProgR r) = toCon r
 
 instance (Show l, Show r) => Show (SumProg l r) where
   show (SumProgL l) = show l
