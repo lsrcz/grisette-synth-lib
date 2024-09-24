@@ -89,10 +89,7 @@ import Grisette.Lib.Synth.Program.ProgSemantics
   ( EvaledSymbolTable,
     ProgSemantics (runProg),
   )
-import Grisette.Lib.Synth.Program.ProgTyping
-  ( ProgTypeTable,
-    ProgTyping (typeProg),
-  )
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
   ( ProgUtil
       ( ProgOpType,
@@ -463,14 +460,12 @@ constrainStmt ::
   ) =>
   sem ->
   EvaledSymbolTable val ctx ->
-  ProgTypeTable (OpTypeType op) ->
   Int ->
   Stmt op symVarId ->
   StateT (CollectedDefUse symVarId val) ctx ()
 constrainStmt
   sem
   table
-  tyTable
   idBound
   (Stmt opUnion argIds argNum resIds resNum disabled mustBeAfters) = do
     symAssertWith "Out-of-bound statement results." $
@@ -484,7 +479,7 @@ constrainStmt
     Intermediates argVals resVals <-
       lift $ genOpIntermediates (Proxy @(OpTypeType op)) sem signature
     mrgIf disabled (return ()) $ do
-      computedResVals <- lift $ applyOp sem table tyTable opUnion argVals
+      computedResVals <- lift $ applyOp sem table opUnion argVals
       symAssertWith "Incorrect results." $ resVals .== computedResVals
 
     let getIdValPairs _ [] [] = mrgReturn []
@@ -568,7 +563,7 @@ instance
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx
   where
-  runProg sem table tyTable (Prog _ arg stmts ret) inputs =
+  runProg sem table (Prog _ arg stmts ret) inputs =
     flip mrgEvalStateT (CollectedDefUse [] []) $ do
       symAssertWith
         ( "Expected "
@@ -581,7 +576,7 @@ instance
       addProgArgs inputs
 
       let bound = length inputs + sum (length . stmtResIds <$> stmts)
-      mrgTraverse_ (constrainStmt sem table tyTable bound) stmts
+      mrgTraverse_ (constrainStmt sem table bound) stmts
       resVals <- genProgResVals sem ret
       symAssertWith "Variable is undefined." $
         symAll (inBound bound) $

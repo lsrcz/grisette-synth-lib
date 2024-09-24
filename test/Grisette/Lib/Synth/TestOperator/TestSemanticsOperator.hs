@@ -82,28 +82,28 @@ instance
   (MonadContext ctx) =>
   OpSemantics TestSemanticsObj TestSemanticsOp Integer ctx
   where
-  applyOp _ _ _ Add [x, y] = return [x + y]
-  applyOp _ _ _ Add l =
+  applyOp _ _ Add [x, y] = return [x + y]
+  applyOp _ _ Add l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText (length l)
         <> " arguments."
-  applyOp _ _ _ DivMod [x, y] = do
+  applyOp _ _ DivMod [x, y] = do
     when (y == 0) $ mrgThrowError "ArithException: divide by zero"
     return [x `div` y, x `mod` y]
-  applyOp _ _ _ DivMod l =
+  applyOp _ _ DivMod l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText (length l)
         <> " arguments."
-  applyOp _ _ _ Inc [x] = return [x + 1]
-  applyOp _ _ _ Inc l =
+  applyOp _ _ Inc [x] = return [x + 1]
+  applyOp _ _ Inc l =
     mrgThrowError $
       "Incorrect number of arguments for inc, expected 1 arguments, but got "
         <> showText (length l)
         <> " arguments."
-  applyOp _ _ _ Double [x] = return [x + x]
-  applyOp _ _ _ Double l =
+  applyOp _ _ Double [x] = return [x + x]
+  applyOp _ _ Double l =
     mrgThrowError $
       "Incorrect number of arguments for dec, expected 1 arguments, but got "
         <> showText (length l)
@@ -113,30 +113,30 @@ instance
   (MonadContext ctx, MonadUnion ctx) =>
   OpSemantics TestSemanticsObj TestSemanticsOp SymInteger ctx
   where
-  applyOp _ _ _ Add [x, y] = return [x + y]
-  applyOp _ _ _ Add l =
+  applyOp _ _ Add [x, y] = return [x + y]
+  applyOp _ _ Add l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText (length l)
         <> " arguments."
-  applyOp _ _ _ DivMod [x, y] = do
+  applyOp _ _ DivMod [x, y] = do
     r <- liftToMonadUnion $ runExceptT $ safeDivMod x y
     case r of
       Left (e :: ArithException) -> mrgThrowError $ "ArithException: " <> showText e
       Right (d, m) -> mrgReturn [d, m]
-  applyOp _ _ _ DivMod l =
+  applyOp _ _ DivMod l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
         <> showText (length l)
         <> " arguments."
-  applyOp _ _ _ Inc [x] = return [x + 1]
-  applyOp _ _ _ Inc l =
+  applyOp _ _ Inc [x] = return [x + 1]
+  applyOp _ _ Inc l =
     mrgThrowError $
       "Incorrect number of arguments for inc, expected 1 arguments, but got "
         <> showText (length l)
         <> " arguments."
-  applyOp _ _ _ Double [x] = return [x + x]
-  applyOp _ _ _ Double l =
+  applyOp _ _ Double [x] = return [x + x]
+  applyOp _ _ Double l =
     mrgThrowError $
       "Incorrect number of arguments for dec, expected 1 arguments, but got "
         <> showText (length l)

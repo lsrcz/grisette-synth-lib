@@ -116,7 +116,6 @@ semanticsTest =
               runProg
                 TestSemanticsObj
                 mempty
-                mempty
                 prog
                 args ::
                 ConcreteContext [Integer]
@@ -125,7 +124,6 @@ semanticsTest =
         let actual =
               runProg
                 TestSemanticsObj
-                mempty
                 mempty
                 (ProgMayMultiPath prog)
                 (toSym args) ::

@@ -23,14 +23,12 @@ import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import Grisette.Lib.Synth.Program.ProgSemantics (EvaledSymbolTable)
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable)
 import Grisette.Lib.Synth.Util.Show (showText)
 
 class (MonadContext ctx, OpTyping op ctx) => OpSemantics semObj op val ctx where
   applyOp ::
     semObj ->
     EvaledSymbolTable val ctx ->
-    ProgTypeTable (OpTypeType op) ->
     op ->
     [val] ->
     ctx [val]
@@ -107,9 +105,9 @@ instance
   ) =>
   OpSemantics semObj (Union op) val ctx
   where
-  applyOp semObj table tyTable op args = tryMerge $ do
+  applyOp semObj table op args = tryMerge $ do
     op' <- liftUnion op
-    applyOp semObj table tyTable op' args
+    applyOp semObj table op' args
 
 data DefaultSem = DefaultSem deriving (Eq)
 

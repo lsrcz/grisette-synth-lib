@@ -307,7 +307,7 @@ instance
   ) =>
   ProgSemantics semObj (Prog op conVarId symVarId ty) val ctx
   where
-  runProg sem table tyTable (Prog _ arg stmts ret) inputs = do
+  runProg sem table (Prog _ arg stmts ret) inputs = do
     when (length inputs /= length arg) . mrgThrowError $
       "Expected "
         <> showText (length arg)
@@ -319,7 +319,7 @@ instance
           args <- mrgTraverse lookupVal argIds
           res <- lift $ do
             keptArgs <- takeNumArg argNum args
-            applyOp sem table tyTable op keptArgs
+            applyOp sem table op keptArgs
           symAssertWith "Incorrect number of results." $
             resNum .== fromIntegral (length res)
           symAssertWith "Insufficient result IDs." $

@@ -123,7 +123,7 @@ fuzzingTest =
                 (evalSymbolTable TestSemanticsObj conProgTable)
                 "test"
             fst (badSpec i) @?= o
-            (runProg TestSemanticsObj mempty mempty conProg i /= Right o)
+            (runProg TestSemanticsObj mempty conProg i /= Right o)
               @? "Should fail the test."
         ],
       testGroup
@@ -152,7 +152,7 @@ fuzzingTest =
                 "test"
                 model
             fst (badSpec i) @?= o
-            (runProg TestSemanticsObj mempty mempty conProg i /= Right o)
+            (runProg TestSemanticsObj mempty conProg i /= Right o)
               @? "Should fail the test."
         ]
     ]

@@ -93,8 +93,8 @@ instance
   ) =>
   ProgSemantics semObj (SumProg l r) val ctx
   where
-  runProg semObj table tyTable (SumProgL l) = runProg semObj table tyTable l
-  runProg semObj table tyTable (SumProgR r) = runProg semObj table tyTable r
+  runProg semObj table (SumProgL l) = runProg semObj table l
+  runProg semObj table (SumProgR r) = runProg semObj table r
 
 instance (ProgNaming l, ProgNaming r) => ProgNaming (SumProg l r) where
   nameProg (SumProgL l) = nameProg l

@@ -27,7 +27,7 @@ opSemanticsTest =
                 Union TestSemanticsOp
         let actual1 =
               mrgModifyError (const "Err") $
-                applyOp TestSemanticsObj mempty mempty op [2] ::
+                applyOp TestSemanticsObj mempty op [2] ::
                 SymbolicContext [SymInteger]
         let expected1 =
               mrgIf ("a" .|| "b") (throwError "Err") $
@@ -35,7 +35,7 @@ opSemanticsTest =
         actual1 @?= expected1
         let actual2 =
               mrgModifyError (const "Err") $
-                applyOp TestSemanticsObj mempty mempty op [5, 3] ::
+                applyOp TestSemanticsObj mempty op [5, 3] ::
                 SymbolicContext [SymInteger]
         let expected2 =
               mrgIf "a" (return [8]) $

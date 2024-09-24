@@ -236,7 +236,7 @@ semanticsTest = testGroup "Semantics" $ do
       ]
   return $ testCase name $ do
     let actual =
-          runProg TestSemanticsObj mempty mempty prog args ::
+          runProg TestSemanticsObj mempty prog args ::
             SymbolicContext [SymInteger]
     case expected of
       ErrorResult expectedError -> actual .@?= mrgThrowError expectedError

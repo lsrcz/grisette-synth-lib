@@ -18,12 +18,8 @@ import qualified Data.Text as T
 import Grisette (Mergeable)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Program.ProgTyping
-  ( ProgTypeTable,
-    ProgTyping,
-    typeSymbolTable,
-  )
-import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil (ProgTypeType))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping)
+import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 
 class
@@ -33,7 +29,6 @@ class
   runProg ::
     semObj ->
     EvaledSymbolTable val ctx ->
-    ProgTypeTable (ProgTypeType prog) ->
     prog ->
     [val] ->
     ctx [val]
@@ -50,11 +45,11 @@ evalSymbolTable ::
   semObj ->
   SymbolTable prog ->
   EvaledSymbolTable val ctx
-evalSymbolTable semObj t@(SymbolTable table) =
+evalSymbolTable semObj (SymbolTable table) =
   let res =
         EvaledSymbolTable $
           fmap
-            (second $ runProg semObj res (typeSymbolTable t))
+            (second $ runProg semObj res)
             table
    in res
 

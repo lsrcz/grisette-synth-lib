@@ -89,8 +89,8 @@ instance
   ) =>
   OpSemantics DefaultSem (Op intVal) (Value intVal boolVal) ctx
   where
-  applyOp _ _ _ Plus = applyPlus
-  applyOp _ _ _ Equals = applyEquals
-  applyOp _ _ _ Minus = applyMinus
-  applyOp _ _ _ (IntConst c) = applyIntConst c
-  applyOp _ table _ (If _ true false) = applyIf table true false
+  applyOp _ _ Plus = applyPlus
+  applyOp _ _ Equals = applyEquals
+  applyOp _ _ Minus = applyMinus
+  applyOp _ _ (IntConst c) = applyIntConst c
+  applyOp _ table (If _ true false) = applyIf table true false

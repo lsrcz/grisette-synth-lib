@@ -537,7 +537,7 @@ semanticsTest = testGroup "Semantics" $ do
       ]
   return $ testCase name $ do
     let actual =
-          flip runFreshT ident $ runProg TestSemanticsObj mempty mempty prog args ::
+          flip runFreshT ident $ runProg TestSemanticsObj mempty prog args ::
             SymbolicContext [SymInteger]
     let processedActual =
           actual `catchError` const (mrgThrowError "Error")

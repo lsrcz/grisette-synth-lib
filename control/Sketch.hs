@@ -22,13 +22,15 @@ import Grisette
     mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
-import Grisette.Lib.Synth.Operator.OpSemantics (
-  DefaultSem, OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpSemantics
+  ( DefaultSem,
+    OpSemantics (applyOp),
+  )
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (OpTypeType, typeOp),
   )
-import Grisette.Lib.Synth.TypeSignature (TypeSignature)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
+import Grisette.Lib.Synth.TypeSignature (TypeSignature)
 import Semantics
   ( HasSemantics,
     applyEquals,
@@ -37,7 +39,7 @@ import Semantics
     applyMinus,
     applyPlus,
   )
-import Typing (Type, typeEquals, typeIntConst, typeMinus, typePlus, typeIf)
+import Typing (Type, typeEquals, typeIf, typeIntConst, typeMinus, typePlus)
 import Value (SymValue)
 
 data Op intVal
@@ -78,8 +80,8 @@ instance
   ) =>
   OpSemantics DefaultSem (Op intVal) (SymValue intVal boolVal) ctx
   where
-  applyOp _ _ _ Plus = applyPlus
-  applyOp _ _ _ Equals = applyEquals
-  applyOp _ _ _ Minus = applyMinus
-  applyOp _ _ _ (IntConst c) = applyIntConst c
-  applyOp _ table _ (If _ true false) = applyIf table true false
+  applyOp _ _ Plus = applyPlus
+  applyOp _ _ Equals = applyEquals
+  applyOp _ _ Minus = applyMinus
+  applyOp _ _ (IntConst c) = applyIntConst c
+  applyOp _ table (If _ true false) = applyIf table true false

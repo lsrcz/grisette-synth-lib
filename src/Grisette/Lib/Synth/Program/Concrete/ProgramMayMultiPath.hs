@@ -37,7 +37,12 @@ import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
-import Grisette.Lib.Synth.Program.Concrete.Program (Prog (Prog), ProgArg (progArgId), ProgRes (progResId), Stmt (Stmt))
+import Grisette.Lib.Synth.Program.Concrete.Program
+  ( Prog (Prog),
+    ProgArg (progArgId),
+    ProgRes (progResId),
+    Stmt (Stmt),
+  )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
@@ -111,7 +116,7 @@ instance
   ) =>
   ProgSemantics semObj (ProgMayMultiPath op varId ty) val ctx
   where
-  runProg sem table tyTable (ProgMayMultiPath (Prog _ arg stmts ret)) inputs = merge $ do
+  runProg sem table (ProgMayMultiPath (Prog _ arg stmts ret)) inputs = merge $ do
     when (length inputs /= length arg) . mrgThrowError $
       "Expected "
         <> showText (length arg)
@@ -123,23 +128,13 @@ instance
             mrgReturn <$> inputs
     let runStmt (Stmt op argIds resIds) = do
           args <- mrgTraverse lookupValMayMultiPath argIds
-          res <- lift $ applyOp sem table tyTable op args
+          res <- lift $ applyOp sem table op args
           when (length res /= length resIds) . throwError $
             "Incorrect number of results."
           mrgTraverse_ (uncurry addValMayMultiPath) $ zip resIds res
     flip evalStateT initialEnv $ do
       mrgTraverse_ runStmt stmts
       mrgTraverse (lookupValMayMultiPath . progResId) ret
-
--- instance StmtUtilImpl (Stmt op varId) op varId where
---   getStmtArgIds = stmtArgIds
---   getStmtResIds = stmtResIds
---   getStmtOp = stmtOp
---   getStmtDisabled _ = toSym False
---
--- instance StmtUtil (Stmt op varId) where
---   type StmtVarIdType (Stmt op varId) = varId
---   type StmtOpType (Stmt op varId) = op
 
 instance ProgUtilImpl (ProgMayMultiPath op varId ty) op (Stmt op varId) varId where
   getProgArgIds (ProgMayMultiPath prog) = getProgArgIds prog

@@ -73,10 +73,10 @@ instance
   (MonadContext ctx, Num a, Mergeable a) =>
   OpSemantics DefaultSem OpCode a ctx
   where
-  applyOp _ _ _ Plus = pureBinaryOp "Plus" (+)
-  applyOp _ _ _ Mul = pureBinaryOp "Mul" (*)
-  applyOp _ _ _ Minus = pureBinaryOp "Minus" (-)
-  applyOp _ _ _ UMinus = pureUnaryOp "UMinus" negate
+  applyOp _ _ Plus = pureBinaryOp "Plus" (+)
+  applyOp _ _ Mul = pureBinaryOp "Mul" (*)
+  applyOp _ _ Minus = pureBinaryOp "Minus" (-)
+  applyOp _ _ UMinus = pureUnaryOp "UMinus" negate
 
 -- | The component encoding
 -- (https://ieeexplore.ieee.org/abstract/document/6062089) needs to generate

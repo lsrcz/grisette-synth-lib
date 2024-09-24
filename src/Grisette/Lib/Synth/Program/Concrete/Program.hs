@@ -90,10 +90,6 @@ import Grisette
   )
 import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
--- import Grisette.Lib.Synth.Program.SubProg
---   ( HasAnyPathSubProgs (getAnyPathSubProgs),
---   )
-
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( OpPPrint (pformatOp),
@@ -617,7 +613,7 @@ instance
   ) =>
   ProgSemantics semObj (Prog op varId ty) val ctx
   where
-  runProg sem table tyTable (Prog _ arg stmts ret) inputs = tryMerge $ do
+  runProg sem table (Prog _ arg stmts ret) inputs = tryMerge $ do
     when (length inputs /= length arg) . throwError $
       "Expected "
         <> showText (length arg)
@@ -627,7 +623,7 @@ instance
     let initialEnv = HM.fromList $ zip (progArgId <$> arg) inputs
     let runStmt (Stmt op argIds resIds) = do
           args <- traverse lookupVal argIds
-          res <- lift $ applyOp sem table tyTable op args
+          res <- lift $ applyOp sem table op args
           when (length res /= length resIds) . throwError $
             "Incorrect number of results."
           traverse_ (uncurry addVal) $ zip resIds res

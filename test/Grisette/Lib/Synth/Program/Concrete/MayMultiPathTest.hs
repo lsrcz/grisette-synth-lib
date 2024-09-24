@@ -65,10 +65,10 @@ instance
   (MonadContext ctx, MonadUnion ctx) =>
   OpSemantics Sem MayAddOneOp Int ctx
   where
-  applyOp _ _ _ (MayAddOneOp s) [x] = do
+  applyOp _ _ (MayAddOneOp s) [x] = do
     r <- liftToMonadUnion $ mayAddOne s x
     return [r]
-  applyOp _ _ _ _ _ =
+  applyOp _ _ _ _ =
     error "Incorrect number of arguments for MayAddOne, expected 1 argument."
 
 prog :: Prog MayAddOneOp Int IntType
@@ -92,5 +92,5 @@ mayMultiPathTest =
   plusTestOptions (mempty {topt_timeout = Just $ Just 5000000}) $
     testCase "ProgMayMultiPath should not have path explosion" $ do
       let actual =
-            runProg Sem mempty mempty (ProgMayMultiPath prog) [0] :: SymbolicContext [Int]
+            runProg Sem mempty (ProgMayMultiPath prog) [0] :: SymbolicContext [Int]
       actual @?= actual
