@@ -51,7 +51,7 @@ import Control.Monad.State
     StateT,
     evalStateT,
   )
-import qualified Data.Binary as Bytes
+import qualified Data.Binary as Binary
 import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Foldable (traverse_)
 import Data.GraphViz
@@ -170,7 +170,7 @@ instance (Serial op, Serial varId) => Cereal.Serialize (Stmt op varId) where
   put = serialize
   get = deserialize
 
-instance (Serial op, Serial varId) => Bytes.Binary (Stmt op varId) where
+instance (Serial op, Serial varId) => Binary.Binary (Stmt op varId) where
   put = serialize
   get = deserialize
 
@@ -203,7 +203,7 @@ instance (Serial varId, Serial ty) => Cereal.Serialize (ProgArg varId ty) where
   put = serialize
   get = deserialize
 
-instance (Serial varId, Serial ty) => Bytes.Binary (ProgArg varId ty) where
+instance (Serial varId, Serial ty) => Binary.Binary (ProgArg varId ty) where
   put = serialize
   get = deserialize
 
@@ -231,7 +231,7 @@ instance (Serial varId, Serial ty) => Cereal.Serialize (ProgRes varId ty) where
   put = serialize
   get = deserialize
 
-instance (Serial varId, Serial ty) => Bytes.Binary (ProgRes varId ty) where
+instance (Serial varId, Serial ty) => Binary.Binary (ProgRes varId ty) where
   put = serialize
   get = deserialize
 
@@ -266,7 +266,7 @@ instance
 
 instance
   (Serial op, Serial varId, Serial ty) =>
-  Bytes.Binary (Prog op varId ty)
+  Binary.Binary (Prog op varId ty)
   where
   put = serialize
   get = deserialize
