@@ -577,8 +577,16 @@ instance
               }
       Right graph -> graph
 
--- instance (ProgPPrint (Prog op varId ty)) => PPrint (Prog op varId ty) where
---   pformat = pformatProg
+instance (ProgPPrint (Prog op varId ty)) => PPrint (Prog op varId ty) where
+  pformat prog = case pformatProg prog of
+    Left err ->
+      nest
+        2
+        ( "Error while pretty-printing program "
+            <> hardline
+            <> err
+        )
+    Right doc -> doc
 
 type Env varId val = HM.HashMap varId val
 
