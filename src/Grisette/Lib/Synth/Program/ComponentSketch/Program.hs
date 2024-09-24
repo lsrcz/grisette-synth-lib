@@ -83,14 +83,16 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( OpCost (opCost),
     PerStmtCostObj (PerStmtCostObj),
   )
-import Grisette.Lib.Synth.Program.ProgConstraints
-  ( ProgConstraints (constrainProg),
-    WithConstraints (WithConstraints),
-  )
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
-import Grisette.Lib.Synth.Program.ProgSemantics (EvaledSymbolTable, ProgSemantics (runProg))
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable, ProgTyping (typeProg))
+import Grisette.Lib.Synth.Program.ProgSemantics
+  ( EvaledSymbolTable,
+    ProgSemantics (runProg),
+  )
+import Grisette.Lib.Synth.Program.ProgTyping
+  ( ProgTypeTable,
+    ProgTyping (typeProg),
+  )
 import Grisette.Lib.Synth.Program.ProgUtil
   ( ProgUtil
       ( ProgOpType,
@@ -587,24 +589,6 @@ instance
       connected
       defDistinct
       mrgReturn resVals
-
-instance
-  ( SymbolicVarId symVarId,
-    GenIntermediate sem ty val,
-    OpSemantics sem op val ctx,
-    OpTyping op ctx,
-    Mergeable op,
-    SymEq val,
-    MonadAngelicContext ctx,
-    ProgConstraints constObj (Prog op symVarId ty) ctx,
-    Mergeable ty,
-    OpTypeType op ~ ty
-  ) =>
-  ProgSemantics (WithConstraints sem constObj) (Prog op symVarId ty) val ctx
-  where
-  runProg (WithConstraints semObj constObj) table tyTable prog inputs = do
-    constrainProg constObj tyTable prog
-    runProg semObj table tyTable prog inputs
 
 instance
   (Mergeable ty, SymbolicVarId varId) =>

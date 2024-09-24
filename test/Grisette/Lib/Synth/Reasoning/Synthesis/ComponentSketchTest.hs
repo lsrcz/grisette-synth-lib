@@ -33,9 +33,6 @@ import Grisette
     z3,
   )
 import Grisette.Lib.Synth.Context (ConcreteContext)
-import Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction
-  ( ComponentSymmetryReduction (ComponentSymmetryReduction),
-  )
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -46,9 +43,6 @@ import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.Concrete.Flatten (flattenSymbolTable)
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( PerStmtCostObj (PerStmtCostObj),
-  )
-import Grisette.Lib.Synth.Program.ProgConstraints
-  ( WithConstraints (WithConstraints),
   )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics, evalSymbolTable)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
@@ -302,10 +296,7 @@ example iop =
   SomeExample $
     Example
       { exampleConSemantics = TestSemanticsObj,
-        exampleSymSemantics =
-          WithConstraints
-            TestSemanticsObj
-            (ComponentSymmetryReduction ()),
+        exampleSymSemantics = TestSemanticsObj,
         exampleSymValType = Proxy :: Proxy SymInteger,
         exampleIOPair = iop,
         exampleMatcher = EqMatcher
@@ -323,8 +314,7 @@ verifier ::
   QuickCheckFuzzer SymVal ConVal SymProg ConProg
 verifier spec gen =
   QuickCheckFuzzer
-    { quickCheckFuzzerSymSemantics =
-        WithConstraints TestSemanticsObj (ComponentSymmetryReduction ()),
+    { quickCheckFuzzerSymSemantics = TestSemanticsObj,
       quickCheckFuzzerConSemantics = TestSemanticsObj,
       quickCheckFuzzerMaxTests = 100,
       quickCheckFuzzerGenerators = [gen],

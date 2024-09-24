@@ -19,9 +19,6 @@ import Grisette.Lib.Synth.Program.ByteCodeSketch
     Stmt (Stmt),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.ProgConstraints
-  ( WithConstraints (WithConstraints),
-  )
 import Grisette.Lib.Synth.Program.ProgSemantics (evalSymbolTable)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
@@ -140,8 +137,7 @@ byteCodeSketchTest =
         ]
     let verifier =
           QuickCheckFuzzer
-            { quickCheckFuzzerSymSemantics =
-                WithConstraints TestSemanticsObj (),
+            { quickCheckFuzzerSymSemantics = TestSemanticsObj,
               quickCheckFuzzerConSemantics = TestSemanticsObj,
               quickCheckFuzzerMaxTests = 100,
               quickCheckFuzzerGenerators = [gen],

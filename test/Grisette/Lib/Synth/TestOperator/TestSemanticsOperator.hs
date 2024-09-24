@@ -51,7 +51,6 @@ import Grisette.Lib.Synth.Program.Concrete.Flatten
   ( OpFlatten (opForwardedSubProg),
   )
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost))
-import Grisette.Lib.Synth.Program.ProgConstraints (OpSubProgConstraints)
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -66,10 +65,6 @@ data TestSemanticsOp = Add | DivMod | Inc | Double
 
 instance OpFlatten TestSemanticsOp TestSemanticsOp where
   opForwardedSubProg op = return $ Right op
-
-instance
-  (MonadContext ctx) =>
-  OpSubProgConstraints constrObj TestSemanticsOp ctx
 
 data TestSemanticsObj = TestSemanticsObj deriving (Eq)
 

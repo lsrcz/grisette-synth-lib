@@ -30,8 +30,6 @@ library
       Grisette.Lib.Synth.Context
       Grisette.Lib.Synth.Operator.OpSemantics
       Grisette.Lib.Synth.Operator.OpTyping
-      Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReduction
-      Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
       Grisette.Lib.Synth.Program.ByteCodeSketch
       Grisette.Lib.Synth.Program.ByteCodeSketch.Program
       Grisette.Lib.Synth.Program.ComponentSketch
@@ -48,7 +46,6 @@ library
       Grisette.Lib.Synth.Program.CostModel.NoCostModel
       Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
       Grisette.Lib.Synth.Program.NullProg
-      Grisette.Lib.Synth.Program.ProgConstraints
       Grisette.Lib.Synth.Program.ProgCost
       Grisette.Lib.Synth.Program.ProgNaming
       Grisette.Lib.Synth.Program.ProgPPrint
