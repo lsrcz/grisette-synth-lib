@@ -88,8 +88,10 @@ import Grisette
     ToSym (toSym),
     tryMerge,
   )
-import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
-import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
+import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Operator.OpReachableSymbols
+  ( OpReachableSymbols (opReachableSymbols),
+  )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
@@ -327,8 +329,7 @@ instance
 
 prettyStmt ::
   ( ConcreteVarId varId,
-    OpPPrint op,
-    OpTyping op ConcreteContext
+    OpPPrint op
   ) =>
   Int ->
   Stmt op varId ->
@@ -348,8 +349,7 @@ prettyStmt index stmt@(Stmt op argIds resIds) = do
 prettyProg ::
   ( ConcreteVarId varId,
     OpPPrint op,
-    PPrint ty,
-    OpTyping op ConcreteContext
+    PPrint ty
   ) =>
   T.Text ->
   Prog op varId ty ->
@@ -389,9 +389,7 @@ instance
     ConcreteVarId varId,
     PPrint ty,
     Show op,
-    Show ty,
-    OpTyping op ConcreteContext,
-    OpTypeType op ~ ty
+    Show ty
   ) =>
   ProgPPrint (Prog op varId ty)
   where
@@ -406,10 +404,7 @@ instance
         Right doc -> Right doc
 
 stmtToDotNode ::
-  ( ConcreteVarId varId,
-    OpPPrint op,
-    OpTyping op ConcreteContext
-  ) =>
+  (ConcreteVarId varId, OpPPrint op) =>
   T.Text ->
   Int ->
   Stmt op varId ->
@@ -446,11 +441,7 @@ stmtToDotNode progName index stmt@(Stmt op argIds resIds) = do
     )
 
 progToDotSubGraph ::
-  ( ConcreteVarId varId,
-    OpPPrint op,
-    PPrint ty,
-    OpTyping op ConcreteContext
-  ) =>
+  (ConcreteVarId varId, OpPPrint op, PPrint ty) =>
   T.Text ->
   Prog op varId ty ->
   Either (ProgPPrintError varId op) (DotSubGraph T.Text)
@@ -538,9 +529,7 @@ instance
     ConcreteVarId varId,
     PPrint ty,
     Show op,
-    Show ty,
-    OpTyping op ConcreteContext,
-    OpTypeType op ~ ty
+    Show ty
   ) =>
   ProgToDot (Prog op varId ty)
   where

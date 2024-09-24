@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Grisette.Lib.Synth.Program.Concrete.OpToDot
   ( VarIdToLabel,
@@ -23,8 +22,6 @@ import Data.GraphViz.Attributes.Complete
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import Grisette.Lib.Synth.Context (ConcreteContext)
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( OpPPrint (describeArguments, prefixResults),
     OpPPrintError
@@ -73,8 +70,7 @@ argumentsToFieldEdges nodeId op argIds map = do
 
 resultsToFieldEdges ::
   ( ConcreteVarId varId,
-    OpPPrint op,
-    OpTyping op ConcreteContext
+    OpPPrint op
   ) =>
   T.Text ->
   op ->

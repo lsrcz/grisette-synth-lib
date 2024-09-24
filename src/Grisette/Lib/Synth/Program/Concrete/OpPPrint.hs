@@ -115,10 +115,7 @@ noArgumentsDescription op = case typeOp op of
   Left err -> throwError $ PPrintTypingError op err
 
 class OpPPrint op where
-  prefixResults ::
-    (OpTyping op ConcreteContext) =>
-    op ->
-    Either (OpPPrintError varId op) [T.Text]
+  prefixResults :: op -> Either (OpPPrintError varId op) [T.Text]
   default prefixResults ::
     ( OpTyping op ConcreteContext,
       PrefixByType (OpTypeType op)
@@ -126,9 +123,7 @@ class OpPPrint op where
     op ->
     Either (OpPPrintError varId op) [T.Text]
   prefixResults = allPrefixesByTypes
-  describeArguments ::
-    op ->
-    Either (OpPPrintError varId op) [Maybe T.Text]
+  describeArguments :: op -> Either (OpPPrintError varId op) [Maybe T.Text]
   default describeArguments ::
     (OpTyping op ConcreteContext) =>
     op ->
@@ -170,8 +165,7 @@ prettyArguments op varIds map = do
 
 prettyResults ::
   ( ConcreteVarId varId,
-    OpPPrint op,
-    OpTyping op ConcreteContext
+    OpPPrint op
   ) =>
   op ->
   [varId] ->

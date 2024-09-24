@@ -53,7 +53,6 @@ library
       Grisette.Lib.Synth.Program.ProgToDot
       Grisette.Lib.Synth.Program.ProgTyping
       Grisette.Lib.Synth.Program.ProgUtil
-      Grisette.Lib.Synth.Program.SubProg
       Grisette.Lib.Synth.Program.SumProg
       Grisette.Lib.Synth.Program.SymbolTable
       Grisette.Lib.Synth.Reasoning.Fuzzing

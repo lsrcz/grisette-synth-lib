@@ -18,12 +18,11 @@ import qualified Data.Text as T
 import Grisette (Mergeable)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping)
 import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 
 class
-  (MonadContext ctx, ProgTyping prog) =>
+  (MonadContext ctx, ProgUtil prog) =>
   ProgSemantics semObj prog val ctx
   where
   runProg ::
@@ -38,10 +37,7 @@ newtype EvaledSymbolTable val ctx
   deriving newtype (Semigroup, Monoid)
 
 evalSymbolTable ::
-  ( ProgSemantics semObj prog val ctx,
-    ProgUtil prog,
-    ProgTyping prog
-  ) =>
+  (ProgSemantics semObj prog val ctx) =>
   semObj ->
   SymbolTable prog ->
   EvaledSymbolTable val ctx
@@ -67,9 +63,7 @@ runEvaledSymbol (EvaledSymbolTable table) symbol inputs = go table
 runSymbol ::
   ( MonadContext ctx,
     Mergeable val,
-    ProgSemantics sem prog val ctx,
-    ProgUtil prog,
-    ProgTyping prog
+    ProgSemantics sem prog val ctx
   ) =>
   sem ->
   SymbolTable prog ->
