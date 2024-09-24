@@ -20,10 +20,10 @@ import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TypeSignature (TypeSignature)
 
 class (ProgUtil prog) => ProgTyping prog where
-  typeProg :: prog -> ConcreteContext (TypeSignature (ProgTypeType prog))
+  typeProg :: prog -> TypeSignature (ProgTypeType prog)
 
 newtype ProgTypeTable ty
-  = ProgTypeTable [(T.Text, ConcreteContext (TypeSignature ty))]
+  = ProgTypeTable [(T.Text, TypeSignature ty)]
   deriving newtype (Semigroup, Monoid)
 
 typeSymbolTable ::
@@ -38,7 +38,7 @@ lookupType ::
 lookupType (ProgTypeTable table) symbol = go table
   where
     go [] = error $ "Symbol " <> T.unpack symbol <> " not found"
-    go ((sym, f) : rest) = if sym == symbol then f else go rest
+    go ((sym, f) : rest) = if sym == symbol then return f else go rest
 
 symbolType ::
   (ProgTyping prog) =>

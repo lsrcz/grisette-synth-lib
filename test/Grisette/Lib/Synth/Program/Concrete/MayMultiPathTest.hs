@@ -59,7 +59,7 @@ instance
   OpTyping MayAddOneOp ctx
   where
   type OpTypeType MayAddOneOp = IntType
-  typeOp _ _ = return $ TypeSignature [IntType] [IntType]
+  typeOp _ = return $ TypeSignature [IntType] [IntType]
 
 instance
   (MonadContext ctx, MonadUnion ctx) =>

@@ -68,10 +68,10 @@ instance ProgTyping (NullProg ty) where
   typeProg _ = error "Impossible"
 
 instance ProgPPrint (NullProg ty) where
-  pformatProg _ _ = error "Impossible"
+  pformatProg _ = error "Impossible"
 
 instance ProgToDot (NullProg ty) where
-  toDotProg _ _ = error "Impossible"
+  toDotProg _ = error "Impossible"
 
 data NullStmt ty
   deriving (Generic)

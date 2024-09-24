@@ -47,23 +47,23 @@ opToDotTest =
             "Errors"
             [ testCase "IncorrectNumberOfArguments" $ do
                 let actual =
-                      argumentsToFieldEdges mempty "prog_stmt1" PrettyOp1 [0, 1] env
+                      argumentsToFieldEdges "prog_stmt1" PrettyOp1 [0, 1] env
                 let expected = Left (IncorrectNumberOfArguments PrettyOp1 1 2)
                 actual @?= expected,
               testCase "UndefinedArgument" $ do
                 let actual =
-                      argumentsToFieldEdges mempty "prog_stmt1" PrettyOp2 [1, 2] env
+                      argumentsToFieldEdges "prog_stmt1" PrettyOp2 [1, 2] env
                 let expected = Left (UndefinedArgument 1 2)
                 actual @?= expected
             ],
           testGroup
             "Success"
             [ testCase "0 arguments" $ do
-                argumentsToFieldEdges mempty "prog_stmt1" PrettyOp0 [] env
+                argumentsToFieldEdges "prog_stmt1" PrettyOp0 [] env
                   @?= Right ([], []),
               testCase "1 arguments" $ do
                 let actual =
-                      argumentsToFieldEdges mempty "prog_stmt1" PrettyOp1 [1] env
+                      argumentsToFieldEdges "prog_stmt1" PrettyOp1 [1] env
                 let expected =
                       Right
                         ( [LabelledTarget (PN "arg0") "op1"],
@@ -79,7 +79,7 @@ opToDotTest =
                 actual @?= expected,
               testCase "2 arguments" $ do
                 let actual =
-                      argumentsToFieldEdges mempty "prog_stmt2" PrettyOp2 [1, 0] env
+                      argumentsToFieldEdges "prog_stmt2" PrettyOp2 [1, 0] env
                 let expected =
                       Right
                         ( [ LabelledTarget (PN "arg0") "op2'2'0'arg",
@@ -110,19 +110,19 @@ opToDotTest =
             "Errors"
             [ testCase "IncorrectNumberOfResults" $ do
                 let actual =
-                      resultsToFieldEdges mempty "prog_stmt1" PrettyOp1 [2, 3] env
+                      resultsToFieldEdges "prog_stmt1" PrettyOp1 [2, 3] env
                 let expected = Left (IncorrectNumberOfResults PrettyOp1 1 2)
                 actual @?= expected,
               testCase "RedefinedResult" $ do
                 let actual =
-                      resultsToFieldEdges mempty "prog_stmt1" PrettyOp2 [0, 2] env
+                      resultsToFieldEdges "prog_stmt1" PrettyOp2 [0, 2] env
                 let expected = Left (RedefinedResult 0 0)
                 actual @?= expected
             ],
           testGroup
             "Success"
             [ testCase "1 results" $ do
-                let actual = resultsToFieldEdges mempty "prog_stmt1" PrettyOp1 [3] env
+                let actual = resultsToFieldEdges "prog_stmt1" PrettyOp1 [3] env
                 let expected =
                       Right
                         ( HM.fromList
@@ -135,7 +135,7 @@ opToDotTest =
                 actual @?= expected,
               testCase "2 results" $ do
                 let actual =
-                      resultsToFieldEdges mempty "prog_stmt1" PrettyOp2 [2, 3] env
+                      resultsToFieldEdges "prog_stmt1" PrettyOp2 [2, 3] env
                 let expected =
                       Right
                         ( HM.fromList

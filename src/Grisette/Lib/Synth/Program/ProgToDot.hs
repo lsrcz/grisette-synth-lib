@@ -15,36 +15,28 @@ import Data.GraphViz
     PrintDot (unqtDot),
   )
 import qualified Data.Text as T
-import Grisette.Lib.Synth.Program.ProgTyping
-  ( ProgTypeTable,
-    ProgTyping,
-    typeSymbolTable,
-  )
-import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil (ProgTypeType))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping)
+import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 
 class ProgToDot prog where
-  toDotProg ::
-    ProgTypeTable (ProgTypeType prog) ->
-    prog ->
-    DotSubGraph T.Text
+  toDotProg :: prog -> DotSubGraph T.Text
 
 instance
   (ProgToDot prog, ProgUtil prog, ProgTyping prog) =>
   PrintDot (SymbolTable prog)
   where
-  unqtDot table@(SymbolTable lst) =
-    let tyTable = typeSymbolTable table
-     in unqtDot $
-          DotGraph
-            { strictGraph = False,
-              directedGraph = True,
-              graphID = Nothing,
-              graphStatements =
-                DotStmts
-                  { attrStmts = [],
-                    subGraphs = toDotProg tyTable . snd <$> lst,
-                    nodeStmts = [],
-                    edgeStmts = []
-                  }
-            }
+  unqtDot (SymbolTable lst) =
+    unqtDot $
+      DotGraph
+        { strictGraph = False,
+          directedGraph = True,
+          graphID = Nothing,
+          graphStatements =
+            DotStmts
+              { attrStmts = [],
+                subGraphs = toDotProg . snd <$> lst,
+                nodeStmts = [],
+                edgeStmts = []
+              }
+        }

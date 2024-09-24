@@ -14,9 +14,12 @@ module ConProg (Op (..), Prog) where
 import Data.Hashable (Hashable)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (PPrint (pformat))
+import Grisette (PPrint (pformat), mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem, OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpSemantics
+  ( DefaultSem,
+    OpSemantics (applyOp),
+  )
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (OpTypeType, typeOp),
   )
@@ -27,8 +30,7 @@ import Grisette.Lib.Synth.Program.Concrete
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 -- applyIf,
 
-import Grisette.Lib.Synth.Program.ProgTyping (lookupType)
-import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (argTypes))
 import Grisette.Lib.Synth.Util.Pretty (parenCommaList)
 import Semantics
   ( HasSemantics,
@@ -46,7 +48,7 @@ data Op intVal
   | Equals
   | Minus
   | IntConst intVal
-  | If T.Text T.Text
+  | If (TypeSignature Type) T.Text T.Text
   deriving (Show, Eq, Generic)
   deriving anyclass (Hashable)
 
@@ -57,32 +59,30 @@ instance (PPrint intVal) => PPrint (Op intVal) where
   pformat Equals = "equals"
   pformat Minus = "Minus"
   pformat (IntConst n) = "const" <> parenCommaList [pformat n]
-  pformat (If true false) =
+  pformat (If _ true false) =
     "if" <> parenCommaList (pformat <$> [true, false])
 
 instance
   (PPrint intVal, Show intVal) =>
   OpPPrint (Op intVal)
   where
-  describeArguments _ Plus = return $ replicate 2 Nothing
-  describeArguments _ Equals = return $ replicate 2 Nothing
-  describeArguments _ Minus = return $ replicate 2 Nothing
-  describeArguments _ (IntConst _) = return []
-  describeArguments table (If true _) =
-    case lookupType table true of
-      Left err -> error $ T.unpack err
-      Right (TypeSignature arg _) -> return $ Just "cond" : (Nothing <$ arg)
+  describeArguments Plus = return $ replicate 2 Nothing
+  describeArguments Equals = return $ replicate 2 Nothing
+  describeArguments Minus = return $ replicate 2 Nothing
+  describeArguments (IntConst _) = return []
+  describeArguments (If sig _ _) =
+    return $ Just "cond" : (Nothing <$ argTypes sig)
 
 instance PrefixByType Type where
   prefixByType _ = "r"
 
 instance (MonadContext ctx) => OpTyping (Op intVal) ctx where
   type OpTypeType (Op intVal) = Type
-  typeOp _ Plus = typePlus
-  typeOp _ Equals = typeEquals
-  typeOp _ Minus = typeMinus
-  typeOp _ IntConst {} = typeIntConst
-  typeOp table (If true false) = typeIf table true false
+  typeOp Plus = typePlus
+  typeOp Equals = typeEquals
+  typeOp Minus = typeMinus
+  typeOp IntConst {} = typeIntConst
+  typeOp (If sig _ _) = mrgReturn $ typeIf sig
 
 instance
   ( HasSemantics (Value intVal boolVal) ctx
@@ -93,4 +93,4 @@ instance
   applyOp _ _ _ Equals = applyEquals
   applyOp _ _ _ Minus = applyMinus
   applyOp _ _ _ (IntConst c) = applyIntConst c
-  applyOp _ table _ (If true false) = applyIf table true false
+  applyOp _ table _ (If _ true false) = applyIf table true false

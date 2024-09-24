@@ -17,7 +17,6 @@
 
 module Arith (OpCode (..)) where
 
-import Control.Monad.Error.Class (MonadError (throwError))
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
@@ -25,7 +24,6 @@ import Grisette
     Mergeable,
     PPrint (pformat),
     derive,
-    mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics
@@ -41,14 +39,7 @@ import Grisette.Lib.Synth.Operator.OpTyping
     simpleTyping,
     unaryDefaultType,
   )
-import Grisette.Lib.Synth.Program.Concrete
-  ( OpPPrint (describeArguments, prefixResults),
-    OpPPrintError (PPrintTypingError),
-    PrefixByType (prefixByType),
-    allPrefixesByTypes,
-  )
-import Grisette.Lib.Synth.Program.NullProg (NullProg)
-import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
+import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments))
 
 -- * Operators
 
@@ -97,7 +88,7 @@ instance
 -- along with the 'DefaultSem'.
 instance (MonadContext ctx) => OpTyping OpCode ctx where
   type OpTypeType OpCode = DefaultType
-  typeOp _ = simpleTyping $ \case
+  typeOp = simpleTyping $ \case
     Plus -> binaryDefaultType
     Mul -> binaryDefaultType
     Minus -> binaryDefaultType
@@ -111,12 +102,7 @@ instance PPrint OpCode where
   pformat UMinus = "uminus"
 
 instance OpPPrint OpCode where
-  describeArguments _ Plus = Right [Just "lhs", Just "rhs"]
-  describeArguments _ Mul = Right [Just "lhs", Just "rhs"]
-  describeArguments _ Minus = Right [Just "lhs", Just "rhs"]
-  describeArguments _ UMinus = Right [Nothing]
-
--- prefixResults table op = case typeOp table op of
---   Right (TypeSignature _ resTypes) ->
---     return $ prefixByType <$> resTypes
---   Left err -> throwError $ PPrintTypingError op err
+  describeArguments Plus = Right [Just "lhs", Just "rhs"]
+  describeArguments Mul = Right [Just "lhs", Just "rhs"]
+  describeArguments Minus = Right [Just "lhs", Just "rhs"]
+  describeArguments UMinus = Right [Nothing]

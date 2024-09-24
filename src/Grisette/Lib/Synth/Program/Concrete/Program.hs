@@ -88,7 +88,6 @@ import Grisette
     ToSym (toSym),
     tryMerge,
   )
-import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 -- import Grisette.Lib.Synth.Program.SubProg
@@ -121,10 +120,7 @@ import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgToDot
   ( ProgToDot (toDotProg),
   )
-import Grisette.Lib.Synth.Program.ProgTyping
-  ( ProgTypeTable,
-    ProgTyping (typeProg),
-  )
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
   ( ProgUtil
       ( ProgOpType,
@@ -338,17 +334,16 @@ prettyStmt ::
     OpPPrint op,
     OpTyping op ConcreteContext
   ) =>
-  ProgTypeTable (OpTypeType op) ->
   Int ->
   Stmt op varId ->
   StateT (VarIdMap varId) (Either (ProgPPrintError varId op)) (Doc ann)
-prettyStmt table index stmt@(Stmt op argIds resIds) = do
+prettyStmt index stmt@(Stmt op argIds resIds) = do
   map <- get
-  arpformat <- case prettyArguments table op argIds map of
+  arpformat <- case prettyArguments op argIds map of
     Left err -> throwError $ StmtPPrintError stmt index err
     Right arpformat -> pure arpformat
   let opPretty = pformatOp op
-  (newMap, resPretty) <- case prettyResults table op resIds map of
+  (newMap, resPretty) <- case prettyResults op resIds map of
     Left err -> throwError $ StmtPPrintError stmt index err
     Right resPretty -> pure resPretty
   put newMap
@@ -360,14 +355,13 @@ prettyProg ::
     PPrint ty,
     OpTyping op ConcreteContext
   ) =>
-  ProgTypeTable (OpTypeType op) ->
   Prog op varId ty ->
   Either (ProgPPrintError varId op) (Doc ann)
-prettyProg table (Prog name argList stmtList resList) = do
+prettyProg (Prog name argList stmtList resList) = do
   let initMap =
         HM.fromList $ map (\arg -> (progArgId arg, progArgName arg)) argList
   flip evalStateT initMap $ do
-    stmtsPretty <- traverse (uncurry $ prettyStmt table) (zip [0 ..] stmtList)
+    stmtsPretty <- traverse (uncurry prettyStmt) (zip [0 ..] stmtList)
     let firstLine =
           nest (-2) $
             "def "
@@ -404,9 +398,9 @@ instance
   ) =>
   ProgPPrint (Prog op varId ty)
   where
-  pformatProg table prog = progDoc
+  pformatProg prog = progDoc
     where
-      progDoc = case prettyProg table prog of
+      progDoc = case prettyProg prog of
         Left err ->
           Left $
             nest
@@ -425,7 +419,6 @@ stmtToDotNode ::
     OpPPrint op,
     OpTyping op ConcreteContext
   ) =>
-  ProgTypeTable (OpTypeType op) ->
   T.Text ->
   Int ->
   Stmt op varId ->
@@ -433,16 +426,16 @@ stmtToDotNode ::
     (VarIdToLabel varId)
     (Either (ProgPPrintError varId op))
     (DotNode T.Text, [DotEdge T.Text])
-stmtToDotNode prog progName index stmt@(Stmt op argIds resIds) = do
+stmtToDotNode progName index stmt@(Stmt op argIds resIds) = do
   map <- get
   let nodeId = progName <> "_stmt" <> showText index
   (argFields, edges) <-
-    case argumentsToFieldEdges prog nodeId op argIds map of
+    case argumentsToFieldEdges nodeId op argIds map of
       Left err -> throwError $ StmtPPrintError stmt index err
       Right argFieldEdges -> pure argFieldEdges
   let opPretty = TL.fromStrict $ renderDoc 80 $ pformatOp op
   (newMap, resFields) <-
-    case resultsToFieldEdges prog nodeId op resIds map of
+    case resultsToFieldEdges nodeId op resIds map of
       Left err -> throwError $ StmtPPrintError stmt index err
       Right resFields -> pure resFields
   put newMap
@@ -467,10 +460,9 @@ progToDotSubGraph ::
     PPrint ty,
     OpTyping op ConcreteContext
   ) =>
-  ProgTypeTable (OpTypeType op) ->
   Prog op varId ty ->
   Either (ProgPPrintError varId op) (DotSubGraph T.Text)
-progToDotSubGraph table (Prog name argList stmtList resList) = do
+progToDotSubGraph (Prog name argList stmtList resList) = do
   let buildArgField arg =
         let argName = TL.fromStrict $ progArgName arg
             argType = TL.fromStrict $ renderDoc 80 (pformat $ progArgType arg)
@@ -517,7 +509,7 @@ progToDotSubGraph table (Prog name argList stmtList resList) = do
             argList
   flip evalStateT initMap $ do
     stmtsPretty <-
-      traverse (uncurry $ stmtToDotNode table name) (zip [0 ..] stmtList)
+      traverse (uncurry $ stmtToDotNode name) (zip [0 ..] stmtList)
     let nodes = fst <$> stmtsPretty
     let edges = concatMap snd stmtsPretty
     allMap <- get
@@ -560,8 +552,8 @@ instance
   ) =>
   ProgToDot (Prog op varId ty)
   where
-  toDotProg table prog =
-    case progToDotSubGraph table prog of
+  toDotProg prog =
+    case progToDotSubGraph prog of
       Left err ->
         let errTxt =
               renderDoc 80 $
@@ -645,10 +637,9 @@ instance
 
 instance (Mergeable ty) => ProgTyping (Prog op varId ty) where
   typeProg prog =
-    mrgReturn $
-      TypeSignature
-        (progArgType <$> progArgList prog)
-        (progResType <$> progResList prog)
+    TypeSignature
+      (progArgType <$> progArgList prog)
+      (progResType <$> progResList prog)
 
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName

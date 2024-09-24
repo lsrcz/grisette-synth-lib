@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -6,9 +7,26 @@
 
 module Grisette.Lib.Synth.TypeSignature (TypeSignature (..)) where
 
+import Control.DeepSeq (NFData)
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
-import Grisette (Default (Default), EvalSym, Mergeable)
+import Grisette
+  ( Default (Default),
+    EvalSym,
+    ExtractSym,
+    Mergeable,
+    SymEq,
+    SymOrd,
+  )
 
 data TypeSignature ty = TypeSignature {argTypes :: [ty], resTypes :: [ty]}
   deriving (Show, Eq, Generic)
-  deriving (EvalSym, Mergeable) via (Default (TypeSignature ty))
+  deriving anyclass (NFData, Hashable)
+  deriving
+    ( SymEq,
+      SymOrd,
+      EvalSym,
+      ExtractSym,
+      Mergeable
+    )
+    via (Default (TypeSignature ty))

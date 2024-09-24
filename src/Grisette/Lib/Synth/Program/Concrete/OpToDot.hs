@@ -24,7 +24,7 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Grisette.Lib.Synth.Context (ConcreteContext)
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping)
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( OpPPrint (describeArguments, prefixResults),
     OpPPrintError
@@ -34,7 +34,6 @@ import Grisette.Lib.Synth.Program.Concrete.OpPPrint
         UndefinedArgument
       ),
   )
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable)
 import Grisette.Lib.Synth.Util.Show (showText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
@@ -42,14 +41,13 @@ type VarIdToLabel varId = HM.HashMap varId (T.Text, PortName)
 
 argumentsToFieldEdges ::
   (ConcreteVarId varId, OpPPrint op) =>
-  ProgTypeTable (OpTypeType op) ->
   T.Text ->
   op ->
   [varId] ->
   VarIdToLabel varId ->
   Either (OpPPrintError varId op) (RecordFields, [DotEdge T.Text])
-argumentsToFieldEdges table nodeId op argIds map = do
-  argDescriptions <- describeArguments table op
+argumentsToFieldEdges nodeId op argIds map = do
+  argDescriptions <- describeArguments op
   when (length argIds /= length argDescriptions) $
     throwError $
       IncorrectNumberOfArguments op (length argDescriptions) (length argIds)
@@ -78,7 +76,6 @@ resultsToFieldEdges ::
     OpPPrint op,
     OpTyping op ConcreteContext
   ) =>
-  ProgTypeTable (OpTypeType op) ->
   T.Text ->
   op ->
   [varId] ->
@@ -86,11 +83,11 @@ resultsToFieldEdges ::
   Either
     (OpPPrintError varId op)
     (VarIdToLabel varId, RecordFields)
-resultsToFieldEdges table nodeId op resIds map = do
+resultsToFieldEdges nodeId op resIds map = do
   let ensureNotRedefined (idx, varId) =
         when (HM.member varId map) $ throwError $ RedefinedResult idx varId
   traverse_ ensureNotRedefined $ zip [0 ..] resIds
-  prefixes <- prefixResults table op
+  prefixes <- prefixResults op
   when (length resIds /= length prefixes) $
     throwError $
       IncorrectNumberOfResults op (length prefixes) (length resIds)

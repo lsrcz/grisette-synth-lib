@@ -19,11 +19,18 @@ import Grisette.Lib.Synth.Program.Concrete
     prettyProg,
     prettyStmt,
   )
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   ( TestPrettyExtOp (TestPrettyExtOp),
-    TestPrettyOp (PrettyInvokeExtOp, PrettyInvokeOp, PrettyOp1, PrettyOp2, PrettyOp2NoDescNoPrefix),
+    TestPrettyOp
+      ( PrettyInvokeExtOp,
+        PrettyInvokeOp,
+        PrettyOp1,
+        PrettyOp2,
+        PrettyOp2NoDescNoPrefix
+      ),
     TestPrettyType (PrettyType1, PrettyType2),
   )
 import Grisette.Lib.Synth.Util.Pretty (renderDoc)
@@ -137,7 +144,7 @@ prettyTest =
               }
             ]
         return $ testGroup groupName $ do
-          let doc = flip runStateT env $ prettyStmt mempty index stmt
+          let doc = flip runStateT env $ prettyStmt index stmt
           [ testCase "loose" $ do
               first (renderDoc 80) <$> doc @?= ((,newMap) <$> loose),
             testCase "compact" $
@@ -257,7 +264,7 @@ prettyTest =
               }
             ]
         return $ testGroup groupName $ do
-          let doc = prettyProg mempty prog
+          let doc = prettyProg prog
           [ testCase "loose" $ renderDoc 80 <$> doc @?= loose,
             testCase "compact" $ renderDoc 1 <$> doc @?= compact
             ],
@@ -268,18 +275,20 @@ prettyTest =
                 [ProgArg "x" 0 PrettyType1]
                 [Stmt TestPrettyExtOp [0 :: Int] [1, 2]]
                 [ProgRes 1 PrettyType1]
+        let progExtType = typeProg progExt
         let prog1 =
               Prog
                 "prog1"
                 [ProgArg "x" 0 PrettyType1]
-                [Stmt (PrettyInvokeExtOp "ext") [0] [1]]
+                [Stmt (PrettyInvokeExtOp progExtType "ext") [0] [1]]
                 [ProgRes 1 PrettyType1]
+        let prog1Type = typeProg prog1
         let prog2 =
               Prog
                 "prog2"
                 [ProgArg "x" (0 :: Int) PrettyType1]
-                [ Stmt (PrettyInvokeExtOp "ext") [0] [1],
-                  Stmt (PrettyInvokeOp "prog1") [1] [2]
+                [ Stmt (PrettyInvokeExtOp progExtType "ext") [0] [1],
+                  Stmt (PrettyInvokeOp prog1Type "prog1") [1] [2]
                 ]
                 [ProgRes 2 PrettyType1]
         let table =

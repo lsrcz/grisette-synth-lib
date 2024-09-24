@@ -19,12 +19,15 @@ import Grisette
     GenSymSimple,
     Mergeable,
     ToCon,
+    mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
-import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem, OpSemantics (applyOp))
+import Grisette.Lib.Synth.Operator.OpSemantics (
+  DefaultSem, OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (OpTypeType, typeOp),
   )
+import Grisette.Lib.Synth.TypeSignature (TypeSignature)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import Semantics
   ( HasSemantics,
@@ -34,7 +37,7 @@ import Semantics
     applyMinus,
     applyPlus,
   )
-import Typing (Type, typeEquals, typeIf, typeIntConst, typeMinus, typePlus)
+import Typing (Type, typeEquals, typeIntConst, typeMinus, typePlus, typeIf)
 import Value (SymValue)
 
 data Op intVal
@@ -42,7 +45,7 @@ data Op intVal
   | Equals
   | Minus
   | IntConst intVal
-  | If T.Text T.Text
+  | If (TypeSignature Type) T.Text T.Text
   deriving (Show, Generic)
   deriving (EvalSym, Mergeable) via (Default (Op intVal))
 
@@ -61,11 +64,11 @@ instance
   OpTyping (Op intVal) ctx
   where
   type OpTypeType (Op intVal) = Type
-  typeOp _ Plus = typePlus
-  typeOp _ Equals = typeEquals
-  typeOp _ Minus = typeMinus
-  typeOp _ IntConst {} = typeIntConst
-  typeOp table (If true false) = typeIf table true false
+  typeOp Plus = typePlus
+  typeOp Equals = typeEquals
+  typeOp Minus = typeMinus
+  typeOp IntConst {} = typeIntConst
+  typeOp (If sig _ _) = mrgReturn $ typeIf sig
 
 instance
   ( HasSemantics (SymValue intVal boolVal) ctx,
@@ -79,4 +82,4 @@ instance
   applyOp _ _ _ Equals = applyEquals
   applyOp _ _ _ Minus = applyMinus
   applyOp _ _ _ (IntConst c) = applyIntConst c
-  applyOp _ table _ (If true false) = applyIf table true false
+  applyOp _ table _ (If _ true false) = applyIf table true false

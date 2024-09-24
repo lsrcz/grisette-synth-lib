@@ -33,5 +33,4 @@ typingTest = testCase "Typing" $ do
           ]
           [ProgRes 4 IntType, ProgRes 5 IntType] ::
           Prog TestSemanticsOp Integer SymInteger TestSemanticsType
-  typeProg prog
-    @?= Right (TypeSignature [IntType, IntType] [IntType, IntType])
+  typeProg prog @?= TypeSignature [IntType, IntType] [IntType, IntType]

@@ -185,8 +185,6 @@ test-suite spec
       Grisette.Lib.Synth.Operator.OpSemanticsTest
       Grisette.Lib.Synth.Operator.OpToDotTest
       Grisette.Lib.Synth.Operator.OpTypingTest
-      Grisette.Lib.Synth.Program.BuiltinProgConstraints.ComponentSymmetryReductionTest
-      Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
       Grisette.Lib.Synth.Program.BuiltinProgConstraintsTest
       Grisette.Lib.Synth.Program.ByteCodeSketch.ProgUtilTest
       Grisette.Lib.Synth.Program.ByteCodeSketch.SemanticsTest

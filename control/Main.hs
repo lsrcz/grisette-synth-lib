@@ -25,6 +25,7 @@ import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (runSymbol)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( defaultSemQuickCheckFuzzer,
   )
@@ -98,18 +99,18 @@ conProg =
             let [equals] = Concrete.node C.Equals 1 [a, b]
                 [res] =
                   Concrete.node
-                    (C.If "trueBranch" "falseBranch")
+                    (C.If (TypeSignature [IntType, IntType] [IntType])
+                      "trueBranch" "falseBranch")
                     1
                     [equals, a, b]
              in [(res, IntType)]
       )
     ]
 
-trueBranchSketch :: SymbolTable Sketch -> Fresh (T.Text, Sketch)
-trueBranchSketch tbl =
+trueBranchSketch :: Fresh (T.Text, Sketch)
+trueBranchSketch =
   ("trueBranch",)
     <$> Component.mkSimpleFreshProg
-      tbl
       "trueBranch"
       [IntType, IntType]
       [ S.Plus,
@@ -117,27 +118,27 @@ trueBranchSketch tbl =
       ]
       [IntType]
 
-falseBranchSketch :: SymbolTable Sketch -> Fresh (T.Text, Sketch)
-falseBranchSketch tbl =
+falseBranchSketch :: Fresh (T.Text, Sketch)
+falseBranchSketch =
   ("falseBranch",)
     <$> Component.mkSimpleFreshProg
-      tbl
       "falseBranch"
       [IntType, IntType]
       [S.Plus, S.Minus]
       [IntType]
 
-sketch :: SymbolTable Sketch -> T.Text -> T.Text -> Fresh (T.Text, Sketch)
-sketch tbl t f = do
+sketch :: T.Text -> T.Text -> Fresh (T.Text, Sketch)
+sketch t f = do
   s :: T.Text <- freshString "prog"
   sk <-
     Component.mkFreshProg
       s
       [IntType, IntType]
-      [ Component.simpleFreshStmt tbl S.Plus,
-        Component.simpleFreshStmt tbl S.Plus,
-        Component.simpleFreshStmt tbl S.Equals,
-        Component.simpleFreshStmt tbl $ S.If t f
+      [ Component.simpleFreshStmt S.Plus,
+        Component.simpleFreshStmt S.Plus,
+        Component.simpleFreshStmt S.Equals,
+        Component.simpleFreshStmt $
+          S.If (TypeSignature [IntType, IntType] [IntType]) t f
       ]
       [IntType]
   return (s, sk)
@@ -145,9 +146,9 @@ sketch tbl t f = do
 sketchSymbol :: T.Text
 sketchSpace :: SymbolTable Sketch
 (sketchSymbol, sketchSpace) = flip runFresh "sketch" $ do
-  (ts, t) <- trueBranchSketch sketchSpace
-  (fs, f) <- falseBranchSketch sketchSpace
-  (ps, p) <- sketch sketchSpace ts fs
+  (ts, t) <- trueBranchSketch
+  (fs, f) <- falseBranchSketch
+  (ps, p) <- sketch ts fs
   return (ps, SymbolTable [(ts, t), (fs, f), (ps, p)])
 
 spec :: [ConVal] -> [ConVal]

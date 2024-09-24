@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -10,35 +11,21 @@ where
 
 import Data.List (intersperse)
 import Grisette (PPrint (pformat))
-import Grisette.Lib.Synth.Program.ProgTyping
-  ( ProgTypeTable,
-    ProgTyping,
-    typeSymbolTable,
-  )
-import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil (ProgTypeType))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.Util.Pretty (Doc, hardline)
 
 class ProgPPrint prog where
-  pformatProg ::
-    ProgTypeTable (ProgTypeType prog) ->
-    prog ->
-    Either (Doc ann) (Doc ann)
-
--- pformatProg :: (ProgPPrint prog) => prog -> Doc ann
--- pformatProg prog =
---   concatWith (\l r -> l <> hardline <> r) allProgs
---   where
---     allProgs = topologicalPFormatProg prog OM.empty
+  pformatProg :: prog -> Either (Doc ann) (Doc ann)
 
 instance
   (ProgPPrint prog, ProgTyping prog) =>
   PPrint (SymbolTable prog)
   where
-  pformat table@(SymbolTable lst) =
+  pformat (SymbolTable lst) =
     mconcat $ intersperse hardline $ go <$> lst
     where
       go (name, prog) =
-        case pformatProg (typeSymbolTable table) prog of
-          Left _ -> pformat name <> ": err"
+        case pformatProg prog of
+          Left err -> pformat name <> ": " <> err
           Right doc -> pformat name <> ": " <> doc

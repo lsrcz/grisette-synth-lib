@@ -44,7 +44,6 @@ sketchTable =
   SymbolTable
     [ ( "prog",
         Component.mkSimpleSketch
-          sketchTable
           -- The name of the program. If your program supports procedure calls, you
           -- should make sure that the programs has a unique name.
           "test"

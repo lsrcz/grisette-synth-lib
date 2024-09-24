@@ -9,6 +9,7 @@ import Grisette.Lib.Synth.Program.Concrete
     Stmt (Stmt),
   )
 import Grisette.Lib.Synth.Program.Concrete.Flatten (flattenSymbolTable)
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   ( TestPrettyOp (PrettyInvokeOp, PrettyOp0, PrettyOp1, PrettyOp2),
@@ -51,14 +52,15 @@ flattenTest =
                   Stmt PrettyOp2 [40, 30] [0, 1]
                 ]
                 [ProgRes 1 PrettyType1, ProgRes 0 PrettyType2]
+        let subProgSig = typeProg subProg
         let prog =
               Prog
                 "prog"
                 [ProgArg "b" 4 PrettyType2]
                 [ Stmt PrettyOp0 [] [20 :: Int],
-                  Stmt (PrettyInvokeOp "subProg") [20, 4] [0, 1],
+                  Stmt (PrettyInvokeOp subProgSig "subProg") [20, 4] [0, 1],
                   Stmt PrettyOp1 [0] [2],
-                  Stmt (PrettyInvokeOp "subProg") [2, 1] [5, 6]
+                  Stmt (PrettyInvokeOp subProgSig "subProg") [2, 1] [5, 6]
                 ]
                 [ProgRes 2 PrettyType1, ProgRes 5 PrettyType2]
         let table = SymbolTable [("subProg", subProg), ("prog", prog)]

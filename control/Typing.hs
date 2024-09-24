@@ -16,10 +16,7 @@ module Typing
   )
 where
 
-import Control.Monad (when)
-import Control.Monad.Error.Class (liftEither)
 import Data.Hashable (Hashable)
-import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
@@ -31,9 +28,7 @@ import Grisette
     ToCon,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
-import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable, lookupType)
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -60,18 +55,8 @@ typeMinus = mrgReturn $ TypeSignature [IntType, IntType] [IntType]
 typeIntConst :: (MonadContext ctx) => ctx (TypeSignature Type)
 typeIntConst = mrgReturn $ TypeSignature [] [IntType]
 
-typeIf ::
-  (MonadContext ctx) =>
-  ProgTypeTable Type ->
-  T.Text ->
-  T.Text ->
-  ctx (TypeSignature Type)
-typeIf table true false = do
-  trueType@(TypeSignature trueArgType trueResType) <-
-    liftEither $ lookupType table true
-  falseType <- liftEither $ lookupType table false
-  when (trueType /= falseType) $ mrgThrowError "Unmatched branch types"
-  mrgReturn $ TypeSignature (BoolType : trueArgType) trueResType
+typeIf :: TypeSignature Type -> TypeSignature Type
+typeIf (TypeSignature args ress) = TypeSignature (BoolType : args) ress
 
 instance
   ( Mergeable intVal,

@@ -480,7 +480,7 @@ constrainStmt
       symAll (\(i, isucc) -> isucc .== i + 1) $
         zip resIds (tail resIds)
 
-    signature <- lift $ typeOp tyTable opUnion
+    signature <- lift $ typeOp opUnion
     Intermediates argVals resVals <-
       lift $ genOpIntermediates (Proxy @(OpTypeType op)) sem signature
     mrgIf disabled (return ()) $ do
@@ -595,10 +595,9 @@ instance
   ProgTyping (Prog op varId ty)
   where
   typeProg prog =
-    mrgReturn $
-      TypeSignature
-        (progArgType <$> progArgList prog)
-        (progResType <$> progResList prog)
+    TypeSignature
+      (progArgType <$> progArgList prog)
+      (progResType <$> progResList prog)
 
 instance ProgNaming (Prog op varId ty) where
   nameProg = progName

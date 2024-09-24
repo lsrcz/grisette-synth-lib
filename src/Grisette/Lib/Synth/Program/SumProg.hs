@@ -117,8 +117,8 @@ instance
   ) =>
   ProgPPrint (SumProg l r)
   where
-  pformatProg table (SumProgL l) = pformatProg table l
-  pformatProg table (SumProgR r) = pformatProg table r
+  pformatProg (SumProgL l) = pformatProg l
+  pformatProg (SumProgR r) = pformatProg r
 
 instance
   ( ProgToDot l,
@@ -127,8 +127,8 @@ instance
   ) =>
   ProgToDot (SumProg l r)
   where
-  toDotProg table (SumProgL l) = toDotProg table l
-  toDotProg table (SumProgR r) = toDotProg table r
+  toDotProg (SumProgL l) = toDotProg l
+  toDotProg (SumProgR r) = toDotProg r
 
 instance
   ( StmtUtil l,

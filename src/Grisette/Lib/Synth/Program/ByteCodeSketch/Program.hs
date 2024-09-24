@@ -334,10 +334,9 @@ instance
   ProgTyping (Prog op conVarId symVarId ty)
   where
   typeProg prog =
-    mrgReturn $
-      TypeSignature
-        (progArgType <$> progArgList prog)
-        (progResType <$> progResList prog)
+    TypeSignature
+      (progArgType <$> progArgList prog)
+      (progResType <$> progResList prog)
 
 instance ProgNaming (Prog op conVarId symVarId ty) where
   nameProg = progName

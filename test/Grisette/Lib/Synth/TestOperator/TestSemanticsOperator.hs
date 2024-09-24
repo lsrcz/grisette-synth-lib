@@ -144,7 +144,7 @@ instance
 
 instance (MonadContext ctx) => OpTyping TestSemanticsOp ctx where
   type OpTypeType TestSemanticsOp = TestSemanticsType
-  typeOp _ = simpleTyping $ \case
+  typeOp = simpleTyping $ \case
     Add -> TypeSignature [IntType, IntType] [IntType]
     DivMod -> TypeSignature [IntType, IntType] [IntType, IntType]
     Inc -> TypeSignature [IntType] [IntType]
