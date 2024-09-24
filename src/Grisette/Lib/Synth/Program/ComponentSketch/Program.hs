@@ -70,6 +70,9 @@ import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Control.Monad.State.Class (mrgModify)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT)
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
+-- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
+
+import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
 import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
@@ -84,7 +87,6 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
     PerStmtCostObj (PerStmtCostObj),
   )
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
--- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics
   ( EvaledSymbolTable,
     ProgSemantics (runProg),
@@ -114,6 +116,7 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getStmtResIds
       ),
   )
+import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -639,3 +642,7 @@ instance
         )
         (progStmtList prog)
     return $ sum stmtCosts
+
+instance (OpReachableSymbols op) => ProgReachableSymbols (Prog op varId ty) where
+  progReachableSymbols =
+    mconcat . fmap (opReachableSymbols . stmtOp) . progStmtList

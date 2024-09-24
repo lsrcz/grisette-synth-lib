@@ -89,6 +89,7 @@ import Grisette
     tryMerge,
   )
 import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
+import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
@@ -140,6 +141,7 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getStmtResIds
       ),
   )
+import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -673,3 +675,7 @@ instance
   progCost (PerStmtCostObj obj) table (Prog _ stmts _) = do
     stmtCosts <- traverse (opCost obj table . stmtOp) stmts
     return $ sum stmtCosts
+
+instance (OpReachableSymbols op) => ProgReachableSymbols (Prog op varId ty) where
+  progReachableSymbols =
+    mconcat . fmap (opReachableSymbols . stmtOp) . progStmtList

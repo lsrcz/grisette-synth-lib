@@ -50,10 +50,12 @@ import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT, mrgPut)
 import Grisette.Lib.Data.Foldable (mrgTraverse_)
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
+-- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
+
+import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
--- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
@@ -80,6 +82,7 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getStmtResIds
       ),
   )
+import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -379,3 +382,10 @@ instance
   where
   type StmtOpType (Stmt op conVarId symVarId) = op
   type StmtVarIdType (Stmt op conVarId symVarId) = symVarId
+
+instance
+  (OpReachableSymbols op) =>
+  ProgReachableSymbols (Prog op conVarId symVarId ty)
+  where
+  progReachableSymbols =
+    mconcat . fmap (opReachableSymbols . stmtOp) . progStmtList

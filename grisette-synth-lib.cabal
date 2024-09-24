@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Grisette.Lib.Synth.Context
+      Grisette.Lib.Synth.Operator.OpReachableSymbols
       Grisette.Lib.Synth.Operator.OpSemantics
       Grisette.Lib.Synth.Operator.OpTyping
       Grisette.Lib.Synth.Program.ByteCodeSketch
