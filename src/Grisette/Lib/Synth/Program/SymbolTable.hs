@@ -18,11 +18,12 @@ where
 
 import Control.DeepSeq (NFData)
 import Control.Monad.Error.Class (MonadError (throwError))
+import Data.Bifunctor (Bifunctor (second))
 import Data.Bytes.Serial (Serial)
 import qualified Data.HashSet as HS
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (EvalSym, Mergeable, ToCon (toCon))
+import Grisette (EvalSym, Mergeable, ToCon (toCon), ToSym (toSym))
 import Grisette.Lib.Synth.Context (ConcreteContext)
 
 newtype SymbolTable prog = SymbolTable [(T.Text, prog)]
@@ -36,6 +37,13 @@ instance
   where
   toCon (SymbolTable table) =
     SymbolTable <$> traverse (\(s, p) -> (s,) <$> toCon p) table
+
+instance
+  (ToSym conProg symProg) =>
+  ToSym (SymbolTable conProg) (SymbolTable symProg)
+  where
+  toSym (SymbolTable table) =
+    SymbolTable $ second toSym <$> table
 
 lookupSymbol :: SymbolTable prog -> T.Text -> ConcreteContext prog
 lookupSymbol (SymbolTable table) symbol = go table
