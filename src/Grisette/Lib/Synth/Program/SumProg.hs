@@ -1,18 +1,21 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Grisette.Lib.Synth.Program.SumProg (SumProg (..)) where
+module Grisette.Lib.Synth.Program.SumProg (SumProg (..), SumOp (..)) where
 
 import Control.DeepSeq (NFData)
 import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Grisette (Default (Default), EvalSym, Mergeable, ToCon, ToSym)
+import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
 import Grisette.Lib.Synth.Program.Concrete.Program
   ( ProgPPrint (pformatProg),
     ProgToDot (toDotProg),
@@ -48,6 +51,7 @@ import Grisette.Lib.Synth.Program.ProgUtil
 data SumVarId l r = SumVarIdL l | SumVarIdR r
   deriving (Eq, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving (Mergeable) via Default (SumVarId l r)
 
 data SumOp l r = SumOpL l | SumOpR r
   deriving (Eq, Generic)
@@ -185,3 +189,15 @@ instance
   type
     ProgOpType (SumProg l r) =
       SumOp (ProgOpType l) (ProgOpType r)
+
+instance
+  ( MonadContext ctx,
+    OpTyping a ctx,
+    OpTyping b ctx,
+    OpTypeType a ~ OpTypeType b
+  ) =>
+  OpTyping (SumOp a b) ctx
+  where
+  type OpTypeType (SumOp a b) = OpTypeType a
+  typeOp table (SumOpL l) = typeOp table l
+  typeOp table (SumOpR r) = typeOp table r

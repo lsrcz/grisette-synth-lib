@@ -140,8 +140,7 @@ byteCodeSketchTest =
         ]
     let verifier =
           QuickCheckFuzzer
-            { quickCheckFuzzerSymSemantics =
-                WithConstraints TestSemanticsObj (),
+            { quickCheckFuzzerSymSemantics = TestSemanticsObj,
               quickCheckFuzzerConSemantics = TestSemanticsObj,
               quickCheckFuzzerMaxTests = 100,
               quickCheckFuzzerGenerators = [gen],

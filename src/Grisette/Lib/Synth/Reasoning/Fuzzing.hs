@@ -232,11 +232,7 @@ instance
 
 defaultQuickCheckFuzzerWithConstraint ::
   forall symVal conVal symProg conProg semObj constObj.
-  ( ProgSemantics
-      (WithConstraints semObj constObj)
-      symProg
-      symVal
-      AngelicContext,
+  ( ProgSemantics semObj symProg symVal AngelicContext,
     ProgSemantics semObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
@@ -270,7 +266,7 @@ defaultQuickCheckFuzzerWithConstraint ::
 defaultQuickCheckFuzzerWithConstraint semObj constObj gen spec =
   SomeVerifier
     ( QuickCheckFuzzer
-        { quickCheckFuzzerSymSemantics = WithConstraints semObj constObj,
+        { quickCheckFuzzerSymSemantics = semObj,
           quickCheckFuzzerConSemantics = semObj,
           quickCheckFuzzerMaxTests = 100,
           quickCheckFuzzerGenerators = [gen],
@@ -281,11 +277,7 @@ defaultQuickCheckFuzzerWithConstraint semObj constObj gen spec =
 
 defaultQuickCheckFuzzer ::
   forall symVal conVal symProg conProg semObj.
-  ( ProgSemantics
-      (WithConstraints semObj ())
-      symProg
-      symVal
-      AngelicContext,
+  ( ProgSemantics semObj symProg symVal AngelicContext,
     ProgSemantics semObj conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,
@@ -317,11 +309,7 @@ defaultQuickCheckFuzzer semObj =
 
 defaultSemQuickCheckFuzzer ::
   forall symVal conVal symProg conProg.
-  ( ProgSemantics
-      (WithConstraints DefaultSem ())
-      symProg
-      symVal
-      AngelicContext,
+  ( ProgSemantics DefaultSem symProg symVal AngelicContext,
     ProgSemantics DefaultSem conProg conVal ConcreteContext,
     ToCon symProg conProg,
     ToSym conVal symVal,

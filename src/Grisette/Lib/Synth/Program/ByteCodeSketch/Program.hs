@@ -53,7 +53,10 @@ import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.ProgConstraints (ProgConstraints (constrainProg), WithConstraints (WithConstraints))
+import Grisette.Lib.Synth.Program.ProgConstraints
+  ( ProgConstraints (constrainProg),
+    WithConstraints (WithConstraints),
+  )
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
@@ -330,6 +333,7 @@ instance
       mrgTraverse_ runStmt stmts
       mrgTraverse (lookupVal . progResId) ret
 
+{-
 instance
   ( OpSemantics semObj op val ctx,
     RelatedVarId conVarId symVarId,
@@ -349,6 +353,7 @@ instance
   runProg (WithConstraints semObj constObj) table tyTable prog inputs = do
     constrainProg constObj tyTable prog
     runProg semObj table tyTable prog inputs
+    -}
 
 instance
   (Mergeable ty, RelatedVarId conVarId symVarId) =>

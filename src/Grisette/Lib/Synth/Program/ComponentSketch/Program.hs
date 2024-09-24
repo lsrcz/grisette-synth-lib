@@ -588,6 +588,7 @@ instance
       defDistinct
       mrgReturn resVals
 
+{-
 instance
   ( SymbolicVarId symVarId,
     GenIntermediate sem ty val,
@@ -605,6 +606,7 @@ instance
   runProg (WithConstraints semObj constObj) table tyTable prog inputs = do
     constrainProg constObj tyTable prog
     runProg semObj table tyTable prog inputs
+    -}
 
 instance
   (Mergeable ty, SymbolicVarId varId) =>

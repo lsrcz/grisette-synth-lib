@@ -50,25 +50,21 @@ import Grisette
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
-import Grisette.Lib.Synth.Program.ProgTyping (ProgTypeTable, ProgTyping)
-import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil (ProgTypeType))
+import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping)
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Util.Show (showText)
 
 class
   (MonadContext ctx, ProgTyping prog) =>
   ProgConstraints constObj prog ctx
   where
-  constrainProg ::
-    constObj ->
-    ProgTypeTable (ProgTypeType prog) ->
-    prog ->
-    ctx ()
+  constrainProg :: constObj -> SymbolTable prog -> ctx ()
 
 instance
   (MonadContext ctx, ProgTyping prog) =>
   ProgConstraints () prog ctx
   where
-  constrainProg _ _ _ = mrgReturn ()
+  constrainProg _ _ = mrgReturn ()
 
 instance
   ( ProgConstraints constObj1 prog ctx,
@@ -76,9 +72,9 @@ instance
   ) =>
   ProgConstraints (constObj1, constObj2) prog ctx
   where
-  constrainProg (obj1, obj2) table prog = do
-    constrainProg obj1 table prog
-    constrainProg obj2 table prog
+  constrainProg (obj1, obj2) table = do
+    constrainProg obj1 table
+    constrainProg obj2 table
 
 instance
   ( ProgConstraints constObj1 prog ctx,

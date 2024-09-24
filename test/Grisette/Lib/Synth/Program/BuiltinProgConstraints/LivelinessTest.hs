@@ -14,15 +14,15 @@
 
 module Grisette.Lib.Synth.Program.BuiltinProgConstraints.LivelinessTest
   ( -- Op (..),
-  -- Type (..),
-  -- LivelinessOp (..),
-  -- livelinessIdentifier,
-  -- livelinessTest,
-  -- anyResource,
+    -- Type (..),
+    -- LivelinessOp (..),
+    -- livelinessIdentifier,
+    livelinessTest,
+    -- anyResource,
+    livelinessIdentifier,
   )
 where
 
-{-
 -- ConstraintHierarchy (ConstraintHierarchy),
 
 import Control.Monad.Error.Class (liftEither)
@@ -31,7 +31,7 @@ import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
     Identifier,
-    LogicalOp ((.&&), (.||)),
+    LogicalOp (true, (.&&), (.||)),
     Mergeable,
     MonadFresh,
     MonadUnion,
@@ -63,41 +63,36 @@ import Grisette.Lib.Synth.Operator.OpTyping
     simpleTyping,
   )
 import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
-  ( ComponentProgDefUse (ComponentProgDefUse),
-    ComponentStmtDefUse (ComponentStmtDefUse),
-    ComponentUnionUse,
-    ComponentUse (ComponentUse),
-    Def (Def),
+  ( Def (Def),
     Liveliness (Liveliness),
     LivelinessName (livelinessName),
     LivelinessOpResource
       ( livelinessOpDefUses
       ),
     LivelinessTypeResource (livelinessTypeDefResource),
-    ProgDefUse (ProgDefUse),
+    ProgDefUseEntry (ProgDefUseEntry),
+    ProgDefUseTable,
     Resource (conflict),
     StmtDefUse (StmtDefUse),
     UnionDef,
     UnionUse,
     Use (Use),
-    livelinessComponentProgDefUses,
-    livelinessComponentProgStmtDefUses,
     livelinessOpDefUsesByType,
-    livelinessProgDefUses,
-    livelinessProgStmtDefUses,
-    livelinessSubProgDefUses,
+    livelinessProgDefUseTable,
     livelinessTypeDefs,
     livelinessTypeUses,
+    lookupProgDefUse,
   )
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgConstraints
   ( OpSubProgConstraints (constrainOpSubProg),
-    ProgConstraints (constrainProg),
+    ProgConstraints (constrainAllProg),
     pattern ConstraintHierarchy,
   )
 import Grisette.Lib.Synth.Program.ProgTyping (lookupType)
 import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
+import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature, argTypes, resTypes),
   )
@@ -188,40 +183,6 @@ instance (MonadContext ctx) => OpTyping Op ctx where
     _ -> error "unreachable"
 
 instance
-  ( MonadContext ctx,
-    MonadFresh ctx,
-    MonadUnion ctx,
-    Resource Resources,
-    ProgConstraints
-      (Liveliness LivelinessOp)
-      (Concrete.Prog Op (WordN 8) Type)
-      ctx
-  ) =>
-  LivelinessOpResource LivelinessOp Op Resources ctx
-  where
-  livelinessOpDefUses LivelinessOp table OpDefNoInvalidate argIds resIds disabled = do
-    ty <- typeOp table OpDefNoInvalidate
-    defs <- livelinessTypeDefs LivelinessOp (resTypes ty) resIds disabled
-    uses <- livelinessTypeUses LivelinessOp (argTypes ty) argIds disabled
-    mrgReturn $ StmtDefUse defs (mrgReturn []) uses
-  livelinessOpDefUses LivelinessOp table OpDefShareScope argIds resIds disabled = do
-    ty <- typeOp table OpDefNoInvalidate
-    defs <- livelinessTypeDefs LivelinessOp (resTypes ty) resIds disabled
-    uses <- livelinessTypeUses LivelinessOp (argTypes ty) argIds disabled
-    mrgReturn $ StmtDefUse defs (mrgReturn []) uses
-  livelinessOpDefUses LivelinessOp table (OpSubProg prog) argIds resIds disabled =
-    livelinessSubProgDefUses LivelinessOp table prog argIds resIds disabled
-  -- livelinessOpDefUses
-  --   LivelinessOp
-  --   (OpComponentSubProg prog)
-  --   argIds
-  --   resIds
-  --   disabled =
-  --     livelinessSubProgDefUses LivelinessOp prog argIds resIds disabled
-  livelinessOpDefUses LivelinessOp table op argIds resIds disabled =
-    livelinessOpDefUsesByType LivelinessOp table op argIds resIds disabled
-
-instance
   (MonadContext ctx, MonadFresh ctx, MonadUnion ctx) =>
   LivelinessTypeResource LivelinessOp Resources Type ctx
   where
@@ -235,32 +196,28 @@ instance
     liftUnion chosen
 
 instance
-  ( ProgConstraints
-      constrObj
-      (Concrete.Prog Op (WordN 8) Type)
-      ctx,
-    ProgConstraints
-      constrObj
-      (Component.Prog Op (SymWordN 8) Type)
-      ctx,
-    MonadContext ctx
+  ( MonadContext ctx,
+    MonadFresh ctx,
+    MonadUnion ctx,
+    Resource Resources
   ) =>
-  OpSubProgConstraints constrObj Op ctx
+  LivelinessOpResource LivelinessOp Op Resources ctx
   where
-  constrainOpSubProg obj (OpSubProg prog) = constrainProg obj prog
-  constrainOpSubProg obj (OpComponentSubProg prog) = constrainProg obj prog
-  constrainOpSubProg _ _ = mrgReturn ()
-
-data LivelinessTest where
-  LivelinessTest ::
-    ( ProgConstraints obj prog AngelicContext
-    ) =>
-    { livelinessTestName :: String,
-      livelinessTestObj :: obj,
-      livelinessTestProg :: prog,
-      livelinessTestExpectedAssertion :: SymbolicContext ()
-    } ->
-    LivelinessTest
+  livelinessOpDefUses LivelinessOp _ tyTable OpDefNoInvalidate argIds resIds disabled = do
+    ty <- typeOp tyTable OpDefNoInvalidate
+    defs <- livelinessTypeDefs LivelinessOp (resTypes ty) resIds disabled
+    uses <- livelinessTypeUses LivelinessOp (argTypes ty) argIds disabled
+    mrgReturn $ StmtDefUse defs (mrgReturn []) uses
+  livelinessOpDefUses LivelinessOp _ tyTable OpDefShareScope argIds resIds disabled = do
+    ty <- typeOp tyTable OpDefNoInvalidate
+    defs <- livelinessTypeDefs LivelinessOp (resTypes ty) resIds disabled
+    uses <- livelinessTypeUses LivelinessOp (argTypes ty) argIds disabled
+    mrgReturn $ StmtDefUse defs (mrgReturn []) uses
+  livelinessOpDefUses LivelinessOp duTable _ (OpSubProg prog) argIds resIds disabled = do
+    ProgDefUseEntry f <- lookupProgDefUse duTable prog
+    f argIds resIds disabled
+  livelinessOpDefUses LivelinessOp _ tyTable op argIds resIds disabled =
+    livelinessOpDefUsesByType LivelinessOp tyTable op argIds resIds disabled
 
 opUse :: Union Op
 opUse = mrgReturn OpUse
@@ -277,7 +234,7 @@ opUseDef = mrgReturn OpUseDef
 livelinessIdentifier :: T.Text -> [T.Text] -> Identifier
 livelinessIdentifier base reversePath =
   withMetadata base $
-    ConstraintHierarchy (reverse reversePath) "Liveliness" (List [])
+    ConstraintHierarchy reversePath "Liveliness" (List [])
 
 anyResource :: T.Text -> [T.Text] -> Int -> Resources
 anyResource base reversePath idx =
@@ -286,10 +243,23 @@ anyResource base reversePath idx =
     mkResource1
     mkResource2
 
+anyResourceDef ::
+  WordN 8 -> T.Text -> [T.Text] -> Int -> SymBool -> Def (WordN 8) Resources
+anyResourceDef varId base reversePath idx =
+  Def varId (anyResource base reversePath idx)
+
+anyResourceUse ::
+  WordN 8 -> T.Text -> [T.Text] -> Int -> SymBool -> Use (WordN 8) Resources
+anyResourceUse varId base reversePath idx =
+  Use varId (anyResource base reversePath idx)
+
+innerConcreteAnySymbol :: T.Text
+innerConcreteAnySymbol = "inner"
+
 innerConcreteAny :: Concrete.Prog Op (WordN 8) Type
 innerConcreteAny =
   Concrete.Prog
-    "inner"
+    innerConcreteAnySymbol
     [ Concrete.ProgArg "a" 0 OtherType,
       Concrete.ProgArg "b" 1 AnyType
     ]
@@ -299,10 +269,13 @@ innerConcreteAny =
     ]
     [Concrete.ProgRes 3 OtherType, Concrete.ProgRes 5 AnyType]
 
+innerComponentAnySymbol :: T.Text
+innerComponentAnySymbol = "innerc"
+
 innerComponentAny :: Component.Prog Op (SymWordN 8) Type
 innerComponentAny =
   Component.Prog
-    "innerc"
+    innerComponentAnySymbol
     [ Component.ProgArg "a" OtherType,
       Component.ProgArg "b" AnyType
     ]
@@ -312,20 +285,62 @@ innerComponentAny =
     ]
     [Component.ProgRes 3 OtherType, Component.ProgRes 5 AnyType]
 
+progAnySymbol :: T.Text
+progAnySymbol = "prog"
+
 progAny :: Concrete.Prog Op (WordN 8) Type
 progAny =
   Concrete.Prog
-    "test"
+    progAnySymbol
     [ Concrete.ProgArg "a" 0 OtherType,
       Concrete.ProgArg "b" 1 AnyType
     ]
-    [ Concrete.Stmt (OpSubProg innerConcreteAny) [0, 1] [2, 3],
+    [ Concrete.Stmt (OpSubProg innerConcreteAnySymbol) [0, 1] [2, 3],
       Concrete.Stmt OpUseAny [2, 3] [4],
       Concrete.Stmt OpDefAny [4] [5, 6],
       Concrete.Stmt OpUseDefAny [6] [7],
-      Concrete.Stmt (OpComponentSubProg innerComponentAny) [5, 7] [8, 9]
+      Concrete.Stmt (OpSubProg innerComponentAnySymbol) [5, 7] [8, 9]
     ]
     [Concrete.ProgRes 8 OtherType, Concrete.ProgRes 9 AnyType]
+
+progComponentAnySymbol :: T.Text
+progComponentAnySymbol = "progc"
+
+progComponentAny :: Component.Prog Op (SymWordN 8) Type
+progComponentAny =
+  Component.Prog
+    progComponentAnySymbol
+    [ Component.ProgArg "a" OtherType,
+      Component.ProgArg "b" AnyType
+    ]
+    [ Component.Stmt (OpSubProg innerConcreteAnySymbol) [0, 1] 2 [2, 3] 2 "d0" [],
+      Component.Stmt OpUseAny [2, 3] 2 [4] 1 "d1" [],
+      Component.Stmt OpDefAny [4] 1 [5, 6] 2 "d2" [],
+      Component.Stmt OpUseDefAny [6] 1 [7] 1 "d3" [],
+      Component.Stmt
+        (OpSubProg innerComponentAnySymbol)
+        [5, 7]
+        2
+        [8, 9]
+        2
+        "d4"
+        []
+    ]
+    [Component.ProgRes 8 OtherType, Component.ProgRes 9 AnyType]
+
+table ::
+  SymbolTable
+    ( SumProg
+        (Concrete.Prog Op (WordN 8) Type)
+        (Component.Prog Op (SymWordN 8) Type)
+    )
+table =
+  SymbolTable
+    [ (innerComponentAnySymbol, SumProgR innerComponentAny),
+      (innerConcreteAnySymbol, SumProgL innerConcreteAny),
+      (progAnySymbol, SumProgL progAny),
+      (progComponentAnySymbol, SumProgR progComponentAny)
+    ]
 
 argDef1 :: Def (WordN 8) Resources
 argDef1 = Def 1 (anyResource "fresh" ["test:arg"] 0) "x"
@@ -418,28 +433,6 @@ resUse1 = Use 9 (anyResource "fresh" ["test:res"] 0) "x"
 resUses :: UnionUse (WordN 8) Resources
 resUses = mrgReturn [resUse1]
 
-progComponentAny :: Component.Prog Op (SymWordN 8) Type
-progComponentAny =
-  Component.Prog
-    "testc"
-    [ Component.ProgArg "a" OtherType,
-      Component.ProgArg "b" AnyType
-    ]
-    [ Component.Stmt (OpSubProg innerConcreteAny) [0, 1] 2 [2, 3] 2 "d0" [],
-      Component.Stmt OpUseAny [2, 3] 2 [4] 1 "d1" [],
-      Component.Stmt OpDefAny [4] 1 [5, 6] 2 "d2" [],
-      Component.Stmt OpUseDefAny [6] 1 [7] 1 "d3" [],
-      Component.Stmt
-        (OpComponentSubProg innerComponentAny)
-        [5, 7]
-        2
-        [8, 9]
-        2
-        "d4"
-        []
-    ]
-    [Component.ProgRes 8 OtherType, Component.ProgRes 9 AnyType]
-
 componentArgDef1 :: Def (SymWordN 8) Resources
 componentArgDef1 = Def 1 (anyResource "fresh" ["testc:arg"] 0) "x"
 
@@ -469,6 +462,7 @@ componentStmt0DefUse =
     (mrgReturn [componentStmt0Invalidate1, componentStmt0Invalidate2])
     (mrgReturn [componentStmt0Use1])
 
+{-
 componentStmt0ComponentUse1 :: ComponentUse (SymWordN 8) Resources
 componentStmt0ComponentUse1 =
   ComponentUse
@@ -603,567 +597,715 @@ componentResComponentUse1 =
 
 componentResComponentUses :: ComponentUnionUse (SymWordN 8) Resources
 componentResComponentUses = mrgReturn [componentResComponentUse1]
+-}
+
+{-
+instance
+  ( ProgConstraints
+      constrObj
+      (Concrete.Prog Op (WordN 8) Type)
+      ctx,
+    ProgConstraints
+      constrObj
+      (Component.Prog Op (SymWordN 8) Type)
+      ctx,
+    MonadContext ctx
+  ) =>
+  OpSubProgConstraints constrObj Op ctx
+  where
+  constrainOpSubProg obj (OpSubProg prog) = constrainProg obj prog
+  constrainOpSubProg obj (OpComponentSubProg prog) = constrainProg obj prog
+  constrainOpSubProg _ _ = mrgReturn ()
+
+data LivelinessTest where
+  LivelinessTest ::
+    ( ProgConstraints obj prog AngelicContext
+    ) =>
+    { livelinessTestName :: String,
+      livelinessTestObj :: obj,
+      livelinessTestProg :: prog,
+      livelinessTestExpectedAssertion :: SymbolicContext ()
+    } ->
+    LivelinessTest
+    -}
 
 livelinessTest :: Test
 livelinessTest =
   testGroup
     "Liveliness"
-    [ testGroup "livelinessStmtDefUses/Component" $ do
-        let expectedDefUses =
-              [ componentStmt0DefUse,
-                componentStmt1DefUse,
-                componentStmt2DefUse,
-                componentStmt3DefUse,
-                componentStmt4DefUse
-              ]
-        (idx, expectedDefUse) <- zip [0 ..] expectedDefUses
-        return $ testCase ("Stmt" <> show idx) $ do
-          let actual =
-                flip runFreshT "fresh" $
-                  livelinessProgStmtDefUses
-                    LivelinessOp
-                    progComponentAny
-                    idx
-                    "x"
-          let expected =
-                return expectedDefUse ::
-                  SymbolicContext (StmtDefUse (SymWordN 8) Resources)
-          actual @?= expected,
-      testGroup "livelinessStmtDefUses/Concrete" $ do
-        let expectedDefUses =
-              [ stmt0DefUse,
-                stmt1DefUse,
-                stmt2DefUse,
-                stmt3DefUse,
-                stmt4DefUse
-              ]
-        (idx, expectedDefUse) <- zip [0 ..] expectedDefUses
-        return $ testCase ("Stmt" <> show idx) $ do
-          let actual =
-                flip runFreshT "fresh" $
-                  livelinessProgStmtDefUses LivelinessOp progAny idx "x"
-          let expected =
-                return expectedDefUse ::
-                  SymbolicContext (StmtDefUse (WordN 8) Resources)
-          actual @?= expected,
-      testGroup "livelinessComponentStmtDefUses" $ do
-        let expectedDefUses =
-              [ componentStmt0ComponentDefUse,
-                componentStmt1ComponentDefUse,
-                componentStmt2ComponentDefUse,
-                componentStmt3ComponentDefUse,
-                componentStmt4ComponentDefUse
-              ]
-        (idx, expectedDefUse) <- zip [0 ..] expectedDefUses
-        return $ testCase ("Stmt" <> show idx) $ do
-          let actual =
-                flip runFreshT "fresh" $
-                  livelinessComponentProgStmtDefUses
-                    LivelinessOp
-                    progComponentAny
-                    idx
-                    "x"
-          let expected =
-                return expectedDefUse ::
-                  SymbolicContext (ComponentStmtDefUse (SymWordN 8) Resources)
-          actual @?= expected,
-      testCase "livelinessProgDefUses/Component" $ do
-        let actual =
-              flip runFreshT "fresh" $
-                livelinessProgDefUses LivelinessOp progComponentAny "x"
-        let expected =
-              return
-                ( ProgDefUse
-                    componentArgDefs
-                    [ componentStmt0DefUse,
-                      componentStmt1DefUse,
-                      componentStmt2DefUse,
-                      componentStmt3DefUse,
-                      componentStmt4DefUse
-                    ]
-                    componentResUses
-                ) ::
-                SymbolicContext (ProgDefUse (SymWordN 8) Resources)
-        actual @?= expected,
-      testCase "livelinessProgDefUses/Concrete" $ do
-        let actual =
-              flip runFreshT "fresh" $
-                livelinessProgDefUses LivelinessOp progAny "x"
-        let expected =
-              return
-                ( ProgDefUse
-                    argDefs
-                    [ stmt0DefUse,
-                      stmt1DefUse,
-                      stmt2DefUse,
-                      stmt3DefUse,
-                      stmt4DefUse
-                    ]
-                    resUses
-                ) ::
-                SymbolicContext (ProgDefUse (WordN 8) Resources)
-        actual @?= expected,
-      testCase "livelinessComponentProgDefUses" $ do
-        let actual =
-              flip runFreshT "fresh" $
-                livelinessComponentProgDefUses LivelinessOp progComponentAny "x"
-        let expected =
-              return
-                ( ComponentProgDefUse
-                    componentArgDefs
-                    [ componentStmt0ComponentDefUse,
-                      componentStmt1ComponentDefUse,
-                      componentStmt2ComponentDefUse,
-                      componentStmt3ComponentDefUse,
-                      componentStmt4ComponentDefUse
-                    ]
-                    componentResComponentUses
-                ) ::
-                SymbolicContext (ComponentProgDefUse (SymWordN 8) Resources)
-        actual @?= expected,
-      testGroup "ProgConstraint" $ do
-        LivelinessTest name obj prog (assertion :: ctx ()) <-
-          [ LivelinessTest
-              { livelinessTestName = "Concrete/correct",
-                livelinessTestObj = Liveliness LivelinessOp,
-                livelinessTestProg =
-                  Concrete.Prog
-                    "test"
-                    [ Concrete.ProgArg "arg0" 0 OtherType,
-                      Concrete.ProgArg "arg1" (-1) ConstrainedType
-                    ]
-                    [ Concrete.Stmt OpUse [0, -1] [2],
-                      Concrete.Stmt OpDef [0] [3, 4],
-                      Concrete.Stmt OpUse [3, 4] [5],
-                      Concrete.Stmt OpUseDef [4] [9],
-                      Concrete.Stmt OpUse [3, 9] [7],
-                      Concrete.Stmt OpNone [7] [8]
-                    ]
-                    [Concrete.ProgRes (9 :: WordN 8) ConstrainedType],
-                livelinessTestExpectedAssertion =
-                  mrgReturn () :: SymbolicContext ()
-              },
-            LivelinessTest
-              { livelinessTestName = "Concrete/sub prog",
-                livelinessTestObj = Liveliness LivelinessOp,
-                livelinessTestProg =
-                  Concrete.Prog
-                    "test"
-                    [ Concrete.ProgArg "arg0" 0 OtherType,
-                      Concrete.ProgArg "arg1" 1 ConstrainedType
-                    ]
-                    [ Concrete.Stmt
-                        ( OpSubProg $
-                            Concrete.Prog
-                              "sub"
-                              [ Concrete.ProgArg "arg0" 0 OtherType,
-                                Concrete.ProgArg "arg1" 1 AnyType
-                              ]
-                              []
-                              [Concrete.ProgRes 1 AnyType]
-                        )
-                        [0, 1]
-                        [2 :: WordN 8]
-                    ]
-                    [Concrete.ProgRes 2 ConstrainedType],
-                livelinessTestExpectedAssertion =
-                  mrgIf
-                    ( ( isym
-                          (livelinessIdentifier "x" ["test:stmt0", "sub:arg"])
-                          0 ::
-                          SymBool
+    [ testGroup "livelinessProgDefUseTable" $ do
+        let duTable =
+              livelinessProgDefUseTable LivelinessOp table ::
+                ProgDefUseTable Resources AngelicContext
+        [ testCase "innerConcreteAny" $ do
+            let actual = flip runFreshT "x" $ do
+                  ProgDefUseEntry f <-
+                    lookupProgDefUse duTable innerConcreteAnySymbol
+                  f [0 :: WordN 8, 1] [2, 3] "dd"
+            let expected =
+                  return $
+                    StmtDefUse
+                      (mrgReturn [anyResourceDef 3 "x" ["inner:res"] 0 "dd"])
+                      ( mrgReturn
+                          [ anyResourceDef 2 "x" ["inner:stmt1"] 0 "dd",
+                            anyResourceDef 2 "x" ["inner:stmt2"] 0 "dd"
+                          ]
                       )
-                        .&& ( isym
-                                ( livelinessIdentifier
-                                    "x"
-                                    ["test:stmt0", "sub:res"]
-                                )
-                                0 ::
-                                SymBool
-                            )
-                    )
-                    (return ())
-                    ( mrgThrowError
-                        "Inconsistent use/def resources for ConstrainedType"
-                    ) ::
-                    SymbolicContext ()
-              },
-            LivelinessTest
-              { livelinessTestName = "Component/correct",
-                livelinessTestObj = Liveliness LivelinessOp,
-                livelinessTestProg =
-                  Component.Prog
-                    "test"
-                    [ Component.ProgArg "arg0" OtherType,
-                      Component.ProgArg "arg1" ConstrainedType
-                    ]
-                    [ Component.Stmt opUse [0, 1] 2 [2] 1 (con False) [],
-                      Component.Stmt opDef [0] 1 [3, 4] 2 (con False) [],
-                      Component.Stmt opUse [3, 4] 2 [5] 1 (con False) [],
-                      Component.Stmt opUseDef [4] 1 [6] 1 (con False) [],
-                      Component.Stmt opUse [3, 6] 2 [7] 1 (con False) [],
-                      Component.Stmt opNone [7] 2 [8] 1 (con False) []
-                    ]
-                    [Component.ProgRes (6 :: SymWordN 8) ConstrainedType],
-                livelinessTestExpectedAssertion =
-                  mrgReturn () :: SymbolicContext ()
-              },
-            LivelinessTest
-              { livelinessTestName = "Component/disabled ok",
-                livelinessTestObj = Liveliness LivelinessOp,
-                livelinessTestProg =
-                  Component.Prog
-                    "test"
-                    [ Component.ProgArg "arg0" OtherType,
-                      Component.ProgArg "arg1" ConstrainedType
-                    ]
-                    [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
-                      Component.Stmt opUseDef [1] 1 [4] 1 (con True) []
-                    ]
-                    [Component.ProgRes (3 :: SymWordN 8) ConstrainedType],
-                livelinessTestExpectedAssertion =
-                  mrgReturn () :: SymbolicContext ()
-              },
-            LivelinessTest
-              { livelinessTestName = "Component/sub prog",
-                livelinessTestObj = Liveliness LivelinessOp,
-                livelinessTestProg =
-                  Component.Prog
-                    "test"
-                    [ Component.ProgArg "arg0" OtherType,
-                      Component.ProgArg "arg1" ConstrainedType
-                    ]
-                    [ Component.Stmt
-                        ( OpSubProg $
-                            Concrete.Prog
-                              "sub"
-                              [ Concrete.ProgArg "arg0" 0 OtherType,
-                                Concrete.ProgArg "arg1" 1 AnyType
-                              ]
-                              []
-                              [Concrete.ProgRes 1 AnyType]
-                        )
-                        [0, 1]
-                        2
-                        [2 :: SymWordN 8]
-                        1
-                        "disabled"
-                        []
-                    ]
-                    [Component.ProgRes 2 ConstrainedType],
-                livelinessTestExpectedAssertion =
-                  mrgIf
-                    ( "disabled"
-                        .|| ( ( isym
-                                  ( livelinessIdentifier
-                                      "x"
-                                      ["test:stmt0", "sub:arg"]
-                                  )
-                                  0 ::
-                                  SymBool
-                              )
-                                .&& ( isym
-                                        ( livelinessIdentifier
-                                            "x"
-                                            ["test:stmt0", "sub:res"]
-                                        )
-                                        0 ::
-                                        SymBool
-                                    )
-                            )
-                    )
-                    (return ())
-                    ( mrgThrowError
-                        "Inconsistent use/def resources for ConstrainedType"
-                    ) ::
-                    SymbolicContext ()
-              }
-            ]
-            ++ ( do
-                   let success = mrgReturn () :: SymbolicContext ()
-                   let err =
-                         mrgThrowError $
-                           "Cannot use invalidated resource for "
-                             <> "ConstrainedType" ::
-                           SymbolicContext ()
-                   let subProg =
-                         Concrete.Prog
-                           "subProg"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" (-1) ConstrainedType,
-                             Concrete.ProgArg "arg2" (-2) ConstrainedType2
-                           ]
-                           [ Concrete.Stmt OpUse [0, -1] [2],
-                             Concrete.Stmt OpDef [0] [3, 4],
-                             Concrete.Stmt OpUse [3, 4] [5],
-                             Concrete.Stmt OpUseDef [4] [9],
-                             Concrete.Stmt OpUse [3, 9] [7],
-                             Concrete.Stmt OpNone [7] [8]
-                           ]
-                           [ Concrete.ProgRes 9 ConstrainedType,
-                             Concrete.ProgRes (-2) ConstrainedType2
-                           ]
-                   let invalidSubProg =
-                         Concrete.Prog
-                           "subProg"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" (-1) ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [3, 4],
-                             Concrete.Stmt OpUse [3, -1] [5]
-                           ]
-                           [ Concrete.ProgRes 4 ConstrainedType
-                           ]
-                   (name, prog, res) <-
-                     [ ( "correct2",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpDef [0] [4, 5],
-                             Concrete.Stmt OpUse [2, 5] [6]
-                           ]
-                           [Concrete.ProgRes (5 :: WordN 8) ConstrainedType],
-                         success
-                       ),
-                       ( "not using newest def but using from arg",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpDef [0] [4, 5],
-                             Concrete.Stmt OpUse [2, 1] [6]
-                           ]
-                           [Concrete.ProgRes 5 ConstrainedType],
-                         err
-                       ),
-                       ( "not using newest def",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpDef [0] [4, 5],
-                             Concrete.Stmt OpUse [2, 3] [6]
-                           ]
-                           [Concrete.ProgRes 5 ConstrainedType],
-                         err
-                       ),
-                       ( "res not using newest def, usg arg",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpDef [0] [4, 5],
-                             Concrete.Stmt OpUse [2, 1] [6]
-                           ]
-                           [Concrete.ProgRes 1 ConstrainedType],
-                         err
-                       ),
-                       ( "res not using newest def, use old stmt",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpDef [0] [4, 5],
-                             Concrete.Stmt OpUse [2, 1] [6]
-                           ]
-                           [Concrete.ProgRes 3 ConstrainedType],
-                         err
-                       ),
-                       ( "multiple arguments",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType,
-                             Concrete.ProgArg "arg2" 2 ConstrainedType
-                           ]
-                           []
-                           [ Concrete.ProgRes 2 ConstrainedType,
-                             Concrete.ProgRes 1 ConstrainedType
-                           ],
-                         success
-                       ),
-                       ( "no invalidate should not invalidate",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpDefNoInvalidate [1] [4],
-                             Concrete.Stmt OpUse [2, 3] [5]
-                           ]
-                           [Concrete.ProgRes 3 ConstrainedType],
-                         success
-                       ),
-                       ( "no use invalidate ok",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpDefNoInvalidate [1] [4]
-                           ]
-                           [Concrete.ProgRes 4 ConstrainedType],
-                         success
-                       ),
-                       ( "use old no invalidate ok",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpDefNoInvalidate [1] [4]
-                           ]
-                           [Concrete.ProgRes 3 ConstrainedType],
-                         success
-                       ),
-                       ( "no invalidate should not invalidate",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpDefShareScope [3] [4],
-                             Concrete.Stmt OpUse [2, 3] [5],
-                             Concrete.Stmt OpUse [2, 4] [6]
-                           ]
-                           [ Concrete.ProgRes 3 ConstrainedType,
-                             Concrete.ProgRes 4 ConstrainedType
-                           ],
-                         success
-                       ),
-                       ( "multiple resources",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 ConstrainedType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType2,
-                             Concrete.ProgArg "arg2" 2 OtherType
-                           ]
-                           [ Concrete.Stmt OpUse [2, 0] [3],
-                             Concrete.Stmt OpUse2 [2, 1] [4],
-                             Concrete.Stmt OpDef [0] [5, 6],
-                             Concrete.Stmt OpDef2 [1] [7, 8],
-                             Concrete.Stmt OpUse [2, 6] [9],
-                             Concrete.Stmt OpUse2 [2, 8] [10]
-                           ]
-                           [ Concrete.ProgRes 6 ConstrainedType,
-                             Concrete.ProgRes 8 ConstrainedType2
-                           ],
-                         success
-                       ),
-                       ( "multiple resources failure",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 ConstrainedType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType2,
-                             Concrete.ProgArg "arg2" 2 OtherType
-                           ]
-                           [ Concrete.Stmt OpUse [2, 0] [3],
-                             Concrete.Stmt OpUse2 [2, 1] [4],
-                             Concrete.Stmt OpDef [0] [5, 6],
-                             Concrete.Stmt OpDef2 [1] [7, 8],
-                             Concrete.Stmt OpUse [2, 0] [9],
-                             Concrete.Stmt OpUse2 [2, 8] [10]
-                           ]
-                           [ Concrete.ProgRes 6 ConstrainedType,
-                             Concrete.ProgRes 8 ConstrainedType2
-                           ],
-                         err
-                       ),
-                       ( "bad use type",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt OpDef [0] [2, 3],
-                             Concrete.Stmt OpUse2 [2, 3] [4]
-                           ]
-                           [Concrete.ProgRes (4 :: WordN 8) OtherType],
-                         mrgThrowError
-                           "Inconsistent use/def resources for ConstrainedType"
-                       ),
-                       ( "correctWithSubProg",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType,
-                             Concrete.ProgArg "arg2" 2 ConstrainedType2
-                           ]
-                           [ Concrete.Stmt
-                               (OpSubProg subProg)
-                               [0, 1, 2]
-                               [3, 4],
-                             Concrete.Stmt OpUse [0, 3] [5],
-                             Concrete.Stmt OpUse2 [0, 2] [6],
-                             Concrete.Stmt OpUse2 [0, 4] [7]
-                           ]
-                           [Concrete.ProgRes 3 ConstrainedType],
-                         success
-                       ),
-                       ( "useSubProgInvalidated",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType,
-                             Concrete.ProgArg "arg2" 2 ConstrainedType2
-                           ]
-                           [ Concrete.Stmt
-                               (OpSubProg subProg)
-                               [0, 1, 2]
-                               [3, 4],
-                             Concrete.Stmt OpUse [0, 1] [5]
-                           ]
-                           [Concrete.ProgRes 3 ConstrainedType],
-                         err
-                       ),
-                       ( "useInvalidSubProg",
-                         Concrete.Prog
-                           "test"
-                           [ Concrete.ProgArg "arg0" 0 OtherType,
-                             Concrete.ProgArg "arg1" 1 ConstrainedType
-                           ]
-                           [ Concrete.Stmt
-                               (OpSubProg invalidSubProg)
-                               [0, 1]
-                               [2]
-                           ]
-                           [Concrete.ProgRes 2 ConstrainedType],
-                         err
-                       )
-                       ]
-                   [ LivelinessTest
-                       { livelinessTestName = "Component/" <> name,
-                         livelinessTestObj = Liveliness LivelinessOp,
-                         livelinessTestProg =
-                           toSym prog :: Component.Prog Op (SymWordN 8) Type,
-                         livelinessTestExpectedAssertion = res
-                       },
-                     LivelinessTest
-                       { livelinessTestName = "Concrete/" <> name,
-                         livelinessTestObj = Liveliness LivelinessOp,
-                         livelinessTestProg = prog,
-                         livelinessTestExpectedAssertion = res
-                       }
-                     ]
-               )
-        return $
-          testCase name $ do
-            let actual = flip runFreshT "x" $ constrainProg obj prog
-            actual .@?= assertion
+                      (mrgReturn [anyResourceUse 1 "x" ["inner:arg"] 0 "dd"])
+            actual @?= expected,
+          testCase "innerComponentAny" $ do
+            let actual = flip runFreshT "x" $ do
+                  ProgDefUseEntry f <-
+                    lookupProgDefUse duTable innerComponentAnySymbol
+                  f [0 :: WordN 8, 1] [2, 3] "dd"
+            let expected =
+                  return $
+                    StmtDefUse
+                      (mrgReturn [anyResourceDef 3 "x" ["innerc:res"] 0 "dd"])
+                      ( mrgReturn
+                          [ anyResourceDef 2 "x" ["innerc:stmt1"] 0 ("dd" .|| "id1"),
+                            anyResourceDef 2 "x" ["innerc:stmt2"] 0 ("dd" .|| "id2")
+                          ]
+                      )
+                      (mrgReturn [anyResourceUse 1 "x" ["innerc:arg"] 0 "dd"])
+            actual @?= expected,
+          testCase "progAny" $ do
+            let actual = flip runFreshT "x" $ do
+                  ProgDefUseEntry f <-
+                    lookupProgDefUse duTable progAnySymbol
+                  f [0 :: WordN 8, 1] [2, 3] "dd"
+            let expected =
+                  return $
+                    StmtDefUse
+                      (mrgReturn [anyResourceDef 3 "x" ["prog:res"] 0 "dd"])
+                      ( mrgReturn
+                          [ anyResourceDef
+                              2
+                              "x"
+                              ["inner:stmt1", "prog:stmt0"]
+                              0
+                              "dd",
+                            anyResourceDef
+                              2
+                              "x"
+                              ["inner:stmt2", "prog:stmt0"]
+                              0
+                              "dd",
+                            anyResourceDef 2 "x" ["prog:stmt2"] 0 "dd",
+                            anyResourceDef 2 "x" ["prog:stmt3"] 0 "dd",
+                            anyResourceDef
+                              2
+                              "x"
+                              ["innerc:stmt1", "prog:stmt4"]
+                              0
+                              ("dd" .|| "id1"),
+                            anyResourceDef
+                              2
+                              "x"
+                              ["innerc:stmt2", "prog:stmt4"]
+                              0
+                              ("dd" .|| "id2")
+                          ]
+                      )
+                      (mrgReturn [anyResourceUse 1 "x" ["prog:arg"] 0 "dd"])
+            actual @?= expected,
+          testCase "progComponentAny" $ do
+            let actual = flip runFreshT "x" $ do
+                  ProgDefUseEntry f <-
+                    lookupProgDefUse duTable progComponentAnySymbol
+                  f [0 :: WordN 8, 1] [2, 3] "dd"
+            let expected =
+                  return $
+                    StmtDefUse
+                      (mrgReturn [anyResourceDef 3 "x" ["progc:res"] 0 "dd"])
+                      ( mrgReturn
+                          [ anyResourceDef
+                              2
+                              "x"
+                              ["inner:stmt1", "progc:stmt0"]
+                              0
+                              ("dd" .|| "d0"),
+                            anyResourceDef
+                              2
+                              "x"
+                              ["inner:stmt2", "progc:stmt0"]
+                              0
+                              ("dd" .|| "d0"),
+                            anyResourceDef 2 "x" ["progc:stmt2"] 0 ("dd" .|| "d2"),
+                            anyResourceDef 2 "x" ["progc:stmt3"] 0 ("dd" .|| "d3"),
+                            anyResourceDef
+                              2
+                              "x"
+                              ["innerc:stmt1", "progc:stmt4"]
+                              0
+                              (("dd" .|| "d4") .|| "id1"),
+                            anyResourceDef
+                              2
+                              "x"
+                              ["innerc:stmt2", "progc:stmt4"]
+                              0
+                              (("dd" .|| "d4") .|| "id2")
+                          ]
+                      )
+                      (mrgReturn [anyResourceUse 1 "x" ["progc:arg"] 0 "dd"])
+            actual @?= expected
+          ]
+          {-testGroup "livelinessStmtDefUses/Component" $ do
+            let expectedDefUses =
+                  [ componentStmt0DefUse,
+                    componentStmt1DefUse,
+                    componentStmt2DefUse,
+                    componentStmt3DefUse,
+                    componentStmt4DefUse
+                  ]
+            (idx, expectedDefUse) <- zip [0 ..] expectedDefUses
+            return $ testCase ("Stmt" <> show idx) $ do
+              let actual =
+                    flip runFreshT "fresh" $
+                      livelinessProgStmtDefUses
+                        LivelinessOp
+                        progComponentAny
+                        idx
+                        "x"
+              let expected =
+                    return expectedDefUse ::
+                      SymbolicContext (StmtDefUse (SymWordN 8) Resources)
+              actual @?= expected,-}
+          {-
+          testGroup "livelinessStmtDefUses/Concrete" $ do
+            let expectedDefUses =
+                  [ stmt0DefUse,
+                    stmt1DefUse,
+                    stmt2DefUse,
+                    stmt3DefUse,
+                    stmt4DefUse
+                  ]
+            (idx, expectedDefUse) <- zip [0 ..] expectedDefUses
+            return $ testCase ("Stmt" <> show idx) $ do
+              let actual =
+                    flip runFreshT "fresh" $
+                      livelinessProgStmtDefUses LivelinessOp progAny idx "x"
+              let expected =
+                    return expectedDefUse ::
+                      SymbolicContext (StmtDefUse (WordN 8) Resources)
+              actual @?= expected ,
+                                  testGroup "livelinessComponentStmtDefUses" $ do
+                                    let expectedDefUses =
+                                          [ componentStmt0ComponentDefUse,
+                                            componentStmt1ComponentDefUse,
+                                            componentStmt2ComponentDefUse,
+                                            componentStmt3ComponentDefUse,
+                                            componentStmt4ComponentDefUse
+                                          ]
+                                    (idx, expectedDefUse) <- zip [0 ..] expectedDefUses
+                                    return $ testCase ("Stmt" <> show idx) $ do
+                                      let actual =
+                                            flip runFreshT "fresh" $
+                                              livelinessComponentProgStmtDefUses
+                                                LivelinessOp
+                                                progComponentAny
+                                                idx
+                                                "x"
+                                      let expected =
+                                            return expectedDefUse ::
+                                              SymbolicContext (ComponentStmtDefUse (SymWordN 8) Resources)
+                                      actual @?= expected,
+                                  testCase "livelinessProgDefUses/Component" $ do
+                                    let actual =
+                                          flip runFreshT "fresh" $
+                                            livelinessProgDefUses LivelinessOp progComponentAny "x"
+                                    let expected =
+                                          return
+                                            ( ProgDefUse
+                                                componentArgDefs
+                                                [ componentStmt0DefUse,
+                                                  componentStmt1DefUse,
+                                                  componentStmt2DefUse,
+                                                  componentStmt3DefUse,
+                                                  componentStmt4DefUse
+                                                ]
+                                                componentResUses
+                                            ) ::
+                                            SymbolicContext (ProgDefUse (SymWordN 8) Resources)
+                                    actual @?= expected,
+                                  testCase "livelinessProgDefUses/Concrete" $ do
+                                    let actual =
+                                          flip runFreshT "fresh" $
+                                            livelinessProgDefUses LivelinessOp progAny "x"
+                                    let expected =
+                                          return
+                                            ( ProgDefUse
+                                                argDefs
+                                                [ stmt0DefUse,
+                                                  stmt1DefUse,
+                                                  stmt2DefUse,
+                                                  stmt3DefUse,
+                                                  stmt4DefUse
+                                                ]
+                                                resUses
+                                            ) ::
+                                            SymbolicContext (ProgDefUse (WordN 8) Resources)
+                                    actual @?= expected,
+                                  testCase "livelinessComponentProgDefUses" $ do
+                                    let actual =
+                                          flip runFreshT "fresh" $
+                                            livelinessComponentProgDefUses LivelinessOp progComponentAny "x"
+                                    let expected =
+                                          return
+                                            ( ComponentProgDefUse
+                                                componentArgDefs
+                                                [ componentStmt0ComponentDefUse,
+                                                  componentStmt1ComponentDefUse,
+                                                  componentStmt2ComponentDefUse,
+                                                  componentStmt3ComponentDefUse,
+                                                  componentStmt4ComponentDefUse
+                                                ]
+                                                componentResComponentUses
+                                            ) ::
+                                            SymbolicContext (ComponentProgDefUse (SymWordN 8) Resources)
+                                    actual @?= expected,
+                                  testGroup "ProgConstraint" $ do
+                                    LivelinessTest name obj prog (assertion :: ctx ()) <-
+                                      [ LivelinessTest
+                                          { livelinessTestName = "Concrete/correct",
+                                            livelinessTestObj = Liveliness LivelinessOp,
+                                            livelinessTestProg =
+                                              Concrete.Prog
+                                                "test"
+                                                [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                  Concrete.ProgArg "arg1" (-1) ConstrainedType
+                                                ]
+                                                [ Concrete.Stmt OpUse [0, -1] [2],
+                                                  Concrete.Stmt OpDef [0] [3, 4],
+                                                  Concrete.Stmt OpUse [3, 4] [5],
+                                                  Concrete.Stmt OpUseDef [4] [9],
+                                                  Concrete.Stmt OpUse [3, 9] [7],
+                                                  Concrete.Stmt OpNone [7] [8]
+                                                ]
+                                                [Concrete.ProgRes (9 :: WordN 8) ConstrainedType],
+                                            livelinessTestExpectedAssertion =
+                                              mrgReturn () :: SymbolicContext ()
+                                          },
+                                        LivelinessTest
+                                          { livelinessTestName = "Concrete/sub prog",
+                                            livelinessTestObj = Liveliness LivelinessOp,
+                                            livelinessTestProg =
+                                              Concrete.Prog
+                                                "test"
+                                                [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                  Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                ]
+                                                [ Concrete.Stmt
+                                                    ( OpSubProg $
+                                                        Concrete.Prog
+                                                          "sub"
+                                                          [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                            Concrete.ProgArg "arg1" 1 AnyType
+                                                          ]
+                                                          []
+                                                          [Concrete.ProgRes 1 AnyType]
+                                                    )
+                                                    [0, 1]
+                                                    [2 :: WordN 8]
+                                                ]
+                                                [Concrete.ProgRes 2 ConstrainedType],
+                                            livelinessTestExpectedAssertion =
+                                              mrgIf
+                                                ( ( isym
+                                                      (livelinessIdentifier "x" ["test:stmt0", "sub:arg"])
+                                                      0 ::
+                                                      SymBool
+                                                  )
+                                                    .&& ( isym
+                                                            ( livelinessIdentifier
+                                                                "x"
+                                                                ["test:stmt0", "sub:res"]
+                                                            )
+                                                            0 ::
+                                                            SymBool
+                                                        )
+                                                )
+                                                (return ())
+                                                ( mrgThrowError
+                                                    "Inconsistent use/def resources for ConstrainedType"
+                                                ) ::
+                                                SymbolicContext ()
+                                          },
+                                        LivelinessTest
+                                          { livelinessTestName = "Component/correct",
+                                            livelinessTestObj = Liveliness LivelinessOp,
+                                            livelinessTestProg =
+                                              Component.Prog
+                                                "test"
+                                                [ Component.ProgArg "arg0" OtherType,
+                                                  Component.ProgArg "arg1" ConstrainedType
+                                                ]
+                                                [ Component.Stmt opUse [0, 1] 2 [2] 1 (con False) [],
+                                                  Component.Stmt opDef [0] 1 [3, 4] 2 (con False) [],
+                                                  Component.Stmt opUse [3, 4] 2 [5] 1 (con False) [],
+                                                  Component.Stmt opUseDef [4] 1 [6] 1 (con False) [],
+                                                  Component.Stmt opUse [3, 6] 2 [7] 1 (con False) [],
+                                                  Component.Stmt opNone [7] 2 [8] 1 (con False) []
+                                                ]
+                                                [Component.ProgRes (6 :: SymWordN 8) ConstrainedType],
+                                            livelinessTestExpectedAssertion =
+                                              mrgReturn () :: SymbolicContext ()
+                                          },
+                                        LivelinessTest
+                                          { livelinessTestName = "Component/disabled ok",
+                                            livelinessTestObj = Liveliness LivelinessOp,
+                                            livelinessTestProg =
+                                              Component.Prog
+                                                "test"
+                                                [ Component.ProgArg "arg0" OtherType,
+                                                  Component.ProgArg "arg1" ConstrainedType
+                                                ]
+                                                [ Component.Stmt opDef [0] 1 [2, 3] 2 (con False) [],
+                                                  Component.Stmt opUseDef [1] 1 [4] 1 (con True) []
+                                                ]
+                                                [Component.ProgRes (3 :: SymWordN 8) ConstrainedType],
+                                            livelinessTestExpectedAssertion =
+                                              mrgReturn () :: SymbolicContext ()
+                                          },
+                                        LivelinessTest
+                                          { livelinessTestName = "Component/sub prog",
+                                            livelinessTestObj = Liveliness LivelinessOp,
+                                            livelinessTestProg =
+                                              Component.Prog
+                                                "test"
+                                                [ Component.ProgArg "arg0" OtherType,
+                                                  Component.ProgArg "arg1" ConstrainedType
+                                                ]
+                                                [ Component.Stmt
+                                                    ( OpSubProg $
+                                                        Concrete.Prog
+                                                          "sub"
+                                                          [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                            Concrete.ProgArg "arg1" 1 AnyType
+                                                          ]
+                                                          []
+                                                          [Concrete.ProgRes 1 AnyType]
+                                                    )
+                                                    [0, 1]
+                                                    2
+                                                    [2 :: SymWordN 8]
+                                                    1
+                                                    "disabled"
+                                                    []
+                                                ]
+                                                [Component.ProgRes 2 ConstrainedType],
+                                            livelinessTestExpectedAssertion =
+                                              mrgIf
+                                                ( "disabled"
+                                                    .|| ( ( isym
+                                                              ( livelinessIdentifier
+                                                                  "x"
+                                                                  ["test:stmt0", "sub:arg"]
+                                                              )
+                                                              0 ::
+                                                              SymBool
+                                                          )
+                                                            .&& ( isym
+                                                                    ( livelinessIdentifier
+                                                                        "x"
+                                                                        ["test:stmt0", "sub:res"]
+                                                                    )
+                                                                    0 ::
+                                                                    SymBool
+                                                                )
+                                                        )
+                                                )
+                                                (return ())
+                                                ( mrgThrowError
+                                                    "Inconsistent use/def resources for ConstrainedType"
+                                                ) ::
+                                                SymbolicContext ()
+                                          }
+                                        ]
+                                        ++ ( do
+                                               let success = mrgReturn () :: SymbolicContext ()
+                                               let err =
+                                                     mrgThrowError $
+                                                       "Cannot use invalidated resource for "
+                                                         <> "ConstrainedType" ::
+                                                       SymbolicContext ()
+                                               let subProg =
+                                                     Concrete.Prog
+                                                       "subProg"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" (-1) ConstrainedType,
+                                                         Concrete.ProgArg "arg2" (-2) ConstrainedType2
+                                                       ]
+                                                       [ Concrete.Stmt OpUse [0, -1] [2],
+                                                         Concrete.Stmt OpDef [0] [3, 4],
+                                                         Concrete.Stmt OpUse [3, 4] [5],
+                                                         Concrete.Stmt OpUseDef [4] [9],
+                                                         Concrete.Stmt OpUse [3, 9] [7],
+                                                         Concrete.Stmt OpNone [7] [8]
+                                                       ]
+                                                       [ Concrete.ProgRes 9 ConstrainedType,
+                                                         Concrete.ProgRes (-2) ConstrainedType2
+                                                       ]
+                                               let invalidSubProg =
+                                                     Concrete.Prog
+                                                       "subProg"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" (-1) ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [3, 4],
+                                                         Concrete.Stmt OpUse [3, -1] [5]
+                                                       ]
+                                                       [ Concrete.ProgRes 4 ConstrainedType
+                                                       ]
+                                               (name, prog, res) <-
+                                                 [ ( "correct2",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpDef [0] [4, 5],
+                                                         Concrete.Stmt OpUse [2, 5] [6]
+                                                       ]
+                                                       [Concrete.ProgRes (5 :: WordN 8) ConstrainedType],
+                                                     success
+                                                   ),
+                                                   ( "not using newest def but using from arg",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpDef [0] [4, 5],
+                                                         Concrete.Stmt OpUse [2, 1] [6]
+                                                       ]
+                                                       [Concrete.ProgRes 5 ConstrainedType],
+                                                     err
+                                                   ),
+                                                   ( "not using newest def",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpDef [0] [4, 5],
+                                                         Concrete.Stmt OpUse [2, 3] [6]
+                                                       ]
+                                                       [Concrete.ProgRes 5 ConstrainedType],
+                                                     err
+                                                   ),
+                                                   ( "res not using newest def, usg arg",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpDef [0] [4, 5],
+                                                         Concrete.Stmt OpUse [2, 1] [6]
+                                                       ]
+                                                       [Concrete.ProgRes 1 ConstrainedType],
+                                                     err
+                                                   ),
+                                                   ( "res not using newest def, use old stmt",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpDef [0] [4, 5],
+                                                         Concrete.Stmt OpUse [2, 1] [6]
+                                                       ]
+                                                       [Concrete.ProgRes 3 ConstrainedType],
+                                                     err
+                                                   ),
+                                                   ( "multiple arguments",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType,
+                                                         Concrete.ProgArg "arg2" 2 ConstrainedType
+                                                       ]
+                                                       []
+                                                       [ Concrete.ProgRes 2 ConstrainedType,
+                                                         Concrete.ProgRes 1 ConstrainedType
+                                                       ],
+                                                     success
+                                                   ),
+                                                   ( "no invalidate should not invalidate",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpDefNoInvalidate [1] [4],
+                                                         Concrete.Stmt OpUse [2, 3] [5]
+                                                       ]
+                                                       [Concrete.ProgRes 3 ConstrainedType],
+                                                     success
+                                                   ),
+                                                   ( "no use invalidate ok",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpDefNoInvalidate [1] [4]
+                                                       ]
+                                                       [Concrete.ProgRes 4 ConstrainedType],
+                                                     success
+                                                   ),
+                                                   ( "use old no invalidate ok",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpDefNoInvalidate [1] [4]
+                                                       ]
+                                                       [Concrete.ProgRes 3 ConstrainedType],
+                                                     success
+                                                   ),
+                                                   ( "no invalidate should not invalidate",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpDefShareScope [3] [4],
+                                                         Concrete.Stmt OpUse [2, 3] [5],
+                                                         Concrete.Stmt OpUse [2, 4] [6]
+                                                       ]
+                                                       [ Concrete.ProgRes 3 ConstrainedType,
+                                                         Concrete.ProgRes 4 ConstrainedType
+                                                       ],
+                                                     success
+                                                   ),
+                                                   ( "multiple resources",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 ConstrainedType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType2,
+                                                         Concrete.ProgArg "arg2" 2 OtherType
+                                                       ]
+                                                       [ Concrete.Stmt OpUse [2, 0] [3],
+                                                         Concrete.Stmt OpUse2 [2, 1] [4],
+                                                         Concrete.Stmt OpDef [0] [5, 6],
+                                                         Concrete.Stmt OpDef2 [1] [7, 8],
+                                                         Concrete.Stmt OpUse [2, 6] [9],
+                                                         Concrete.Stmt OpUse2 [2, 8] [10]
+                                                       ]
+                                                       [ Concrete.ProgRes 6 ConstrainedType,
+                                                         Concrete.ProgRes 8 ConstrainedType2
+                                                       ],
+                                                     success
+                                                   ),
+                                                   ( "multiple resources failure",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 ConstrainedType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType2,
+                                                         Concrete.ProgArg "arg2" 2 OtherType
+                                                       ]
+                                                       [ Concrete.Stmt OpUse [2, 0] [3],
+                                                         Concrete.Stmt OpUse2 [2, 1] [4],
+                                                         Concrete.Stmt OpDef [0] [5, 6],
+                                                         Concrete.Stmt OpDef2 [1] [7, 8],
+                                                         Concrete.Stmt OpUse [2, 0] [9],
+                                                         Concrete.Stmt OpUse2 [2, 8] [10]
+                                                       ]
+                                                       [ Concrete.ProgRes 6 ConstrainedType,
+                                                         Concrete.ProgRes 8 ConstrainedType2
+                                                       ],
+                                                     err
+                                                   ),
+                                                   ( "bad use type",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt OpDef [0] [2, 3],
+                                                         Concrete.Stmt OpUse2 [2, 3] [4]
+                                                       ]
+                                                       [Concrete.ProgRes (4 :: WordN 8) OtherType],
+                                                     mrgThrowError
+                                                       "Inconsistent use/def resources for ConstrainedType"
+                                                   ),
+                                                   ( "correctWithSubProg",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType,
+                                                         Concrete.ProgArg "arg2" 2 ConstrainedType2
+                                                       ]
+                                                       [ Concrete.Stmt
+                                                           (OpSubProg subProg)
+                                                           [0, 1, 2]
+                                                           [3, 4],
+                                                         Concrete.Stmt OpUse [0, 3] [5],
+                                                         Concrete.Stmt OpUse2 [0, 2] [6],
+                                                         Concrete.Stmt OpUse2 [0, 4] [7]
+                                                       ]
+                                                       [Concrete.ProgRes 3 ConstrainedType],
+                                                     success
+                                                   ),
+                                                   ( "useSubProgInvalidated",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType,
+                                                         Concrete.ProgArg "arg2" 2 ConstrainedType2
+                                                       ]
+                                                       [ Concrete.Stmt
+                                                           (OpSubProg subProg)
+                                                           [0, 1, 2]
+                                                           [3, 4],
+                                                         Concrete.Stmt OpUse [0, 1] [5]
+                                                       ]
+                                                       [Concrete.ProgRes 3 ConstrainedType],
+                                                     err
+                                                   ),
+                                                   ( "useInvalidSubProg",
+                                                     Concrete.Prog
+                                                       "test"
+                                                       [ Concrete.ProgArg "arg0" 0 OtherType,
+                                                         Concrete.ProgArg "arg1" 1 ConstrainedType
+                                                       ]
+                                                       [ Concrete.Stmt
+                                                           (OpSubProg invalidSubProg)
+                                                           [0, 1]
+                                                           [2]
+                                                       ]
+                                                       [Concrete.ProgRes 2 ConstrainedType],
+                                                     err
+                                                   )
+                                                   ]
+                                               [ LivelinessTest
+                                                   { livelinessTestName = "Component/" <> name,
+                                                     livelinessTestObj = Liveliness LivelinessOp,
+                                                     livelinessTestProg =
+                                                       toSym prog :: Component.Prog Op (SymWordN 8) Type,
+                                                     livelinessTestExpectedAssertion = res
+                                                   },
+                                                 LivelinessTest
+                                                   { livelinessTestName = "Concrete/" <> name,
+                                                     livelinessTestObj = Liveliness LivelinessOp,
+                                                     livelinessTestProg = prog,
+                                                     livelinessTestExpectedAssertion = res
+                                                   }
+                                                 ]
+                                           )
+                                    return $
+                                      testCase name $ do
+                                        let actual = flip runFreshT "x" $ constrainProg obj prog
+                                        actual .@?= assertion-}
     ]
--}

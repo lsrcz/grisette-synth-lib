@@ -45,20 +45,20 @@ import Grisette
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
-import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
-  ( ComponentProgDefUse (ComponentProgDefUse),
-    ComponentStmtDefUse
-      ( componentStmtDef,
-        componentStmtInvalidatingDef,
-        componentStmtUse
-      ),
-    ComponentUse (ComponentUse),
-    Def (Def),
-    Liveliness (Liveliness),
-    LivelinessConstraint,
-    Resource (conflict),
-    livelinessComponentProgDefUses,
-  )
+-- import Grisette.Lib.Synth.Program.BuiltinProgConstraints.Liveliness
+--   ( ComponentProgDefUse (ComponentProgDefUse),
+--     ComponentStmtDefUse
+--       ( componentStmtDef,
+--         componentStmtInvalidatingDef,
+--         componentStmtUse
+--       ),
+--     ComponentUse (ComponentUse),
+--     Def (Def),
+--     Liveliness (Liveliness),
+--     LivelinessConstraint,
+--     Resource (conflict),
+--     livelinessComponentProgDefUses,
+--   )
 import Grisette.Lib.Synth.Program.ComponentSketch.Program (Stmt (stmtDisabled))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch.Program as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
@@ -215,6 +215,7 @@ newtype ComponentSymmetryReduction constrObj
   deriving (Eq, Generic)
   deriving anyclass (NFData, Serial)
 
+{-
 instance
   ( ProgConstraints constrObj (Concrete.Prog op conVarId ty) ctx,
     OpSubProgConstraints (ComponentSymmetryReduction constrObj) op ctx,
@@ -259,6 +260,7 @@ instance
             progStmtLocalIdent prog i $ constrainOpSubProg obj op
       )
       [0 .. getProgNumStmts prog - 1]
+      -}
 
 instance
   (MonadContext ctx, MonadUnion ctx, OpTyping op ctx, ty ~ OpTypeType op) =>
@@ -266,6 +268,7 @@ instance
   where
   componentStatementUnreorderable _ _ _ _ _ = mrgReturn $ con False
 
+{-
 instance
   ( LivelinessConstraint livelinessObj op ty res ctx,
     SimpleMergeable res,
@@ -376,6 +379,7 @@ instance
     unreorderable2 <- componentStatementUnreorderable obj2 table prog i j
     unreorderable3 <- componentStatementUnreorderable obj3 table prog i j
     mrgReturn $ unreorderable1 .|| unreorderable2 .|| unreorderable3
+-}
 
 statementsDirectDep ::
   (SymbolicVarId symVarId) =>

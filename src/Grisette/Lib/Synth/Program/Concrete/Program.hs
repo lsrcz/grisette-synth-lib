@@ -644,6 +644,7 @@ instance
       traverse_ runStmt stmts
       traverse (lookupVal . progResId) ret
 
+{-
 instance
   ( ProgConstraints constObj (Prog op varId ty) ctx,
     OpSemantics semObj op val ctx,
@@ -657,6 +658,7 @@ instance
   runProg (WithConstraints semObj constObj) table tyTable prog inputs = do
     constrainProg constObj tyTable prog
     runProg semObj table tyTable prog inputs
+    -}
 
 instance (Mergeable ty) => ProgTyping (Prog op varId ty) where
   typeProg prog =

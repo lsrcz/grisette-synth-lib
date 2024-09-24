@@ -303,9 +303,9 @@ example iop =
     Example
       { exampleConSemantics = TestSemanticsObj,
         exampleSymSemantics =
-          WithConstraints
-            TestSemanticsObj
-            (ComponentSymmetryReduction ()),
+  --        WithConstraints
+            TestSemanticsObj,
+   --         (ComponentSymmetryReduction ()),
         exampleSymValType = Proxy :: Proxy SymInteger,
         exampleIOPair = iop,
         exampleMatcher = EqMatcher
@@ -324,7 +324,7 @@ verifier ::
 verifier spec gen =
   QuickCheckFuzzer
     { quickCheckFuzzerSymSemantics =
-        WithConstraints TestSemanticsObj (ComponentSymmetryReduction ()),
+        {-WithConstraints -}TestSemanticsObj {-(ComponentSymmetryReduction ())-},
       quickCheckFuzzerConSemantics = TestSemanticsObj,
       quickCheckFuzzerMaxTests = 100,
       quickCheckFuzzerGenerators = [gen],
