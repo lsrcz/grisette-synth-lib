@@ -24,7 +24,6 @@ import Test.HUnit ((@?=))
 prog :: Prog T.Text Integer SymInteger T.Text
 prog =
   Prog
-    "test"
     [ProgArg "a" 0 "ta", ProgArg "b" 1 "tb"]
     [ Stmt "s1" [0] 1 [2] 1,
       Stmt "s2" [1] 1 [3] 1

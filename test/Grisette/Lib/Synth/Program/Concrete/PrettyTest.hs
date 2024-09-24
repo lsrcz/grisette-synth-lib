@@ -154,17 +154,16 @@ prettyTest =
         (PrettyProgTestCase groupName prog loose compact) <-
           [ PrettyProgTestCase
               { testProgGroupName = "0 stmt",
-                testProg = Prog "prog1" [] [] [],
+                testProg = Prog [] [] [],
                 testProgLooseExpectedResult =
-                  Right "def prog1() -> ():\n  return ()",
+                  Right "def prog() -> ():\n  return ()",
                 testProgCompactExpectedResult =
-                  Right "def prog1() -> ():\n  return ()"
+                  Right "def prog() -> ():\n  return ()"
               },
             PrettyProgTestCase
               { testProgGroupName = "1 stmt",
                 testProg =
                   Prog
-                    "prog2"
                     [ProgArg "x" 0 PrettyType1]
                     [Stmt PrettyOp1 [0] [1]]
                     [ProgRes 1 PrettyType2],
@@ -172,7 +171,7 @@ prettyTest =
                   Right $
                     T.intercalate
                       "\n"
-                      [ "def prog2(x: PrettyType1) -> PrettyType2:",
+                      [ "def prog(x: PrettyType1) -> PrettyType2:",
                         "  t1_1 = op1(op1=x)",
                         "  return t1_1"
                       ],
@@ -180,7 +179,7 @@ prettyTest =
                   Right $
                     T.intercalate
                       "\n"
-                      [ "def prog2(",
+                      [ "def prog(",
                         "  x: PrettyType1",
                         ") -> PrettyType2:",
                         "  t1_1 = op1(",
@@ -193,7 +192,6 @@ prettyTest =
               { testProgGroupName = "2 stmts",
                 testProg =
                   Prog
-                    "prog3"
                     [ProgArg "x" 0 PrettyType1, ProgArg "y" 1 PrettyType2]
                     [ Stmt PrettyOp2 [0, 1] [2, 3],
                       Stmt PrettyOp1 [3] [4]
@@ -203,7 +201,7 @@ prettyTest =
                   Right $
                     T.intercalate
                       "\n"
-                      [ "def prog3(x: PrettyType1, y: PrettyType2) -> "
+                      [ "def prog(x: PrettyType1, y: PrettyType2) -> "
                           <> "(PrettyType1, PrettyType2):",
                         "  (op2_2, op2'_3) = op2(op2'2'0'arg=x, y)",
                         "  t1_4 = op1(op1=op2'_3)",
@@ -213,7 +211,7 @@ prettyTest =
                   Right $
                     T.intercalate
                       "\n"
-                      [ "def prog3(",
+                      [ "def prog(",
                         "  x: PrettyType1,",
                         "  y: PrettyType2",
                         ") -> (",
@@ -240,7 +238,6 @@ prettyTest =
               { testProgGroupName = "stmt error",
                 testProg =
                   Prog
-                    "prog4"
                     [ProgArg "x" 0 PrettyType1, ProgArg "y" 1 PrettyType2]
                     [Stmt PrettyOp2 [0, 1] [1, 2]]
                     [ProgRes 0 PrettyType1],
@@ -255,7 +252,6 @@ prettyTest =
               { testProgGroupName = "result undefined",
                 testProg =
                   Prog
-                    "prog5"
                     [ProgArg "x" 0 PrettyType1]
                     [Stmt PrettyOp1 [0] [1]]
                     [ProgRes 2 PrettyType1],
@@ -264,28 +260,25 @@ prettyTest =
               }
             ]
         return $ testGroup groupName $ do
-          let doc = prettyProg prog
+          let doc = prettyProg "prog" prog
           [ testCase "loose" $ renderDoc 80 <$> doc @?= loose,
             testCase "compact" $ renderDoc 1 <$> doc @?= compact
             ],
       testGroup "pformat" $ do
         let progExt =
               Prog
-                "ext"
                 [ProgArg "x" 0 PrettyType1]
                 [Stmt TestPrettyExtOp [0 :: Int] [1, 2]]
                 [ProgRes 1 PrettyType1]
         let progExtType = typeProg progExt
         let prog1 =
               Prog
-                "prog1"
                 [ProgArg "x" 0 PrettyType1]
                 [Stmt (PrettyInvokeExtOp progExtType "ext") [0] [1]]
                 [ProgRes 1 PrettyType1]
         let prog1Type = typeProg prog1
         let prog2 =
               Prog
-                "prog2"
                 [ProgArg "x" (0 :: Int) PrettyType1]
                 [ Stmt (PrettyInvokeExtOp progExtType "ext") [0] [1],
                   Stmt (PrettyInvokeOp prog1Type "prog1") [1] [2]
@@ -303,13 +296,13 @@ prettyTest =
             let expected =
                   T.intercalate
                     "\n"
-                    [ "ext: def ext(x: PrettyType1) -> PrettyType1:",
+                    [ "def ext(x: PrettyType1) -> PrettyType1:",
                       "  (t1_1, t2_2) = ext(x)",
                       "  return t1_1",
-                      "prog1: def prog1(x: PrettyType1) -> PrettyType1:",
+                      "def prog1(x: PrettyType1) -> PrettyType1:",
                       "  t1_1 = invoke_ext(ext)(x)",
                       "  return t1_1",
-                      "prog2: def prog2(x: PrettyType1) -> PrettyType1:",
+                      "def prog2(x: PrettyType1) -> PrettyType1:",
                       "  t1_1 = invoke_ext(ext)(x)",
                       "  t1_2 = invoke(prog1)(t1_1)",
                       "  return t1_2"

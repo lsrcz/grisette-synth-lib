@@ -20,7 +20,6 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
 goodConcreteProg :: Prog (Union TestSemanticsOp) SymInteger TestSemanticsType
 goodConcreteProg =
   Prog
-    "test"
     [ProgArg "x" IntType, ProgArg "y" IntType]
     [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con False) [],
       Stmt (mrgReturn DivMod) [2, 0] 2 [3, 4] 2 (con False) []

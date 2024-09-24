@@ -74,7 +74,6 @@ instance
 prog :: Prog MayAddOneOp Int IntType
 prog =
   Prog
-    "prog"
     [ProgArg "x" 0 IntType]
     ( fmap
         ( \i ->

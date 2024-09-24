@@ -30,11 +30,11 @@ import qualified Data.Text as T
 import Grisette
   ( Fresh,
     GenSymSimple (simpleFresh),
+    Identifier,
     LogicalOp ((.||)),
     Mergeable,
     Solvable (con),
     ToSym (toSym),
-    identifier,
     runFresh,
   )
 import Grisette.Lib.Synth.Context (SymbolicContext)
@@ -165,15 +165,14 @@ freshStmts num freshOp =
 
 class MkProg prog stmts op symVarId ty | prog -> stmts op symVarId ty where
   mkProg ::
-    T.Text ->
     [(T.Text, ty)] ->
     stmts ->
     [(symVarId, ty)] ->
     prog
 
 instance MkProg (Prog op symVarId ty) [Stmt op symVarId] op symVarId ty where
-  mkProg name args stmts rets =
-    Prog name (uncurry ProgArg <$> args) stmts (uncurry ProgRes <$> rets)
+  mkProg args stmts rets =
+    Prog (uncurry ProgArg <$> args) stmts (uncurry ProgRes <$> rets)
 
 instance
   MkProg
@@ -183,14 +182,14 @@ instance
     (Fresh symVarId)
     ty
   where
-  mkProg name args stmts rets =
-    (Prog name (uncurry ProgArg <$> args) . concat <$> sequence stmts)
+  mkProg args stmts rets =
+    (Prog (uncurry ProgArg <$> args) . concat <$> sequence stmts)
       <*> traverse
         (\(freshVarId, ty) -> ProgRes <$> freshVarId <*> return ty)
         rets
 
 class MkFreshProg prog stmt op ty | prog -> stmt op ty, stmt ty -> prog where
-  mkFreshProg :: T.Text -> [ty] -> [Fresh [stmt]] -> [ty] -> Fresh prog
+  mkFreshProg :: [ty] -> [Fresh [stmt]] -> [ty] -> Fresh prog
 
 mkSimpleFreshProg ::
   forall prog op ty symVarId.
@@ -198,24 +197,19 @@ mkSimpleFreshProg ::
     OpTyping op SymbolicContext,
     GenSymSimple () symVarId
   ) =>
-  T.Text ->
   [ty] ->
   [op] ->
   [ty] ->
   Fresh prog
-mkSimpleFreshProg name argTypes ops =
-  mkFreshProg
-    name
-    argTypes
-    (simpleFreshStmt <$> ops :: [Fresh [Stmt op symVarId]])
+mkSimpleFreshProg argTypes ops =
+  mkFreshProg argTypes (simpleFreshStmt <$> ops :: [Fresh [Stmt op symVarId]])
 
 instance
   (GenSymSimple () symVarId) =>
   MkFreshProg (Prog op symVarId ty) (Stmt op symVarId) op ty
   where
-  mkFreshProg name argTypes freshStmts retTypes =
+  mkFreshProg argTypes freshStmts retTypes =
     ( ( Prog
-          name
           [ProgArg ("arg" <> showText n) ty | (n, ty) <- zip [0 ..] argTypes]
       )
         . concat
@@ -232,9 +226,9 @@ fromConcrete ::
   ) =>
   Concrete.Prog conOp conVarId conTy ->
   Fresh (Prog symOp symVarId symTy)
-fromConcrete (Concrete.Prog name argList stmtList resList) = do
+fromConcrete (Concrete.Prog argList stmtList resList) = do
   stmts <- concat <$> allFreshStmts
-  Prog name args stmts <$> freshResults
+  Prog args stmts <$> freshResults
   where
     args =
       (\(Concrete.ProgArg name _ ty) -> ProgArg name (toSym ty)) <$> argList
@@ -253,14 +247,14 @@ fromConcrete (Concrete.Prog name argList stmtList resList) = do
 mkSketch ::
   forall prog stmt op ty.
   (MkFreshProg prog stmt op ty) =>
-  T.Text ->
+  Identifier ->
   [ty] ->
   [Fresh [stmt]] ->
   [ty] ->
   prog
-mkSketch name argTypes stmts retTypes =
-  flip runFresh (identifier name) $
-    mkFreshProg name argTypes stmts retTypes
+mkSketch ident argTypes stmts retTypes =
+  flip runFresh ident $
+    mkFreshProg argTypes stmts retTypes
 
 mkSimpleSketch ::
   forall prog op ty symVarId.
@@ -268,11 +262,11 @@ mkSimpleSketch ::
     OpTyping op SymbolicContext,
     GenSymSimple () symVarId
   ) =>
-  T.Text ->
+  Identifier ->
   [ty] ->
   [op] ->
   [ty] ->
   prog
-mkSimpleSketch name argTypes ops retTypes =
-  flip runFresh (identifier name) $
-    mkSimpleFreshProg name argTypes ops retTypes
+mkSimpleSketch ident argTypes ops retTypes =
+  flip runFresh ident $
+    mkSimpleFreshProg argTypes ops retTypes

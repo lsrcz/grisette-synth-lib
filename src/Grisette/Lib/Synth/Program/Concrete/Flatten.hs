@@ -78,7 +78,7 @@ getFlattenedProgram t@(FlattenedProgramMap table) symbol = do
   (newRess, stmts) <-
     evalStateT (getFlattenedProgramInner t symbol $ progArgId <$> progArgs) initialState
   progRess <- ress table
-  return $ Prog symbol progArgs stmts (progRess newRess)
+  return $ Prog progArgs stmts (progRess newRess)
   where
     args [] = throwError $ "getFlattenedProgram: " <> symbol <> " not found"
     args ((sym, _, tableArg, _) : xs) =
@@ -139,7 +139,7 @@ remapProg ::
     (FlattenState varId newVarId)
     ConcreteContext
     ([newVarId], [Stmt flatOp newVarId])
-remapProg flattened (Prog _ args stmts ress) newArgs = do
+remapProg flattened (Prog args stmts ress) newArgs = do
   state <- get
   put $ state {localIdMapping = HM.fromList $ zip (progArgId <$> args) newArgs}
   newStmts <- concat <$> traverse (remapUpToOneSubProgStmt flattened) stmts
@@ -166,7 +166,7 @@ flattenSymbolTable' (SymbolTable table) =
   let res =
         FlattenedProgramMap $
           fmap
-            ( \(symbol, prog@(Prog _ args _ ress)) ->
+            ( \(symbol, prog@(Prog args _ ress)) ->
                 ( symbol,
                   \newArgs -> do
                     when (length args /= length newArgs) $

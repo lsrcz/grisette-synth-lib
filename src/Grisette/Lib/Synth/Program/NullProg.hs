@@ -17,7 +17,7 @@ import Grisette.Lib.Synth.Program.Concrete.Program
   ( ProgPPrint (pformatProg),
     ProgToDot (toDotProg),
   )
-import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
+-- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
@@ -61,8 +61,8 @@ instance Eq (NullProg ty) where
 instance (MonadContext ctx) => ProgSemantics semObj (NullProg ty) val ctx where
   runProg _ _ = error "Impossible"
 
-instance ProgNaming (NullProg ty) where
-  nameProg _ = error "Impossible"
+-- instance ProgNaming (NullProg ty) where
+--   nameProg _ = error "Impossible"
 
 instance ProgTyping (NullProg ty) where
   typeProg _ = error "Impossible"

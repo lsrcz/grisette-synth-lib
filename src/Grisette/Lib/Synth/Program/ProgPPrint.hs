@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -10,13 +10,14 @@ module Grisette.Lib.Synth.Program.ProgPPrint
 where
 
 import Data.List (intersperse)
+import qualified Data.Text as T
 import Grisette (PPrint (pformat))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.Util.Pretty (Doc, hardline)
 
 class ProgPPrint prog where
-  pformatProg :: prog -> Either (Doc ann) (Doc ann)
+  pformatProg :: T.Text -> prog -> Either (Doc ann) (Doc ann)
 
 instance
   (ProgPPrint prog, ProgTyping prog) =>
@@ -25,7 +26,7 @@ instance
   pformat (SymbolTable lst) =
     mconcat $ intersperse hardline $ go <$> lst
     where
-      go (name, prog) =
-        case pformatProg prog of
-          Left err -> pformat name <> ": " <> err
-          Right doc -> pformat name <> ": " <> doc
+      go (key, prog) =
+        case pformatProg key prog of
+          Left err -> err
+          Right doc -> doc

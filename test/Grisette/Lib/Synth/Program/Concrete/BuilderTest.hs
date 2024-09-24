@@ -22,7 +22,6 @@ import Test.HUnit ((@?=))
 concreteProg :: Prog TestSemanticsOp Integer TestSemanticsType
 concreteProg =
   Prog
-    "test"
     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
     [ Stmt Add [0, 1] [2],
       Stmt DivMod [2, 0] [3, 4]
@@ -40,7 +39,7 @@ builderTest =
         "buildProg"
         [ testCase "simple" $ do
             let actual =
-                  buildProg "test" [("x", IntType), ("y", IntType)] $
+                  buildProg [("x", IntType), ("y", IntType)] $
                     \[argxRef, argyRef] ->
                       let [addRef] = node Add 1 [argxRef, argyRef]
                           [divRef, modRef] = node DivMod 2 [addRef, argxRef]
@@ -50,7 +49,7 @@ builderTest =
                           ]
             actual @?= concreteProg,
           testCase "pseudo dep 1" $ do
-            let actual = buildProg "test" [("x", IntType), ("y", IntType)] $
+            let actual = buildProg [("x", IntType), ("y", IntType)] $
                   \[argxRef, argyRef] ->
                     let [addRef] = node Add 1 [argxRef, argyRef]
                         [divRef, modRef] =
@@ -61,14 +60,13 @@ builderTest =
                         ]
             let expected =
                   Prog
-                    "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt Add [0, 1] [2], Stmt DivMod [0, 1] [3, 4]]
                     [ProgRes 3 IntType, ProgRes 4 IntType, ProgRes 2 IntType] ::
                     Prog TestSemanticsOp Integer TestSemanticsType
             actual @?= expected,
           testCase "pseudo dep 2" $ do
-            let actual = buildProg "test" [("x", IntType), ("y", IntType)] $
+            let actual = buildProg [("x", IntType), ("y", IntType)] $
                   \[argxRef, argyRef] ->
                     let [divRef, modRef] = node DivMod 2 [argxRef, argyRef]
                         [addRef] = node' Add 1 [argxRef, argyRef] [divRef]
@@ -78,7 +76,6 @@ builderTest =
                         ]
             let expected =
                   Prog
-                    "test"
                     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                     [Stmt DivMod [0, 1] [2, 3], Stmt Add [0, 1] [4]]
                     [ProgRes 2 IntType, ProgRes 3 IntType, ProgRes 4 IntType] ::

@@ -29,7 +29,6 @@ typingTest :: Test
 typingTest = testCase "Typing" $ do
   let prog =
         Prog
-          "test"
           [ProgArg "x" IntType, ProgArg "y" IntType]
           [ Stmt (mrgReturn Add) ["a", "b"] "c" ["d"] "e" "f" [],
             Stmt (mrgReturn DivMod) ["g", "h"] "i" ["j", "k"] "l" "m" []

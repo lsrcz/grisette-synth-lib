@@ -51,7 +51,6 @@ data SemanticsTestCase = SemanticsTestCase
 goodConcreteProg :: Prog TestSemanticsOp Integer SymInteger TestSemanticsType
 goodConcreteProg =
   Prog
-    "test"
     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
     [ Stmt Add [0, 1] 2 [3] 1,
       Stmt DivMod [3, 0] 2 [4, 5] 2
@@ -72,7 +71,6 @@ semanticsTest = testGroup "Semantics" $ do
             "symbolic number of statement arguments",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt Add [0, 1] "a" [2] 1]
               [ProgRes 2 IntType],
@@ -84,7 +82,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "symbolic statement argument",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt Add ["a", 1] 2 [2] 1]
               [ProgRes 2 IntType],
@@ -98,7 +95,6 @@ semanticsTest = testGroup "Semantics" $ do
             "symbolic number of statement results",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt Add [0, 1] 2 [2] "a"]
               [ProgRes 2 IntType],
@@ -110,7 +106,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "symbolic result",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt Add [0, 1] 2 [2] 1]
               [ProgRes "a" IntType],
@@ -139,7 +134,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "incorrect number of statement results",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt Add [0, 1] 2 [2, 3] 2]
               [ProgRes 2 IntType],
@@ -152,7 +146,6 @@ semanticsTest = testGroup "Semantics" $ do
             "incorrect number of statement arguments",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt Add [0] 1 [2] 1]
               [ProgRes 2 IntType],
@@ -166,7 +159,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "Redefinition of variable",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "x" 1 IntType]
               [Stmt Add [0, 1] 2 [1] 1]
               [ProgRes 1 IntType],
@@ -178,7 +170,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "Undefined variable",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType]
               [Stmt Add [0, 1] 2 [2] 1]
               [ProgRes 2 IntType],
@@ -190,7 +181,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "Undefined result",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt Add [0, 1] 2 [2] 1]
               [ProgRes 3 IntType],
@@ -202,7 +192,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "Extra statement arg num",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt Add [0, 1, 1] 2 [2] 1]
               [ProgRes 2 IntType],
@@ -213,7 +202,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "Insufficient statement args",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt Add [0] 2 [2] 1]
               [ProgRes 2 IntType],
@@ -225,7 +213,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "Insufficient result ids",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [Stmt DivMod [0, 1] 2 [2] 2]
               [ProgRes 2 IntType],

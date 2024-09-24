@@ -127,7 +127,6 @@ sharedSketchTable =
   SymbolTable
     [ ( "test",
         Prog
-          "test"
           [ProgArg "x" IntType, ProgArg "y" IntType]
           [ Stmt
               (mrgReturn Add)
@@ -171,7 +170,6 @@ sharedSketchUnionTable =
   SymbolTable
     [ ( "test",
         Prog
-          "test"
           [ProgArg "x" IntType, ProgArg "y" IntType]
           [ Stmt
               (mrgIf "stmt0'sel" (return Add) (return DivMod))
@@ -199,7 +197,6 @@ addThenDivModSketchTable =
   SymbolTable
     [ ( "test",
         Prog
-          "test"
           [ProgArg "x" IntType, ProgArg "y" IntType, ProgArg "z" IntType]
           [ Stmt
               (mrgReturn Add)
@@ -227,7 +224,6 @@ addThenDivModSketchBadMustBeAfterTable =
   SymbolTable
     [ ( "test",
         Prog
-          "test"
           [ProgArg "x" IntType, ProgArg "y" IntType, ProgArg "z" IntType]
           [ Stmt
               (return Add)
@@ -449,7 +445,6 @@ componentSketchTest =
                     }
             let expectedSynthesizedProg =
                   Concrete.Prog
-                    "test"
                     [Concrete.ProgArg "x" (0 :: Integer) IntType]
                     [ Concrete.Stmt Double [0] [1],
                       Concrete.Stmt Double [1] [2]
@@ -489,7 +484,6 @@ times4SketchTable =
   SymbolTable
     [ ( "test",
         Prog
-          "test"
           [ProgArg "x" IntType]
           [ Stmt
               (mrgReturn Add)

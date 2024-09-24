@@ -21,7 +21,6 @@ progCostTest :: Test
 progCostTest = testCase "ProgCost" $ do
   let prog =
         Component.Prog
-          "test"
           []
           [ Component.Stmt (TestCostOperator 10) [] 0 [] 0 "x" [],
             Component.Stmt (TestCostOperator 20) [] 0 [] 0 "y" []

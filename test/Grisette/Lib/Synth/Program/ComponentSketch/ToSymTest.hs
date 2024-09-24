@@ -26,7 +26,6 @@ toSymTest =
     [ testCase "from concrete program" $ do
         let prog =
               Concrete.Prog
-                "test"
                 [ Concrete.ProgArg "x" 100 IntType,
                   Concrete.ProgArg "y" (-1) IntType
                 ]
@@ -37,7 +36,6 @@ toSymTest =
                 Concrete.Prog TestSemanticsOp Int TestSemanticsType
         let expected =
               Prog
-                "test"
                 [ProgArg "x" IntType, ProgArg "y" IntType]
                 [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con False) [],
                   Stmt (mrgReturn DivMod) [2, 0] 2 [3, 4] 2 (con False) []

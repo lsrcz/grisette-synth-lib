@@ -36,7 +36,6 @@ toConTest = testGroup "ToCon" $ do
         { toConTestCaseName = "goodConcreteProg",
           toConTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [ Stmt Add [0, 1] 2 [3] 1,
                 Stmt DivMod [3, 0] 2 [4, 5] 2
@@ -45,7 +44,6 @@ toConTest = testGroup "ToCon" $ do
           toConTestCaseExpected =
             Just $
               Concrete.Prog
-                "test"
                 [ Concrete.ProgArg "x" 0 IntType,
                   Concrete.ProgArg "y" 1 IntType
                 ]
@@ -58,7 +56,6 @@ toConTest = testGroup "ToCon" $ do
         { toConTestCaseName = "argNum is less than number of args",
           toConTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
               [ Stmt Inc [0, 1] 1 [2, 3] 1
               ]
@@ -66,7 +63,6 @@ toConTest = testGroup "ToCon" $ do
           toConTestCaseExpected =
             Just $
               Concrete.Prog
-                "test"
                 [ Concrete.ProgArg "x" 0 IntType,
                   Concrete.ProgArg "y" 1 IntType
                 ]

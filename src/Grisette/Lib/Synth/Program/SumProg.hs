@@ -18,7 +18,7 @@ import Grisette.Lib.Synth.Program.Concrete.Program
   ( ProgPPrint (pformatProg),
     ProgToDot (toDotProg),
   )
-import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
+-- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
@@ -96,9 +96,9 @@ instance
   runProg semObj table (SumProgL l) = runProg semObj table l
   runProg semObj table (SumProgR r) = runProg semObj table r
 
-instance (ProgNaming l, ProgNaming r) => ProgNaming (SumProg l r) where
-  nameProg (SumProgL l) = nameProg l
-  nameProg (SumProgR r) = nameProg r
+-- instance (ProgNaming l, ProgNaming r) => ProgNaming (SumProg l r) where
+--   nameProg (SumProgL l) = nameProg l
+--   nameProg (SumProgR r) = nameProg r
 
 instance
   ( ProgTyping l,
@@ -117,8 +117,8 @@ instance
   ) =>
   ProgPPrint (SumProg l r)
   where
-  pformatProg (SumProgL l) = pformatProg l
-  pformatProg (SumProgR r) = pformatProg r
+  pformatProg key (SumProgL l) = pformatProg key l
+  pformatProg key (SumProgR r) = pformatProg key r
 
 instance
   ( ProgToDot l,
@@ -127,8 +127,8 @@ instance
   ) =>
   ProgToDot (SumProg l r)
   where
-  toDotProg (SumProgL l) = toDotProg l
-  toDotProg (SumProgR r) = toDotProg r
+  toDotProg key (SumProgL l) = toDotProg key l
+  toDotProg key (SumProgR r) = toDotProg key r
 
 instance
   ( StmtUtil l,

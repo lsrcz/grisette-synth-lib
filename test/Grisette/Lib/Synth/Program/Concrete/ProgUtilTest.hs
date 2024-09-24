@@ -21,7 +21,6 @@ import Test.HUnit ((@?=))
 prog :: Prog T.Text Int T.Text
 prog =
   Prog
-    "test"
     [ProgArg "a" 1 "ta", ProgArg "b" 2 "tb"]
     [ Stmt "s1" [1] [3],
       Stmt "s2" [2] [4]

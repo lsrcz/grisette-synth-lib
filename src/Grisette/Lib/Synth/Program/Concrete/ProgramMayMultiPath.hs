@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -116,7 +115,7 @@ instance
   ) =>
   ProgSemantics semObj (ProgMayMultiPath op varId ty) val ctx
   where
-  runProg sem table (ProgMayMultiPath (Prog _ arg stmts ret)) inputs = merge $ do
+  runProg sem table (ProgMayMultiPath (Prog arg stmts ret)) inputs = merge $ do
     when (length inputs /= length arg) . mrgThrowError $
       "Expected "
         <> showText (length arg)

@@ -47,7 +47,6 @@ library
       Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
       Grisette.Lib.Synth.Program.NullProg
       Grisette.Lib.Synth.Program.ProgCost
-      Grisette.Lib.Synth.Program.ProgNaming
       Grisette.Lib.Synth.Program.ProgPPrint
       Grisette.Lib.Synth.Program.ProgSemantics
       Grisette.Lib.Synth.Program.ProgToDot

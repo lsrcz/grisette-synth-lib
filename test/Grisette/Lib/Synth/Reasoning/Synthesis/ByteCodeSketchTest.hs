@@ -75,7 +75,6 @@ type SymProg =
 sharedSketch :: SymProg
 sharedSketch =
   Prog
-    "test"
     [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
     [ Stmt
         (mrgIf "stmt0'op" (return Add) (return DivMod))

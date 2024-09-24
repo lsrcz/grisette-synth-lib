@@ -20,7 +20,7 @@ import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 
 class ProgToDot prog where
-  toDotProg :: prog -> DotSubGraph T.Text
+  toDotProg :: T.Text -> prog -> DotSubGraph T.Text
 
 instance
   (ProgToDot prog, ProgUtil prog, ProgTyping prog) =>
@@ -35,7 +35,7 @@ instance
           graphStatements =
             DotStmts
               { attrStmts = [],
-                subGraphs = toDotProg . snd <$> lst,
+                subGraphs = uncurry toDotProg <$> lst,
                 nodeStmts = [],
                 edgeStmts = []
               }

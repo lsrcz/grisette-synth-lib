@@ -88,7 +88,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "concrete excluded by num arg",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [Stmt (mrgReturn Add) [0, 1, 5] 2 [2] 1 (con False) []]
               [ProgRes 2 IntType],
@@ -111,7 +110,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "concrete excluded by num res",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 (con False) []
               ]
@@ -136,7 +134,6 @@ semanticsTest = testGroup "Semantics" $ do
             "concrete excluded by num res must still be in bound",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2, 4] 1 (con False) []
               ]
@@ -150,7 +147,6 @@ semanticsTest = testGroup "Semantics" $ do
             "concrete excluded by num res must still be unique",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2, 2] 1 (con False) []
               ]
@@ -164,7 +160,6 @@ semanticsTest = testGroup "Semantics" $ do
             "concrete excluded by num res must still be canonical",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2, 5] 1 (con False) [],
                 Stmt (mrgReturn Add) [0, 2] 2 [4, 3] 1 (con False) []
@@ -179,7 +174,6 @@ semanticsTest = testGroup "Semantics" $ do
             "excluded res cannot be used by non-excluded arg",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 (con False) [],
                 Stmt (mrgReturn Add) [2, 3] 2 [4, 5] 1 (con False) []
@@ -194,7 +188,6 @@ semanticsTest = testGroup "Semantics" $ do
             "failed must be after constraint",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 1 (con False) [4],
                 Stmt (mrgReturn Add) [0, 1] 2 [4, 5] 1 (con False) []
@@ -208,7 +201,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "symbolic disable",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 "dis0" [],
                 Stmt (mrgReturn DivMod) [0, 1] 2 [3, 4] 2 "dis1" []
@@ -237,7 +229,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "symbolic operator and arg/res num",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt
                   ( mrgIf
@@ -308,7 +299,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "symbolic result",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con False) []]
               [ProgRes "res" IntType],
@@ -346,7 +336,6 @@ semanticsTest = testGroup "Semantics" $ do
             { semanticsTestCaseName = "symbolic instructions",
               semanticsTestCaseProg =
                 Prog
-                  "test"
                   [ProgArg "x" IntType]
                   [ Stmt (mrgReturn Inc) [argInc] 1 [resInc] 1 (con False) [],
                     Stmt
@@ -421,7 +410,6 @@ semanticsTest = testGroup "Semantics" $ do
             { semanticsTestCaseName = "multi-result statements",
               semanticsTestCaseProg =
                 Prog
-                  "test"
                   [ProgArg "x" IntType, ProgArg "y" IntType]
                   [ Stmt
                       (mrgReturn DivMod)
@@ -481,7 +469,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "incorrect number of statement results",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [Stmt (mrgReturn Add) [0, 1] 2 [2, 3] 2 (con False) []]
               [ProgRes 2 IntType],
@@ -493,7 +480,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "use disabled values",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con True) [],
                 Stmt (mrgReturn Add) [0, 2] 2 [3] 1 (con False) []
@@ -507,7 +493,6 @@ semanticsTest = testGroup "Semantics" $ do
         { semanticsTestCaseName = "use disabled values in results",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con True) [],
                 Stmt (mrgReturn Add) [0, 2] 2 [3] 1 (con True) []
@@ -522,7 +507,6 @@ semanticsTest = testGroup "Semantics" $ do
             "disabled statement may use disabled values",
           semanticsTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con True) [],
                 Stmt (mrgReturn Add) [0, 2] 2 [3] 1 (con True) []

@@ -46,7 +46,7 @@ sketchTable =
         Component.mkSimpleSketch
           -- The name of the program. If your program supports procedure calls, you
           -- should make sure that the programs has a unique name.
-          "test"
+          "prog"
           -- The types of the arguments to the program.
           [DefaultType, DefaultType]
           -- The components of the program. Each component is a statement.

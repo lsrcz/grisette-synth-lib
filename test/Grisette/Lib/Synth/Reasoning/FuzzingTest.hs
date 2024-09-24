@@ -37,7 +37,6 @@ type ConProgType = Concrete.Prog TestSemanticsOp Integer TestSemanticsType
 conProg :: ConProgType
 conProg =
   Concrete.Prog
-    "test"
     [ Concrete.ProgArg "x" 0 IntType,
       Concrete.ProgArg "y" 1 IntType
     ]
@@ -55,7 +54,6 @@ type SymProgType =
 symProg :: SymProgType
 symProg =
   ByteCodeSketch.Prog
-    "test"
     [ ByteCodeSketch.ProgArg "x" 0 IntType,
       ByteCodeSketch.ProgArg "y" 1 IntType
     ]

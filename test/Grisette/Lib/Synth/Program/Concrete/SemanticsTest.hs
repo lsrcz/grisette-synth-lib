@@ -35,7 +35,6 @@ semanticsTest =
   testGroup "semantics" $ do
     let goodProg =
           Prog
-            "test"
             [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
             [ Stmt Add [0, 1] [3],
               Stmt DivMod [3, 0] [4, 5]
@@ -66,7 +65,6 @@ semanticsTest =
           { semanticsTestCaseName = "incorrect number of statement results",
             semanticsTestCaseProg =
               Prog
-                "test"
                 [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                 [ Stmt Add [0, 1] [2, 3]
                 ]
@@ -78,7 +76,6 @@ semanticsTest =
           { semanticsTestCaseName = "Redefinition of variable",
             semanticsTestCaseProg =
               Prog
-                "test"
                 [ProgArg "x" 0 IntType, ProgArg "x" 1 IntType]
                 [Stmt Add [0, 1] [1]]
                 [ProgRes 1 IntType] ::
@@ -90,7 +87,6 @@ semanticsTest =
           { semanticsTestCaseName = "Undefined variable",
             semanticsTestCaseProg =
               Prog
-                "test"
                 [ProgArg "x" 0 IntType]
                 [Stmt Add [0, 1] [2]]
                 [ProgRes 2 IntType] ::
@@ -102,7 +98,6 @@ semanticsTest =
           { semanticsTestCaseName = "Undefined result",
             semanticsTestCaseProg =
               Prog
-                "test"
                 [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
                 [Stmt Add [0, 1] [2]]
                 [ProgRes 3 IntType] ::

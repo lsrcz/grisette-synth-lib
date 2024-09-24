@@ -53,7 +53,7 @@ import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
+-- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
@@ -196,8 +196,7 @@ instance Mergeable (ProgRes symVarId ty) where
   rootStrategy = NoStrategy
 
 data Prog op conVarId symVarId ty = Prog
-  { progName :: T.Text,
-    progArgList :: [ProgArg conVarId ty],
+  { progArgList :: [ProgArg conVarId ty],
     progStmtList :: [Stmt op conVarId symVarId],
     progResList :: [ProgRes symVarId ty]
   }
@@ -307,7 +306,7 @@ instance
   ) =>
   ProgSemantics semObj (Prog op conVarId symVarId ty) val ctx
   where
-  runProg sem table (Prog _ arg stmts ret) inputs = do
+  runProg sem table (Prog arg stmts ret) inputs = do
     when (length inputs /= length arg) . mrgThrowError $
       "Expected "
         <> showText (length arg)
@@ -338,8 +337,8 @@ instance
       (progArgType <$> progArgList prog)
       (progResType <$> progResList prog)
 
-instance ProgNaming (Prog op conVarId symVarId ty) where
-  nameProg = progName
+-- instance ProgNaming (Prog op conVarId symVarId ty) where
+--   nameProg = progName
 
 instance
   (RelatedVarId conVarId symVarId) =>

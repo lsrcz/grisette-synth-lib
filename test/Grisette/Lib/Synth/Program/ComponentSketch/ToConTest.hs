@@ -42,7 +42,6 @@ toConTest = testGroup "ToCon" $ do
           toConTestCaseExpected =
             Just $
               Concrete.Prog
-                "test"
                 [ Concrete.ProgArg "x" 0 IntType,
                   Concrete.ProgArg "y" 1 IntType
                 ]
@@ -55,7 +54,6 @@ toConTest = testGroup "ToCon" $ do
         { toConTestCaseName = "reorder",
           toConTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn DivMod) [2, 0] 2 [3, 4] 2 (con False) [],
                 Stmt (mrgReturn Add) [0, 1] 2 [2] 1 (con False) []
@@ -64,7 +62,6 @@ toConTest = testGroup "ToCon" $ do
           toConTestCaseExpected =
             Just $
               Concrete.Prog
-                "test"
                 [ Concrete.ProgArg "x" 0 IntType,
                   Concrete.ProgArg "y" 1 IntType
                 ]
@@ -77,7 +74,6 @@ toConTest = testGroup "ToCon" $ do
         { toConTestCaseName = "shrink by arg/res num",
           toConTestCaseProg =
             Prog
-              "test"
               [ProgArg "x" IntType, ProgArg "y" IntType]
               [ Stmt (mrgReturn DivMod) [2, 0, 3] 2 [4, 5, 6] 2 (con False) [],
                 Stmt (mrgReturn Add) [0, 1, 0] 2 [2, 3] 1 (con False) []
@@ -86,7 +82,6 @@ toConTest = testGroup "ToCon" $ do
           toConTestCaseExpected =
             Just $
               Concrete.Prog
-                "test"
                 [ Concrete.ProgArg "x" 0 IntType,
                   Concrete.ProgArg "y" 1 IntType
                 ]

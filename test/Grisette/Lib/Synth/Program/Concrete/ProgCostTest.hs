@@ -20,7 +20,6 @@ progCostTest :: Test
 progCostTest = testCase "ProgCost" $ do
   let prog =
         Concrete.Prog
-          "test"
           []
           [ Concrete.Stmt (TestCostOperator 10) [] [],
             Concrete.Stmt (TestCostOperator 20) [] []

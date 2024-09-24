@@ -199,7 +199,6 @@ builderTest =
         [ testCase "Non-fresh" $ do
             let actual =
                   mkProg
-                    "test"
                     [("x", IntType), ("y", IntType)]
                     [ Stmt Add ["a", "b"] "c" ["d"] "e" "f" [],
                       Stmt DivMod ["g", "h"] "i" ["j", "k"] "l" "m" []
@@ -208,7 +207,6 @@ builderTest =
                     Prog TestSemanticsOp SymInteger TestSemanticsType
             let expected =
                   Prog
-                    "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
                     [ Stmt Add ["a", "b"] "c" ["d"] "e" "f" [],
                       Stmt DivMod ["g", "h"] "i" ["j", "k"] "l" "m" []
@@ -219,7 +217,6 @@ builderTest =
             let actual =
                   flip runFresh "x" $
                     mkProg
-                      "test"
                       [("x", IntType), ("y", IntType)]
                       [simpleFreshStmt Add, simpleFreshStmt DivMod]
                       [ (simpleFresh (), IntType),
@@ -227,7 +224,6 @@ builderTest =
                       ]
             let expected =
                   Prog
-                    "test"
                     [ProgArg "x" IntType, ProgArg "y" IntType]
                     [ Stmt
                         Add
@@ -255,13 +251,11 @@ builderTest =
         let actual =
               flip runFresh "x" $
                 mkFreshProg
-                  "test"
                   [IntType, IntType]
                   [simpleFreshStmt Add, simpleFreshStmt DivMod]
                   [IntType, IntType]
         let expected =
               Prog
-                "test"
                 [ProgArg "arg0" IntType, ProgArg "arg1" IntType]
                 [ Stmt
                     Add
@@ -287,7 +281,6 @@ builderTest =
       testCase "fromConcrete" $ do
         let conProg =
               Concrete.Prog
-                "test"
                 [Concrete.ProgArg "x" 0 IntType, Concrete.ProgArg "y" 1 IntType]
                 [ Concrete.Stmt Add [0, 1] [2],
                   Concrete.Stmt DivMod [2, 0] [3, 4]
@@ -301,7 +294,6 @@ builderTest =
                 Fresh (Prog TestSemanticsOp SymInteger TestSemanticsType)
         let expected =
               Prog
-                "test"
                 [ProgArg "x" IntType, ProgArg "y" IntType]
                 [ Stmt
                     Add

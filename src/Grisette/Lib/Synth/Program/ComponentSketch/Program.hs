@@ -84,7 +84,7 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
     PerStmtCostObj (PerStmtCostObj),
   )
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
-import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
+-- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics
   ( EvaledSymbolTable,
     ProgSemantics (runProg),
@@ -228,8 +228,7 @@ instance Mergeable (ProgRes symVarId ty) where
   rootStrategy = NoStrategy
 
 data Prog op symVarId ty = Prog
-  { progName :: T.Text,
-    progArgList :: [ProgArg ty],
+  { progArgList :: [ProgArg ty],
     progStmtList :: [Stmt op symVarId],
     progResList :: [ProgRes symVarId ty]
   }
@@ -275,11 +274,11 @@ instance
   ) =>
   ToSym (Concrete.Prog conOp conVarId conTy) (Prog symOp symVarId symTy)
   where
-  toSym (Concrete.Prog name argList stmtList resList) =
+  toSym (Concrete.Prog argList stmtList resList) =
     flip evalState initialMapping $ do
       stmts <- traverse toSymStmt stmtList
       res <- traverse toSymRes resList
-      return $ Prog name componentArgList stmts res
+      return $ Prog componentArgList stmts res
     where
       componentArgList =
         (\(Concrete.ProgArg name _ ty) -> ProgArg name (toSym ty)) <$> argList
@@ -328,7 +327,7 @@ instance
   ) =>
   ToCon (Prog symOp symVarId symTy) (Concrete.Prog conOp conVarId conTy)
   where
-  toCon (Prog name argList stmtList resList) = do
+  toCon (Prog argList stmtList resList) = do
     conArgList <-
       traverse
         ( \(ProgArg name ty, varId) ->
@@ -366,7 +365,6 @@ instance
         resList
     return $
       Concrete.Prog
-        name
         conArgList
         (sortOn (listToMaybe . Concrete.stmtResIds) conStmts)
         conResList
@@ -563,7 +561,7 @@ instance
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx
   where
-  runProg sem table (Prog _ arg stmts ret) inputs =
+  runProg sem table (Prog arg stmts ret) inputs =
     flip mrgEvalStateT (CollectedDefUse [] []) $ do
       symAssertWith
         ( "Expected "
@@ -594,8 +592,8 @@ instance
       (progArgType <$> progArgList prog)
       (progResType <$> progResList prog)
 
-instance ProgNaming (Prog op varId ty) where
-  nameProg = progName
+-- instance ProgNaming (Prog op varId ty) where
+--   nameProg = progName
 
 instance StmtUtilImpl (Stmt op varId) op varId where
   getStmtArgIds = stmtArgIds

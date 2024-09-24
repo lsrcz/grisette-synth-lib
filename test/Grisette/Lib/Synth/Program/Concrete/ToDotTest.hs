@@ -183,7 +183,6 @@ toDotTest =
               { testProgName = "2 stmt",
                 testProg =
                   Prog
-                    "prog"
                     [ProgArg "x" 0 PrettyType1, ProgArg "y" 1 PrettyType2]
                     [ Stmt PrettyOp2 [0, 1] [2, 3],
                       Stmt PrettyOp1 [3] [4]
@@ -308,6 +307,6 @@ toDotTest =
               }
             ]
         return $ testCase name $ do
-          let actual = progToDotSubGraph prog
+          let actual = progToDotSubGraph "prog" prog
           actual @?= expected
     ]

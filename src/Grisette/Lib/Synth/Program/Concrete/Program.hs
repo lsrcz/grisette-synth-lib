@@ -108,7 +108,6 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
     PerStmtCostObj (PerStmtCostObj),
   )
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
-import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgPPrint
   ( ProgPPrint (pformatProg),
   )
@@ -248,8 +247,7 @@ instance
   toSym (ProgRes varId ty) = ProgRes varId $ toSym ty
 
 data Prog op varId ty = Prog
-  { progName :: T.Text,
-    progArgList :: [ProgArg varId ty],
+  { progArgList :: [ProgArg varId ty],
     progStmtList :: [Stmt op varId],
     progResList :: [ProgRes varId ty]
   }
@@ -275,15 +273,15 @@ instance
   (ToCon symOp conOp, ToCon symTy conTy) =>
   ToCon (Prog symOp varId symTy) (Prog conOp varId conTy)
   where
-  toCon (Prog name arg stmt res) =
-    Prog name <$> toCon arg <*> traverse toCon stmt <*> toCon res
+  toCon (Prog arg stmt res) =
+    Prog <$> toCon arg <*> traverse toCon stmt <*> toCon res
 
 instance
   (ToSym conOp symOp, ToSym conTy symTy, Mergeable varId) =>
   ToSym (Prog conOp varId conTy) (Prog symOp varId symTy)
   where
-  toSym (Prog name arg stmt res) =
-    Prog name (toSym arg) (toSym stmt) (toSym res)
+  toSym (Prog arg stmt res) =
+    Prog (toSym arg) (toSym stmt) (toSym res)
 
 instance Mergeable (Prog op varId ty) where
   rootStrategy = NoStrategy
@@ -351,9 +349,10 @@ prettyProg ::
     PPrint ty,
     OpTyping op ConcreteContext
   ) =>
+  T.Text ->
   Prog op varId ty ->
   Either (ProgPPrintError varId op) (Doc ann)
-prettyProg (Prog name argList stmtList resList) = do
+prettyProg key (Prog argList stmtList resList) = do
   let initMap =
         HM.fromList $ map (\arg -> (progArgId arg, progArgName arg)) argList
   flip evalStateT initMap $ do
@@ -361,7 +360,7 @@ prettyProg (Prog name argList stmtList resList) = do
     let firstLine =
           nest (-2) $
             "def "
-              <> pformat name
+              <> pformat key
               <> parenCommaList
                 ( map
                     ( \arg ->
@@ -394,18 +393,12 @@ instance
   ) =>
   ProgPPrint (Prog op varId ty)
   where
-  pformatProg prog = progDoc
+  pformatProg key prog = progDoc
     where
-      progDoc = case prettyProg prog of
+      progDoc = case prettyProg key prog of
         Left err ->
           Left $
-            nest
-              2
-              ( "Error while pretty-printing program "
-                  <> pformat (progName prog)
-                  <> hardline
-                  <> pformat err
-              )
+            pformat err
               <> hardline
               <> nest 2 ("Raw program: " <> hardline <> pformat (show prog))
         Right doc -> Right doc
@@ -456,14 +449,15 @@ progToDotSubGraph ::
     PPrint ty,
     OpTyping op ConcreteContext
   ) =>
+  T.Text ->
   Prog op varId ty ->
   Either (ProgPPrintError varId op) (DotSubGraph T.Text)
-progToDotSubGraph (Prog name argList stmtList resList) = do
+progToDotSubGraph key (Prog argList stmtList resList) = do
   let buildArgField arg =
         let argName = TL.fromStrict $ progArgName arg
             argType = TL.fromStrict $ renderDoc 80 (pformat $ progArgType arg)
          in LabelledTarget (PN argName) (argName <> ": " <> argType)
-  let argNodeId = name <> "_args"
+  let argNodeId = key <> "_args"
   let argNode =
         DotNode
           argNodeId
@@ -484,7 +478,7 @@ progToDotSubGraph (Prog name argList stmtList resList) = do
             <> renderDoc 80 (pformat (progResType res))
   let buildResField pos res =
         LabelledTarget (PN $ resPortAtPos pos) $ resLabel pos res
-  let resNodeId = name <> "_res"
+  let resNodeId = key <> "_res"
   let resNode =
         DotNode
           resNodeId
@@ -505,7 +499,7 @@ progToDotSubGraph (Prog name argList stmtList resList) = do
             argList
   flip evalStateT initMap $ do
     stmtsPretty <-
-      traverse (uncurry $ stmtToDotNode name) (zip [0 ..] stmtList)
+      traverse (uncurry $ stmtToDotNode key) (zip [0 ..] stmtList)
     let nodes = fst <$> stmtsPretty
     let edges = concatMap snd stmtsPretty
     allMap <- get
@@ -527,10 +521,10 @@ progToDotSubGraph (Prog name argList stmtList resList) = do
     return $
       DotSG
         { isCluster = True,
-          subGraphID = Just $ Str $ TL.fromStrict name,
+          subGraphID = Just $ Str $ TL.fromStrict key,
           subGraphStmts =
             DotStmts
-              { attrStmts = [GraphAttrs [textLabel $ TL.fromStrict name]],
+              { attrStmts = [GraphAttrs [textLabel $ TL.fromStrict key]],
                 subGraphs = [],
                 nodeStmts = [argNode] <> nodes <> [resNode],
                 edgeStmts = edges <> zipWith preLabelToEdge resPreLabels [0 ..]
@@ -548,15 +542,15 @@ instance
   ) =>
   ProgToDot (Prog op varId ty)
   where
-  toDotProg prog =
-    case progToDotSubGraph prog of
+  toDotProg key prog =
+    case progToDotSubGraph key prog of
       Left err ->
         let errTxt =
               renderDoc 80 $
                 nest
                   2
                   ( "Error while pretty-printing program "
-                      <> pformat (progName prog)
+                      <> pformat key
                       <> hardline
                       <> pformat err
                   )
@@ -566,7 +560,7 @@ instance
                     ("Raw program: " <> hardline <> pformat (show prog))
          in DotSG
               { isCluster = True,
-                subGraphID = Just $ Str $ TL.fromStrict $ progName prog,
+                subGraphID = Just $ Str $ TL.fromStrict key,
                 subGraphStmts =
                   DotStmts
                     { attrStmts = [],
@@ -578,7 +572,7 @@ instance
       Right graph -> graph
 
 instance (ProgPPrint (Prog op varId ty)) => PPrint (Prog op varId ty) where
-  pformat prog = case pformatProg prog of
+  pformat prog = case pformatProg "anonymous" prog of
     Left err ->
       nest
         2
@@ -621,7 +615,7 @@ instance
   ) =>
   ProgSemantics semObj (Prog op varId ty) val ctx
   where
-  runProg sem table (Prog _ arg stmts ret) inputs = tryMerge $ do
+  runProg sem table (Prog arg stmts ret) inputs = tryMerge $ do
     when (length inputs /= length arg) . throwError $
       "Expected "
         <> showText (length arg)
@@ -645,8 +639,8 @@ instance (Mergeable ty) => ProgTyping (Prog op varId ty) where
       (progArgType <$> progArgList prog)
       (progResType <$> progResList prog)
 
-instance ProgNaming (Prog op varId ty) where
-  nameProg = progName
+-- instance ProgNaming (Prog op varId ty) where
+--   nameProg = progName
 
 instance StmtUtilImpl (Stmt op varId) op varId where
   getStmtArgIds = stmtArgIds
@@ -676,6 +670,6 @@ instance
   (MonadContext ctx, OpCost opCostObj op cost ctx, Num cost) =>
   ProgCost (PerStmtCostObj opCostObj) (Prog op varId ty) cost ctx
   where
-  progCost (PerStmtCostObj obj) table (Prog _ _ stmts _) = do
+  progCost (PerStmtCostObj obj) table (Prog _ stmts _) = do
     stmtCosts <- traverse (opCost obj table . stmtOp) stmts
     return $ sum stmtCosts

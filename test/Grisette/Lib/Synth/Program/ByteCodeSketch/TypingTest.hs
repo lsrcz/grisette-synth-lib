@@ -26,7 +26,6 @@ typingTest :: Test
 typingTest = testCase "Typing" $ do
   let prog =
         Prog
-          "test"
           [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
           [ Stmt Add [0, 1] 2 [3] 1,
             Stmt DivMod [3, 0] 2 [4, 5] 2

@@ -60,8 +60,7 @@ data ProgRes op ty = ProgRes
   deriving anyclass (Hashable)
 
 data Prog op ty = Prog
-  { progName :: T.Text,
-    progArgList :: [ProgArg ty],
+  { progArgList :: [ProgArg ty],
     progResList :: [ProgRes op ty]
   }
   deriving (Show, Eq, Generic)
@@ -75,9 +74,8 @@ toConcreteProg ::
   (Hashable op, Eq op, Hashable ty, Eq ty, ConcreteVarId varId) =>
   Prog op ty ->
   Concrete.Prog op varId ty
-toConcreteProg (Prog name argList resList) =
+toConcreteProg (Prog argList resList) =
   Concrete.Prog
-    name
     ( fmap
         ( \a@(ProgArg name ty) ->
             Concrete.ProgArg
@@ -158,12 +156,11 @@ toConcreteProg (Prog name argList resList) =
 
 buildProg ::
   (Hashable op, Eq op, Hashable ty, Eq ty, ConcreteVarId varId) =>
-  T.Text ->
   [(T.Text, ty)] ->
   ([NodeRef op ty] -> [(NodeRef op ty, ty)]) ->
   Concrete.Prog op varId ty
-buildProg name argPairs f =
-  toConcreteProg $ Prog name args (uncurry ProgRes <$> f argRefs)
+buildProg argPairs f =
+  toConcreteProg $ Prog args (uncurry ProgRes <$> f argRefs)
   where
     args = uncurry ProgArg <$> argPairs
     argRefs = fmap (flip NodeRef 0 . ArgNode) args

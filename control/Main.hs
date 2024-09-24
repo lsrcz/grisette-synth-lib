@@ -15,7 +15,6 @@ import Grisette
     Solvable (con),
     SymBool,
     SymInteger,
-    freshString,
     runFresh,
     z3,
   )
@@ -82,19 +81,19 @@ conProg :: SymbolTable ConProg
 conProg =
   SymbolTable
     [ ( "trueBranch",
-        Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
+        Concrete.buildProg [("a", IntType), ("b", IntType)] $
           \[a, b] ->
             let [plus] = Concrete.node C.Plus 1 [a, b]
              in [(plus, IntType)]
       ),
       ( "falseBranch",
-        Concrete.buildProg "trueBranch" [("a", IntType), ("b", IntType)] $
+        Concrete.buildProg [("a", IntType), ("b", IntType)] $
           \[a, b] ->
             let [minus] = Concrete.node C.Minus 1 [a, b]
              in [(minus, IntType)]
       ),
       ( "prog",
-        Concrete.buildProg "prog" [("a", IntType), ("b", IntType)] $
+        Concrete.buildProg [("a", IntType), ("b", IntType)] $
           \[a, b] ->
             let [equals] = Concrete.node C.Equals 1 [a, b]
                 [res] =
@@ -111,7 +110,6 @@ trueBranchSketch :: Fresh (T.Text, Sketch)
 trueBranchSketch =
   ("trueBranch",)
     <$> Component.mkSimpleFreshProg
-      "trueBranch"
       [IntType, IntType]
       [ S.Plus,
         S.Minus
@@ -122,17 +120,14 @@ falseBranchSketch :: Fresh (T.Text, Sketch)
 falseBranchSketch =
   ("falseBranch",)
     <$> Component.mkSimpleFreshProg
-      "falseBranch"
       [IntType, IntType]
       [S.Plus, S.Minus]
       [IntType]
 
 sketch :: T.Text -> T.Text -> Fresh (T.Text, Sketch)
 sketch t f = do
-  s :: T.Text <- freshString "prog"
   sk <-
     Component.mkFreshProg
-      s
       [IntType, IntType]
       [ Component.simpleFreshStmt S.Plus,
         Component.simpleFreshStmt S.Plus,
@@ -141,7 +136,7 @@ sketch t f = do
           S.If (TypeSignature [IntType, IntType] [IntType]) t f
       ]
       [IntType]
-  return (s, sk)
+  return ("sketch", sk)
 
 sketchSymbol :: T.Text
 sketchSpace :: SymbolTable Sketch
