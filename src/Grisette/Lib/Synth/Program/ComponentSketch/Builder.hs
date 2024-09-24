@@ -189,7 +189,7 @@ instance
         (\(freshVarId, ty) -> ProgRes <$> freshVarId <*> return ty)
         rets
 
-class MkFreshProg prog stmt op ty | prog -> stmt op ty where
+class MkFreshProg prog stmt op ty | prog -> stmt op ty, stmt ty -> prog where
   mkFreshProg :: T.Text -> [ty] -> [Fresh [stmt]] -> [ty] -> Fresh prog
 
 mkSimpleFreshProg ::
