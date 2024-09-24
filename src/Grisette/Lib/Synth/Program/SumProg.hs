@@ -19,6 +19,8 @@ import Grisette.Lib.Synth.Program.Concrete.Program
     ProgToDot (toDotProg),
   )
 -- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
+
+import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
@@ -197,3 +199,10 @@ instance
   type
     ProgOpType (SumProg l r) =
       SumOp (ProgOpType l) (ProgOpType r)
+
+instance
+  (ProgCost costObj prog0 cost ctx, ProgCost costObj prog1 cost ctx) =>
+  ProgCost costObj (SumProg prog0 prog1) cost ctx
+  where
+  progCost costObj table (SumProgL l) = progCost costObj table l
+  progCost costObj table (SumProgR r) = progCost costObj table r
