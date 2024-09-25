@@ -46,6 +46,8 @@ import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
   ( OpSymmetryReduction (opUnreorderable),
   )
 import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments))
+import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
+import qualified Data.HashSet as HS
 
 -- * Operators
 
@@ -118,3 +120,6 @@ instance OpSymmetryReduction OpCode where
   opCommutativeArgPos Plus = mrgReturn [[0, 1]]
   opCommutativeArgPos Mul = mrgReturn [[0, 1]]
   opCommutativeArgPos _ = mrgReturn []
+
+instance OpReachableSymbols OpCode where
+  opReachableSymbols _ = HS.empty

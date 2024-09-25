@@ -36,6 +36,7 @@ import Control.Monad.Except (runExceptT)
 import qualified Data.Binary as Binary
 import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Data (Typeable)
+import qualified Data.HashSet as HS
 import Data.Hashable (Hashable)
 import qualified Data.Serialize as Cereal
 import qualified Data.Text as T
@@ -77,7 +78,7 @@ import Grisette.Lib.Synth.Program.ProgCost (ProgCost, symbolCost)
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics, runSymbol)
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping)
 import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil)
-import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
+import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols, SymbolTable, filterByReachableSymbols)
 import Grisette.Lib.Synth.Reasoning.IOPair
   ( IOPair (ioPairInputs, ioPairOutputs),
   )
@@ -228,7 +229,8 @@ data SynthesisTask symProg conProg where
     forall symProg conProg.
     ( EvalSym symProg,
       ToCon symProg conProg,
-      Typeable symProg
+      Typeable symProg,
+      ProgReachableSymbols conProg
     ) =>
     { synthesisVerifiers :: [SomeVerifier symProg conProg],
       synthesisInitialExamples :: [SomeExample symProg conProg],
@@ -243,6 +245,7 @@ data SynthesisBoundCostTask symProg conProg where
     forall symProg conProg cost symCostObj.
     ( EvalSym symProg,
       ToCon symProg conProg,
+      ProgReachableSymbols conProg,
       ProgCost symCostObj symProg cost AngelicContext,
       SymOrd cost,
       Mergeable cost
@@ -262,6 +265,7 @@ data SynthesisMinimalCostTask symProg conProg where
     forall symProg conProg cost conCostObj symCostObj.
     ( EvalSym symProg,
       ToCon symProg conProg,
+      ProgReachableSymbols conProg,
       ProgCost conCostObj conProg cost ConcreteContext,
       ProgCost symCostObj symProg cost AngelicContext,
       SymOrd cost,
@@ -360,7 +364,15 @@ instance
       let allCexes = examples ++ cex
       case r of
         CEGISSuccess model ->
-          return (allCexes, SynthesisSuccess $ evalSymToCon model table)
+          return
+            ( allCexes,
+              SynthesisSuccess $
+                case filterByReachableSymbols (HS.singleton symbol) $
+                  evalSymToCon model table of
+                  Left err ->
+                    error $ "BUG: Failed to filter symbols: " <> T.unpack err
+                  Right v -> v
+            )
         CEGISVerifierFailure () ->
           return (allCexes, SynthesisVerifierFailure)
         CEGISSolverFailure failure ->
@@ -413,7 +425,15 @@ instance
       let allCexes = examples ++ cex
       case r of
         CEGISSuccess model ->
-          return (allCexes, SynthesisSuccess $ evalSymToCon model table)
+          return
+            ( allCexes,
+              SynthesisSuccess $
+                case filterByReachableSymbols (HS.singleton symbol) $
+                  evalSymToCon model table of
+                  Left err ->
+                    error $ "BUG: Failed to filter symbols: " <> T.unpack err
+                  Right v -> v
+            )
         CEGISVerifierFailure () -> return (allCexes, SynthesisVerifierFailure)
         CEGISSolverFailure failure ->
           return (allCexes, SynthesisSolverFailure failure)
@@ -458,7 +478,15 @@ instance
       let allCexes = examples ++ cex
       case r of
         CEGISSuccess model ->
-          return (allCexes, SynthesisSuccess $ evalSymToCon model table)
+          return
+            ( allCexes,
+              SynthesisSuccess $
+                case filterByReachableSymbols (HS.singleton symbol) $
+                  evalSymToCon model table of
+                  Left err ->
+                    error $ "BUG: Failed to filter symbols: " <> T.unpack err
+                  Right v -> v
+            )
         CEGISVerifierFailure () -> return (allCexes, SynthesisVerifierFailure)
         CEGISSolverFailure failure ->
           return (allCexes, SynthesisSolverFailure failure)

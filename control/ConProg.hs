@@ -11,11 +11,15 @@
 
 module ConProg (Op (..), Prog) where
 
+-- applyIf,
+
+import qualified Data.HashSet as HS
 import Data.Hashable (Hashable)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette (PPrint (pformat), mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
 import Grisette.Lib.Synth.Operator.OpSemantics
   ( DefaultSem,
     OpSemantics (applyOp),
@@ -28,8 +32,6 @@ import Grisette.Lib.Synth.Program.Concrete
     PrefixByType (prefixByType),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
--- applyIf,
-
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (argTypes))
 import Grisette.Lib.Synth.Util.Pretty (parenCommaList)
 import Semantics
@@ -94,3 +96,7 @@ instance
   applyOp _ _ Minus = applyMinus
   applyOp _ _ (IntConst c) = applyIntConst c
   applyOp _ table (If _ true false) = applyIf table true false
+
+instance OpReachableSymbols (Op intVal) where
+  opReachableSymbols (If _ t f) = HS.fromList [t, f]
+  opReachableSymbols _ = HS.empty

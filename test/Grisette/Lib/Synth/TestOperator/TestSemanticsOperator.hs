@@ -59,6 +59,7 @@ import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
 import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
 
 data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving (Show, Generic, Eq)
@@ -66,6 +67,9 @@ data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving
     (Mergeable, ToCon TestSemanticsOp, EvalSym, ToSym TestSemanticsOp)
     via (Default TestSemanticsOp)
+
+instance OpReachableSymbols TestSemanticsOp where
+  opReachableSymbols _ = mempty
 
 instance OpSymmetryReduction TestSemanticsOp where
   opUnreorderable _ _ = false

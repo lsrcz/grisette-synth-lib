@@ -61,9 +61,11 @@ transitivelyReachableSymbols ::
   ConcreteContext (HS.HashSet T.Text)
 transitivelyReachableSymbols symbols table = go symbols symbols
   where
-    go confirmed queue = do
-      allNew <- fmap mconcat $ traverse (go1 confirmed) $ HS.toList queue
-      go (HS.union confirmed allNew) allNew
+    go confirmed queue
+      | HS.null queue = return confirmed
+      | otherwise = do
+          allNew <- fmap mconcat $ traverse (go1 confirmed) $ HS.toList queue
+          go (HS.union confirmed allNew) allNew
     go1 confirmed s = do
       prog <- lookupSymbol table s
       let symbols = progReachableSymbols prog
