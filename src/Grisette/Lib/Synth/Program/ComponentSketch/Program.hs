@@ -63,6 +63,7 @@ import Grisette
     mrgIf,
     mrgSequence_,
     mrgTraverse_,
+    simpleMerge,
     symAnd,
     symAny,
     symAssertWith,
@@ -72,8 +73,6 @@ import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Control.Monad.State.Class (mrgModify)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT)
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
--- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
-
 import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
@@ -83,7 +82,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
     genIntermediates,
     genOpIntermediates,
   )
-import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction (OpSymmetryReduction (opUnreorderable))
+import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction (OpSymmetryReduction (opCommutativeArgPos, opUnreorderable))
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( OpCost (opCost),
@@ -570,6 +569,7 @@ instance
   where
   runProg sem table prog@(Prog arg stmts ret) inputs = do
     symAssertWith "non-canonical" $ canonicalOrderConstraint prog
+    symAssertWith "commutative reduction" $ progCommutativeConstraint prog
     flip mrgEvalStateT (CollectedDefUse [] []) $ do
       symAssertWith
         ( "Expected "
@@ -708,3 +708,25 @@ statementsAdjacent ::
   SymBool
 statementsAdjacent first second =
   last (stmtResIds first) + 1 .== head (stmtResIds second)
+
+statementCommutativeConstraint ::
+  (OpSymmetryReduction op, SymbolicVarId symVarId) =>
+  Stmt op symVarId ->
+  SymBool
+statementCommutativeConstraint (Stmt op argIds _ _ _ _ _) = simpleMerge $ do
+  pos <- opCommutativeArgPos op
+  return $ go pos
+  where
+    increasing [] = true
+    increasing [_] = true
+    increasing (a : b : xs) = a .<= b .&& increasing (b : xs)
+    go [] = true
+    go (x : xs) =
+      let ids = (argIds !!) <$> x in increasing ids .&& go xs
+
+progCommutativeConstraint ::
+  (OpSymmetryReduction op, SymbolicVarId symVarId) =>
+  Prog op symVarId ty ->
+  SymBool
+progCommutativeConstraint prog =
+  symAnd $ statementCommutativeConstraint <$> progStmtList prog

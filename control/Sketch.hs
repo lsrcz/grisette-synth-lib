@@ -92,3 +92,6 @@ instance
 
 instance OpSymmetryReduction (Op intVal) where
   opUnreorderable _ _ = false
+  opCommutativeArgPos Plus = mrgReturn [[0, 1]]
+  opCommutativeArgPos Equals = mrgReturn [[0, 1]]
+  opCommutativeArgPos _ = mrgReturn []

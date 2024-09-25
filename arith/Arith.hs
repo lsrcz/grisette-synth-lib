@@ -25,6 +25,7 @@ import Grisette
     Mergeable,
     PPrint (pformat),
     derive,
+    mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics
@@ -40,6 +41,7 @@ import Grisette.Lib.Synth.Operator.OpTyping
     simpleTyping,
     unaryDefaultType,
   )
+import Grisette.Lib.Synth.Program.ComponentSketch (OpSymmetryReduction (opCommutativeArgPos))
 import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
   ( OpSymmetryReduction (opUnreorderable),
   )
@@ -113,3 +115,6 @@ instance OpPPrint OpCode where
 
 instance OpSymmetryReduction OpCode where
   opUnreorderable _ _ = false
+  opCommutativeArgPos Plus = mrgReturn [[0, 1]]
+  opCommutativeArgPos Mul = mrgReturn [[0, 1]]
+  opCommutativeArgPos _ = mrgReturn []

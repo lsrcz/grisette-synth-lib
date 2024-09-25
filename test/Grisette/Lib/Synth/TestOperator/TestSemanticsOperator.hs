@@ -28,6 +28,7 @@ import Grisette
   ( Default (Default),
     EvalSym,
     GenSymSimple (simpleFresh),
+    LogicalOp (false),
     Mergeable,
     MonadUnion,
     SafeDiv (safeDivMod),
@@ -47,6 +48,9 @@ import Grisette.Lib.Synth.Operator.OpTyping
 import Grisette.Lib.Synth.Program.ComponentSketch
   ( GenIntermediate (genIntermediate),
   )
+import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
+  ( OpSymmetryReduction (opCommutativeArgPos, opUnreorderable),
+  )
 import Grisette.Lib.Synth.Program.Concrete.Flatten
   ( OpFlatten (opForwardedSubProg),
   )
@@ -62,6 +66,11 @@ data TestSemanticsOp = Add | DivMod | Inc | Double
   deriving
     (Mergeable, ToCon TestSemanticsOp, EvalSym, ToSym TestSemanticsOp)
     via (Default TestSemanticsOp)
+
+instance OpSymmetryReduction TestSemanticsOp where
+  opUnreorderable _ _ = false
+  opCommutativeArgPos Add = mrgReturn [[0, 1]]
+  opCommutativeArgPos _ = mrgReturn []
 
 instance OpFlatten TestSemanticsOp TestSemanticsOp where
   opForwardedSubProg op = return $ Right op

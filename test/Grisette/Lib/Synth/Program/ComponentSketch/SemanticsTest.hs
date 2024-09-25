@@ -354,6 +354,7 @@ semanticsTest = testGroup "Semantics" $ do
                   ( (argInc .>= 0 .&& argInc .< resInc)
                       .&& (argDouble .>= 0 .&& argDouble .< resDouble)
                       .&& (resInc .== 1 .|| resInc .== 2)
+                      .&& ((argInc ./= resDouble) `symImplies` (resInc .== 1))
                       .&& (resDouble .== 1 .|| resDouble .== 2)
                       .&& (resInc ./= resDouble)
                       .&& (resIncVal .== argIncVal + 1)
@@ -434,9 +435,8 @@ semanticsTest = testGroup "Semantics" $ do
                 Result
                   ( (res01 .== res00 + 1)
                       .&& (res11 .== res10 + 1)
-                      .&& (res00 .== 2 .|| res00 .== 4)
+                      .&& (res00 .== 2)
                       .&& symImplies (res00 .== 2) (res10 .== 4)
-                      .&& symImplies (res00 .== 4) (res10 .== 2)
                       .&& (arg00Val .== 20)
                       .&& (arg01Val .== 13)
                       .&& (arg10Val .== 20)
