@@ -21,6 +21,7 @@ import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
     EvalSym,
+    LogicalOp (false),
     Mergeable,
     PPrint (pformat),
     derive,
@@ -38,6 +39,9 @@ import Grisette.Lib.Synth.Operator.OpTyping
     binaryDefaultType,
     simpleTyping,
     unaryDefaultType,
+  )
+import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
+  ( OpSymmetryReduction (opUnreorderable),
   )
 import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments))
 
@@ -106,3 +110,6 @@ instance OpPPrint OpCode where
   describeArguments Mul = Right [Just "lhs", Just "rhs"]
   describeArguments Minus = Right [Just "lhs", Just "rhs"]
   describeArguments UMinus = Right [Nothing]
+
+instance OpSymmetryReduction OpCode where
+  opUnreorderable _ _ = false

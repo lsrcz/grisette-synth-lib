@@ -47,7 +47,8 @@ import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
     EvalSym,
-    LogicalOp (symImplies, (.&&), (.||)),
+    ITEOp (symIte),
+    LogicalOp (false, symImplies, symNot, true, (.&&), (.||)),
     Mergeable (rootStrategy),
     MergingStrategy (NoStrategy),
     MonadUnion,
@@ -62,6 +63,7 @@ import Grisette
     mrgIf,
     mrgSequence_,
     mrgTraverse_,
+    symAnd,
     symAny,
     symAssertWith,
   )
@@ -81,6 +83,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
     genIntermediates,
     genOpIntermediates,
   )
+import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction (OpSymmetryReduction (opUnreorderable))
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( OpCost (opCost),
@@ -560,11 +563,13 @@ instance
     SymEq val,
     MonadAngelicContext ctx,
     Mergeable ty,
-    OpTypeType op ~ ty
+    OpTypeType op ~ ty,
+    OpSymmetryReduction op
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx
   where
-  runProg sem table (Prog arg stmts ret) inputs =
+  runProg sem table prog@(Prog arg stmts ret) inputs = do
+    symAssertWith "non-canonical" $ canonicalOrderConstraint prog
     flip mrgEvalStateT (CollectedDefUse [] []) $ do
       symAssertWith
         ( "Expected "
@@ -646,3 +651,60 @@ instance
 instance (OpReachableSymbols op) => ProgReachableSymbols (Prog op varId ty) where
   progReachableSymbols =
     mconcat . fmap (opReachableSymbols . stmtOp) . progStmtList
+
+stmtUnreorderable ::
+  (OpSymmetryReduction op, SymbolicVarId symVarId) =>
+  Prog op symVarId ty ->
+  Int ->
+  Int ->
+  SymBool
+stmtUnreorderable prog i j
+  | i == j = true
+  | i >= length (progStmtList prog) = true
+  | j >= length (progStmtList prog) = true
+  | otherwise =
+      let firstStmt = progStmtList prog !! i
+          secondStmt = progStmtList prog !! j
+          opRes = opUnreorderable (stmtOp firstStmt) (stmtOp secondStmt)
+       in symIte
+            (stmtDisabled firstStmt .|| stmtDisabled secondStmt)
+            false
+            (opRes .|| statementsDirectDep firstStmt secondStmt)
+
+canonicalOrderConstraint ::
+  (OpSymmetryReduction op, SymbolicVarId symVarId) =>
+  Prog op symVarId ty ->
+  SymBool
+canonicalOrderConstraint prog =
+  symAnd $ cond <$> [0 .. n - 1] <*> [0 .. n - 1]
+  where
+    stmts = progStmtList prog
+    n = length stmts
+    cond i j
+      | i > j =
+          statementsAdjacent (stmts !! i) (stmts !! j)
+            `symImplies` stmtUnreorderable prog i j
+      | otherwise = true
+
+statementsDirectDep ::
+  (SymbolicVarId symVarId) =>
+  Stmt op symVarId ->
+  Stmt op symVarId ->
+  SymBool
+statementsDirectDep src dest =
+  symAny
+    (uncurry (.==))
+    [ (srcResId, destArgId)
+      | srcResId <- stmtResIds src,
+        destArgId <- stmtArgIds dest
+    ]
+    .&& symNot (stmtDisabled src)
+    .&& symNot (stmtDisabled dest)
+
+statementsAdjacent ::
+  (SymbolicVarId symVarId) =>
+  Stmt op symVarId ->
+  Stmt op symVarId ->
+  SymBool
+statementsAdjacent first second =
+  last (stmtResIds first) + 1 .== head (stmtResIds second)

@@ -37,6 +37,7 @@ library
       Grisette.Lib.Synth.Program.ComponentSketch.Builder
       Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
       Grisette.Lib.Synth.Program.ComponentSketch.Program
+      Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
       Grisette.Lib.Synth.Program.Concrete
       Grisette.Lib.Synth.Program.Concrete.Builder
       Grisette.Lib.Synth.Program.Concrete.Flatten

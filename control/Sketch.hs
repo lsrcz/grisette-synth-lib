@@ -17,6 +17,7 @@ import Grisette
   ( Default (Default),
     EvalSym,
     GenSymSimple,
+    LogicalOp (false),
     Mergeable,
     ToCon,
     mrgReturn,
@@ -30,6 +31,9 @@ import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (OpTypeType, typeOp),
   )
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
+import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
+  ( OpSymmetryReduction (opUnreorderable),
+  )
 import Grisette.Lib.Synth.TypeSignature (TypeSignature)
 import Semantics
   ( HasSemantics,
@@ -85,3 +89,6 @@ instance
   applyOp _ _ Minus = applyMinus
   applyOp _ _ (IntConst c) = applyIntConst c
   applyOp _ table (If _ true false) = applyIf table true false
+
+instance OpSymmetryReduction (Op intVal) where
+  opUnreorderable _ _ = false
