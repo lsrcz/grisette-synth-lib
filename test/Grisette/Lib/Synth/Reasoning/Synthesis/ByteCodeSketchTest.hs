@@ -12,6 +12,7 @@ where
 import Control.DeepSeq (NFData)
 import Data.Data (Typeable)
 import Grisette (Solvable (con), SymBool, SymInteger, Union, mrgIf, z3)
+import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Program.ByteCodeSketch
   ( Prog (Prog),
     ProgArg (ProgArg),
@@ -102,7 +103,9 @@ data ByteCodeSynthesisTestCase where
     ) =>
     { byteCodeSynthesisTestCaseName :: String,
       byteCodeSynthesisTestCaseSketch :: SymProg,
-      byteCodeSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
+      byteCodeSynthesisTestCaseSpec ::
+        [Integer] ->
+        ConcreteContext ([Integer], matcher),
       byteCodeSynthesisTestCaseGen :: Gen [Integer]
     } ->
     ByteCodeSynthesisTestCase
@@ -113,7 +116,7 @@ byteCodeSketchTest =
     ByteCodeSynthesisTestCase
       name
       sketch
-      (spec :: [Integer] -> ([Integer], matcher))
+      (spec :: [Integer] -> ConcreteContext ([Integer], matcher))
       gen <-
       [ ByteCodeSynthesisTestCase
           { byteCodeSynthesisTestCaseName = "Add then double",

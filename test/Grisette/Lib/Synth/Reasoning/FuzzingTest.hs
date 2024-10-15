@@ -3,12 +3,14 @@
 module Grisette.Lib.Synth.Reasoning.FuzzingTest (fuzzingTest) where
 
 import Data.Data (Proxy (Proxy))
+import Data.Either (fromRight)
 import Grisette
   ( Model,
     ModelRep (buildModel),
     ModelValuePair ((::=)),
     SymInteger,
   )
+import Grisette.Lib.Synth.Context (ConcreteContext)
 import qualified Grisette.Lib.Synth.Program.ByteCodeSketch as ByteCodeSketch
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg), evalSymbolTable)
@@ -74,18 +76,17 @@ gen = do
   y <- arbitrary
   return [x, y]
 
-spec :: [Integer] -> ([Integer], EqMatcher)
-spec [x, y] | x /= 0 = ([(x + y) `div` x, (x + y) `mod` x], EqMatcher)
+spec :: [Integer] -> ConcreteContext ([Integer], EqMatcher)
+spec [x, y] | x /= 0 = return ([(x + y) `div` x, (x + y) `mod` x], EqMatcher)
 spec _ = error "Error"
 
-badSpec :: [Integer] -> ([Integer], EqMatcher)
-badSpec [_, _] = ([0, 0], EqMatcher)
+badSpec :: [Integer] -> ConcreteContext ([Integer], EqMatcher)
+badSpec [_, _] = return ([0, 0], EqMatcher)
 badSpec _ = error "Error"
 
-reverseSpec :: [Integer] -> ([Integer], ReverseMatcher)
+reverseSpec :: [Integer] -> ConcreteContext ([Integer], ReverseMatcher)
 reverseSpec [x, y]
-  | x /= 0 =
-      ([(x + y) `mod` x, (x + y) `div` x], ReverseMatcher)
+  | x /= 0 = return ([(x + y) `mod` x, (x + y) `div` x], ReverseMatcher)
 reverseSpec _ = error "Error"
 
 fuzzingTest :: Test
@@ -120,7 +121,7 @@ fuzzingTest =
                 100
                 (evalSymbolTable TestSemanticsObj conProgTable)
                 "test"
-            fst (badSpec i) @?= o
+            fst (fromRight (error "err") $ badSpec i) @?= o
             (runProg TestSemanticsObj mempty conProg i /= Right o)
               @? "Should fail the test."
         ],
@@ -149,7 +150,7 @@ fuzzingTest =
                 symProgTable
                 "test"
                 model
-            fst (badSpec i) @?= o
+            fst (fromRight (error "err") $ badSpec i) @?= o
             (runProg TestSemanticsObj mempty conProg i /= Right o)
               @? "Should fail the test."
         ]

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -5,8 +6,9 @@
 module Main (main) where
 
 import Arith (OpCode (Minus, Mul, Plus))
-import Grisette (PPrint (pformat), Solvable (con), SymInteger, z3)
-import Grisette.Lib.Synth.Context (ConcreteContext)
+import Grisette (Mergeable, PPrint (pformat), Solvable (con), SymInteger, mrgReturn, z3, GenSymSimple (simpleFresh), SimpleListSpec (SimpleListSpec))
+import Grisette.Lib.Control.Monad.Except (mrgThrowError)
+import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Operator.OpTyping (DefaultType (DefaultType))
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
@@ -28,6 +30,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
       ),
     runSynthesisTask,
   )
+import Grisette.Lib.Synth.Reasoning.Verification (defaultSemSMTVerifier)
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, vectorOf)
 
 type ConProg = Concrete.Prog OpCode Integer DefaultType
@@ -63,9 +66,9 @@ sketchTable =
 
 -- The specification specifies the expected behavior. Here, we want to synthesis
 -- a program that computes the expression a * (a + b) - b.
-spec :: [Integer] -> [Integer]
-spec [a, b] = [a * (a + b) - b]
-spec _ = undefined
+spec :: (Num a, Mergeable a, MonadContext ctx) => [a] -> ctx [a]
+spec [a, b] = mrgReturn [a * (a + b) - b]
+spec _ = mrgThrowError "Invalid inputs"
 
 -- The generator generates concrete inputs to fuzz the synthesized program
 -- against the specification.
@@ -78,7 +81,12 @@ main = do
     runSynthesisTask z3 $
       SynthesisTask
         { synthesisVerifiers =
-            [defaultSemQuickCheckFuzzer @SymInteger gen spec],
+            [ defaultSemQuickCheckFuzzer @SymInteger gen (spec @Integer),
+              defaultSemSMTVerifier @Integer
+                z3
+                [simpleFresh (SimpleListSpec 2 ())]
+                (spec @SymInteger)
+            ],
           synthesisInitialExamples = [],
           synthesisSketchTable = sketchTable,
           synthesisSketchSymbol = "prog",
@@ -94,6 +102,6 @@ main = do
       print $ pformat table
       -- writeFile "/tmp/arith.dot" $ TL.unpack $ renderDot $ toDot prog
       let input = [5, 20]
-      print $ spec input
+      print $ spec @Integer @ConcreteContext input
       print (runSymbol DefaultSem table "prog" input :: ConcreteContext [Integer])
     _ -> print r

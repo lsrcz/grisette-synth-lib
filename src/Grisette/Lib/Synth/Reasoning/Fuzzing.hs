@@ -19,18 +19,13 @@ module Grisette.Lib.Synth.Reasoning.Fuzzing
   )
 where
 
-import Control.DeepSeq (NFData)
 import Control.Exception.Safe (Exception (fromException), throw)
-import Data.Data (Typeable)
 import Data.Proxy (Proxy (Proxy))
 import qualified Data.Text as T
 import Grisette
   ( EvalSym,
     Mergeable,
     Model,
-    PPrint,
-    SymBool,
-    SymEq,
     ToCon,
     ToSym,
     VerifierResult (CEGISVerifierFoundCex, CEGISVerifierNoCex),
@@ -53,10 +48,12 @@ import Grisette.Lib.Synth.Reasoning.Matcher
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (CancellingException)
 import Grisette.Lib.Synth.Reasoning.Synthesis
-  ( Example (Example),
+  ( ConExampleConstraint,
+    Example (Example),
     IsVerifier (toVerifierFuns),
     SomeExample (SomeExample),
     SomeVerifier (SomeVerifier),
+    SymExampleConstraint,
   )
 import Test.QuickCheck.Counterexamples
   ( Args (chatty),
@@ -64,6 +61,7 @@ import Test.QuickCheck.Counterexamples
     PropertyOf,
     Result (Failure, theException),
     Testable (Counterexample),
+    discard,
     forAll,
     quickCheckWithResult,
     stdArgs,
@@ -78,7 +76,7 @@ fuzzingTestProg' ::
     Counterexample prop ~ ([conVal] :&: ())
   ) =>
   prop ->
-  ([conVal] -> ([conVal], matcher)) ->
+  ([conVal] -> ConcreteContext ([conVal], matcher)) ->
   IO (Maybe (IOPair conVal, matcher))
 fuzzingTestProg' prop spec = do
   (maybeCex, result) <- quickCheckWithResult stdArgs {chatty = False} prop
@@ -91,7 +89,7 @@ fuzzingTestProg' prop spec = do
             Just (se :: CancellingException) -> throw se
             _ -> return ()
         _ -> return ()
-      let (outputs, matcher) = spec cex
+      let Right (outputs, matcher) = spec cex
       return $ Just (IOPair cex outputs, matcher)
 
 propertyWithMatcher ::
@@ -100,18 +98,18 @@ propertyWithMatcher ::
     Mergeable conVal
   ) =>
   Gen [conVal] ->
-  ([conVal] -> ([conVal], matcher)) ->
+  ([conVal] -> ConcreteContext ([conVal], matcher)) ->
   Int ->
   EvaledSymbolTable conVal ConcreteContext ->
   T.Text ->
   PropertyOf ([conVal] :&: ())
 propertyWithMatcher gen spec maxTests table symbol = forAll gen $ \inputs ->
   withMaxSuccess maxTests $
-    let (expectedOutputs, matcher) = spec inputs
-     in case runEvaledSymbol table symbol inputs of
-          Left _ -> False
-          Right actualOutputs ->
-            match matcher actualOutputs expectedOutputs
+    case (spec inputs, runEvaledSymbol table symbol inputs) of
+      (Left _, _) -> discard
+      (_, Left _) -> False
+      (Right (expectedOutputs, matcher), Right actualOutputs) ->
+        match matcher actualOutputs expectedOutputs
 
 fuzzingTestProg ::
   ( Matcher matcher Bool conVal,
@@ -119,7 +117,7 @@ fuzzingTestProg ::
     Mergeable conVal
   ) =>
   Gen [conVal] ->
-  ([conVal] -> ([conVal], matcher)) ->
+  ([conVal] -> ConcreteContext ([conVal], matcher)) ->
   Int ->
   EvaledSymbolTable conVal ConcreteContext ->
   T.Text ->
@@ -138,7 +136,7 @@ fuzzingTestSymProgWithModel ::
     EvalSym symProg
   ) =>
   Gen [conVal] ->
-  ([conVal] -> ([conVal], matcher)) ->
+  ([conVal] -> ConcreteContext ([conVal], matcher)) ->
   Int ->
   p conProg ->
   conSemObj ->
@@ -156,45 +154,19 @@ fuzzingTestSymProgWithModel gen spec maxTests _ sem table symbol model = do
 
 data QuickCheckFuzzer symVal conVal symProg conProg where
   QuickCheckFuzzer ::
-    ( ProgSemantics symSemObj symProg symVal AngelicContext,
-      ProgSemantics conSemObj conProg conVal ConcreteContext,
-      ProgUtil symProg,
-      ProgUtil conProg,
-      Matcher matcher SymBool symVal,
-      Matcher matcher Bool conVal,
-      Eq conSemObj,
-      Mergeable conVal,
-      Typeable conSemObj,
-      Typeable symSemObj,
-      Typeable matcher,
-      NFData conSemObj,
-      NFData symSemObj,
-      NFData matcher,
-      Eq conSemObj,
-      Eq symSemObj,
-      Eq matcher
+    ( SymExampleConstraint symSemObj symProg symVal matcher,
+      ConExampleConstraint conSemObj conProg conVal matcher
     ) =>
     { quickCheckFuzzerSymSemantics :: symSemObj,
       quickCheckFuzzerConSemantics :: conSemObj,
       quickCheckFuzzerMaxTests :: Int,
       quickCheckFuzzerGenerators :: [Gen [conVal]],
-      quickCheckFuzzerSpec :: [conVal] -> ([conVal], matcher)
+      quickCheckFuzzerSpec :: [conVal] -> ConcreteContext ([conVal], matcher)
     } ->
     QuickCheckFuzzer symVal conVal symProg conProg
 
 instance
-  ( Show conVal,
-    ToCon symProg conProg,
-    EvalSym symProg,
-    Mergeable symVal,
-    Show symVal,
-    PPrint conVal,
-    Eq conVal,
-    NFData conVal,
-    Typeable conVal,
-    Typeable symVal,
-    ToSym conVal symVal
-  ) =>
+  (ToCon symProg conProg, EvalSym symProg, ToSym conVal symVal) =>
   IsVerifier
     (QuickCheckFuzzer symVal conVal symProg conProg)
     symProg
@@ -228,32 +200,15 @@ instance
 
 defaultQuickCheckFuzzer ::
   forall symVal conVal symProg conProg semObj.
-  ( ProgSemantics semObj symProg symVal AngelicContext,
-    ProgSemantics semObj conProg conVal ConcreteContext,
+  ( SymExampleConstraint semObj symProg symVal EqMatcher,
+    ConExampleConstraint semObj conProg conVal EqMatcher,
     ToCon symProg conProg,
     ToSym conVal symVal,
-    EvalSym symProg,
-    Show conVal,
-    ProgUtil symProg,
-    ProgUtil conProg,
-    Mergeable conVal,
-    Mergeable symVal,
-    Typeable symProg,
-    Typeable semObj,
-    Typeable conVal,
-    Typeable symVal,
-    SymEq symVal,
-    Show symVal,
-    PPrint conVal,
-    Eq conVal,
-    NFData conVal,
-    NFData semObj,
-    Eq semObj,
-    Eq symVal
+    EvalSym symProg
   ) =>
   semObj ->
   Gen [conVal] ->
-  ([conVal] -> [conVal]) ->
+  ([conVal] -> ConcreteContext [conVal]) ->
   SomeVerifier symProg conProg
 defaultQuickCheckFuzzer semObj gen spec =
   SomeVerifier
@@ -262,7 +217,7 @@ defaultQuickCheckFuzzer semObj gen spec =
           quickCheckFuzzerConSemantics = semObj,
           quickCheckFuzzerMaxTests = 100,
           quickCheckFuzzerGenerators = [gen],
-          quickCheckFuzzerSpec = (,EqMatcher) . spec
+          quickCheckFuzzerSpec = fmap (,EqMatcher) . spec
         } ::
         QuickCheckFuzzer symVal conVal symProg conProg
     )
@@ -270,26 +225,14 @@ defaultQuickCheckFuzzer semObj gen spec =
 defaultSemQuickCheckFuzzer ::
   forall symVal conVal symProg conProg.
   ( ProgSemantics DefaultSem symProg symVal AngelicContext,
+    SymExampleConstraint DefaultSem symProg symVal EqMatcher,
     ProgSemantics DefaultSem conProg conVal ConcreteContext,
+    ConExampleConstraint DefaultSem conProg conVal EqMatcher,
     ToCon symProg conProg,
     ToSym conVal symVal,
-    EvalSym symProg,
-    Show conVal,
-    ProgUtil symProg,
-    ProgUtil conProg,
-    Mergeable conVal,
-    Mergeable symVal,
-    Typeable symProg,
-    Typeable conVal,
-    Typeable symVal,
-    Show symVal,
-    PPrint conVal,
-    SymEq symVal,
-    Eq conVal,
-    NFData conVal,
-    Eq symVal
+    EvalSym symProg
   ) =>
   Gen [conVal] ->
-  ([conVal] -> [conVal]) ->
+  ([conVal] -> ConcreteContext [conVal]) ->
   SomeVerifier symProg conProg
 defaultSemQuickCheckFuzzer = defaultQuickCheckFuzzer @symVal DefaultSem

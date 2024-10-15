@@ -146,8 +146,8 @@ sketchSpace :: SymbolTable Sketch
   (ps, p) <- sketch ts fs
   return (ps, SymbolTable [(ts, t), (fs, f), (ps, p)])
 
-spec :: [ConVal] -> [ConVal]
-spec [IntValue a, IntValue b] = [IntValue $ if a == b then a + b else a - b]
+spec :: [ConVal] -> ConcreteContext [ConVal]
+spec [IntValue a, IntValue b] = Right [IntValue $ if a == b then a + b else a - b]
 spec _ = undefined
 
 gen :: Gen [ConVal]

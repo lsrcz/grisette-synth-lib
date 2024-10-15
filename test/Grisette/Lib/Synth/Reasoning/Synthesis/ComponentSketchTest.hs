@@ -256,8 +256,11 @@ data ComponentSynthesisTestCase where
       Eq matcher
     ) =>
     { componentSynthesisTestCaseName :: String,
-      componentSynthesisTestCaseSpec :: [Integer] -> ([Integer], matcher),
-      componentSynthesisTestCaseInitialExamples :: [SomeExample SymProg ConProg],
+      componentSynthesisTestCaseSpec ::
+        [Integer] ->
+        ConcreteContext ([Integer], matcher),
+      componentSynthesisTestCaseInitialExamples ::
+        [SomeExample SymProg ConProg],
       componentSynthesisTestCaseSynthGen :: Gen [Integer],
       componentSynthesisTestCaseFuzzGen :: Gen [Integer]
     } ->
@@ -274,7 +277,7 @@ fuzzResult ::
   SynthesisResult conProg ->
   T.Text ->
   Gen [conVal] ->
-  ([conVal] -> ([conVal], b)) ->
+  ([conVal] -> ConcreteContext ([conVal], b)) ->
   IO ()
 fuzzResult (SynthesisSuccess prog) symbol gen spec = do
   fuzzingResult <-
@@ -305,7 +308,7 @@ verifier ::
     NFData matcher,
     Eq matcher
   ) =>
-  ([ConVal] -> ([ConVal], matcher)) ->
+  ([ConVal] -> ConcreteContext ([ConVal], matcher)) ->
   Gen [ConVal] ->
   QuickCheckFuzzer SymVal ConVal SymProg ConProg
 verifier spec gen =
@@ -324,7 +327,7 @@ task ::
     NFData matcher,
     Eq matcher
   ) =>
-  ([ConVal] -> ([ConVal], matcher)) ->
+  ([ConVal] -> ConcreteContext ([ConVal], matcher)) ->
   Gen [ConVal] ->
   [SomeExample SymProg ConProg] ->
   SymbolTable SymProg ->
@@ -352,7 +355,7 @@ componentSketchTest =
                 ]
             ComponentSynthesisTestCase
               name
-              (spec :: [Integer] -> ([Integer], matcher))
+              (spec :: [Integer] -> ConcreteContext ([Integer], matcher))
               examples
               synthGen
               fuzzGen <-

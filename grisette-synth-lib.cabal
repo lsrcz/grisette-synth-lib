@@ -65,6 +65,7 @@ library
       Grisette.Lib.Synth.Reasoning.Parallel.SynthesisTaskHandle
       Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool
       Grisette.Lib.Synth.Reasoning.Synthesis
+      Grisette.Lib.Synth.Reasoning.Verification
       Grisette.Lib.Synth.TypeSignature
       Grisette.Lib.Synth.Util.Pretty
       Grisette.Lib.Synth.Util.Show

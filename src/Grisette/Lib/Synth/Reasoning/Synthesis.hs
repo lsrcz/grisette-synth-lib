@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -19,6 +20,8 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
     IsVerifier (..),
     SomeVerifier (..),
     Example (..),
+    SymExampleConstraint,
+    ConExampleConstraint,
     SomeExample (..),
     synthesisConstraintFun,
     RunSynthesisTask (..),
@@ -159,31 +162,46 @@ instance
   where
   pformat (Example _ _ _ iop _) = pformat iop
 
+type SymExampleConstraint symSemObj symProg symVal matcher =
+  ( ProgSemantics symSemObj symProg symVal AngelicContext,
+    ProgUtil symProg,
+    Matcher matcher SymBool symVal,
+    Mergeable symVal,
+    Eq symSemObj,
+    Eq matcher,
+    Typeable symSemObj,
+    Typeable symProg,
+    Typeable symVal,
+    Typeable matcher,
+    NFData symSemObj,
+    NFData matcher
+  )
+
+type ConExampleConstraint conSemObj conProg conVal matcher =
+  ( ProgSemantics conSemObj conProg conVal ConcreteContext,
+    ProgUtil conProg,
+    Matcher matcher Bool conVal,
+    Mergeable conVal,
+    Eq conSemObj,
+    Eq matcher,
+    Eq conVal,
+    Mergeable conVal,
+    Show conVal,
+    PPrint conVal,
+    Typeable conSemObj,
+    Typeable conProg,
+    Typeable conVal,
+    Typeable matcher,
+    NFData conSemObj,
+    NFData matcher,
+    NFData conVal
+  )
+
 data SomeExample symProg conProg where
   SomeExample ::
     forall symSemObj symProg symVal conSemObj conProg conVal matcher.
-    ( ProgSemantics symSemObj symProg symVal AngelicContext,
-      ProgSemantics conSemObj conProg conVal ConcreteContext,
-      ProgUtil symProg,
-      ProgUtil conProg,
-      Matcher matcher SymBool symVal,
-      Matcher matcher Bool conVal,
-      Mergeable symVal,
-      Eq conSemObj,
-      Eq symSemObj,
-      Eq conVal,
-      Eq matcher,
-      Typeable conSemObj,
-      Typeable symSemObj,
-      Typeable conVal,
-      Typeable symVal,
-      Typeable matcher,
-      Show conVal,
-      PPrint conVal,
-      NFData conSemObj,
-      NFData symSemObj,
-      NFData conVal,
-      NFData matcher,
+    ( SymExampleConstraint symSemObj symProg symVal matcher,
+      ConExampleConstraint conSemObj conProg conVal matcher,
       ToSym conVal symVal
     ) =>
     Example symSemObj symVal conSemObj conVal matcher ->
@@ -215,7 +233,7 @@ class
     verifier ->
     SymbolTable symProg ->
     T.Text ->
-    [VerifierFun (SomeExample symProg conProg) ()]
+    [VerifierFun (SomeExample symProg conProg) T.Text]
 
 data SomeVerifier symProg conProg where
   SomeVerifier ::
@@ -305,7 +323,7 @@ synthesisConstraintFun
 
 data SynthesisResult conProg
   = SynthesisSuccess (SymbolTable conProg)
-  | SynthesisVerifierFailure
+  | SynthesisVerifierFailure T.Text
   | SynthesisSolverFailure SolvingFailure
   deriving (Show, Generic)
   deriving (Serial, NFData)
@@ -373,8 +391,8 @@ instance
                     error $ "BUG: Failed to filter symbols: " <> T.unpack err
                   Right v -> v
             )
-        CEGISVerifierFailure () ->
-          return (allCexes, SynthesisVerifierFailure)
+        CEGISVerifierFailure err ->
+          return (allCexes, SynthesisVerifierFailure err)
         CEGISSolverFailure failure ->
           return (allCexes, SynthesisSolverFailure failure)
       where
@@ -434,7 +452,8 @@ instance
                     error $ "BUG: Failed to filter symbols: " <> T.unpack err
                   Right v -> v
             )
-        CEGISVerifierFailure () -> return (allCexes, SynthesisVerifierFailure)
+        CEGISVerifierFailure err ->
+          return (allCexes, SynthesisVerifierFailure err)
         CEGISSolverFailure failure ->
           return (allCexes, SynthesisSolverFailure failure)
       where
@@ -487,7 +506,8 @@ instance
                     error $ "BUG: Failed to filter symbols: " <> T.unpack err
                   Right v -> v
             )
-        CEGISVerifierFailure () -> return (allCexes, SynthesisVerifierFailure)
+        CEGISVerifierFailure err ->
+          return (allCexes, SynthesisVerifierFailure err)
         CEGISSolverFailure failure ->
           return (allCexes, SynthesisSolverFailure failure)
   taskRefinable _ = True

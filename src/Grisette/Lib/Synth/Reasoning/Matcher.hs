@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -8,12 +10,15 @@ module Grisette.Lib.Synth.Reasoning.Matcher
 where
 
 import Control.DeepSeq (NFData (rnf))
-import Grisette (SymBool, SymEq ((.==)))
+import GHC.Generics (Generic)
+import Grisette (Default (Default), EvalSym, Mergeable, SymBool, SymEq ((.==)))
 
 class Matcher matcher bool a where
   match :: matcher -> [a] -> [a] -> bool
 
-data EqMatcher = EqMatcher deriving (Eq, Show)
+data EqMatcher = EqMatcher
+  deriving (Eq, Show, Generic)
+  deriving (Mergeable, EvalSym) via (Default EqMatcher)
 
 instance NFData EqMatcher where
   rnf EqMatcher = ()
