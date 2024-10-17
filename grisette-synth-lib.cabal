@@ -203,6 +203,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.ComponentSketch.TypingTest
       Grisette.Lib.Synth.Program.ComponentSketchTest
       Grisette.Lib.Synth.Program.Concrete.BuilderTest
+      Grisette.Lib.Synth.Program.Concrete.EliminateDeadCodeTest
       Grisette.Lib.Synth.Program.Concrete.FlattenTest
       Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest
       Grisette.Lib.Synth.Program.Concrete.PrettyTest

@@ -39,6 +39,8 @@ module Grisette.Lib.Synth.Program.Concrete.Program
     progToDotSubGraph,
     ProgPPrint (..),
     ProgToDot (..),
+    eliminateDeadCode,
+    eliminateProgTableDeadCode,
   )
 where
 
@@ -51,6 +53,7 @@ import Control.Monad.State
     StateT,
     evalStateT,
   )
+import Data.Bifunctor (Bifunctor (second))
 import qualified Data.Binary as Binary
 import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Foldable (traverse_)
@@ -73,6 +76,7 @@ import Data.GraphViz.Attributes.Complete
     RecordField (FieldLabel, FlipFields, LabelledTarget),
   )
 import qualified Data.HashMap.Lazy as HM
+import qualified Data.HashSet as HS
 import Data.Hashable (Hashable)
 import qualified Data.Serialize as Cereal
 import qualified Data.Text as T
@@ -143,7 +147,7 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getStmtResIds
       ),
   )
-import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols))
+import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols), SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -668,3 +672,21 @@ instance
 instance (OpReachableSymbols op) => ProgReachableSymbols (Prog op varId ty) where
   progReachableSymbols =
     mconcat . fmap (opReachableSymbols . stmtOp) . progStmtList
+
+eliminateDeadCode ::
+  (ConcreteVarId varId) => Prog op varId ty -> Prog op varId ty
+eliminateDeadCode (Prog args stmts res) = do
+  Prog args (reverse $ go (HS.fromList $ progResId <$> res) $ reverse stmts) res
+  where
+    go reachable [] = []
+    go reachable (stmt : rest) =
+      if any (`HS.member` reachable) (stmtResIds stmt)
+        then stmt : go (HS.union reachable (HS.fromList $ stmtArgIds stmt)) rest
+        else go reachable rest
+
+eliminateProgTableDeadCode ::
+  (ConcreteVarId varId) =>
+  SymbolTable (Prog op varId ty) ->
+  SymbolTable (Prog op varId ty)
+eliminateProgTableDeadCode (SymbolTable table) =
+  SymbolTable $ map (second eliminateDeadCode) table
