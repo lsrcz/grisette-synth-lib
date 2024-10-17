@@ -254,7 +254,9 @@ data SynthesisTask symProg conProg where
       synthesisInitialExamples :: [SomeExample symProg conProg],
       synthesisSketchTable :: SymbolTable symProg,
       synthesisSketchSymbol :: T.Text,
-      synthesisPrecondition :: SymBool
+      synthesisPrecondition :: SymBool,
+      synthesisExtraConstraints ::
+        SynthesisConstraintFun (SomeExample symProg conProg)
     } ->
     SynthesisTask symProg conProg
 
@@ -274,7 +276,9 @@ data SynthesisBoundCostTask symProg conProg where
       synthesisSketchSymbol :: T.Text,
       synthesisPrecondition :: SymBool,
       synthesisInitialMaxCost :: Maybe cost,
-      synthesisSymCostObj :: symCostObj
+      synthesisSymCostObj :: symCostObj,
+      synthesisExtraConstraints ::
+        SynthesisConstraintFun (SomeExample symProg conProg)
     } ->
     SynthesisBoundCostTask symProg conProg
 
@@ -296,7 +300,9 @@ data SynthesisMinimalCostTask symProg conProg where
       synthesisPrecondition :: SymBool,
       synthesisInitialMaxCost :: Maybe cost,
       synthesisConCostObj :: conCostObj,
-      synthesisSymCostObj :: symCostObj
+      synthesisSymCostObj :: symCostObj,
+      synthesisExtraConstraints ::
+        SynthesisConstraintFun (SomeExample symProg conProg)
     } ->
     SynthesisMinimalCostTask symProg conProg
 
@@ -365,6 +371,7 @@ instance
         precond
         (initialMaxCost :: Maybe cost)
         symCostObj
+        extraConstraints
       ) = do
       initialExampleConstraints <-
         traverse (synthesisConstraintFun table symbol) examples
@@ -374,7 +381,11 @@ instance
           solver
           True
           (precond .&& symAnd initialExampleConstraints .&& costConstraint)
-          (synthesisConstraintFun table symbol)
+          ( \cex -> do
+              s <- synthesisConstraintFun table symbol cex
+              e <- extraConstraints cex
+              return $ s .&& e
+          )
           ( concatMap
               (\(SomeVerifier verifier) -> toVerifierFuns verifier table symbol)
               verifiers
@@ -423,6 +434,7 @@ instance
         (initialMaxCost :: Maybe cost)
         conCostObj
         symCostObj
+        extraConstraints
       ) = do
       initialExampleConstraints <-
         traverse (synthesisConstraintFun table symbol) examples
@@ -434,7 +446,11 @@ instance
           solver
           True
           (precond .&& symAnd initialExampleConstraints .&& costConstraint)
-          (synthesisConstraintFun table symbol)
+          ( \cex -> do
+              s <- synthesisConstraintFun table symbol cex
+              e <- extraConstraints cex
+              return $ s .&& e
+          )
           (Just refineFun)
           ( concatMap
               (\(SomeVerifier verifier) -> toVerifierFuns verifier table symbol)
@@ -481,7 +497,7 @@ instance
   where
   solverRunSynthesisTaskExtractCex
     solver
-    (SynthesisTask verifiers examples table symbol precond) = do
+    (SynthesisTask verifiers examples table symbol precond extraConstraints) = do
       initialExampleConstraints <-
         traverse (synthesisConstraintFun table symbol) examples
       (cex, r) <-
@@ -489,7 +505,11 @@ instance
           solver
           True
           (precond .&& symAnd initialExampleConstraints)
-          (synthesisConstraintFun table symbol)
+          ( \cex -> do
+              s <- synthesisConstraintFun table symbol cex
+              e <- extraConstraints cex
+              return $ s .&& e
+          )
           ( concatMap
               (\(SomeVerifier verifier) -> toVerifierFuns verifier table symbol)
               verifiers

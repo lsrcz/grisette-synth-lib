@@ -22,7 +22,8 @@ import Data.Data (Typeable)
 import Data.Proxy (Proxy (Proxy))
 import qualified Data.Text as T
 import Grisette
-  ( Mergeable,
+  ( LogicalOp (true),
+    Mergeable,
     Solvable (con),
     SolvingFailure (Unsat),
     SymBool,
@@ -73,6 +74,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisMinimalCostTask
       ( SynthesisMinimalCostTask,
         synthesisConCostObj,
+        synthesisExtraConstraints,
         synthesisInitialExamples,
         synthesisInitialMaxCost,
         synthesisPrecondition,
@@ -84,6 +86,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisResult (SynthesisSolverFailure, SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
+        synthesisExtraConstraints,
         synthesisInitialExamples,
         synthesisPrecondition,
         synthesisSketchSymbol,
@@ -340,7 +343,8 @@ task spec gen initialExamples table symbol precond =
       synthesisInitialExamples = initialExamples,
       synthesisSketchTable = table,
       synthesisSketchSymbol = symbol,
-      synthesisPrecondition = precond
+      synthesisPrecondition = precond,
+      synthesisExtraConstraints = const $ return true
     }
 
 componentSketchTest :: Test
@@ -444,7 +448,8 @@ componentSketchTest =
                       synthesisConCostObj =
                         PerStmtCostObj TestSemanticsCost,
                       synthesisSymCostObj =
-                        PerStmtCostObj TestSemanticsCost
+                        PerStmtCostObj TestSemanticsCost,
+                      synthesisExtraConstraints = const $ return true
                     }
             let expectedSynthesizedProg =
                   Concrete.Prog
@@ -473,7 +478,8 @@ componentSketchTest =
                       synthesisConCostObj =
                         PerStmtCostObj TestSemanticsCost,
                       synthesisSymCostObj =
-                        PerStmtCostObj TestSemanticsCost
+                        PerStmtCostObj TestSemanticsCost,
+                      synthesisExtraConstraints = const $ return true
                     }
             result <- runSynthesisTask z3 task
             case result of

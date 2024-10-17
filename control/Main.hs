@@ -24,7 +24,6 @@ import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.ProgSemantics (runSymbol)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
-import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Reasoning.Fuzzing
   ( defaultSemQuickCheckFuzzer,
   )
@@ -32,6 +31,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
+        synthesisExtraConstraints,
         synthesisInitialExamples,
         synthesisPrecondition,
         synthesisSketchSymbol,
@@ -40,6 +40,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
       ),
     runSynthesisTask,
   )
+import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import qualified Sketch as S
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, vectorOf)
 import Typing (Type (IntType))
@@ -98,8 +99,11 @@ conProg =
             let [equals] = Concrete.node C.Equals 1 [a, b]
                 [res] =
                   Concrete.node
-                    (C.If (TypeSignature [IntType, IntType] [IntType])
-                      "trueBranch" "falseBranch")
+                    ( C.If
+                        (TypeSignature [IntType, IntType] [IntType])
+                        "trueBranch"
+                        "falseBranch"
+                    )
                     1
                     [equals, a, b]
              in [(res, IntType)]
@@ -166,7 +170,8 @@ main = do
             synthesisInitialExamples = [],
             synthesisSketchTable = sketchSpace,
             synthesisSketchSymbol = sketchSymbol,
-            synthesisPrecondition = con True
+            synthesisPrecondition = con True,
+            synthesisExtraConstraints = const $ return $ con True
           }
   r <- runSynthesisTask z3 task
   case r of

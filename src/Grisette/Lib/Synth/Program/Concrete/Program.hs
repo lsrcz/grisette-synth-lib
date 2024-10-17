@@ -678,7 +678,7 @@ eliminateDeadCode ::
 eliminateDeadCode (Prog args stmts res) = do
   Prog args (reverse $ go (HS.fromList $ progResId <$> res) $ reverse stmts) res
   where
-    go reachable [] = []
+    go _ [] = []
     go reachable (stmt : rest) =
       if any (`HS.member` reachable) (stmtResIds stmt)
         then stmt : go (HS.union reachable (HS.fromList $ stmtArgIds stmt)) rest

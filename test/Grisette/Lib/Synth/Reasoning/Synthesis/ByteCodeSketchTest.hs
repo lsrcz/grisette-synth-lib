@@ -39,6 +39,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
+        synthesisExtraConstraints,
         synthesisInitialExamples,
         synthesisPrecondition,
         synthesisSketchSymbol,
@@ -152,7 +153,8 @@ byteCodeSketchTest =
               synthesisInitialExamples = [],
               synthesisSketchTable = SymbolTable [("test", sketch)],
               synthesisSketchSymbol = "test",
-              synthesisPrecondition = con True
+              synthesisPrecondition = con True,
+              synthesisExtraConstraints = const $ return $ con True
             }
     return $ testCase name $ do
       SynthesisSuccess (result :: SymbolTable ConProg) <- runSynthesisTask z3 task

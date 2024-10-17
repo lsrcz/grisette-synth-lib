@@ -6,7 +6,16 @@
 module Main (main) where
 
 import Arith (OpCode (Minus, Mul, Plus))
-import Grisette (Mergeable, PPrint (pformat), Solvable (con), SymInteger, mrgReturn, z3, GenSymSimple (simpleFresh), SimpleListSpec (SimpleListSpec))
+import Grisette
+  ( GenSymSimple (simpleFresh),
+    Mergeable,
+    PPrint (pformat),
+    SimpleListSpec (SimpleListSpec),
+    Solvable (con),
+    SymInteger,
+    mrgReturn,
+    z3,
+  )
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (ConcreteContext, MonadContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
@@ -22,6 +31,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisResult (SynthesisSuccess),
     SynthesisTask
       ( SynthesisTask,
+        synthesisExtraConstraints,
         synthesisInitialExamples,
         synthesisPrecondition,
         synthesisSketchSymbol,
@@ -90,7 +100,8 @@ main = do
           synthesisInitialExamples = [],
           synthesisSketchTable = sketchTable,
           synthesisSketchSymbol = "prog",
-          synthesisPrecondition = con True
+          synthesisPrecondition = con True,
+          synthesisExtraConstraints = const $ return $ con True
         }
   case r of
     SynthesisSuccess (table :: SymbolTable ConProg) -> do
