@@ -15,6 +15,9 @@ module Grisette.Lib.Synth.Reasoning.Verification
   )
 where
 
+import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
+import Control.Concurrent.Async (async, cancelWith)
+import Control.Exception (AsyncException (ThreadKilled))
 import Control.Monad.Except (runExceptT)
 import qualified Data.Text as T
 import Data.Typeable (Proxy (Proxy))
@@ -37,14 +40,20 @@ import Grisette
     simpleMerge,
     solve,
     uniqueIdentifier,
-    withTimeout,
   )
-import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext, SymbolicContext)
+import Grisette.Lib.Synth.Context
+  ( AngelicContext,
+    ConcreteContext,
+    SymbolicContext,
+  )
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics, runSymbol)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.IOPair (IOPair (IOPair))
-import Grisette.Lib.Synth.Reasoning.Matcher (EqMatcher (EqMatcher), Matcher (match))
+import Grisette.Lib.Synth.Reasoning.Matcher
+  ( EqMatcher (EqMatcher),
+    Matcher (match),
+  )
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( ConExampleConstraint,
     Example (Example),
@@ -113,19 +122,27 @@ instance
                 (_, Left _) -> return true
                 (Right (expected, matcher), Right actual) ->
                   return $ symNot $ match matcher actual expected
-        let timeoutedConfig = case timeoutSeconds of
-              Nothing -> config
-              Just timeoutSeconds ->
-                withTimeout (round timeoutSeconds * 1000000) config
-        r <- solve timeoutedConfig result
-        case r of
-          Left Unsat -> return $ CEGISVerifierNoCex True
-          Left (SolvingError f) ->
+        r <- newEmptyMVar
+        a <- async $ do
+          res <- solve config result
+          putMVar r $ Just res
+        _ <- async $ do
+          case timeoutSeconds of
+            Just timeoutSeconds -> do
+              threadDelay (round (timeoutSeconds * 1000000))
+              putMVar r Nothing
+              cancelWith a ThreadKilled
+            Nothing -> return ()
+        result <- takeMVar r
+        case result of
+          Nothing -> return $ CEGISVerifierNoCex False
+          Just (Left Unsat) -> return $ CEGISVerifierNoCex True
+          Just (Left (SolvingError f)) ->
             if T.isInfixOf "Timeout!" f
               then return $ CEGISVerifierNoCex False
               else return $ CEGISVerifierException f
-          Left e -> error $ "Unexpected solver error: " ++ show e
-          Right m -> do
+          Just (Left e) -> error $ "Unexpected solver error: " ++ show e
+          Just (Right m) -> do
             let Right evaledInput =
                   evalSymToCon m generatedInputs :: ConcreteContext [conVal]
             let Right (output, matcher) =
