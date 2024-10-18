@@ -59,7 +59,7 @@ jobs:
             }
           - {
               build: stack,
-              arg: "--stack-yaml stack-lts-22.33.yaml",
+              arg: "--stack-yaml stack-lts-22.38.yaml",
               ismain: false,
               experimental: false,
               ghc: "96",

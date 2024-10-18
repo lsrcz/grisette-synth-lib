@@ -24,7 +24,7 @@ packages:
     hackage: quickcheck-with-counterexamples-1.2
 snapshots:
 - completed:
-    sha256: 3e2ebb6e538654269973faf683d0068b123a6ee9462a48ac2c3f3281a7bf3f8b
-    size: 658094
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2024/8/13.yaml
-  original: nightly-2024-08-13
+    sha256: 1435a8c3c419d01af402eef9c0938adb601031d8ed625622ef1519fa726db042
+    size: 665058
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2024/10/11.yaml
+  original: nightly-2024-10-11
