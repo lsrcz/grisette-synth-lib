@@ -312,11 +312,15 @@ threadPoolTest =
               traverse_ waitCatch allHandles,
         testCase "freezePool" $ do
           mvar <- newMVar ()
+          mvar2 <- newMVar ()
           pool <- newThreadPool 2
           freezePool pool
-          handle <- newThread pool 0 $ takeMVar mvar >> return (42 :: Int)
+          handle <-
+            newThread pool 0 $
+              putMVar mvar2 () >> takeMVar mvar >> return (42 :: Int)
           numOfRunningThreads pool >>= (@?= 0)
           unfreezePool pool
+          takeMVar mvar2
           numOfRunningThreads pool >>= (@?= 1)
           putMVar mvar ()
           Right r <- waitCatch handle
