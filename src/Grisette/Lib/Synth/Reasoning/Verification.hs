@@ -51,6 +51,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SomeVerifier (SomeVerifier),
     SymExampleConstraint,
   )
+import System.Time.Extra (Seconds, timeout)
 
 data SMTVerifier symVal conVal symProg conProg where
   SMTVerifier ::
@@ -61,6 +62,9 @@ data SMTVerifier symVal conVal symProg conProg where
       EvalSym matcher
     ) =>
     { smtVerifierSolverConfig :: GrisetteSMTConfig,
+      -- | After this timeout, the verification is considered success for the
+      -- synthesis purpose
+      smtVerifierTimeoutSeconds :: Maybe Seconds,
       smtVerifierSymSemantics :: symSemObj,
       smtVerifierConSemantics :: conSemObj,
       smtVerifierInputs :: [AngelicContext [symVal]],
@@ -82,6 +86,7 @@ instance
   toVerifierFuns
     ( SMTVerifier
         config
+        timeoutSeconds
         symSem
         conSem
         inputs
@@ -106,12 +111,16 @@ instance
                 (_, Left _) -> return true
                 (Right (expected, matcher), Right actual) ->
                   return $ symNot $ match matcher actual expected
-        r <- solve config result
+        let timeoutFun = case timeoutSeconds of
+              Nothing -> fmap Just
+              Just timeoutSeconds -> timeout timeoutSeconds
+        r <- timeoutFun $ solve config result
         case r of
-          Left Unsat -> return CEGISVerifierNoCex
-          Left (SolvingError f) -> return $ CEGISVerifierException f
-          Left e -> error $ "Unexpected solver error: " ++ show e
-          Right m -> do
+          Nothing -> return CEGISVerifierNoCex
+          Just (Left Unsat) -> return CEGISVerifierNoCex
+          Just (Left (SolvingError f)) -> return $ CEGISVerifierException f
+          Just (Left e) -> error $ "Unexpected solver error: " ++ show e
+          Just (Right m) -> do
             let Right evaledInput =
                   evalSymToCon m generatedInputs :: ConcreteContext [conVal]
             let Right (output, matcher) =
@@ -141,14 +150,16 @@ defaultSMTVerifier ::
   ) =>
   semObj ->
   GrisetteSMTConfig ->
+  Maybe Seconds ->
   [AngelicContext [symVal]] ->
   ([symVal] -> SymbolicContext [symVal]) ->
   SomeVerifier symProg conProg
-defaultSMTVerifier semObj config inputs spec =
+defaultSMTVerifier semObj config seconds inputs spec =
   SomeVerifier
     ( SMTVerifier
         { smtVerifierSolverConfig = config,
           smtVerifierSymSemantics = semObj,
+          smtVerifierTimeoutSeconds = seconds,
           smtVerifierConSemantics = semObj,
           smtVerifierInputs = inputs,
           smtVerifierSpec = fmap (,EqMatcher) . spec
@@ -170,13 +181,15 @@ defaultSemSMTVerifier ::
     Show symVal
   ) =>
   GrisetteSMTConfig ->
+  Maybe Seconds ->
   [AngelicContext [symVal]] ->
   ([symVal] -> SymbolicContext [symVal]) ->
   SomeVerifier symProg conProg
-defaultSemSMTVerifier config inputs spec =
+defaultSemSMTVerifier config seconds inputs spec =
   SomeVerifier
     ( SMTVerifier
         { smtVerifierSolverConfig = config,
+          smtVerifierTimeoutSeconds = seconds,
           smtVerifierSymSemantics = DefaultSem,
           smtVerifierConSemantics = DefaultSem,
           smtVerifierInputs = inputs,

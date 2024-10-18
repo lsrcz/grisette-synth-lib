@@ -94,6 +94,7 @@ main = do
             [ defaultSemQuickCheckFuzzer @SymInteger gen (spec @Integer),
               defaultSemSMTVerifier @Integer
                 z3
+                Nothing
                 [simpleFresh (SimpleListSpec 2 ())]
                 (spec @SymInteger)
             ],
