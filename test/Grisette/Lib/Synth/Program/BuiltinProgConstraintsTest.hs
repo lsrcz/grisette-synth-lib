@@ -15,6 +15,7 @@ builtinProgConstraintsTest :: Test
 builtinProgConstraintsTest =
   testGroup
     "BuiltinProgConstraints"
-    [ -- componentSymmetryReductionTest,
-      -- livelinessTest
-    ]
+    []
+
+-- componentSymmetryReductionTest,
+-- livelinessTest

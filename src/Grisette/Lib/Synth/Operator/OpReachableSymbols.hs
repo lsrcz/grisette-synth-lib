@@ -14,5 +14,5 @@ instance
   (OpReachableSymbols op, Mergeable op) =>
   OpReachableSymbols (Union op)
   where
-  opReachableSymbols = 
+  opReachableSymbols =
     mconcat . fmap opReachableSymbols . overestimateUnionValues

@@ -17,6 +17,7 @@
 
 module Arith (OpCode (..)) where
 
+import qualified Data.HashSet as HS
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
@@ -28,6 +29,7 @@ import Grisette
     mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
 import Grisette.Lib.Synth.Operator.OpSemantics
   ( DefaultSem,
     OpSemantics (applyOp),
@@ -46,8 +48,6 @@ import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
   ( OpSymmetryReduction (opUnreorderable),
   )
 import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments))
-import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
-import qualified Data.HashSet as HS
 
 -- * Operators
 
