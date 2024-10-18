@@ -253,7 +253,8 @@ builderTest =
                 mkFreshProg
                   [IntType, IntType]
                   [simpleFreshStmt Add, simpleFreshStmt DivMod]
-                  [IntType, IntType]
+                  [IntType, IntType] ::
+                Prog TestSemanticsOp SymInteger TestSemanticsType
         let expected =
               Prog
                 [ProgArg "arg0" IntType, ProgArg "arg1" IntType]
