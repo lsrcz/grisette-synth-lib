@@ -1,11 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.ProgPPrint
   ( ProgPPrint (..),
-  -- pformatProg,
   )
 where
 
