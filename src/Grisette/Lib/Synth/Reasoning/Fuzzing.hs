@@ -196,7 +196,7 @@ instance
                     (ioPair :: IOPair conVal)
                     matcher
             )
-        Nothing -> return CEGISVerifierNoCex
+        Nothing -> return $ CEGISVerifierNoCex False
 
 defaultQuickCheckFuzzer ::
   forall symVal conVal symProg conProg semObj.

@@ -116,8 +116,8 @@ instance
               Just timeoutSeconds -> timeout timeoutSeconds
         r <- timeoutFun $ solve config result
         case r of
-          Nothing -> return CEGISVerifierNoCex
-          Just (Left Unsat) -> return CEGISVerifierNoCex
+          Nothing -> return $ CEGISVerifierNoCex False
+          Just (Left Unsat) -> return $ CEGISVerifierNoCex True
           Just (Left (SolvingError f)) -> return $ CEGISVerifierException f
           Just (Left e) -> error $ "Unexpected solver error: " ++ show e
           Just (Right m) -> do
