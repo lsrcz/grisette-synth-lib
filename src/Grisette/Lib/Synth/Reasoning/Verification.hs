@@ -16,6 +16,7 @@ module Grisette.Lib.Synth.Reasoning.Verification
 where
 
 import Control.Monad.Except (runExceptT)
+import qualified Data.Text as T
 import Data.Typeable (Proxy (Proxy))
 import Grisette
   ( EvalSym,
@@ -36,6 +37,7 @@ import Grisette
     simpleMerge,
     solve,
     uniqueIdentifier,
+    withTimeout,
   )
 import Grisette.Lib.Synth.Context (AngelicContext, ConcreteContext, SymbolicContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (DefaultSem (DefaultSem))
@@ -51,7 +53,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SomeVerifier (SomeVerifier),
     SymExampleConstraint,
   )
-import System.Time.Extra (Seconds, timeout)
+import System.Time.Extra (Seconds)
 
 data SMTVerifier symVal conVal symProg conProg where
   SMTVerifier ::
@@ -111,16 +113,19 @@ instance
                 (_, Left _) -> return true
                 (Right (expected, matcher), Right actual) ->
                   return $ symNot $ match matcher actual expected
-        let timeoutFun = case timeoutSeconds of
-              Nothing -> fmap Just
-              Just timeoutSeconds -> timeout timeoutSeconds
-        r <- timeoutFun $ solve config result
+        let timeoutedConfig = case timeoutSeconds of
+              Nothing -> config
+              Just timeoutSeconds ->
+                withTimeout (round timeoutSeconds * 1000000) config
+        r <- solve timeoutedConfig result
         case r of
-          Nothing -> return $ CEGISVerifierNoCex False
-          Just (Left Unsat) -> return $ CEGISVerifierNoCex True
-          Just (Left (SolvingError f)) -> return $ CEGISVerifierException f
-          Just (Left e) -> error $ "Unexpected solver error: " ++ show e
-          Just (Right m) -> do
+          Left Unsat -> return $ CEGISVerifierNoCex True
+          Left (SolvingError f) ->
+            if T.isInfixOf "Timeout!" f
+              then return $ CEGISVerifierNoCex False
+              else return $ CEGISVerifierException f
+          Left e -> error $ "Unexpected solver error: " ++ show e
+          Right m -> do
             let Right evaledInput =
                   evalSymToCon m generatedInputs :: ConcreteContext [conVal]
             let Right (output, matcher) =
