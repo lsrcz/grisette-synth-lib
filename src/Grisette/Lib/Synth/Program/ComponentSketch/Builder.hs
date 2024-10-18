@@ -188,25 +188,28 @@ instance
         (\(freshVarId, ty) -> ProgRes <$> freshVarId <*> return ty)
         rets
 
-class MkFreshProg prog stmt op ty | prog -> stmt op ty, stmt ty -> prog where
+class
+  MkFreshProg prog stmt op symVarId ty
+    | prog -> stmt op ty symVarId,
+      stmt ty -> prog
+  where
   mkFreshProg :: [ty] -> [Fresh [stmt]] -> [ty] -> Fresh prog
 
 mkSimpleFreshProg ::
-  forall prog op ty symVarId.
-  ( MkFreshProg prog (Stmt op symVarId) op ty,
-    OpTyping op SymbolicContext,
+  forall op ty symVarId.
+  ( OpTyping op SymbolicContext,
     GenSymSimple () symVarId
   ) =>
   [ty] ->
   [op] ->
   [ty] ->
-  Fresh prog
+  Fresh (Prog op symVarId ty)
 mkSimpleFreshProg argTypes ops =
   mkFreshProg argTypes (simpleFreshStmt <$> ops :: [Fresh [Stmt op symVarId]])
 
 instance
   (GenSymSimple () symVarId) =>
-  MkFreshProg (Prog op symVarId ty) (Stmt op symVarId) op ty
+  MkFreshProg (Prog op symVarId ty) (Stmt op symVarId) op symVarId ty
   where
   mkFreshProg argTypes freshStmts retTypes =
     ( ( Prog
@@ -245,8 +248,8 @@ fromConcrete (Concrete.Prog argList stmtList resList) = do
         resList
 
 mkSketch ::
-  forall prog stmt op ty.
-  (MkFreshProg prog stmt op ty) =>
+  forall prog stmt op symVarId ty.
+  (MkFreshProg prog stmt op symVarId ty) =>
   Identifier ->
   [ty] ->
   [Fresh [stmt]] ->
@@ -257,16 +260,13 @@ mkSketch ident argTypes stmts retTypes =
     mkFreshProg argTypes stmts retTypes
 
 mkSimpleSketch ::
-  forall prog op ty symVarId.
-  ( MkFreshProg prog (Stmt op symVarId) op ty,
-    OpTyping op SymbolicContext,
-    GenSymSimple () symVarId
-  ) =>
+  forall op ty symVarId.
+  (OpTyping op SymbolicContext, GenSymSimple () symVarId) =>
   Identifier ->
   [ty] ->
   [op] ->
   [ty] ->
-  prog
+  Prog op symVarId ty
 mkSimpleSketch ident argTypes ops retTypes =
   flip runFresh ident $
     mkSimpleFreshProg argTypes ops retTypes
