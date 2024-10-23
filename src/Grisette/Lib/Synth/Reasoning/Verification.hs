@@ -29,7 +29,7 @@ import Grisette
     SolvingFailure (SolvingError, Unsat),
     SymBool,
     ToCon,
-    ToSym,
+    ToSym (toSym),
     VerifierResult
       ( CEGISVerifierException,
         CEGISVerifierFoundCex,
@@ -145,8 +145,9 @@ instance
           Just (Right m) -> do
             let Right evaledInput =
                   evalSymToCon m generatedInputs :: ConcreteContext [conVal]
+            let res = spec (toSym evaledInput)
             let Right (output, matcher) =
-                  evalSymToCon m specOutput :: ConcreteContext ([conVal], matcher)
+                  evalSymToCon m res :: ConcreteContext ([conVal], matcher)
             return $
               CEGISVerifierFoundCex $
                 SomeExample $
