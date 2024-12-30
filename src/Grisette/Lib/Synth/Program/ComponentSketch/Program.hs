@@ -436,8 +436,8 @@ connected = do
           symImplies (defDisabled .&& defId .== useId) useDisabled
         symAssertWith "Def/use with same ID does not have the same value." $
           useDisabled .|| symImplies (defId .== useId) (defVal .== useVal)
-    | IdValPair defDisabled defId defVal <- def,
-      IdValPair useDisabled useId useVal <- use
+      | IdValPair defDisabled defId defVal <- def,
+        IdValPair useDisabled useId useVal <- use
     ]
 
 defDistinct ::
@@ -599,8 +599,8 @@ statementsDirectDep src dest =
   symAny
     (uncurry (.==))
     [ (srcResId, destArgId)
-    | srcResId <- stmtResIds src,
-      destArgId <- stmtArgIds dest
+      | srcResId <- stmtResIds src,
+        destArgId <- stmtArgIds dest
     ]
     .&& symNot (stmtDisabled src)
     .&& symNot (stmtDisabled dest)
