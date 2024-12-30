@@ -139,6 +139,8 @@ jobs:
         id: test
         run: |
           set -ex
+          export LC_ALL=en_US.UTF-8
+          export LANG=en_US.UTF-8
           case "$BUILD" in
             stack)
               nix develop .#${{ matrix.plan.ghc }}-ci --allow-dirty --no-warn-dirty -c stack --no-terminal $ARGS test --fast --flag grisette:-optimize --bench --no-run-benchmarks --coverage --haddock --no-haddock-deps --test-arguments "--jxml=test-report.xml"
