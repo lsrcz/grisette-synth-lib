@@ -17,7 +17,6 @@ module ConProg (Op (..), Prog) where
 -- applyIf,
 
 import qualified Data.HashSet as HS
-import Data.Hashable (Hashable)
 import Data.List ((\\))
 import qualified Data.Text as T
 import GHC.Generics (Generic)

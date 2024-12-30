@@ -59,27 +59,35 @@ jobs:
             }
           - {
               build: stack,
-              arg: "--stack-yaml stack-lts-22.38.yaml",
+              arg: "--stack-yaml stack-lts-22.43.yaml",
               ismain: false,
               experimental: false,
-              ghc: "96",
+              ghc: "966",
               cachekey: "stack-96",
+            }
+          - {
+              build: stack,
+              arg: "--stack-yaml stack-lts-23.2.yaml",
+              ismain: false,
+              experimental: false,
+              ghc: "984",
+              cachekey: "stack-98",
             }
           - {
               build: stack,
               arg: "",
               ismain: true,
               experimental: false,
-              ghc: "98",
-              cachekey: "stack-98",
+              ghc: "9101",
+              cachekey: "stack-910",
             }
           - {
               build: cabal,
               arg: "",
               ismain: false,
               experimental: false,
-              ghc: "9101",
-              cachekey: "cabal-910",
+              ghc: "9121",
+              cachekey: "cabal-912",
             }
         include:
           - os: macOS-latest
@@ -89,8 +97,8 @@ jobs:
                 arg: "",
                 ismain: true,
                 experimental: false,
-                ghc: "98",
-                cachekey: "stack-98",
+                ghc: "9101-macOS",
+                cachekey: "stack-910-maxOS",
               }
 
 
@@ -155,11 +163,11 @@ jobs:
           set -ex
           case "$BUILD" in
             stack)
-              nix develop --allow-dirty --no-warn-dirty -c stack --no-terminal $ARGS test --fast --flag grisette:-optimize --bench --no-run-benchmarks --coverage --haddock --no-haddock-deps --test-arguments "--jxml=test-report.xml"
+              nix develop .#${{ matrix.plan.ghc }}-ci --allow-dirty --no-warn-dirty -c stack --no-terminal $ARGS test --fast --flag grisette:-optimize --bench --no-run-benchmarks --coverage --haddock --no-haddock-deps --test-arguments "--jxml=test-report.xml"
               ;;
             cabal)
-              nix develop --allow-dirty --no-warn-dirty -c cabal update
-              nix develop --allow-dirty --no-warn-dirty -c cabal run --disable-optimization --flags=-optimize $ARGS spec -- --jxml=test-report.xml
+              nix develop .#${{ matrix.plan.ghc }}-ci --allow-dirty --no-warn-dirty -c cabal update
+              nix develop .#${{ matrix.plan.ghc }}-ci --allow-dirty --no-warn-dirty -c cabal run --disable-optimization --flags=-optimize $ARGS spec -- --jxml=test-report.xml
               ;;
           esac
           set +ex

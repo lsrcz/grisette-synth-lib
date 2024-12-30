@@ -33,7 +33,6 @@ import Control.Monad.State
   )
 import Data.Bifunctor (Bifunctor (first))
 import Data.Data (Proxy (Proxy))
-import Data.Foldable (Foldable (foldl'))
 import qualified Data.HashMap.Lazy as M
 import Data.List (sortOn, tails, (\\))
 import Data.Maybe (fromMaybe, listToMaybe)
@@ -64,6 +63,7 @@ import Grisette
     mrgTraverse_,
     ordClasses,
     simpleMerge,
+    symAll,
     symAnd,
     symAny,
     symAssertWith,
@@ -355,9 +355,6 @@ inBound bound val =
 symInBound :: (SymbolicVarId symVarId) => symVarId -> symVarId -> SymBool
 symInBound bound val = (0 .<= val) .&& (val .< bound)
 
-symAll :: (Foldable t) => (a -> SymBool) -> t a -> SymBool
-symAll f = foldl' (\acc v -> acc .&& f v) (con True)
-
 constrainStmt ::
   forall sem ctx op symVarId val.
   ( SymbolicVarId symVarId,
@@ -439,8 +436,8 @@ connected = do
           symImplies (defDisabled .&& defId .== useId) useDisabled
         symAssertWith "Def/use with same ID does not have the same value." $
           useDisabled .|| symImplies (defId .== useId) (defVal .== useVal)
-      | IdValPair defDisabled defId defVal <- def,
-        IdValPair useDisabled useId useVal <- use
+    | IdValPair defDisabled defId defVal <- def,
+      IdValPair useDisabled useId useVal <- use
     ]
 
 defDistinct ::
@@ -602,8 +599,8 @@ statementsDirectDep src dest =
   symAny
     (uncurry (.==))
     [ (srcResId, destArgId)
-      | srcResId <- stmtResIds src,
-        destArgId <- stmtArgIds dest
+    | srcResId <- stmtResIds src,
+      destArgId <- stmtArgIds dest
     ]
     .&& symNot (stmtDisabled src)
     .&& symNot (stmtDisabled dest)
