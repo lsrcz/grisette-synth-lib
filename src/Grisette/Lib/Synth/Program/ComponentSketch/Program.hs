@@ -1,14 +1,14 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -21,7 +21,6 @@ module Grisette.Lib.Synth.Program.ComponentSketch.Program
   )
 where
 
-import Control.DeepSeq (NFData)
 import Control.Monad (join)
 import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.State
@@ -33,24 +32,20 @@ import Control.Monad.State
     gets,
   )
 import Data.Bifunctor (Bifunctor (first))
-import qualified Data.Binary as Bytes
-import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Data (Proxy (Proxy))
 import Data.Foldable (Foldable (foldl'))
 import qualified Data.HashMap.Lazy as M
-import Data.Hashable (Hashable)
-import Data.List (sortOn, tails)
+import Data.List (sortOn, tails, (\\))
 import Data.Maybe (fromMaybe, listToMaybe)
-import qualified Data.Serialize as Cereal
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
-  ( Default (Default),
+  ( DeriveConfig (useNoStrategy),
     EvalSym,
     ITEOp (symIte),
     LogicalOp (false, symImplies, symNot, true, (.&&), (.||)),
-    Mergeable (rootStrategy),
-    MergingStrategy (NoStrategy),
+    Mergeable,
+    Mergeable3,
     MonadUnion,
     Solvable (con),
     SymBool,
@@ -59,21 +54,29 @@ import Grisette
     ToCon (toCon),
     ToSym (toSym),
     Union,
+    allClasses01,
+    allClasses012,
+    deriveGADT,
+    deriveGADTWith,
     mrgFmap,
     mrgIf,
     mrgSequence_,
     mrgTraverse_,
+    ordClasses,
     simpleMerge,
     symAnd,
     symAny,
     symAssertWith,
+    unifiedSymOrdClasses,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Control.Monad.State.Class (mrgModify)
 import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT)
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
-import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
+import Grisette.Lib.Synth.Operator.OpReachableSymbols
+  ( OpReachableSymbols (opReachableSymbols),
+  )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
 import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
@@ -82,7 +85,9 @@ import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
     genIntermediates,
     genOpIntermediates,
   )
-import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction (OpSymmetryReduction (opCommutativeArgPos, opUnreorderable))
+import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
+  ( OpSymmetryReduction (opCommutativeArgPos, opUnreorderable),
+  )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
   ( OpCost (opCost),
@@ -118,7 +123,9 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getStmtResIds
       ),
   )
-import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols))
+import Grisette.Lib.Synth.Program.SymbolTable
+  ( ProgReachableSymbols (progReachableSymbols),
+  )
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -134,141 +141,41 @@ data Stmt op symVarId = Stmt
     stmtDisabled :: SymBool,
     stmtMustBeAfter :: [symVarId]
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (Stmt op symVarId))
-
-instance
-  (Serial op, Serial symVarId) =>
-  Cereal.Serialize (Stmt op symVarId)
-  where
-  put = serialize
-  get = deserialize
-
-instance (Serial op, Serial symVarId) => Bytes.Binary (Stmt op symVarId) where
-  put = serialize
-  get = deserialize
-
-deriving via
-  (Default (Stmt conOp symVarId))
-  instance
-    (ToCon symOp conOp, ToCon symVarId symVarId) =>
-    ToCon (Stmt symOp symVarId) (Stmt conOp symVarId)
-
-deriving via
-  (Default (Stmt symOp symVarId))
-  instance
-    (ToSym conOp symOp, ToSym symVarId symVarId) =>
-    ToSym (Stmt conOp symVarId) (Stmt symOp symVarId)
-
-instance Mergeable (Stmt op symVarId) where
-  rootStrategy = NoStrategy
+  deriving (Generic)
 
 data ProgArg ty = ProgArg
   { progArgName :: T.Text,
     progArgType :: ty
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (ProgArg ty))
-
-instance (Serial ty) => Cereal.Serialize (ProgArg ty) where
-  put = serialize
-  get = deserialize
-
-instance (Serial ty) => Bytes.Binary (ProgArg ty) where
-  put = serialize
-  get = deserialize
-
-deriving via
-  (Default (ProgArg conTy))
-  instance
-    (ToCon symTy conTy) =>
-    ToCon (ProgArg symTy) (ProgArg conTy)
-
-deriving via
-  (Default (ProgArg symTy))
-  instance
-    (ToSym conTy symTy) =>
-    ToSym (ProgArg conTy) (ProgArg symTy)
-
-instance Mergeable (ProgArg ty) where
-  rootStrategy = NoStrategy
+  deriving (Generic)
 
 data ProgRes symVarId ty = ProgRes
   { progResId :: symVarId,
     progResType :: ty
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (ProgRes symVarId ty))
-
-instance
-  (Serial symVarId, Serial ty) =>
-  Cereal.Serialize (ProgRes symVarId ty)
-  where
-  put = serialize
-  get = deserialize
-
-instance
-  (Serial symVarId, Serial ty) =>
-  Bytes.Binary (ProgRes symVarId ty)
-  where
-  put = serialize
-  get = deserialize
-
-deriving via
-  (Default (ProgRes symVarId conTy))
-  instance
-    (ToCon symTy conTy, ToCon symVarId symVarId) =>
-    ToCon (ProgRes symVarId symTy) (ProgRes symVarId conTy)
-
-deriving via
-  (Default (ProgRes symVarId symTy))
-  instance
-    (ToSym conTy symTy, ToSym symVarId symVarId) =>
-    ToSym (ProgRes symVarId conTy) (ProgRes symVarId symTy)
-
-instance Mergeable (ProgRes symVarId ty) where
-  rootStrategy = NoStrategy
+  deriving (Generic)
 
 data Prog op symVarId ty = Prog
   { progArgList :: [ProgArg ty],
     progStmtList :: [Stmt op symVarId],
     progResList :: [ProgRes symVarId ty]
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (Prog op symVarId ty))
+  deriving (Generic)
 
-instance
-  (Serial op, Serial symVarId, Serial ty) =>
-  Cereal.Serialize (Prog op symVarId ty)
-  where
-  put = serialize
-  get = deserialize
+deriveGADTWith
+  mempty {useNoStrategy = True}
+  [''ProgArg]
+  (allClasses01 \\ (ordClasses ++ unifiedSymOrdClasses))
 
-instance
-  (Serial op, Serial symVarId, Serial ty) =>
-  Bytes.Binary (Prog op symVarId ty)
-  where
-  put = serialize
-  get = deserialize
+deriveGADTWith
+  mempty {useNoStrategy = True}
+  [''Stmt, ''ProgRes, ''Prog]
+  (allClasses012 \\ (ordClasses ++ unifiedSymOrdClasses))
 
-deriving via
-  (Default (Prog conOp symVarId conTy))
-  instance
-    (ToCon symOp conOp, ToCon symTy conTy, ToCon symVarId symVarId) =>
-    ToCon (Prog symOp symVarId symTy) (Prog conOp symVarId conTy)
-
-deriving via
-  (Default (Prog symOp symVarId symTy))
-  instance
-    (ToSym conOp symOp, ToSym conTy symTy, ToSym symVarId symVarId) =>
-    ToSym (Prog conOp symVarId conTy) (Prog symOp symVarId symTy)
-
-instance Mergeable (Prog op symVarId ty) where
-  rootStrategy = NoStrategy
+deriveGADTWith
+  mempty {useNoStrategy = True}
+  [''Prog]
+  [''Mergeable3]
 
 instance
   ( ToSym conOp symOp,
@@ -375,15 +282,15 @@ instance
         conResList
 
 data IdValPair symVarId val = IdValPair SymBool symVarId (Union (Maybe val))
-  deriving (Show, Eq, Generic)
-  deriving (EvalSym, Mergeable) via Default (IdValPair symVarId val)
 
 data CollectedDefUse symVarId val = CollectedDefUse
   { collectedDef :: [IdValPair symVarId val],
     collectedUse :: [IdValPair symVarId val]
   }
-  deriving (Show, Eq, Generic)
-  deriving (EvalSym, Mergeable) via Default (CollectedDefUse symVarId val)
+
+deriveGADT
+  [''IdValPair, ''CollectedDefUse]
+  [''Show, ''Eq, ''EvalSym, ''Mergeable]
 
 addDefs ::
   ( MonadState (CollectedDefUse symVarId val) ctx,

@@ -1,28 +1,17 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Reasoning.IOPair (IOPair (..)) where
 
-import Control.DeepSeq (NFData)
-import qualified Data.Binary as Binary
-import Data.Bytes.Serial (Serial (deserialize, serialize))
-import Data.Hashable (Hashable)
-import qualified Data.Serialize as Cereal
-import GHC.Generics (Generic)
-import Grisette (Default (Default), Mergeable, PPrint, ToCon, ToSym)
+import Grisette (allClasses01, deriveGADT)
 
 data IOPair val = IOPair {ioPairInputs :: [val], ioPairOutputs :: [val]}
-  deriving (Show, Eq, Generic)
-  deriving anyclass (NFData, Serial, Hashable)
-  deriving
-    (ToSym (IOPair conVal), ToCon (IOPair conVal), Mergeable, PPrint)
-    via (Default (IOPair val))
 
-instance (Serial val) => Cereal.Serialize (IOPair val) where
-  put = serialize
-  get = deserialize
-
-instance (Serial val) => Binary.Binary (IOPair val) where
-  put = serialize
-  get = deserialize
+deriveGADT [''IOPair] allClasses01

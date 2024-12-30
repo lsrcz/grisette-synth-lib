@@ -5,7 +5,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Value
   ( Value (..),
@@ -15,16 +19,12 @@ module Value
   )
 where
 
-import Control.DeepSeq (NFData)
-import GHC.Generics (Generic)
 import Grisette
-  ( Default (Default),
-    Mergeable,
+  ( Mergeable,
     MonadUnion,
-    PPrint,
-    SymEq,
-    ToSym,
     Union,
+    allClasses0,
+    deriveGADT,
     liftToMonadUnion,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -34,11 +34,8 @@ import Grisette.Lib.Synth.Context (MonadContext)
 data Value intVal boolVal
   = IntValue intVal
   | BoolValue boolVal
-  deriving (Show, Eq, Generic)
-  deriving anyclass (NFData)
-  deriving
-    (Mergeable, SymEq, ToSym (Value symIntVal symBoolVal), PPrint)
-    via (Default (Value intVal boolVal))
+
+deriveGADT [''Value] allClasses0
 
 class (Mergeable val) => ValueBuilder val where
   type IntValType val

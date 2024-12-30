@@ -4,6 +4,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Grisette.Lib.Synth.TestOperator.TestPrettyOperator
@@ -13,9 +16,15 @@ module Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   )
 where
 
+import Data.List ((\\))
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (Default (Default), Mergeable, PPrint (pformat))
+import Grisette
+  ( PPrint (pformat),
+    allClasses0,
+    deriveGADT,
+    pprintClasses,
+  )
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
 import Grisette.Lib.Synth.Program.Concrete
@@ -30,9 +39,24 @@ import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature, argTypes),
   )
 
-data TestPrettyExtOp = TestPrettyExtOp
-  deriving (Show, Generic, Eq)
-  deriving (Mergeable) via (Default TestPrettyExtOp)
+data TestPrettyExtOp = TestPrettyExtOp deriving (Generic)
+
+data TestPrettyOp
+  = PrettyOp0
+  | PrettyOp1
+  | PrettyOp2
+  | PrettyOp2NoDescNoPrefix
+  | PrettyInvokeOp (TypeSignature TestPrettyType) T.Text
+  | PrettyInvokeExtOp (TypeSignature TestPrettyType) T.Text
+  deriving (Generic)
+
+data TestPrettyType = PrettyType1 | PrettyType2 deriving (Generic)
+
+deriveGADT [''TestPrettyType] allClasses0
+
+deriveGADT
+  [''TestPrettyExtOp, ''TestPrettyOp]
+  (allClasses0 \\ pprintClasses)
 
 instance PPrint TestPrettyExtOp where
   pformat TestPrettyExtOp = "ext"
@@ -44,16 +68,6 @@ instance OpTyping TestPrettyExtOp ConcreteContext where
   type OpTypeType TestPrettyExtOp = TestPrettyType
   typeOp TestPrettyExtOp =
     return $ TypeSignature [PrettyType1] [PrettyType1, PrettyType2]
-
-data TestPrettyOp
-  = PrettyOp0
-  | PrettyOp1
-  | PrettyOp2
-  | PrettyOp2NoDescNoPrefix
-  | PrettyInvokeOp (TypeSignature TestPrettyType) T.Text
-  | PrettyInvokeExtOp (TypeSignature TestPrettyType) T.Text
-  deriving (Show, Generic, Eq)
-  deriving (Mergeable) via (Default TestPrettyOp)
 
 instance OpFlatten TestPrettyOp TestPrettyOp where
   opForwardedSubProg (PrettyInvokeOp _ prog) = return $ Left prog
@@ -80,10 +94,6 @@ instance OpPPrint TestPrettyOp where
   prefixResults PrettyOp2 = return ["op2_", "op2'_"]
   prefixResults PrettyOp2NoDescNoPrefix = return []
   prefixResults op = allPrefixesByTypes op
-
-data TestPrettyType = PrettyType1 | PrettyType2
-  deriving (Show, Generic, Eq)
-  deriving (Mergeable, PPrint) via (Default TestPrettyType)
 
 instance PrefixByType TestPrettyType where
   prefixByType PrettyType1 = "t1_"

@@ -18,18 +18,18 @@
 module Arith (OpCode (..)) where
 
 import qualified Data.HashSet as HS
-import GHC.Generics (Generic)
 import Grisette
-  ( Default (Default),
-    EvalSym,
+  ( EvalSym,
     LogicalOp (false),
     Mergeable,
     PPrint (pformat),
-    derive,
+    deriveGADT,
     mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
+import Grisette.Lib.Synth.Operator.OpReachableSymbols
+  ( OpReachableSymbols (opReachableSymbols),
+  )
 import Grisette.Lib.Synth.Operator.OpSemantics
   ( DefaultSem,
     OpSemantics (applyOp),
@@ -43,7 +43,9 @@ import Grisette.Lib.Synth.Operator.OpTyping
     simpleTyping,
     unaryDefaultType,
   )
-import Grisette.Lib.Synth.Program.ComponentSketch (OpSymmetryReduction (opCommutativeArgPos))
+import Grisette.Lib.Synth.Program.ComponentSketch
+  ( OpSymmetryReduction (opCommutativeArgPos),
+  )
 import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
   ( OpSymmetryReduction (opUnreorderable),
   )
@@ -58,7 +60,7 @@ data OpCode
   | Minus
   | UMinus
 
-derive ''OpCode [''EvalSym, ''Show, ''Generic, ''Mergeable]
+deriveGADT [''OpCode] [''EvalSym, ''Show, ''Mergeable]
 
 -- * Semantics and typing.
 

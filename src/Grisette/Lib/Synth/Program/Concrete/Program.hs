@@ -7,6 +7,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -44,7 +46,6 @@ module Grisette.Lib.Synth.Program.Concrete.Program
   )
 where
 
-import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.State
@@ -54,8 +55,6 @@ import Control.Monad.State
     evalStateT,
   )
 import Data.Bifunctor (Bifunctor (second))
-import qualified Data.Binary as Binary
-import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Foldable (traverse_)
 import Data.GraphViz
   ( DotEdge (DotEdge),
@@ -77,19 +76,20 @@ import Data.GraphViz.Attributes.Complete
   )
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.HashSet as HS
-import Data.Hashable (Hashable)
-import qualified Data.Serialize as Cereal
+import Data.List ((\\))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import GHC.Generics (Generic)
 import Grisette
-  ( Default (Default),
-    EvalSym,
-    Mergeable (rootStrategy),
-    MergingStrategy (NoStrategy),
+  ( DeriveConfig (useNoStrategy),
+    Mergeable,
+    Mergeable3,
     PPrint (pformat),
-    ToCon (toCon),
     ToSym (toSym),
+    allClasses012,
+    deriveGADT,
+    deriveGADTWith,
+    pprintClasses,
     tryMerge,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
@@ -147,7 +147,10 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getStmtResIds
       ),
   )
-import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols), SymbolTable (SymbolTable))
+import Grisette.Lib.Synth.Program.SymbolTable
+  ( ProgReachableSymbols (progReachableSymbols),
+    SymbolTable (SymbolTable),
+  )
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -169,137 +172,45 @@ data Stmt op varId = Stmt
     stmtArgIds :: [varId],
     stmtResIds :: [varId]
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (Stmt op varId))
-
-instance (Serial op, Serial varId) => Cereal.Serialize (Stmt op varId) where
-  put = serialize
-  get = deserialize
-
-instance (Serial op, Serial varId) => Binary.Binary (Stmt op varId) where
-  put = serialize
-  get = deserialize
-
-instance
-  (ToCon symOp conOp) =>
-  ToCon (Stmt symOp varId) (Stmt conOp varId)
-  where
-  toCon (Stmt op argIds resIds) =
-    Stmt <$> toCon op <*> return argIds <*> return resIds
-
-instance
-  (ToSym conOp symOp) =>
-  ToSym (Stmt conOp varId) (Stmt symOp varId)
-  where
-  toSym (Stmt op argIds resIds) = Stmt (toSym op) argIds resIds
-
-instance Mergeable (Stmt op varId) where
-  rootStrategy = NoStrategy
+  deriving (Generic)
 
 data ProgArg varId ty = ProgArg
   { progArgName :: T.Text,
     progArgId :: varId,
     progArgType :: ty
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym, Mergeable) via (Default (ProgArg varId ty))
-
-instance (Serial varId, Serial ty) => Cereal.Serialize (ProgArg varId ty) where
-  put = serialize
-  get = deserialize
-
-instance (Serial varId, Serial ty) => Binary.Binary (ProgArg varId ty) where
-  put = serialize
-  get = deserialize
-
-instance
-  (ToCon symTy conTy) =>
-  ToCon (ProgArg varId symTy) (ProgArg varId conTy)
-  where
-  toCon (ProgArg name varId ty) = ProgArg name varId <$> toCon ty
-
-instance
-  (ToSym conTy symTy, Mergeable varId) =>
-  ToSym (ProgArg varId conTy) (ProgArg varId symTy)
-  where
-  toSym (ProgArg name varId ty) = ProgArg name varId $ toSym ty
+  deriving (Generic)
 
 data ProgRes varId ty = ProgRes
   { progResId :: varId,
     progResType :: ty
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym, Mergeable) via (Default (ProgRes varId ty))
-
-instance (Serial varId, Serial ty) => Cereal.Serialize (ProgRes varId ty) where
-  put = serialize
-  get = deserialize
-
-instance (Serial varId, Serial ty) => Binary.Binary (ProgRes varId ty) where
-  put = serialize
-  get = deserialize
-
-instance
-  (ToCon symTy conTy) =>
-  ToCon (ProgRes varId symTy) (ProgRes varId conTy)
-  where
-  toCon (ProgRes varId ty) = ProgRes varId <$> toCon ty
-
-instance
-  (ToSym conTy symTy, Mergeable varId) =>
-  ToSym (ProgRes varId conTy) (ProgRes varId symTy)
-  where
-  toSym (ProgRes varId ty) = ProgRes varId $ toSym ty
+  deriving (Generic)
 
 data Prog op varId ty = Prog
   { progArgList :: [ProgArg varId ty],
     progStmtList :: [Stmt op varId],
     progResList :: [ProgRes varId ty]
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (Prog op varId ty))
+  deriving (Generic)
 
-instance
-  (Serial op, Serial varId, Serial ty) =>
-  Cereal.Serialize (Prog op varId ty)
-  where
-  put = serialize
-  get = deserialize
+deriveGADTWith
+  mempty {useNoStrategy = True}
+  [''Stmt, ''ProgRes, ''Prog, ''ProgArg]
+  (allClasses012 \\ pprintClasses)
 
-instance
-  (Serial op, Serial varId, Serial ty) =>
-  Binary.Binary (Prog op varId ty)
-  where
-  put = serialize
-  get = deserialize
-
-instance
-  (ToCon symOp conOp, ToCon symTy conTy) =>
-  ToCon (Prog symOp varId symTy) (Prog conOp varId conTy)
-  where
-  toCon (Prog arg stmt res) =
-    Prog <$> toCon arg <*> traverse toCon stmt <*> toCon res
-
-instance
-  (ToSym conOp symOp, ToSym conTy symTy, Mergeable varId) =>
-  ToSym (Prog conOp varId conTy) (Prog symOp varId symTy)
-  where
-  toSym (Prog arg stmt res) =
-    Prog (toSym arg) (toSym stmt) (toSym res)
-
-instance Mergeable (Prog op varId ty) where
-  rootStrategy = NoStrategy
+deriveGADTWith
+  mempty {useNoStrategy = True}
+  [''Prog]
+  [''Mergeable3]
 
 data ProgPPrintError varId op
   = StmtPPrintError (Stmt op varId) Int (OpPPrintError varId op)
   | ResultUndefined Int varId
   | ExtractSubProgError T.Text
-  deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default (ProgPPrintError varId op))
+  deriving (Generic)
+
+deriveGADT [''ProgPPrintError] (allClasses012 \\ pprintClasses)
 
 instance
   (OpPPrint op, Show op, ConcreteVarId varId) =>

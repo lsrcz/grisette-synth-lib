@@ -11,8 +11,11 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -ddump-splices -ddump-to-file -ddump-file-prefix=synthesis #-}
 
 module Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisContext (..),
@@ -34,11 +37,12 @@ module Grisette.Lib.Synth.Reasoning.Synthesis
   )
 where
 
-import Control.DeepSeq (NFData (rnf))
+import Control.DeepSeq (NFData, NFData1)
 import Control.Monad.Except (runExceptT)
 import qualified Data.Binary as Binary
-import Data.Bytes.Serial (Serial (deserialize, serialize))
+import Data.Bytes.Serial (Serial (deserialize, serialize), Serial1)
 import Data.Data (Typeable)
+import Data.Functor.Classes (Show1)
 import qualified Data.HashSet as HS
 import Data.Hashable (Hashable)
 import qualified Data.Serialize as Cereal
@@ -49,6 +53,7 @@ import Grisette
   ( CEGISResult (CEGISSolverFailure, CEGISSuccess, CEGISVerifierFailure),
     ConfigurableSolver,
     Default (Default),
+    DeriveConfig (unconstrainedPositions),
     EvalSym,
     LogicalOp ((.&&)),
     Mergeable,
@@ -62,6 +67,8 @@ import Grisette
     ToCon,
     ToSym (toSym),
     VerifierFun,
+    deriveGADT,
+    deriveGADTWith,
     evalSymToCon,
     runFreshT,
     simpleMerge,
@@ -81,7 +88,11 @@ import Grisette.Lib.Synth.Program.ProgCost (ProgCost, symbolCost)
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics, runSymbol)
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping)
 import Grisette.Lib.Synth.Program.ProgUtil (ProgUtil)
-import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols, SymbolTable, filterByReachableSymbols)
+import Grisette.Lib.Synth.Program.SymbolTable
+  ( ProgReachableSymbols,
+    SymbolTable,
+    filterByReachableSymbols,
+  )
 import Grisette.Lib.Synth.Reasoning.IOPair
   ( IOPair (ioPairInputs, ioPairOutputs),
   )
@@ -118,8 +129,7 @@ data Example symSemObj symVal conSemObj conVal matcher where
       exampleMatcher :: matcher
     } ->
     Example symSemObj symVal conSemObj conVal matcher
-  deriving (Eq, Generic)
-  deriving anyclass (NFData, Hashable)
+  deriving (Generic)
 
 instance
   (Serial conSemObj, Serial symSemObj, Serial conVal, Serial matcher) =>
@@ -136,19 +146,15 @@ instance
     iop <- deserialize
     Example conSem symSem Proxy iop <$> deserialize
 
-instance
-  (Serial conSemObj, Serial symSemObj, Serial conVal, Serial matcher) =>
-  Cereal.Serialize (Example symSemObj symVal conSemObj conVal matcher)
-  where
-  put = serialize
-  get = deserialize
-
-instance
-  (Serial conSemObj, Serial symSemObj, Serial conVal, Serial matcher) =>
-  Binary.Binary (Example symSemObj symVal conSemObj conVal matcher)
-  where
-  put = serialize
-  get = deserialize
+deriveGADTWith
+  (mempty {unconstrainedPositions = [1]})
+  [''Example]
+  [ ''Cereal.Serialize,
+    ''Binary.Binary,
+    ''Eq,
+    ''NFData,
+    ''Hashable
+  ]
 
 instance
   (Show conVal) =>
@@ -207,8 +213,10 @@ data SomeExample symProg conProg where
     Example symSemObj symVal conSemObj conVal matcher ->
     SomeExample symProg conProg
 
-instance Show (SomeExample symProg conProg) where
-  show (SomeExample ex) = show ex
+deriveGADTWith
+  (mempty {unconstrainedPositions = [0, 1]})
+  [''SomeExample]
+  [''Show, ''NFData]
 
 instance PPrint (SomeExample symProg conProg) where
   pformat (SomeExample ex) = pformat ex
@@ -221,9 +229,6 @@ eqHetero a b = case cast b of
 instance Eq (SomeExample symProg conProg) where
   (SomeExample ex1) == (SomeExample ex2) =
     eqHetero ex1 ex2
-
-instance NFData (SomeExample symProg conProg) where
-  rnf (SomeExample ex) = rnf ex
 
 class
   IsVerifier verifier symProg conProg
@@ -331,22 +336,25 @@ data SynthesisResult conProg
   = SynthesisSuccess (SymbolTable conProg)
   | SynthesisVerifierFailure T.Text
   | SynthesisSolverFailure SolvingFailure
-  deriving (Show, Generic)
-  deriving (Serial, NFData)
+  deriving (Generic)
+
+deriveGADT
+  [''SynthesisResult]
+  [ ''Show,
+    ''Show1,
+    ''Serial,
+    ''Serial1,
+    ''NFData,
+    ''NFData1,
+    ''Cereal.Serialize,
+    ''Binary.Binary
+  ]
 
 deriving via
   (Default (SynthesisResult conProg))
   instance
     (ProgPPrint conProg, ProgUtil conProg, ProgTyping conProg) =>
     (PPrint (SynthesisResult conProg))
-
-instance (Serial conProg) => Cereal.Serialize (SynthesisResult conProg) where
-  put = serialize
-  get = deserialize
-
-instance (Serial conProg) => Binary.Binary (SynthesisResult conProg) where
-  put = serialize
-  get = deserialize
 
 class RunSynthesisTask task symProg conProg | task -> symProg conProg where
   solverRunSynthesisTaskExtractCex ::

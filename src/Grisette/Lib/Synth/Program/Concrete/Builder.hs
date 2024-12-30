@@ -1,7 +1,12 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Program.Concrete.Builder
   ( buildProg,
@@ -16,7 +21,12 @@ import Data.Hashable (Hashable)
 import Data.List (sortOn)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (Mergeable (rootStrategy), MergingStrategy (NoStrategy))
+import Grisette
+  ( DeriveConfig (useNoStrategy),
+    allClasses01,
+    allClasses012,
+    deriveGADTWith,
+  )
 import qualified Grisette.Lib.Synth.Program.Concrete.Program as Concrete
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
@@ -24,15 +34,13 @@ data NodeRef op ty = NodeRef
   { nodeRef :: Node op ty,
     nodeRetId :: Int
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
+  deriving (Generic)
 
 data ProgArg ty = ProgArg
   { progArgName :: T.Text,
     progArgTy :: ty
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
+  deriving (Generic)
 
 data Node op ty
   = ArgNode (ProgArg ty)
@@ -42,32 +50,29 @@ data Node op ty
         _args :: [NodeRef op ty],
         _pseudoDeps :: [NodeRef op ty]
       }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
-
-isInteriorNode :: Node op ty -> Bool
-isInteriorNode InteriorNode {} = True
-isInteriorNode _ = False
-
-instance Mergeable (Node op ty) where
-  rootStrategy = NoStrategy
+  deriving (Generic)
 
 data ProgRes op ty = ProgRes
   { progResNode :: NodeRef op ty,
     progResTy :: ty
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
+  deriving (Generic)
 
 data Prog op ty = Prog
   { progArgList :: [ProgArg ty],
     progResList :: [ProgRes op ty]
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
+  deriving (Generic)
 
-instance Mergeable (Prog op ty) where
-  rootStrategy = NoStrategy
+deriveGADTWith mempty {useNoStrategy = True} [''ProgArg] allClasses01
+deriveGADTWith
+  mempty {useNoStrategy = True}
+  [''NodeRef, ''Node, ''ProgRes, ''Prog]
+  allClasses012
+
+isInteriorNode :: Node op ty -> Bool
+isInteriorNode InteriorNode {} = True
+isInteriorNode _ = False
 
 toConcreteProg ::
   forall varId op ty.

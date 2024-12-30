@@ -7,6 +7,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -22,25 +24,23 @@ import Control.DeepSeq (NFData (rnf))
 import Control.Exception (ArithException)
 import Control.Monad (when)
 import Control.Monad.Except (runExceptT)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Grisette
-  ( Default (Default),
-    EvalSym,
-    GenSymSimple (simpleFresh),
+  ( GenSymSimple (simpleFresh),
     LogicalOp (false),
-    Mergeable,
     MonadUnion,
     SafeDiv (safeDivMod),
     SymInteger,
-    ToCon,
-    ToSym,
+    allClasses0,
+    deriveGADT,
     liftToMonadUnion,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
+import Grisette.Lib.Synth.Operator.OpReachableSymbols
+  ( OpReachableSymbols (opReachableSymbols),
+  )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping
   ( OpTyping (OpTypeType, typeOp),
@@ -61,12 +61,9 @@ import Grisette.Lib.Synth.TypeSignature
   )
 import Grisette.Lib.Synth.Util.Show (showText)
 
-data TestSemanticsOp = Add | DivMod | Inc | Double
-  deriving (Show, Generic, Eq)
-  deriving anyclass (Hashable)
-  deriving
-    (Mergeable, ToCon TestSemanticsOp, EvalSym, ToSym TestSemanticsOp)
-    via (Default TestSemanticsOp)
+data TestSemanticsOp = Add | DivMod | Inc | Double deriving (Generic)
+
+deriveGADT [''TestSemanticsOp] allClasses0
 
 instance OpReachableSymbols TestSemanticsOp where
   opReachableSymbols _ = mempty
@@ -84,12 +81,9 @@ data TestSemanticsObj = TestSemanticsObj deriving (Eq)
 instance NFData TestSemanticsObj where
   rnf TestSemanticsObj = ()
 
-data TestSemanticsType = IntType
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
-  deriving
-    (Mergeable, EvalSym, ToCon TestSemanticsType, ToSym TestSemanticsType)
-    via (Default TestSemanticsType)
+data TestSemanticsType = IntType deriving (Generic)
+
+deriveGADT [''TestSemanticsType] allClasses0
 
 instance
   (MonadContext ctx) =>

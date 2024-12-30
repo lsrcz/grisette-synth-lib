@@ -45,9 +45,9 @@ import Grisette
   ( ConfigurableSolver (newSolver),
     Solvable (con),
     Solver (solverAssert, solverForceTerminate),
+    SymBool,
     solverSolve,
   )
-import Grisette.Internal.SymPrim.SymBool (SymBool)
 import Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
   ( BaseTaskHandle
       ( cancelWith,

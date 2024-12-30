@@ -1,6 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.TestOperator.TestCostOperator
   ( TestCostOperator (..),
@@ -8,15 +11,15 @@ module Grisette.Lib.Synth.TestOperator.TestCostOperator
   )
 where
 
-import Grisette (Mergeable, mrgReturn)
+import Grisette (Mergeable, allClasses0, deriveGADT, mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost))
 
 data TestCost = TestCost
-  deriving (Show, Eq)
 
 newtype TestCostOperator = TestCostOperator Integer
-  deriving (Show, Eq)
+
+deriveGADT [''TestCost, ''TestCostOperator] allClasses0
 
 instance
   (Num cost, MonadContext ctx, Mergeable cost) =>

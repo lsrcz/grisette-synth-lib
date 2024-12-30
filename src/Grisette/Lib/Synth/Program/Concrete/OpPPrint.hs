@@ -3,9 +3,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( VarIdMap,
@@ -23,10 +28,15 @@ import Control.Monad (when)
 import Control.Monad.Except (MonadError (throwError))
 import Data.Foldable (traverse_)
 import qualified Data.HashMap.Lazy as HM
--- import qualified Data.Map.Ordered as OM
+import Data.List ((\\))
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (Default (Default), Mergeable, PPrint (pformat))
+import Grisette
+  ( PPrint (pformat),
+    allClasses012,
+    deriveGADT,
+    pprintClasses,
+  )
 import Grisette.Lib.Synth.Context (ConcreteContext)
 import Grisette.Lib.Synth.Operator.OpTyping
   ( DefaultType (DefaultType),
@@ -47,8 +57,9 @@ data OpPPrintError varId op
   | IncorrectNumberOfResults op Int Int
   | RedefinedResult Int varId
   | PPrintTypingError op T.Text
-  deriving (Show, Eq, Generic, Functor)
-  deriving (Mergeable) via (Default (OpPPrintError varId op))
+  deriving (Generic, Functor)
+
+deriveGADT [''OpPPrintError] (allClasses012 \\ pprintClasses)
 
 instance
   (OpPPrint op, ConcreteVarId varId) =>

@@ -31,15 +31,15 @@ where
 
 import Control.Monad.Except (runExceptT)
 import Grisette
-  ( Default (Default),
-    GenSym (fresh),
+  ( GenSym (fresh),
     Mergeable (rootStrategy),
     MergingStrategy (SimpleStrategy),
     MonadUnion,
     PPrint (pformat),
     SimpleMergeable (mrgIte),
     Union,
-    deriveAllExcept,
+    allClasses0,
+    deriveGADT,
     liftUnion,
     mrgFmap,
     mrgReturn,
@@ -102,7 +102,7 @@ symOpMaximumResNum op =
 
 data DefaultType = DefaultType
 
-deriveAllExcept ''DefaultType [''PPrint]
+deriveGADT [''DefaultType] $ filter (/= ''PPrint) allClasses0
 
 instance PPrint DefaultType where
   pformat _ = "default"

@@ -19,6 +19,7 @@ import Control.Concurrent (newEmptyMVar, putMVar, takeMVar, threadDelay)
 import Control.Concurrent.Async (async, cancelWith)
 import Control.Exception (AsyncException (ThreadKilled))
 import Control.Monad.Except (runExceptT)
+import Control.Monad.Identity (Identity (runIdentity))
 import qualified Data.Text as T
 import Data.Typeable (Proxy (Proxy))
 import Grisette
@@ -144,10 +145,12 @@ instance
           Just (Left e) -> error $ "Unexpected solver error: " ++ show e
           Just (Right m) -> do
             let Right evaledInput =
-                  evalSymToCon m generatedInputs :: ConcreteContext [conVal]
+                  runIdentity $ evalSymToCon m (runExceptT generatedInputs) ::
+                    ConcreteContext [conVal]
             let res = spec (toSym evaledInput)
             let Right (output, matcher) =
-                  evalSymToCon m res :: ConcreteContext ([conVal], matcher)
+                  runIdentity $ evalSymToCon m (runExceptT res) ::
+                    ConcreteContext ([conVal], matcher)
             return $
               CEGISVerifierFoundCex $
                 SomeExample $

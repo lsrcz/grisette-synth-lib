@@ -4,7 +4,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -15,11 +18,12 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvalSym,
     GenSymSimple,
     LogicalOp (false),
     Mergeable,
     ToCon,
+    allClasses01,
+    deriveGADT,
     mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
@@ -52,8 +56,9 @@ data Op intVal
   | Minus
   | IntConst intVal
   | If (TypeSignature Type) T.Text T.Text
-  deriving (Show, Generic)
-  deriving (EvalSym, Mergeable) via (Default (Op intVal))
+  deriving (Generic)
+
+deriveGADT [''Op] allClasses01
 
 deriving via
   (Default (Concrete.Op conIntVal))

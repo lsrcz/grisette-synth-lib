@@ -4,14 +4,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Grisette.Lib.Synth.Program.NullProg (NullProg) where
 
-import Control.DeepSeq (NFData)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
-import Grisette (Default (Default), EvalSym, Mergeable, ToCon, ToSym)
+import Grisette (allClasses01, deriveGADT)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Program.Concrete.Program
   ( ProgPPrint (pformatProg),
@@ -45,24 +46,14 @@ import Grisette.Lib.Synth.Program.ProgUtil
       ),
   )
 
-data NullProg ty
-  deriving (Generic)
-  deriving anyclass (NFData, Hashable)
-  deriving
-    (EvalSym, Mergeable, ToCon (NullProg ty0), ToSym (NullProg ty0))
-    via (Default (NullProg ty))
+data NullStmt ty deriving (Generic)
 
-instance Show (NullProg ty) where
-  show _ = error "Impossible"
+data NullProg ty deriving (Generic)
 
-instance Eq (NullProg ty) where
-  _ == _ = error "Impossible"
+deriveGADT [''NullStmt, ''NullProg] allClasses01
 
 instance (MonadContext ctx) => ProgSemantics semObj (NullProg ty) val ctx where
   runProg _ _ = error "Impossible"
-
--- instance ProgNaming (NullProg ty) where
---   nameProg _ = error "Impossible"
 
 instance ProgTyping (NullProg ty) where
   typeProg _ = error "Impossible"
@@ -73,18 +64,11 @@ instance ProgPPrint (NullProg ty) where
 instance ProgToDot (NullProg ty) where
   toDotProg _ = error "Impossible"
 
-data NullStmt ty
-  deriving (Generic)
-  deriving anyclass (NFData, Hashable)
-  deriving
-    (EvalSym, Mergeable, ToCon (NullStmt ty0), ToSym (NullStmt ty0))
-    via (Default (NullStmt ty))
-
-instance Show (NullStmt ty) where
-  show _ = error "Impossible"
-
-instance Eq (NullStmt ty) where
-  _ == _ = error "Impossible"
+-- instance Show (NullStmt ty) where
+--   show _ = error "Impossible"
+--
+-- instance Eq (NullStmt ty) where
+--   _ == _ = error "Impossible"
 
 instance StmtUtilImpl (NullStmt ty) () () where
   getStmtArgIds = error "Impossible"

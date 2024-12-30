@@ -2,6 +2,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Operator.OpSemantics
@@ -16,9 +19,17 @@ module Grisette.Lib.Synth.Operator.OpSemantics
   )
 where
 
-import Control.DeepSeq (NFData (rnf))
 import qualified Data.Text as T
-import Grisette (Mergeable, MonadUnion, Union, liftUnion, mrgReturn, tryMerge)
+import Grisette
+  ( Mergeable,
+    MonadUnion,
+    Union,
+    allClasses0,
+    deriveGADT,
+    liftUnion,
+    mrgReturn,
+    tryMerge,
+  )
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
@@ -109,7 +120,6 @@ instance
     op' <- liftUnion op
     applyOp semObj table op' args
 
-data DefaultSem = DefaultSem deriving (Eq)
+data DefaultSem = DefaultSem
 
-instance NFData DefaultSem where
-  rnf DefaultSem = ()
+deriveGADT [''DefaultSem] allClasses0

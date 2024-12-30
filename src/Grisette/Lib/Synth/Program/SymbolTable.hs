@@ -2,10 +2,15 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Program.SymbolTable
   ( SymbolTable (..),
@@ -16,34 +21,33 @@ module Grisette.Lib.Synth.Program.SymbolTable
   )
 where
 
-import Control.DeepSeq (NFData)
 import Control.Monad.Error.Class (MonadError (throwError))
-import Data.Bifunctor (Bifunctor (second))
-import Data.Bytes.Serial (Serial)
 import qualified Data.HashSet as HS
+import Data.List ((\\))
+import Data.List.Extra (intersperse)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
-import Grisette (EvalSym, Mergeable, ToCon (toCon), ToSym (toSym))
+import Grisette
+  ( PPrint (pformat),
+    allClasses01,
+    deriveGADT,
+    hardline,
+    pprintClasses,
+  )
 import Grisette.Lib.Synth.Context (ConcreteContext)
+import Grisette.Lib.Synth.Program.ProgPPrint (ProgPPrint (pformatProg))
 
 newtype SymbolTable prog = SymbolTable [(T.Text, prog)]
-  deriving (Show, Eq, Generic)
-  deriving newtype (Mergeable, EvalSym, Semigroup, Monoid)
-  deriving anyclass (Serial, NFData)
 
-instance
-  (ToCon symProg conProg) =>
-  ToCon (SymbolTable symProg) (SymbolTable conProg)
-  where
-  toCon (SymbolTable table) =
-    SymbolTable <$> traverse (\(s, p) -> (s,) <$> toCon p) table
+deriveGADT [''SymbolTable] (allClasses01 \\ pprintClasses)
 
-instance
-  (ToSym conProg symProg) =>
-  ToSym (SymbolTable conProg) (SymbolTable symProg)
-  where
-  toSym (SymbolTable table) =
-    SymbolTable $ second toSym <$> table
+instance (ProgPPrint prog) => PPrint (SymbolTable prog) where
+  pformat (SymbolTable lst) =
+    mconcat $ intersperse hardline $ go <$> lst
+    where
+      go (key, prog) =
+        case pformatProg key prog of
+          Left err -> err
+          Right doc -> doc
 
 lookupSymbol :: SymbolTable prog -> T.Text -> ConcreteContext prog
 lookupSymbol (SymbolTable table) symbol = go table

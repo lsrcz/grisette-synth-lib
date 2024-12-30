@@ -2,9 +2,12 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
   ( GenIntermediate (..),
@@ -16,9 +19,10 @@ where
 
 import GHC.Generics (Generic)
 import Grisette
-  ( Default (Default),
-    GenSym (fresh),
+  ( GenSym (fresh),
     Mergeable,
+    allClasses01,
+    deriveGADT,
     liftUnion,
   )
 import Grisette.Lib.Data.Traversable (mrgTraverse)
@@ -42,8 +46,9 @@ data Intermediates val = Intermediates
   { argIntermediates :: [val],
     resIntermediates :: [val]
   }
-  deriving (Show, Eq, Generic)
-  deriving (Mergeable) via (Default (Intermediates val))
+  deriving (Generic)
+
+deriveGADT [''Intermediates] allClasses01
 
 genOpIntermediates ::
   forall semObj ty val ctx p.

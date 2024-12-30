@@ -6,6 +6,9 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -15,11 +18,14 @@ module ConProg (Op (..), Prog) where
 
 import qualified Data.HashSet as HS
 import Data.Hashable (Hashable)
+import Data.List ((\\))
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (PPrint (pformat), mrgReturn)
+import Grisette (PPrint (pformat), allClasses01, deriveGADT, mrgReturn, pprintClasses)
 import Grisette.Lib.Synth.Context (MonadContext)
-import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
+import Grisette.Lib.Synth.Operator.OpReachableSymbols
+  ( OpReachableSymbols (opReachableSymbols),
+  )
 import Grisette.Lib.Synth.Operator.OpSemantics
   ( DefaultSem,
     OpSemantics (applyOp),
@@ -51,8 +57,9 @@ data Op intVal
   | Minus
   | IntConst intVal
   | If (TypeSignature Type) T.Text T.Text
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
+  deriving (Generic)
+
+deriveGADT [''Op] (allClasses01 \\ pprintClasses)
 
 type Prog varId intVal = Concrete.Prog (Op intVal) varId Type
 

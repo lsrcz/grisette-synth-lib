@@ -4,6 +4,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -12,17 +15,20 @@ module Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest
   )
 where
 
+import Data.List ((\\))
 import GHC.Generics (Generic)
 import Grisette
-  ( Default (Default),
-    Mergeable,
-    MonadUnion,
+  ( MonadUnion,
     Solvable (ssym),
     SymBool,
     Union,
+    allClasses0,
+    deriveGADT,
     identifier,
     liftToMonadUnion,
     mrgIf,
+    ordClasses,
+    unifiedSymOrdClasses,
   )
 import Grisette.Lib.Synth.Context (MonadContext, SymbolicContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
@@ -41,15 +47,15 @@ import Test.Framework (Test, TestOptions' (topt_timeout), plusTestOptions)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
 
-newtype MayAddOneOp = MayAddOneOp SymBool
-  deriving (Show, Generic, Eq)
-  deriving (Mergeable) via (Default MayAddOneOp)
+newtype MayAddOneOp = MayAddOneOp SymBool deriving (Generic)
+
+deriveGADT [''MayAddOneOp] (allClasses0 \\ (ordClasses ++ unifiedSymOrdClasses))
 
 data Sem = Sem
 
-data IntType = IntType
-  deriving (Generic)
-  deriving (Mergeable) via (Default IntType)
+data IntType = IntType deriving (Generic)
+
+deriveGADT [''IntType] allClasses0
 
 mayAddOne :: SymBool -> Int -> Union Int
 mayAddOne s x = mrgIf s (return x) (return $ x + 1)

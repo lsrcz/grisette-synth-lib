@@ -1,24 +1,37 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Grisette.Lib.Synth.Program.SumProg (SumProg (..)) where
 
-import Control.DeepSeq (NFData)
-import Data.Hashable (Hashable)
+import Data.Functor.Classes
+  ( Show1 (liftShowsPrec),
+    Show2 (liftShowsPrec2),
+    showsPrec1,
+  )
+import Data.List ((\\))
 import GHC.Generics (Generic)
-import Grisette (Default (Default), EvalSym, Mergeable, ToCon (toCon), ToSym)
+import Grisette
+  ( PPrint (pformatList, pformatPrec),
+    PPrint1 (liftPFormatPrec),
+    PPrint2 (liftPFormatPrec2),
+    ToCon (toCon),
+    allClasses012,
+    deriveGADT,
+    pformatPrec1,
+    pprintClasses,
+    showClasses,
+  )
 import Grisette.Lib.Synth.Program.Concrete.Program
   ( ProgPPrint (pformatProg),
     ProgToDot (toDotProg),
   )
--- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
-
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
@@ -47,33 +60,22 @@ import Grisette.Lib.Synth.Program.ProgUtil
       ),
   )
 
-data SumVarId l r = SumVarIdL l | SumVarIdR r
-  deriving (Eq, Generic)
-  deriving anyclass (NFData, Hashable)
+data SumVarId l r = SumVarIdL l | SumVarIdR r deriving (Generic)
 
-data SumOp l r = SumOpL l | SumOpR r
-  deriving (Eq, Generic)
-  deriving anyclass (NFData, Hashable)
+data SumOp l r = SumOpL l | SumOpR r deriving (Generic)
 
-data SumStmt l r = SumStmtL l | SumStmtR r
-  deriving (Eq, Generic)
-  deriving anyclass (NFData, Hashable)
+data SumStmt l r = SumStmtL l | SumStmtR r deriving (Generic)
+
+deriveGADT [''SumVarId, ''SumOp, ''SumStmt] allClasses012
 
 data SumProg l r
   = SumProgL l
   | SumProgR r
-  deriving (Eq, Generic)
-  deriving anyclass (NFData, Hashable)
-  deriving
-    ( EvalSym,
-      Mergeable,
-      ToSym (SumProg cl cr)
-    )
-    via (Default (SumProg l r))
+  deriving (Generic)
 
-instance (ToCon sl l, ToCon sr r) => ToCon (SumProg sl sr) (SumProg l r) where
-  toCon (SumProgL l) = SumProgL <$> toCon l
-  toCon (SumProgR r) = SumProgR <$> toCon r
+deriveGADT
+  [''SumProg]
+  (allClasses012 \\ (showClasses ++ pprintClasses))
 
 instance
   {-# OVERLAPPABLE #-}
@@ -83,9 +85,25 @@ instance
   toCon (SumProgL l) = toCon l
   toCon (SumProgR r) = toCon r
 
+instance Show2 SumProg where
+  liftShowsPrec2 sp1 _ _ _ n (SumProgL l) = sp1 n l
+  liftShowsPrec2 _ _ sp2 _ n (SumProgR r) = sp2 n r
+
+instance (Show l) => Show1 (SumProg l) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
+
 instance (Show l, Show r) => Show (SumProg l r) where
-  show (SumProgL l) = show l
-  show (SumProgR r) = show r
+  showsPrec = showsPrec1
+
+instance PPrint2 SumProg where
+  liftPFormatPrec2 pp1 _ _ _ n (SumProgL l) = pp1 n l
+  liftPFormatPrec2 _ _ pp2 _ n (SumProgR r) = pp2 n r
+
+instance (PPrint l) => PPrint1 (SumProg l) where
+  liftPFormatPrec = liftPFormatPrec2 pformatPrec pformatList
+
+instance (PPrint l, PPrint r) => PPrint (SumProg l r) where
+  pformatPrec = pformatPrec1
 
 instance
   ( ProgSemantics semObj l val ctx,
@@ -96,10 +114,6 @@ instance
   where
   runProg semObj table (SumProgL l) = runProg semObj table l
   runProg semObj table (SumProgR r) = runProg semObj table r
-
--- instance (ProgNaming l, ProgNaming r) => ProgNaming (SumProg l r) where
---   nameProg (SumProgL l) = nameProg l
---   nameProg (SumProgR r) = nameProg r
 
 instance
   ( ProgTyping l,

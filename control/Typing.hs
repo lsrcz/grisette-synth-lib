@@ -1,10 +1,10 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Typing
   ( Type (..),
@@ -16,16 +16,13 @@ module Typing
   )
 where
 
-import Data.Hashable (Hashable)
-import GHC.Generics (Generic)
 import Grisette
-  ( Default (Default),
-    EvalSym,
-    GenSym (fresh),
+  ( GenSym (fresh),
     GenSymSimple (simpleFresh),
     Mergeable,
     PPrint (pformat),
-    ToCon,
+    allClasses0,
+    deriveGADT,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
@@ -35,9 +32,8 @@ import Grisette.Lib.Synth.TypeSignature
 import Value (Value, ValueBuilder (mkBool, mkInt))
 
 data Type = IntType | BoolType
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable)
-  deriving (Mergeable, EvalSym, ToCon Type) via (Default Type)
+
+deriveGADT [''Type] (filter (/= ''PPrint) allClasses0)
 
 instance PPrint Type where
   pformat IntType = "int"

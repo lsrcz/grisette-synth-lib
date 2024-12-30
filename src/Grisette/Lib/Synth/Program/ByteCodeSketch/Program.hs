@@ -7,6 +7,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -18,28 +20,26 @@ module Grisette.Lib.Synth.Program.ByteCodeSketch.Program
   )
 where
 
-import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.State (MonadState (get), MonadTrans (lift), StateT)
-import qualified Data.Binary as Bytes
-import Data.Bytes.Serial (Serial (deserialize, serialize))
 import qualified Data.HashMap.Lazy as HM
-import Data.Hashable (Hashable)
-import qualified Data.Serialize as Cereal
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Grisette
   ( Default (Default),
-    EvalSym,
+    DeriveConfig (useNoStrategy),
     Mergeable,
-    MergingStrategy (NoStrategy, SimpleStrategy, SortedStrategy),
+    Mergeable3,
+    MergingStrategy (SimpleStrategy, SortedStrategy),
     MonadUnion,
     SimpleMergeable (mrgIte),
     SymEq ((.==)),
     SymOrd ((.>=)),
     ToCon (toCon),
     ToSym (toSym),
+    allClasses012,
+    deriveGADTWith,
     mrgIf,
     symAssertWith,
   )
@@ -50,9 +50,9 @@ import Grisette.Lib.Control.Monad.Trans.State (mrgEvalStateT, mrgPut)
 import Grisette.Lib.Data.Foldable (mrgTraverse_)
 import Grisette.Lib.Data.Traversable (mrgTraverse)
 import Grisette.Lib.Synth.Context (MonadContext)
--- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
-
-import Grisette.Lib.Synth.Operator.OpReachableSymbols (OpReachableSymbols (opReachableSymbols))
+import Grisette.Lib.Synth.Operator.OpReachableSymbols
+  ( OpReachableSymbols (opReachableSymbols),
+  )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
@@ -82,7 +82,9 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getStmtResIds
       ),
   )
-import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols))
+import Grisette.Lib.Synth.Program.SymbolTable
+  ( ProgReachableSymbols (progReachableSymbols),
+  )
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
@@ -96,23 +98,37 @@ data Stmt op conVarId symVarId = Stmt
     stmtResIds :: [conVarId],
     stmtResNum :: symVarId
   }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (Stmt op conVarId symVarId))
+  deriving (Generic)
 
-instance
-  (Serial op, Serial conVarId, Serial symVarId) =>
-  Cereal.Serialize (Stmt op conVarId symVarId)
-  where
-  put = serialize
-  get = deserialize
+data ProgArg conVarId ty = ProgArg
+  { progArgName :: T.Text,
+    progArgId :: conVarId,
+    progArgType :: ty
+  }
+  deriving (Generic)
 
-instance
-  (Serial op, Serial conVarId, Serial symVarId) =>
-  Bytes.Binary (Stmt op conVarId symVarId)
-  where
-  put = serialize
-  get = deserialize
+data ProgRes symVarId ty = ProgRes
+  { progResId :: symVarId,
+    progResType :: ty
+  }
+  deriving (Generic)
+
+data Prog op conVarId symVarId ty = Prog
+  { progArgList :: [ProgArg conVarId ty],
+    progStmtList :: [Stmt op conVarId symVarId],
+    progResList :: [ProgRes symVarId ty]
+  }
+  deriving (Generic)
+
+deriveGADTWith
+  mempty {useNoStrategy = True}
+  [''Stmt, ''ProgArg, ''ProgRes, ''Prog]
+  allClasses012
+
+deriveGADTWith
+  mempty {useNoStrategy = True}
+  [''Prog]
+  [''Mergeable3]
 
 instance
   (ToCon conOp symOp, RelatedVarId conVarId symVarId, Mergeable conOp) =>
@@ -125,62 +141,11 @@ instance
     conResNum <- fromIntegral <$> (toCon resNum :: Maybe conVarId)
     return $ Concrete.Stmt conOp conArgIds (take conResNum resIds)
 
-instance Mergeable (Stmt op conVarId symVarId) where
-  rootStrategy = NoStrategy
-
-data ProgArg conVarId ty = ProgArg
-  { progArgName :: T.Text,
-    progArgId :: conVarId,
-    progArgType :: ty
-  }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (ProgArg conVarId ty))
-
-instance
-  (Serial op, Serial conVarId) =>
-  Cereal.Serialize (ProgArg op conVarId)
-  where
-  put = serialize
-  get = deserialize
-
-instance
-  (Serial op, Serial conVarId) =>
-  Bytes.Binary (ProgArg op conVarId)
-  where
-  put = serialize
-  get = deserialize
-
 instance
   (ToCon symTy conTy) =>
   ToCon (ProgArg conVarId symTy) (Concrete.ProgArg conVarId conTy)
   where
   toCon (ProgArg name varId ty) = Concrete.ProgArg name varId <$> toCon ty
-
-instance Mergeable (ProgArg conVarId ty) where
-  rootStrategy = NoStrategy
-
-data ProgRes symVarId ty = ProgRes
-  { progResId :: symVarId,
-    progResType :: ty
-  }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (ProgRes symVarId ty))
-
-instance
-  (Serial op, Serial symVarId) =>
-  Cereal.Serialize (ProgRes op symVarId)
-  where
-  put = serialize
-  get = deserialize
-
-instance
-  (Serial op, Serial symVarId) =>
-  Bytes.Binary (ProgRes op symVarId)
-  where
-  put = serialize
-  get = deserialize
 
 instance
   (RelatedVarId conVarId symVarId, ToCon symTy conTy) =>
@@ -194,32 +159,6 @@ instance
         { Concrete.progResId = conProgResId,
           Concrete.progResType = conTy
         }
-
-instance Mergeable (ProgRes symVarId ty) where
-  rootStrategy = NoStrategy
-
-data Prog op conVarId symVarId ty = Prog
-  { progArgList :: [ProgArg conVarId ty],
-    progStmtList :: [Stmt op conVarId symVarId],
-    progResList :: [ProgRes symVarId ty]
-  }
-  deriving (Show, Eq, Generic)
-  deriving anyclass (Hashable, NFData, Serial)
-  deriving (EvalSym) via (Default (Prog op conVarId symVarId ty))
-
-instance
-  (Serial op, Serial conVarId, Serial symVarId, Serial ty) =>
-  Cereal.Serialize (Prog op conVarId symVarId ty)
-  where
-  put = serialize
-  get = deserialize
-
-instance
-  (Serial op, Serial conVarId, Serial symVarId, Serial ty) =>
-  Bytes.Binary (Prog op conVarId symVarId ty)
-  where
-  put = serialize
-  get = deserialize
 
 deriving via
   (Default (Concrete.Prog conOp conVarId conTy))
