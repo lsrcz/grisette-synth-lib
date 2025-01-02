@@ -26,7 +26,8 @@ import Control.Monad (when)
 import Control.Monad.Except (runExceptT)
 import GHC.Generics (Generic)
 import Grisette
-  ( GenSymSimple (simpleFresh),
+  ( GenSym,
+    GenSymSimple (simpleFresh),
     LogicalOp (false),
     MonadUnion,
     SafeDiv (safeDivMod),
@@ -52,6 +53,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch
 import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
   ( OpSymmetryReduction (opCommutativeArgPos, opUnreorderable),
   )
+import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments, pformatOp, prefixResults))
 import Grisette.Lib.Synth.Program.Concrete.Flatten
   ( OpFlatten (opForwardedSubProg),
   )
@@ -64,6 +66,19 @@ import Grisette.Lib.Synth.Util.Show (showText)
 data TestSemanticsOp = Add | DivMod | Inc | Double deriving (Generic)
 
 deriveGADT [''TestSemanticsOp] allClasses0
+
+instance OpPPrint TestSemanticsOp where
+  prefixResults _ = return []
+  describeArguments _ = return []
+  pformatOp Add = "add"
+  pformatOp DivMod = "divmod"
+  pformatOp Inc = "inc"
+  pformatOp Double = "double"
+
+instance GenSymSimple TestSemanticsOp TestSemanticsOp where
+  simpleFresh = return
+
+instance GenSym TestSemanticsOp TestSemanticsOp
 
 instance OpReachableSymbols TestSemanticsOp where
   opReachableSymbols _ = mempty
@@ -84,6 +99,11 @@ instance NFData TestSemanticsObj where
 data TestSemanticsType = IntType deriving (Generic)
 
 deriveGADT [''TestSemanticsType] allClasses0
+
+instance GenSymSimple TestSemanticsType TestSemanticsType where
+  simpleFresh = return
+
+instance GenSym TestSemanticsType TestSemanticsType
 
 instance
   (MonadContext ctx) =>

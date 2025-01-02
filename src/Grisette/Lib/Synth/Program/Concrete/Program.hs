@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -82,6 +83,7 @@ import qualified Data.Text.Lazy as TL
 import GHC.Generics (Generic)
 import Grisette
   ( DeriveConfig (useNoStrategy),
+    GenSymSimple (simpleFresh),
     Mergeable,
     Mergeable3,
     PPrint (pformat),
@@ -98,6 +100,7 @@ import Grisette.Lib.Synth.Operator.OpReachableSymbols
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
+import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum (lowestSeqNum), PartitionSpec (partitionSpec), lowestSeqNumList, partitionSpecList)
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( OpPPrint (pformatOp),
     OpPPrintError,
@@ -601,3 +604,41 @@ eliminateProgTableDeadCode ::
   SymbolTable (Prog op varId ty)
 eliminateProgTableDeadCode (SymbolTable table) =
   SymbolTable $ map (second eliminateDeadCode) table
+
+instance (LowestSeqNum op) => LowestSeqNum (Prog op varId ty) where
+  lowestSeqNum succeeded (Prog _ stmts _) =
+    lowestSeqNumList succeeded $ stmtOp <$> stmts
+
+instance (PartitionSpec op) => PartitionSpec (Stmt op varId) where
+  partitionSpec seqNum Stmt {..} =
+    let lst = partitionSpec seqNum stmtOp
+     in [Stmt {stmtOp = l, ..} | l <- lst]
+
+instance (PartitionSpec op) => PartitionSpec (Prog op varId ty) where
+  partitionSpec seqNum Prog {..} =
+    let lst = partitionSpecList seqNum progStmtList
+     in [Prog {progStmtList = l, ..} | l <- lst]
+
+instance
+  (GenSymSimple op0 op1, GenSymSimple ty0 ty1) =>
+  GenSymSimple (Prog op0 varId ty0) (Prog op1 varId ty1)
+  where
+  simpleFresh (Prog args stmts ress) = do
+    newStmts <- traverse goStmt stmts
+    newArgs <-
+      traverse
+        ( \arg ->
+            (\ty -> arg {progArgType = ty}) <$> simpleFresh (progArgType arg)
+        )
+        args
+    newResTypes <-
+      traverse
+        ( \res ->
+            (\ty -> res {progResType = ty}) <$> simpleFresh (progResType res)
+        )
+        ress
+    return $ Prog newArgs newStmts newResTypes
+    where
+      goStmt (Stmt op argIds resIds) = do
+        newOp <- simpleFresh op
+        return $ Stmt newOp argIds resIds

@@ -27,13 +27,19 @@ import Data.List ((\\))
 import Data.List.Extra (intersperse)
 import qualified Data.Text as T
 import Grisette
-  ( PPrint (pformat),
+  ( GenSymSimple (simpleFresh),
+    PPrint (pformat),
     allClasses01,
     deriveGADT,
     hardline,
     pprintClasses,
   )
 import Grisette.Lib.Synth.Context (ConcreteContext)
+import Grisette.Lib.Synth.Program.Choice.Split
+  ( LowestSeqNum (lowestSeqNum),
+    PartitionSpec (partitionSpec),
+    lowestSeqNumList,
+  )
 import Grisette.Lib.Synth.Program.ProgPPrint (ProgPPrint (pformatProg))
 
 newtype SymbolTable prog = SymbolTable [(T.Text, prog)]
@@ -84,3 +90,24 @@ filterByReachableSymbols symbols table@(SymbolTable t) = do
   progReachable <- transitivelyReachableSymbols symbols table
   let filtered = filter (\(s, _) -> HS.member s progReachable) t
   return $ SymbolTable filtered
+
+instance (LowestSeqNum prog) => LowestSeqNum (SymbolTable prog) where
+  lowestSeqNum succeeded (SymbolTable lst) =
+    lowestSeqNumList succeeded $ snd <$> lst
+
+instance (PartitionSpec prog) => PartitionSpec (SymbolTable prog) where
+  partitionSpec seqNum (SymbolTable lst) =
+    SymbolTable <$> go lst
+    where
+      go [] = [[]]
+      go ((sym, prog) : rest) = do
+        prog' <- partitionSpec seqNum prog
+        res <- go rest
+        return $ (sym, prog') : res
+
+instance
+  (GenSymSimple prog0 prog) =>
+  GenSymSimple (SymbolTable prog0) (SymbolTable prog)
+  where
+  simpleFresh (SymbolTable lst) = do
+    SymbolTable <$> traverse (\(sym, prog) -> (sym,) <$> simpleFresh prog) lst

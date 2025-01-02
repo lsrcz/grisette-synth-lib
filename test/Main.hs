@@ -4,13 +4,8 @@ import Grisette.Lib.Synth.Operator.OpPPrintTest (opPPrintTest)
 import Grisette.Lib.Synth.Operator.OpSemanticsTest (opSemanticsTest)
 import Grisette.Lib.Synth.Operator.OpToDotTest (opToDotTest)
 import Grisette.Lib.Synth.Operator.OpTypingTest (opTypingTest)
-{-
-import Grisette.Lib.Synth.Program.BuiltinProgConstraintsTest
-  ( builtinProgConstraintsTest,
-  )
--}
-
 import Grisette.Lib.Synth.Program.ByteCodeSketchTest (byteCodeSketchTest)
+import Grisette.Lib.Synth.Program.ChoiceTest (choiceTest)
 import Grisette.Lib.Synth.Program.ComponentSketchTest (componentSketchTest)
 import Grisette.Lib.Synth.Program.ConcreteTest (concreteTest)
 import Grisette.Lib.Synth.Reasoning.FuzzingTest (fuzzingTest)
@@ -44,6 +39,7 @@ tests =
     synthesisTest,
     threadPoolTest,
     synthesisTaskHandleTest,
-    refinableTaskHandleTest -- ,
+    refinableTaskHandleTest,
+    choiceTest
     -- builtinProgConstraintsTest
   ]

@@ -5,7 +5,9 @@ import Grisette.Lib.Synth.Program.Concrete.EliminateDeadCodeTest
   ( eliminateDeadCodeTest,
   )
 import Grisette.Lib.Synth.Program.Concrete.FlattenTest (flattenTest)
+import Grisette.Lib.Synth.Program.Concrete.GenSymSimpleTest (genSymSimpleTest)
 import Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest (mayMultiPathTest)
+import Grisette.Lib.Synth.Program.Concrete.PartitionTest (partitionTest)
 import Grisette.Lib.Synth.Program.Concrete.PrettyTest (prettyTest)
 import Grisette.Lib.Synth.Program.Concrete.ProgCostTest (progCostTest)
 import Grisette.Lib.Synth.Program.Concrete.ProgUtilTest (progUtilTest)
@@ -28,5 +30,7 @@ concreteTest =
       progUtilTest,
       flattenTest,
       progCostTest,
-      eliminateDeadCodeTest
+      eliminateDeadCodeTest,
+      partitionTest,
+      genSymSimpleTest
     ]

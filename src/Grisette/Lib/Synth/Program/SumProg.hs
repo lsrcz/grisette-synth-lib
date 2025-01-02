@@ -18,7 +18,8 @@ import Data.Functor.Classes
 import Data.List ((\\))
 import GHC.Generics (Generic)
 import Grisette
-  ( PPrint (pformatList, pformatPrec),
+  ( GenSymSimple (simpleFresh),
+    PPrint (pformatList, pformatPrec),
     PPrint1 (liftPFormatPrec),
     PPrint2 (liftPFormatPrec2),
     ToCon (toCon),
@@ -28,6 +29,7 @@ import Grisette
     pprintClasses,
     showClasses,
   )
+import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum (lowestSeqNum), PartitionSpec (partitionSpec))
 import Grisette.Lib.Synth.Program.Concrete.Program
   ( ProgPPrint (pformatProg),
     ProgToDot (toDotProg),
@@ -219,3 +221,20 @@ instance
   where
   progCost costObj table (SumProgL l) = progCost costObj table l
   progCost costObj table (SumProgR r) = progCost costObj table r
+
+instance (LowestSeqNum l, LowestSeqNum r) => LowestSeqNum (SumProg l r) where
+  lowestSeqNum succeeded (SumProgL l) = lowestSeqNum succeeded l
+  lowestSeqNum succeeded (SumProgR r) = lowestSeqNum succeeded r
+
+instance (PartitionSpec l, PartitionSpec r) => PartitionSpec (SumProg l r) where
+  partitionSpec seqNum (SumProgL l) =
+    [SumProgL l | l <- partitionSpec seqNum l]
+  partitionSpec seqNum (SumProgR r) =
+    [SumProgR r | r <- partitionSpec seqNum r]
+
+instance
+  (GenSymSimple l0 l1, GenSymSimple r0 r1) =>
+  GenSymSimple (SumProg l0 r0) (SumProg l1 r1)
+  where
+  simpleFresh (SumProgL l) = SumProgL <$> simpleFresh l
+  simpleFresh (SumProgR r) = SumProgR <$> simpleFresh r

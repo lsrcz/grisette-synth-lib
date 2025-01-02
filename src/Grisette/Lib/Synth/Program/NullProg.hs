@@ -12,13 +12,13 @@
 module Grisette.Lib.Synth.Program.NullProg (NullProg) where
 
 import GHC.Generics (Generic)
-import Grisette (allClasses01, deriveGADT)
+import Grisette (GenSymSimple (simpleFresh), allClasses01, deriveGADT)
 import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum (lowestSeqNum), PartitionSpec (partitionSpec))
 import Grisette.Lib.Synth.Program.Concrete.Program
   ( ProgPPrint (pformatProg),
     ProgToDot (toDotProg),
   )
--- import Grisette.Lib.Synth.Program.ProgNaming (ProgNaming (nameProg))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
@@ -91,3 +91,12 @@ instance ProgUtil (NullProg ty) where
   type ProgTypeType (NullProg ty) = ty
   type ProgVarIdType _ = ()
   type ProgStmtType (NullProg ty) = NullStmt ty
+
+instance LowestSeqNum (NullProg ty) where
+  lowestSeqNum _ _ = error "Impossible"
+
+instance PartitionSpec (NullProg ty) where
+  partitionSpec _ _ = error "Impossible"
+
+instance GenSymSimple (NullProg ty0) (NullProg ty1) where
+  simpleFresh _ = error "Impossible"
