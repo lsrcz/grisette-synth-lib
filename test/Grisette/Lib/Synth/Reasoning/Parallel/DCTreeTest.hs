@@ -16,7 +16,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
     nodeFailed,
     nodeParent,
     numNodes,
-    rootNodes,
+    rootNodes, insertRootSketches,
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
@@ -47,6 +47,13 @@ dcTreeTest =
             nodeParent tree2 nodeId2 @?= Nothing
             rootNodes tree2 @?= HS.fromList [nodeId, nodeId2]
             leafNodes tree2 @?= HS.fromList [nodeId, nodeId2],
+          testCase "insertRootSketches" $ do
+            let tree0 = emptyDCTree :: DCTree Int
+            let (nodeIds, tree1) = insertRootSketches tree0 [1, 2]
+            numNodes tree1 @?= 2
+            nodeIds @?= [NodeId 1, NodeId 2]
+            rootNodes tree1 @?= HS.fromList [NodeId 1, NodeId 2]
+            leafNodes tree1 @?= HS.fromList [NodeId 1, NodeId 2],
           testCase "insertSplittedSketches" $ do
             let tree0 = emptyDCTree :: DCTree Int
             let (nodeId1, tree1) = insertRootSketch tree0 1
@@ -66,24 +73,30 @@ dcTreeTest =
             let (nodeId2, tree2) = insertRootSketch tree1 2
             let (_, tree3) = insertSplittedSketches tree2 nodeId1 [3, 4]
             let (_, tree4) = insertSplittedSketches tree3 (NodeId 3) [5, 6]
-            let tree5 = markNodeFailed tree4 nodeId1
-            nodeFailed tree5 nodeId1 @?= True
-            nodeFailed tree5 nodeId2 @?= False
-            nodeFailed tree5 (NodeId 3) @?= True
-            nodeFailed tree5 (NodeId 4) @?= True
-            nodeFailed tree5 (NodeId 5) @?= True
-            nodeFailed tree5 (NodeId 6) @?= True,
+            let (_, tree5) = insertSplittedSketches tree4 (NodeId 4) [7, 8]
+            let (marked, tree6) = markNodeFailed tree5 (NodeId 4)
+            marked @?= HS.fromList [NodeId 4, NodeId 7, NodeId 8]
+            let (marked2, tree7) = markNodeFailed tree6 (NodeId 1)
+            marked2 @?= HS.fromList [nodeId1, NodeId 3, NodeId 5, NodeId 6]
+            nodeFailed tree7 nodeId1 @?= True
+            nodeFailed tree7 nodeId2 @?= False
+            nodeFailed tree7 (NodeId 3) @?= True
+            nodeFailed tree7 (NodeId 4) @?= True
+            nodeFailed tree7 (NodeId 5) @?= True
+            nodeFailed tree7 (NodeId 6) @?= True,
           testCase "markNodeFailed -- up" $ do
             let tree0 = emptyDCTree :: DCTree Int
             let (nodeId1, tree1) = insertRootSketch tree0 1
             let (nodeId2, tree2) = insertRootSketch tree1 2
             let (_, tree3) = insertSplittedSketches tree2 nodeId1 [3, 4]
-            let tree4 = markNodeFailed tree3 (NodeId 3)
+            let (marked, tree4) = markNodeFailed tree3 (NodeId 3)
+            marked @?= HS.fromList [NodeId 3]
             nodeFailed tree4 nodeId1 @?= False
             nodeFailed tree4 nodeId2 @?= False
             nodeFailed tree4 (NodeId 3) @?= True
             nodeFailed tree4 (NodeId 4) @?= False
-            let tree5 = markNodeFailed tree4 (NodeId 4)
+            let (marked2, tree5) = markNodeFailed tree4 (NodeId 4)
+            marked2 @?= HS.fromList [nodeId1, NodeId 4]
             nodeFailed tree5 nodeId1 @?= True
             nodeFailed tree5 nodeId2 @?= False
             nodeFailed tree5 (NodeId 3) @?= True
@@ -91,7 +104,7 @@ dcTreeTest =
           testCase "insertSplittedSketches -- failed" $ do
             let tree0 = emptyDCTree :: DCTree Int
             let (nodeId1, tree1) = insertRootSketch tree0 1
-            let tree2 = markNodeFailed tree1 nodeId1
+            let (_, tree2) = markNodeFailed tree1 nodeId1
             let (_, tree3) = insertSplittedSketches tree2 nodeId1 [2, 3]
             nodeFailed tree3 nodeId1 @?= True
             nodeFailed tree3 (NodeId 2) @?= True

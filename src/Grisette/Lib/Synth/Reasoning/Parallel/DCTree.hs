@@ -15,6 +15,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.DCTree
     leafNodes,
     nodeDepth,
     insertRootSketch,
+    insertRootSketches,
     insertSplittedSketches,
     markNodeFailed,
     emptyDCTree,
@@ -25,6 +26,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.DCTree
   )
 where
 
+import Data.Bifunctor (first)
 import qualified Data.HashMap.Internal.Strict as HM
 import qualified Data.HashSet as HS
 import Data.Hashable (Hashable)
@@ -50,7 +52,7 @@ data DCTree sketchSpec = DCTree
 
 deriveGADT
   [''NodeId, ''Node, ''DCTree]
-  [''Show, ''Eq, ''Hashable, ''PPrint]
+  [''Show, ''Eq, ''Ord, ''Hashable, ''PPrint]
 
 emptyDCTree :: DCTree sketchSpec
 emptyDCTree = DCTree HM.empty mempty
@@ -151,6 +153,21 @@ insertRootSketch ::
   (NodeId, DCTree sketchSpec)
 insertRootSketch tree sketch = _insertSketch tree Nothing sketch
 
+insertRootSketches ::
+  (Hashable sketchSpec) =>
+  DCTree sketchSpec ->
+  [sketchSpec] ->
+  ([NodeId], DCTree sketchSpec)
+insertRootSketches tree sketches =
+  first reverse $
+    foldl
+      ( \(nodeIds, newTree) sketch ->
+          let (nodeId, newTree2) = _insertSketch newTree Nothing sketch
+           in (nodeId : nodeIds, newTree2)
+      )
+      (mempty, tree)
+      sketches
+
 insertSplittedSketches ::
   (Hashable sketchSpec) =>
   DCTree sketchSpec -> NodeId -> [sketchSpec] -> ([NodeId], DCTree sketchSpec)
@@ -179,16 +196,16 @@ insertSplittedSketches tree parent sketches =
           error "insertSplittedSketches: parent node is already splitted"
 
 _checkAndPropagateSplittedFailure ::
-  DCTree sketchSpec -> NodeId -> DCTree sketchSpec
+  DCTree sketchSpec -> NodeId -> (HS.HashSet NodeId, DCTree sketchSpec)
 _checkAndPropagateSplittedFailure tree@DCTree {..} nid =
   if nodeFailed tree nid
-    then tree
+    then (mempty, tree)
     else case nodeDividedChildren tree nid of
-      Nothing -> tree
+      Nothing -> (mempty, tree)
       Just children ->
         if all (nodeFailed tree) children
           then markNodeFailed tree nid
-          else tree
+          else (mempty, tree)
 
 _setNodeFailed :: DCTree sketchSpec -> NodeId -> DCTree sketchSpec
 _setNodeFailed tree@DCTree {..} nid =
@@ -201,22 +218,28 @@ _setNodeFailed tree@DCTree {..} nid =
               dcTreeNodes
         }
 
-markNodeFailed :: DCTree sketchSpec -> NodeId -> DCTree sketchSpec
+markNodeFailed ::
+  DCTree sketchSpec -> NodeId -> (HS.HashSet NodeId, DCTree sketchSpec)
 markNodeFailed tree@DCTree {..} nid =
   if nodeFailed tree nid
-    then tree
+    then (mempty, tree)
     else
       let tree0 = _setNodeFailed tree nid
-          tree1 =
+          (markedFailed', tree1) =
             foldl
-              markNodeFailed
-              tree0
+              ( \(oldInferredFailed, tree) nid ->
+                  first (HS.union oldInferredFailed) $ markNodeFailed tree nid
+              )
+              (mempty, tree0)
               ( fromMaybe mempty (nodeDividedChildren tree nid)
                   <> nodeExtraChildren tree nid
               )
+          markedFailed = HS.insert nid markedFailed'
        in maybe
-            tree1
-            (_checkAndPropagateSplittedFailure tree1)
+            (markedFailed, tree1)
+            ( first (HS.union markedFailed)
+                . _checkAndPropagateSplittedFailure tree1
+            )
             (nodeParent tree nid)
 
 _parentNode :: DCTree sketchSpec -> NodeId -> Maybe (Node sketchSpec)
