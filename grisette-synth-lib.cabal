@@ -63,6 +63,7 @@ library
       Grisette.Lib.Synth.Reasoning.IOPair
       Grisette.Lib.Synth.Reasoning.Matcher
       Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
+      Grisette.Lib.Synth.Reasoning.Parallel.DCTree
       Grisette.Lib.Synth.Reasoning.Parallel.Exception
       Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandle
       Grisette.Lib.Synth.Reasoning.Parallel.SynthesisTaskHandle
@@ -223,6 +224,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.ConcreteTest
       Grisette.Lib.Synth.Reasoning.FuzzingTest
       Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandleTestCommon
+      Grisette.Lib.Synth.Reasoning.Parallel.DCTreeTest
       Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandleTest
       Grisette.Lib.Synth.Reasoning.Parallel.SynthesisTaskHandleTest
       Grisette.Lib.Synth.Reasoning.Parallel.ThreadPoolTest

@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -ddump-splices -ddump-to-file -ddump-file-prefix=synthesis #-}
+-- {-# OPTIONS_GHC -ddump-splices -ddump-to-file -ddump-file-prefix=synthesis #-}
 
 module Grisette.Lib.Synth.Reasoning.Synthesis
   ( SynthesisContext (..),
