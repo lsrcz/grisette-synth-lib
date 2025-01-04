@@ -38,6 +38,10 @@ dependencies:
   - cereal
   - bytes
   - binary
+  - hslogger
+  - unix
+  - bytestring
+  - ansi-terminal
 
 ghc-options:
   - -Wextra
