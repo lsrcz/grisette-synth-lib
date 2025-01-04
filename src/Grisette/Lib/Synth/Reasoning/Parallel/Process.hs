@@ -74,6 +74,7 @@ import Grisette.Lib.Synth.Context
     ConcreteContext,
     SymbolicContext,
   )
+import Grisette.Lib.Synth.Program.Choice.Counting (CountNumProgsEvidence, countNumChoicesWithEvidence, countNumProgsWithEvidence)
 import Grisette.Lib.Synth.Program.Concrete
   ( ProgPPrint,
     eliminateProgTableDeadCode,
@@ -230,7 +231,9 @@ data
       doDeadCodeElimination :: Bool,
       easySynthTimeout :: Int,
       exactCost :: Maybe Int,
-      initialCost :: Maybe Int
+      initialCost :: Maybe Int,
+      countNumProgsEvidence ::
+        Maybe (CountNumProgsEvidence (SymbolTable sketchSpec))
     } ->
     ProcessConfig
       sketchSpec
@@ -601,11 +604,10 @@ runRequestInSubProcess config processConfig@ProcessConfig {..} = do
             rdChild,
             logger
           }
-    let verifiersWithLogger = verifiers logger
     let loop :: (Solver handle) => handle -> ProcessStep conProg -> IO ()
         loop solver st = do
           nextStep <- case st of
-            InitialStep -> initialStep processConfig verifiersWithLogger
+            InitialStep -> initialStep processConfig stateRef
             FastTrackSynthStep ->
               fastTrackSynthStep solver processConfig stateRef
             FastTrackImmSynthStep prog ->
@@ -635,9 +637,38 @@ initialStep ::
     conSemObj
     conVal
     matcher ->
-  TwoTrackVerifiers sketch conProg ->
+  IORef ProcessState ->
   IO (ProcessStep conProg)
-initialStep ProcessConfig {..} TwoTrackVerifiers {..} = do
+initialStep ProcessConfig {..} stateRef = do
+  logger <- _readLogger stateRef
+  let TwoTrackVerifiers {..} = verifiers logger
+
+  case countNumProgsEvidence of
+    Nothing ->
+      logMultiLineDoc logger NOTICE $
+        nest 2 $
+          vsep
+            [ "Start synthesizing with sketch: ",
+              pformat sketchSpec,
+              ", entry symbol:",
+              pformat sketchSymbol
+            ]
+    Just evidence -> do
+      let numOfChoices = countNumChoicesWithEvidence evidence sketchSpec
+      let numOfProgs = countNumProgsWithEvidence evidence sketchSpec
+      logMultiLineDoc logger NOTICE $
+        nest 2 $
+          vsep
+            [ "Start synthesizing with sketch: ",
+              pformat sketchSpec,
+              ", entry symbol:",
+              pformat sketchSymbol,
+              "number of choices: ",
+              pformat numOfChoices,
+              "number of well-typed progs: ",
+              pformat numOfProgs
+            ]
+
   let haveTwoTracks = not $ null slowTrackVerifiers
   if haveTwoTracks
     then return FastTrackSynthStep
