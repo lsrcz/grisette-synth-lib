@@ -291,7 +291,7 @@ data Message conProg symSemObj symVal conSemObj conVal matcher
         _knownCost :: Maybe Int,
         _prog :: SymbolTable conProg
       }
-  | FastTrackImmSynthFailure
+  | FastTrackEasySynthFailure
       { _knownCost :: Maybe Int,
         _examples :: [Example symSemObj symVal conSemObj conVal matcher]
       }
@@ -322,8 +322,8 @@ pformatMessageSummary (FastTrackViable nextTrack examples cost _) =
     <> " track, best known cost: "
     <> pformat cost
     <> ")"
-pformatMessageSummary (FastTrackImmSynthFailure cost examples) =
-  "FastTrackImmSynthFailure (with "
+pformatMessageSummary (FastTrackEasySynthFailure cost examples) =
+  "FastTrackEasySynthFailure (with "
     <> pformat (length examples)
     <> " examples, best known cost: "
     <> pformat cost
@@ -354,7 +354,7 @@ instance
         [ pformatMessageSummary message,
           pformat prog
         ]
-  pformat message@(FastTrackImmSynthFailure _ _) = pformatMessageSummary message
+  pformat message@(FastTrackEasySynthFailure _ _) = pformatMessageSummary message
   pformat message@(GotExample example currentCost) =
     nest 2 $
       vsep
@@ -550,7 +550,7 @@ instance Hashable Process where
 data ProcessStep conProg
   = InitialStep
   | FastTrackSynthStep
-  | FastTrackImmSynthStep (SymbolTable conProg)
+  | FastTrackEasySynthStep (SymbolTable conProg)
   | SlowTrackSynthStep
   | TerminationStep
 
@@ -610,8 +610,8 @@ runRequestInSubProcess config processConfig@ProcessConfig {..} = do
             InitialStep -> initialStep processConfig stateRef
             FastTrackSynthStep ->
               fastTrackSynthStep solver processConfig stateRef
-            FastTrackImmSynthStep prog ->
-              fastTrackImmSynthStep config processConfig stateRef prog
+            FastTrackEasySynthStep prog ->
+              fastTrackEasySynthStep config processConfig stateRef prog
             SlowTrackSynthStep ->
               slowTrackSynthStep solver processConfig stateRef
             TerminationStep -> error "Should not happen"
@@ -728,7 +728,7 @@ fastTrackSynthStep handle processConfig@ProcessConfig {..} stateRef = do
       _sendAndWaitForNewMinimalCost stateRef $
         FastTrackViable nextTrack examples cost prog
       if isJust easySketchFromFastResult
-        then return $ FastTrackImmSynthStep prog
+        then return $ FastTrackEasySynthStep prog
         else return $ SlowTrackSynthStep
     SynthesisSolverFailure failure -> do
       logMultiLineDoc logger NOTICE $
@@ -745,7 +745,7 @@ fastTrackSynthStep handle processConfig@ProcessConfig {..} stateRef = do
         T.unpack $
           "Verification crashed, please check the code, reason: " <> err
 
-fastTrackImmSynthStep ::
+fastTrackEasySynthStep ::
   forall
     sketchSpec
     sketch
@@ -762,7 +762,7 @@ fastTrackImmSynthStep ::
   IORef ProcessState ->
   SymbolTable conProg ->
   IO (ProcessStep conProg)
-fastTrackImmSynthStep
+fastTrackEasySynthStep
   config
   processConfig@ProcessConfig {..}
   stateRef
@@ -835,7 +835,7 @@ fastTrackImmSynthStep
         cost <- _readKnownMinimalCost stateRef
         _sendAndWaitForNewMinimalCost
           stateRef
-          ( FastTrackImmSynthFailure cost examples ::
+          ( FastTrackEasySynthFailure cost examples ::
               Message conProg symSemObj symVal conSemObj conVal matcher
           )
         return SlowTrackSynthStep
@@ -846,7 +846,7 @@ fastTrackImmSynthStep
           "Fast track easy synth timed out or crashed, switch to slow track."
         cost <- _readKnownMinimalCost stateRef
         _sendAndWaitForNewMinimalCost stateRef $
-          ( FastTrackImmSynthFailure cost [] ::
+          ( FastTrackEasySynthFailure cost [] ::
               Message conProg symSemObj symVal conSemObj conVal matcher
           )
         return SlowTrackSynthStep
