@@ -68,6 +68,7 @@ library
       Grisette.Lib.Synth.Reasoning.Parallel.Exception
       Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
       Grisette.Lib.Synth.Reasoning.Parallel.LogMultiLine
+      Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
       Grisette.Lib.Synth.Reasoning.Parallel.Process
       Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandle
       Grisette.Lib.Synth.Reasoning.Parallel.Serialize

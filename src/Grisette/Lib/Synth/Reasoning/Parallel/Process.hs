@@ -19,9 +19,16 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Process
     Message (..),
     Process (..),
     LogConfig (..),
+    ProcessResponse,
     runRequestInSubProcess,
     getProcessResponse,
     sendNewMinimalCost,
+    processResponseNewCost,
+    processResponseIsGotExample,
+    processResponseIsFastTrackSuccess,
+    processResponseIsSlowTrackSuccess,
+    processResponseIsFastTrackEasySynthFailure,
+    processResponseIsFastTrackViable,
   )
 where
 
@@ -944,6 +951,40 @@ _readProcessResponse process@Process {..} (Terminated signal dumped) = do
         <> (if dumped then " (core dumped)" else "")
 _readProcessResponse _ (Stopped {}) = error "Should not happen"
 
+type ProcessResponse conProg symSemObj symVal conSemObj conVal matcher =
+  Either T.Text (Message conProg symSemObj symVal conSemObj conVal matcher)
+
+processResponseNewCost ::
+  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
+processResponseNewCost (Right (Success _ _ cost _)) = Just cost
+processResponseNewCost _ = Nothing
+
+processResponseIsGotExample ::
+  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
+processResponseIsGotExample (Right GotExample {}) = True
+processResponseIsGotExample _ = False
+
+processResponseIsFastTrackSuccess ::
+  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
+processResponseIsFastTrackSuccess (Right (Success FastTrack _ _ _)) = True
+processResponseIsFastTrackSuccess _ = False
+
+processResponseIsSlowTrackSuccess ::
+  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
+processResponseIsSlowTrackSuccess (Right (Success SlowTrack _ _ _)) = True
+processResponseIsSlowTrackSuccess _ = False
+
+processResponseIsFastTrackEasySynthFailure ::
+  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
+processResponseIsFastTrackEasySynthFailure
+  (Right FastTrackEasySynthFailure {}) = True
+processResponseIsFastTrackEasySynthFailure _ = False
+
+processResponseIsFastTrackViable ::
+  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
+processResponseIsFastTrackViable (Right FastTrackViable {}) = True
+processResponseIsFastTrackViable _ = False
+
 getProcessResponse ::
   ( Serial conProg,
     Serial symSemObj,
@@ -955,10 +996,7 @@ getProcessResponse ::
   Process ->
   IO
     ( Maybe
-        ( Either
-            T.Text
-            (Message conProg symSemObj symVal conSemObj conVal matcher)
-        )
+        (ProcessResponse conProg symSemObj symVal conSemObj conVal matcher)
     )
 getProcessResponse blk process@Process {..} = do
   r <- getProcessStatus blk False pid
