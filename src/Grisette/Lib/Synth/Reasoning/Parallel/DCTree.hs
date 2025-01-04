@@ -31,7 +31,7 @@ import qualified Data.HashMap.Internal.Strict as HM
 import qualified Data.HashSet as HS
 import Data.Hashable (Hashable)
 import Data.Maybe (fromMaybe)
-import Grisette (PPrint, deriveGADT)
+import Grisette (PPrint (pformat), deriveGADT)
 
 newtype NodeId = NodeId Int
 
@@ -52,7 +52,17 @@ data DCTree sketchSpec = DCTree
 
 deriveGADT
   [''NodeId, ''Node, ''DCTree]
-  [''Show, ''Eq, ''Ord, ''Hashable, ''PPrint]
+  [''Eq, ''Ord, ''Hashable]
+
+instance Show NodeId where
+  show (NodeId n) = show n
+
+instance PPrint NodeId where
+  pformat (NodeId n) = pformat n
+
+deriveGADT
+  [''Node, ''DCTree]
+  [''Show, ''PPrint]
 
 emptyDCTree :: DCTree sketchSpec
 emptyDCTree = DCTree HM.empty mempty
