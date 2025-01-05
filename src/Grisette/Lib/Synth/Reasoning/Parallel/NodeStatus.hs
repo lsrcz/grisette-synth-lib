@@ -23,12 +23,14 @@ module Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
     nodeStatusIsJustStarted,
     nodeStatusInferFailureTransition,
     nodeStatusTransition,
+    pformatNodeStatusSummary,
+    nodeStatusIsEnded,
   )
 where
 
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (PPrint (pformat), SolvingFailure (Unsat), nest, vsep)
+import Grisette (Doc, PPrint (pformat), SolvingFailure (Unsat), nest, vsep)
 import Grisette.Lib.Synth.Program.Concrete (ProgPPrint)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.Parallel.Process
@@ -64,6 +66,35 @@ data NodeStatus conProg
   | NodeStarted
   | NodeNotYetStarted
   deriving (Eq, Show, Generic)
+
+pformatNodeStatusSummary :: NodeStatus conProg -> Doc ann
+pformatNodeStatusSummary NodeInferredFailure = "NodeInferredFailure"
+pformatNodeStatusSummary (NodeTerminated fastTrackViable _) =
+  "NodeTerminated "
+    <> (if fastTrackViable then "(fast track viable) " else "")
+pformatNodeStatusSummary NodeNotYetStarted = "NodeNotYetStarted"
+pformatNodeStatusSummary (NodeFastTrackRefining cost _) =
+  "NodeFastTrackRefining (cost " <> pformat cost <> ")"
+pformatNodeStatusSummary NodeFastTrackEasySynthFailure =
+  "NodeFastTrackEasySynthFailure"
+pformatNodeStatusSummary (NodeSlowTrackRefining cost _) =
+  "NodeSlowTrackRefining (cost " <> pformat cost <> ")"
+pformatNodeStatusSummary (NodeFastTrackViable track _) =
+  "NodeFastTrackViable (next track: " <> pformat track <> ")"
+pformatNodeStatusSummary (NodeSucceeded maybeCrashMessage track cost _) =
+  "NodeSucceeded (cost "
+    <> pformat cost
+    <> ", track"
+    <> pformat track
+    <> case maybeCrashMessage of
+      Nothing -> ")"
+      Just _ -> ", not finished)"
+pformatNodeStatusSummary (NodeFailed fastTrackViable r) =
+  "NodeFailed "
+    <> (if fastTrackViable then "(fast track viable) " else "")
+    <> pformat r
+pformatNodeStatusSummary NodeStarted =
+  "NodeStarted"
 
 instance (ProgPPrint conProg) => PPrint (NodeStatus conProg) where
   pformat NodeInferredFailure = "NodeInferredFailure"
@@ -202,6 +233,18 @@ nodeStatusIsInferredFailure _ = False
 nodeStatusIsJustStarted :: NodeStatus conProg -> Bool
 nodeStatusIsJustStarted NodeStarted {} = True
 nodeStatusIsJustStarted _ = False
+
+nodeStatusIsEnded :: NodeStatus conProg -> Bool
+nodeStatusIsEnded NodeSucceeded {} = True
+nodeStatusIsEnded NodeFailed {} = True
+nodeStatusIsEnded NodeTerminated {} = True
+nodeStatusIsEnded NodeInferredFailure = True
+nodeStatusIsEnded NodeFastTrackViable {} = False
+nodeStatusIsEnded NodeFastTrackEasySynthFailure = False
+nodeStatusIsEnded NodeFastTrackRefining {} = False
+nodeStatusIsEnded NodeSlowTrackRefining {} = False
+nodeStatusIsEnded NodeStarted = False
+nodeStatusIsEnded NodeNotYetStarted = False
 
 data NodeAction
   = Refine {_succeed :: Bool, _nodeBestCostKnowledge :: Maybe Int}
