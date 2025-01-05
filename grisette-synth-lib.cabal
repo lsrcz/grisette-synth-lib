@@ -64,6 +64,7 @@ library
       Grisette.Lib.Synth.Reasoning.IOPair
       Grisette.Lib.Synth.Reasoning.Matcher
       Grisette.Lib.Synth.Reasoning.Parallel.BaseTaskHandle
+      Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue
       Grisette.Lib.Synth.Reasoning.Parallel.DCTree
       Grisette.Lib.Synth.Reasoning.Parallel.Exception
       Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
@@ -107,6 +108,7 @@ library
     , prettyprinter >=1.5 && <1.8
     , psqueues
     , quickcheck-with-counterexamples ==1.2.*
+    , random
     , safe-exceptions
     , sbv >=8.17 && <12
     , stm
@@ -147,6 +149,7 @@ executable arith
     , prettyprinter >=1.5 && <1.8
     , psqueues
     , quickcheck-with-counterexamples ==1.2.*
+    , random
     , safe-exceptions
     , sbv >=8.17 && <12
     , stm
@@ -191,6 +194,7 @@ executable control
     , prettyprinter >=1.5 && <1.8
     , psqueues
     , quickcheck-with-counterexamples ==1.2.*
+    , random
     , safe-exceptions
     , sbv >=8.17 && <12
     , stm
@@ -285,6 +289,7 @@ test-suite spec
     , prettyprinter >=1.5 && <1.8
     , psqueues
     , quickcheck-with-counterexamples ==1.2.*
+    , random
     , safe-exceptions
     , sbv >=8.17 && <12
     , stm
