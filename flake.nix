@@ -71,6 +71,10 @@
             stack-wrapped
             pkgs.zlib # External C library needed by some Haskell packages
             pkgs.z3
+            pkgs.cairo
+            pkgs.expat
+            pkgs.pkg-config
+            pkgs.xorg.libXdmcp
           ];
 
         cabalDevTools = [

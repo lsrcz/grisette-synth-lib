@@ -43,6 +43,8 @@ dependencies:
   - bytestring
   - ansi-terminal
   - random
+  - Chart
+  - Chart-cairo
 
 ghc-options:
   - -Wextra

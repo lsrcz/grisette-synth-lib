@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -20,6 +21,9 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Process
     Process (..),
     LogConfig (..),
     ProcessResponse,
+    ProcessCostConstraint,
+    ProcessConstraint,
+    ConProgConstraint,
     runRequestInSubProcess,
     getProcessResponse,
     sendNewMinimalCost,
@@ -154,6 +158,7 @@ import System.Posix
   )
 import System.Posix.ByteString (fdRead, fdWrite, setFdOption)
 import System.Posix.Types (CPid (CPid), Fd, ProcessGroupID, ProcessID)
+import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum, PartitionSpec)
 
 _createLogger :: LogConfig -> NodeId -> IO Logger
 _createLogger logConfig@LogConfig {..} (NodeId nodeId) = do
@@ -181,6 +186,60 @@ data TwoTrackVerifiers sketch conProg = TwoTrackVerifiers
     slowTrackVerifiers :: [SomeVerifier sketch conProg]
   }
 
+type ProcessCostConstraint costObj cost conProg sketch =
+  ( ProgCost costObj conProg Int ConcreteContext,
+    ProgCost costObj sketch cost SymbolicContext,
+    ProgCost costObj sketch cost AngelicContext
+  )
+
+type ProcessConstraint
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher =
+  ( GenSymSimple sketchSpec sketch,
+    ProcessCostConstraint costObj cost conProg sketch,
+    ProgPPrint sketchSpec,
+    ProgPPrint conProg,
+    EvalSym sketch,
+    ToCon sketch conProg,
+    ProgReachableSymbols conProg,
+    SymOrd cost,
+    Mergeable cost,
+    Num cost,
+    Serial conProg,
+    Serial cost,
+    Serial conVal,
+    Serial symSemObj,
+    Serial conSemObj,
+    Serial matcher,
+    Typeable sketch,
+    Typeable symSemObj,
+    Typeable conSemObj,
+    Typeable conVal,
+    Typeable matcher,
+    Typeable symVal,
+    PPrint conVal,
+    Hashable sketchSpec,
+    LowestSeqNum sketchSpec,
+    PartitionSpec sketchSpec
+  )
+
+type ConProgConstraint conProg conOp conVarId conType =
+  ( ConcreteVarId conVarId,
+    conProg ~ Concrete.Prog conOp conVarId conType,
+    Concrete.OpPPrint conOp,
+    Show conOp,
+    PPrint conType,
+    Show conType
+  )
+
 data
   ProcessConfig
     sketchSpec
@@ -195,36 +254,18 @@ data
     matcher
   where
   ProcessConfig ::
-    ( GenSymSimple sketchSpec sketch,
-      ProgCost costObj conProg Int ConcreteContext,
-      ProgCost costObj sketch cost SymbolicContext,
-      ProgCost costObj sketch cost AngelicContext,
-      ProgPPrint sketchSpec,
-      EvalSym sketch,
-      ToCon sketch conProg,
-      ProgReachableSymbols conProg,
-      SymOrd cost,
-      Mergeable cost,
-      Num cost,
-      Serial conProg,
-      Serial cost,
-      Serial conVal,
-      Serial symSemObj,
-      Serial conSemObj,
-      Serial matcher,
-      Typeable sketch,
-      Typeable symSemObj,
-      Typeable conSemObj,
-      Typeable conVal,
-      Typeable matcher,
-      Typeable symVal,
-      PPrint conVal,
-      ConcreteVarId conVarId,
-      conProg ~ Concrete.Prog conOp conVarId conType,
-      Concrete.OpPPrint conOp,
-      Show conOp,
-      PPrint conType,
-      Show conType
+    ( ProcessConstraint
+        sketchSpec
+        sketch
+        conProg
+        costObj
+        cost
+        symSemObj
+        symVal
+        conSemObj
+        conVal
+        matcher,
+      ConProgConstraint conProg conOp conVarId conType
     ) =>
     { costObj :: costObj,
       sketchSpec :: SymbolTable sketchSpec,

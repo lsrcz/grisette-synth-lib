@@ -25,6 +25,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
     nodeStatusTransition,
     pformatNodeStatusSummary,
     nodeStatusIsEnded,
+    nodeStatusIsDetermined,
   )
 where
 
@@ -159,6 +160,12 @@ nodeStatusIsRunning NodeFastTrackRefining {} = True
 nodeStatusIsRunning NodeFastTrackEasySynthFailure {} = True
 nodeStatusIsRunning NodeSlowTrackRefining {} = True
 nodeStatusIsRunning _ = False
+
+nodeStatusIsDetermined :: NodeStatus conProg -> Bool
+nodeStatusIsDetermined NodeSucceeded {} = True
+nodeStatusIsDetermined NodeFailed {} = True
+nodeStatusIsDetermined NodeInferredFailure = True
+nodeStatusIsDetermined _ = False
 
 nodeStatusIsNotYetStarted :: NodeStatus conProg -> Bool
 nodeStatusIsNotYetStarted NodeNotYetStarted = True
