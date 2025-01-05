@@ -86,6 +86,7 @@ import Grisette.Lib.Synth.Context
     SymbolicContext,
   )
 import Grisette.Lib.Synth.Program.Choice.Counting (CountNumProgsEvidence, countNumChoicesWithEvidence, countNumProgsWithEvidence)
+import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum, PartitionSpec)
 import Grisette.Lib.Synth.Program.Concrete
   ( ProgPPrint,
     eliminateProgTableDeadCode,
@@ -158,7 +159,6 @@ import System.Posix
   )
 import System.Posix.ByteString (fdRead, fdWrite, setFdOption)
 import System.Posix.Types (CPid (CPid), Fd, ProcessGroupID, ProcessID)
-import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum, PartitionSpec)
 
 _createLogger :: LogConfig -> NodeId -> IO Logger
 _createLogger logConfig@LogConfig {..} (NodeId nodeId) = do

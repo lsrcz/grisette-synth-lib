@@ -1313,8 +1313,7 @@ addSubSketches
         <$> traverse
           ( \nid ->
               if nodeFailed newDcTree nid
-                then
-                  setInferredFailure scheduler nid >> return [nid]
+                then setInferredFailure scheduler nid >> return [nid]
                 else return []
           )
           nodeIds
@@ -1869,8 +1868,7 @@ runWithScheduler
     debugLogAllStats False scheduler
     debugLogAllStats True scheduler
 
-data ParallelSynthesisSolution conProg
-  = ParallelSynthesisSolution
+data ParallelSynthesisSolution conProg = ParallelSynthesisSolution
   { _nodeId :: NodeId,
     startTime :: UTCTime,
     resultTime :: UTCTime,
@@ -1888,8 +1886,7 @@ data ParallelSynthesisNoSolutionResult = ParallelSynthesisNoSolutionResult
     undeterminedRatio :: Double
   }
 
-data ParallelSynthesisSolutionFoundResult conProg
-  = ParallelSynthesisSolutionFoundResult
+data ParallelSynthesisSolutionFoundResult conProg = ParallelSynthesisSolutionFoundResult
   { aggregatedTime :: UTCTime,
     initialCost :: Maybe Int,
     bestCost :: Int,
@@ -2764,16 +2761,16 @@ debugLogAllStats
                         fromMaybe mempty $
                           nodeDividedChildren dcTree nid
               if
-                | null children -> return $ result <+> "{}"
-                | onlyUndetermined && nodeStatusIsDetermined status ->
-                    return $ result <+> "{...}"
-                | otherwise -> do
-                    childrenDocs <- mapM walkNode children
-                    return $
-                      vsep
-                        [ nest 2 $ vsep $ [result <+> "{", vsep childrenDocs],
-                          "}"
-                        ]
+                  | null children -> return $ result <+> "{}"
+                  | onlyUndetermined && nodeStatusIsDetermined status ->
+                      return $ result <+> "{...}"
+                  | otherwise -> do
+                      childrenDocs <- mapM walkNode children
+                      return $
+                        vsep
+                          [ nest 2 $ vsep $ [result <+> "{", vsep childrenDocs],
+                            "}"
+                          ]
         nodeResult :: NodeId -> IO (Doc ann)
         nodeResult nid = do
           state <- (HM.! nid) <$> readIORef nodeStates

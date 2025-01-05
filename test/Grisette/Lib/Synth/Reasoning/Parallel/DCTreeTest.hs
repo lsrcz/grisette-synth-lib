@@ -9,6 +9,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
     directSiblingNodes,
     emptyDCTree,
     insertRootSketch,
+    insertRootSketches,
     insertSplittedSketches,
     leafNodes,
     markNodeFailed,
@@ -16,7 +17,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
     nodeFailed,
     nodeParent,
     numNodes,
-    rootNodes, insertRootSketches,
+    rootNodes,
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)

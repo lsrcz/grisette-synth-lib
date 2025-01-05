@@ -180,7 +180,10 @@ insertRootSketches tree sketches =
 
 insertSplittedSketches ::
   (Hashable sketchSpec) =>
-  DCTree sketchSpec -> NodeId -> [sketchSpec] -> ([NodeId], DCTree sketchSpec)
+  DCTree sketchSpec ->
+  NodeId ->
+  [sketchSpec] ->
+  ([NodeId], DCTree sketchSpec)
 insertSplittedSketches tree parent sketches =
   let (ids, newTree) =
         foldl
