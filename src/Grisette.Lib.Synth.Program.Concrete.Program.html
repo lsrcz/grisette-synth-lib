@@ -167,7 +167,7 @@
 </span><span id="line-167"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Pretty.html#renderDoc"><span class="hs-identifier">renderDoc</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-168"></span><span>    </span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">,</span><span>
 </span><span id="line-169"></span><span>  </span><span class="hs-special">)</span><span>
-</span><span id="line-170"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html"><span class="hs-identifier">Grisette.Lib.Synth.Util.Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier">showText</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html"><span class="hs-identifier">Grisette.Lib.Synth.Util.Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html#showAsText"><span class="hs-identifier">showAsText</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-171"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html"><span class="hs-identifier">Grisette.Lib.Synth.VarId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html#ConcreteVarId"><span class="hs-identifier">ConcreteVarId</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-172"></span><span>
 </span><span id="line-173"></span><span class="hs-keyword">data</span><span> </span><span id="Stmt"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Stmt"><span class="hs-identifier hs-var">Stmt</span></a></span></span><span> </span><span id="local-6989586621680146023"><span class="annot"><a href="#local-6989586621680146023"><span class="hs-identifier hs-type">op</span></a></span></span><span> </span><span id="local-6989586621680146024"><span class="annot"><a href="#local-6989586621680146024"><span class="hs-identifier hs-type">varId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Stmt"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Stmt"><span class="hs-identifier hs-var">Stmt</span></a></span></span><span>
@@ -877,7 +877,7 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
 forall a. Show a =&gt; a -&gt; Text
-</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showAsText"><span class="hs-identifier hs-var">showAsText</span></a></span><span> </span><span class="annot"><span class="annottext">Int
 </span><a href="#local-6989586621680154929"><span class="hs-identifier hs-var">index</span></a></span><span>
 </span><span id="line-336"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621680154936"><span class="annot"><a href="#local-6989586621680154936"><span class="hs-identifier hs-var">argFields</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680154937"><span class="annot"><a href="#local-6989586621680154937"><span class="hs-identifier hs-var">edges</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
 </span><span id="line-337"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#argumentsToFieldEdges"><span class="hs-identifier hs-type">argumentsToFieldEdges</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680154935"><span class="hs-identifier hs-type">nodeId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680154931"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680154932"><span class="hs-identifier hs-type">argIds</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680154934"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-keyword">of</span><span>
@@ -1105,7 +1105,7 @@ forall a b. (a -&gt; b) -&gt; a -&gt; b
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Text
 forall a. Show a =&gt; a -&gt; Text
-</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showAsText"><span class="hs-identifier hs-var">showAsText</span></a></span><span> </span><span class="annot"><span class="annottext">a
 </span><a href="#local-6989586621680155021"><span class="hs-identifier hs-var">pos</span></a></span><span>
 </span><span id="line-384"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680155031"><span class="annot"><span class="annottext">resLabel :: a -&gt; ProgRes varId a -&gt; LazyText
 </span><a href="#local-6989586621680155031"><span class="hs-identifier hs-var hs-var hs-var">resLabel</span></a></span></span><span> </span><span id="local-6989586621680155032"><span class="annot"><span class="annottext">a
@@ -1121,7 +1121,7 @@ forall a b. (a -&gt; b) -&gt; a -&gt; b
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Text
 forall a. Show a =&gt; a -&gt; Text
-</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showAsText"><span class="hs-identifier hs-var">showAsText</span></a></span><span> </span><span class="annot"><span class="annottext">a
 </span><a href="#local-6989586621680155032"><span class="hs-identifier hs-var">pos</span></a></span><span>
 </span><span id="line-388"></span><span>            </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
@@ -1614,7 +1614,7 @@ varId -&gt; val -&gt; StateT (Env varId val) ctx ()
 forall s (m :: * -&gt; *). MonadState s m =&gt; m s
 </span><span class="hs-identifier hs-var">get</span></span><span>
 </span><span id="line-503"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HM.member</span></span><span> </span><span class="annot"><a href="#local-6989586621680155159"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680155161"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">.</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">throwError</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
-</span><span id="line-504"></span><span>    </span><span class="annot"><span class="hs-string">&quot;Variable &quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-type">showText</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680155159"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot; is already defined.&quot;</span></span><span>
+</span><span id="line-504"></span><span>    </span><span class="annot"><span class="hs-string">&quot;Variable &quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html#showAsText"><span class="hs-identifier hs-type">showAsText</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680155159"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot; is already defined.&quot;</span></span><span>
 </span><span id="line-505"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">put</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.insert</span></span><span> </span><span class="annot"><a href="#local-6989586621680155159"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680155160"><span class="hs-identifier hs-type">val</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680155161"><span class="hs-identifier hs-type">env</span></a></span><span>
 </span><span id="line-506"></span><span>
 </span><span id="line-507"></span><span id="local-6989586621680147905"><span id="local-6989586621680147906"><span id="local-6989586621680147907"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#lookupVal"><span class="hs-identifier hs-type">lookupVal</span></a></span><span> </span><span class="hs-glyph">::</span><span>
@@ -1642,7 +1642,7 @@ forall a b. (a -&gt; b) -&gt; a -&gt; b
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">varId -&gt; Text
 forall a. Show a =&gt; a -&gt; Text
-</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="annot"><span class="annottext">varId
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showAsText"><span class="hs-identifier hs-var">showAsText</span></a></span><span> </span><span class="annot"><span class="annottext">varId
 </span><a href="#local-6989586621680155183"><span class="hs-identifier hs-var">varId</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text
@@ -1706,7 +1706,7 @@ forall a b. (a -&gt; b) -&gt; a -&gt; b
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
 forall a. Show a =&gt; a -&gt; Text
-</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ProgArg varId ty] -&gt; Int
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showAsText"><span class="hs-identifier hs-var">showAsText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ProgArg varId ty] -&gt; Int
 forall a. [a] -&gt; Int
 forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
 </span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[ProgArg varId ty]
@@ -1719,7 +1719,7 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
 forall a. Show a =&gt; a -&gt; Text
-</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[val] -&gt; Int
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showAsText"><span class="hs-identifier hs-var">showAsText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[val] -&gt; Int
 forall a. [a] -&gt; Int
 forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
 </span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[val]

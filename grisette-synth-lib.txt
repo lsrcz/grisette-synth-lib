@@ -491,7 +491,7 @@ readByteString :: Fd -> ByteCount -> IO ByteString
 writeByteString :: Fd -> ByteString -> IO ByteCount
 
 module Grisette.Lib.Synth.Util.Show
-showText :: Show a => a -> Text
+showAsText :: Show a => a -> Text
 showFloat :: RealFloat a => a -> String
 showDiffTime :: NominalDiffTime -> String
 
