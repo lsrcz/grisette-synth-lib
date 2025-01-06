@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.ProgTyping</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTyping"><span class="hs-identifier">ProgTyping</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTypeTable"><span class="hs-identifier">ProgTypeTable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#typeSymbolTable"><span class="hs-identifier">typeSymbolTable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#lookupType"><span class="hs-identifier">lookupType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#symbolType"><span class="hs-identifier">symbolType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Bifunctor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Bifunctor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">second</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Context.html"><span class="hs-identifier">Grisette.Lib.Synth.Context</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Context.html#ConcreteContext"><span class="hs-identifier">ConcreteContext</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.ProgUtil</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgUtil"><span class="hs-identifier">ProgUtil</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgTypeType"><span class="hs-identifier">ProgTypeType</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.SymbolTable.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.SymbolTable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.SymbolTable.html#SymbolTable"><span class="hs-identifier">SymbolTable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.SymbolTable.html#SymbolTable"><span class="hs-identifier">SymbolTable</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.TypeSignature.html"><span class="hs-identifier">Grisette.Lib.Synth.TypeSignature</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.TypeSignature.html#TypeSignature"><span class="hs-identifier">TypeSignature</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">class</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgUtil"><span class="hs-identifier hs-type">ProgUtil</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143350"><span class="hs-identifier hs-type">prog</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="ProgTyping"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTyping"><span class="hs-identifier hs-var">ProgTyping</span></a></span></span><span> </span><span id="local-6989586621680143350"><span class="annot"><a href="#local-6989586621680143350"><span class="hs-identifier hs-type">prog</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>  </span><span id="typeProg"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#typeProg"><span class="hs-identifier hs-type">typeProg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621680143350"><span class="hs-identifier hs-type">prog</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.TypeSignature.html#TypeSignature"><span class="hs-identifier hs-type">TypeSignature</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgTypeType"><span class="hs-identifier hs-type">ProgTypeType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143350"><span class="hs-identifier hs-type">prog</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">newtype</span><span> </span><span id="ProgTypeTable"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTypeTable"><span class="hs-identifier hs-var">ProgTypeTable</span></a></span></span><span> </span><span id="local-6989586621680143388"><span class="annot"><a href="#local-6989586621680143388"><span class="hs-identifier hs-type">ty</span></a></span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="ProgTypeTable"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTypeTable"><span class="hs-identifier hs-var">ProgTypeTable</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.TypeSignature.html#TypeSignature"><span class="hs-identifier hs-type">TypeSignature</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143388"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680143424"><span id="local-6989586621680143429"><span id="local-6989586621680143435"><span class="annot"><span class="annottext">NonEmpty (ProgTypeTable ty) -&gt; ProgTypeTable ty
+ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+(ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty)
+-&gt; (NonEmpty (ProgTypeTable ty) -&gt; ProgTypeTable ty)
+-&gt; (forall b.
+    Integral b =&gt;
+    b -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty)
+-&gt; Semigroup (ProgTypeTable ty)
+forall b. Integral b =&gt; b -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+forall ty. NonEmpty (ProgTypeTable ty) -&gt; ProgTypeTable ty
+forall ty. ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+forall ty b.
+Integral b =&gt;
+b -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+$c&lt;&gt; :: forall ty. ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+&lt;&gt; :: ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+$csconcat :: forall ty. NonEmpty (ProgTypeTable ty) -&gt; ProgTypeTable ty
+sconcat :: NonEmpty (ProgTypeTable ty) -&gt; ProgTypeTable ty
+$cstimes :: forall ty b.
+Integral b =&gt;
+b -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+stimes :: forall b. Integral b =&gt; b -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680143447"><span id="local-6989586621680143452"><span id="local-6989586621680143456"><span class="annot"><span class="annottext">Semigroup (ProgTypeTable ty)
+ProgTypeTable ty
+Semigroup (ProgTypeTable ty) =&gt;
+ProgTypeTable ty
+-&gt; (ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty)
+-&gt; ([ProgTypeTable ty] -&gt; ProgTypeTable ty)
+-&gt; Monoid (ProgTypeTable ty)
+[ProgTypeTable ty] -&gt; ProgTypeTable ty
+ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+forall ty. Semigroup (ProgTypeTable ty)
+forall ty. ProgTypeTable ty
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+forall ty. [ProgTypeTable ty] -&gt; ProgTypeTable ty
+forall ty. ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+$cmempty :: forall ty. ProgTypeTable ty
+mempty :: ProgTypeTable ty
+$cmappend :: forall ty. ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+mappend :: ProgTypeTable ty -&gt; ProgTypeTable ty -&gt; ProgTypeTable ty
+$cmconcat :: forall ty. [ProgTypeTable ty] -&gt; ProgTypeTable ty
+mconcat :: [ProgTypeTable ty] -&gt; ProgTypeTable ty
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span id="local-6989586621680143370"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#typeSymbolTable"><span class="hs-identifier hs-type">typeSymbolTable</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTyping"><span class="hs-identifier hs-type">ProgTyping</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143370"><span class="hs-identifier hs-type">prog</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.SymbolTable.html#SymbolTable"><span class="hs-identifier hs-type">SymbolTable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143370"><span class="hs-identifier hs-type">prog</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTypeTable"><span class="hs-identifier hs-type">ProgTypeTable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgTypeType"><span class="hs-identifier hs-type">ProgTypeType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143370"><span class="hs-identifier hs-type">prog</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-31"></span><span id="typeSymbolTable"><span class="annot"><span class="annottext">typeSymbolTable :: forall prog.
+ProgTyping prog =&gt;
+SymbolTable prog -&gt; ProgTypeTable (ProgTypeType prog)
+</span><a href="Grisette.Lib.Synth.Program.ProgTyping.html#typeSymbolTable"><span class="hs-identifier hs-var hs-var">typeSymbolTable</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.SymbolTable.html#SymbolTable"><span class="hs-identifier hs-type">SymbolTable</span></a></span><span> </span><span id="local-6989586621680143478"><span class="annot"><span class="annottext">[(Text, prog)]
+</span><a href="#local-6989586621680143478"><span class="hs-identifier hs-var">table</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680143493"><span class="annot"><span class="annottext">res :: ProgTypeTable (ProgTypeType prog)
+</span><a href="#local-6989586621680143493"><span class="hs-identifier hs-var hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Text, TypeSignature (ProgTypeType prog))]
+-&gt; ProgTypeTable (ProgTypeType prog)
+forall ty. [(Text, TypeSignature ty)] -&gt; ProgTypeTable ty
+</span><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTypeTable"><span class="hs-identifier hs-var">ProgTypeTable</span></a></span><span> </span><span class="annot"><span class="annottext">([(Text, TypeSignature (ProgTypeType prog))]
+ -&gt; ProgTypeTable (ProgTypeType prog))
+-&gt; [(Text, TypeSignature (ProgTypeType prog))]
+-&gt; ProgTypeTable (ProgTypeType prog)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">((Text, prog) -&gt; (Text, TypeSignature (ProgTypeType prog)))
+-&gt; [(Text, prog)] -&gt; [(Text, TypeSignature (ProgTypeType prog))]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(prog -&gt; TypeSignature (ProgTypeType prog))
+-&gt; (Text, prog) -&gt; (Text, TypeSignature (ProgTypeType prog))
+forall b c a. (b -&gt; c) -&gt; (a, b) -&gt; (a, c)
+forall (p :: * -&gt; * -&gt; *) b c a.
+Bifunctor p =&gt;
+(b -&gt; c) -&gt; p a b -&gt; p a c
+</span><span class="hs-identifier hs-var">second</span></span><span> </span><span class="annot"><span class="annottext">prog -&gt; TypeSignature (ProgTypeType prog)
+forall prog.
+ProgTyping prog =&gt;
+prog -&gt; TypeSignature (ProgTypeType prog)
+</span><a href="Grisette.Lib.Synth.Program.ProgTyping.html#typeProg"><span class="hs-identifier hs-var">typeProg</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Text, prog)]
+</span><a href="#local-6989586621680143478"><span class="hs-identifier hs-var">table</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">ProgTypeTable (ProgTypeType prog)
+</span><a href="#local-6989586621680143493"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span id="local-6989586621680143400"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#lookupType"><span class="hs-identifier hs-type">lookupType</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTypeTable"><span class="hs-identifier hs-type">ProgTypeTable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143400"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Context.html#ConcreteContext"><span class="hs-identifier hs-type">ConcreteContext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.TypeSignature.html#TypeSignature"><span class="hs-identifier hs-type">TypeSignature</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143400"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-38"></span><span id="lookupType"><span class="annot"><span class="annottext">lookupType :: forall ty.
+ProgTypeTable ty -&gt; Text -&gt; ConcreteContext (TypeSignature ty)
+</span><a href="Grisette.Lib.Synth.Program.ProgTyping.html#lookupType"><span class="hs-identifier hs-var hs-var">lookupType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTypeTable"><span class="hs-identifier hs-type">ProgTypeTable</span></a></span><span> </span><span id="local-6989586621680143496"><span class="annot"><span class="annottext">[(Text, TypeSignature ty)]
+</span><a href="#local-6989586621680143496"><span class="hs-identifier hs-var">table</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621680143497"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680143497"><span class="hs-identifier hs-var">symbol</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Text, TypeSignature ty)] -&gt; Either Text (TypeSignature ty)
+forall {m :: * -&gt; *} {a}. Monad m =&gt; [(Text, a)] -&gt; m a
+</span><a href="#local-6989586621680143498"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, TypeSignature ty)]
+</span><a href="#local-6989586621680143496"><span class="hs-identifier hs-var">table</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621680143498"><span class="annot"><span class="annottext">go :: [(Text, a)] -&gt; m a
+</span><a href="#local-6989586621680143498"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; m a
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; m a) -&gt; [Char] -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Symbol &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Char]
+</span><span class="hs-identifier hs-var">T.unpack</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680143497"><span class="hs-identifier hs-var">symbol</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot; not found&quot;</span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><a href="#local-6989586621680143498"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621680143515"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680143515"><span class="hs-identifier hs-var">sym</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680143516"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680143516"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621680143517"><span class="annot"><span class="annottext">[(Text, a)]
+</span><a href="#local-6989586621680143517"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680143515"><span class="hs-identifier hs-var">sym</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680143497"><span class="hs-identifier hs-var">symbol</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">a -&gt; m a
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680143516"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">[(Text, a)] -&gt; m a
+</span><a href="#local-6989586621680143498"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, a)]
+</span><a href="#local-6989586621680143517"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span id="local-6989586621680143413"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#symbolType"><span class="hs-identifier hs-type">symbolType</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTyping"><span class="hs-identifier hs-type">ProgTyping</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143413"><span class="hs-identifier hs-type">prog</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Program.SymbolTable.html#SymbolTable"><span class="hs-identifier hs-type">SymbolTable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143413"><span class="hs-identifier hs-type">prog</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Context.html#ConcreteContext"><span class="hs-identifier hs-type">ConcreteContext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.TypeSignature.html#TypeSignature"><span class="hs-identifier hs-type">TypeSignature</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgTypeType"><span class="hs-identifier hs-type">ProgTypeType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680143413"><span class="hs-identifier hs-type">prog</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-48"></span><span id="symbolType"><span class="annot"><span class="annottext">symbolType :: forall prog.
+ProgTyping prog =&gt;
+SymbolTable prog
+-&gt; Text -&gt; ConcreteContext (TypeSignature (ProgTypeType prog))
+</span><a href="Grisette.Lib.Synth.Program.ProgTyping.html#symbolType"><span class="hs-identifier hs-var hs-var">symbolType</span></a></span></span><span> </span><span id="local-6989586621680143520"><span class="annot"><span class="annottext">SymbolTable prog
+</span><a href="#local-6989586621680143520"><span class="hs-identifier hs-var">table</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProgTypeTable (ProgTypeType prog)
+-&gt; Text -&gt; Either Text (TypeSignature (ProgTypeType prog))
+forall ty.
+ProgTypeTable ty -&gt; Text -&gt; ConcreteContext (TypeSignature ty)
+</span><a href="Grisette.Lib.Synth.Program.ProgTyping.html#lookupType"><span class="hs-identifier hs-var">lookupType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SymbolTable prog -&gt; ProgTypeTable (ProgTypeType prog)
+forall prog.
+ProgTyping prog =&gt;
+SymbolTable prog -&gt; ProgTypeTable (ProgTypeType prog)
+</span><a href="Grisette.Lib.Synth.Program.ProgTyping.html#typeSymbolTable"><span class="hs-identifier hs-var">typeSymbolTable</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolTable prog
+</span><a href="#local-6989586621680143520"><span class="hs-identifier hs-var">table</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span></pre></body></html>

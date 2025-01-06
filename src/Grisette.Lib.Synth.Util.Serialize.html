@@ -1,0 +1,568 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html"><span class="hs-identifier">Grisette.Lib.Synth.Util.Serialize</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#finiteBitsToByteStringLE"><span class="hs-identifier">finiteBitsToByteStringLE</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToFiniteBitsLE"><span class="hs-identifier">byteStringToFiniteBitsLE</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToWord64"><span class="hs-identifier">byteStringToWord64</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#word64ToByteString"><span class="hs-identifier">word64ToByteString</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToWord32"><span class="hs-identifier">byteStringToWord32</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#word32ToByteString"><span class="hs-identifier">word32ToByteString</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToBool"><span class="hs-identifier">byteStringToBool</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#boolToByteString"><span class="hs-identifier">boolToByteString</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#writeByteStringWithSize"><span class="hs-identifier">writeByteStringWithSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#writeObject"><span class="hs-identifier">writeObject</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteStringWithSize"><span class="hs-identifier">readByteStringWithSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#readObject"><span class="hs-identifier">readObject</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#nonBlockingReadByteStringWithSize"><span class="hs-identifier">nonBlockingReadByteStringWithSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#nonBlockingReadObject"><span class="hs-identifier">nonBlockingReadObject</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteString"><span class="hs-identifier">readByteString</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#writeByteString"><span class="hs-identifier">writeByteString</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">where</span><span class="hs-cpp">
+
+#if !MIN_VERSION_unix(2, 8, 0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data.ByteString.Char8</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">BC8</span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Exception</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">catch</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Bits</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Bits</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">shiftL</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">shiftR</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.|.)</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">FiniteBits</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">finiteBitSize</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Builder</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BL</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Unsafe</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Bytes.Get</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">runGetS</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Bytes.Put</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">runPutS</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Bytes.Serial</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Serial</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">deserialize</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">serialize</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Foreign.C</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">eAGAIN</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getErrno</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Posix</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ByteCount</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Fd</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Posix.IO.ByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fdRead</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">fdWrite</span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span id="local-6989586621680135406"><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#finiteBitsToByteStringLE"><span class="hs-identifier hs-type">finiteBitsToByteStringLE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FiniteBits</span></span><span> </span><span class="annot"><a href="#local-6989586621680135406"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621680135406"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680135406"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span></span><span>
+</span><span id="line-42"></span><span id="finiteBitsToByteStringLE"><span class="annot"><span class="annottext">finiteBitsToByteStringLE :: forall n. (FiniteBits n, Integral n) =&gt; n -&gt; ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#finiteBitsToByteStringLE"><span class="hs-identifier hs-var hs-var">finiteBitsToByteStringLE</span></a></span></span><span> </span><span id="local-6989586621680135585"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621680135585"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">[Word8] -&gt; ByteString
+</span><span class="hs-identifier hs-var">B.pack</span></span><span> </span><span class="annot"><span class="annottext">([Word8] -&gt; ByteString) -&gt; [Word8] -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">n -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(n -&gt; Word8) -&gt; (Int -&gt; n) -&gt; Int -&gt; Word8
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">n -&gt; Int -&gt; n
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-identifier hs-var">shiftR</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621680135585"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word8) -&gt; [Int] -&gt; [Word8]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621680135589"><span class="hs-identifier hs-var">shiftIdx</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621680135599"><span class="annot"><span class="annottext">bytesNeeded :: Int
+</span><a href="#local-6989586621680135599"><span class="hs-identifier hs-var hs-var">bytesNeeded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">n -&gt; Int
+forall b. FiniteBits b =&gt; b -&gt; Int
+</span><span class="hs-identifier hs-var">finiteBitSize</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621680135585"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">7</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span>
+</span><span id="line-46"></span><span>    </span><span id="local-6989586621680135589"><span class="annot"><span class="annottext">shiftIdx :: [Int]
+</span><a href="#local-6989586621680135589"><span class="hs-identifier hs-var hs-var">shiftIdx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; [Int] -&gt; [Int]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680135599"><span class="hs-identifier hs-var">bytesNeeded</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">]</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span id="local-6989586621680135427"><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToFiniteBitsLE"><span class="hs-identifier hs-type">byteStringToFiniteBitsLE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FiniteBits</span></span><span> </span><span class="annot"><a href="#local-6989586621680135427"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621680135427"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680135427"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-49"></span><span id="byteStringToFiniteBitsLE"><span class="annot"><span class="annottext">byteStringToFiniteBitsLE :: forall n. (FiniteBits n, Integral n) =&gt; ByteString -&gt; n
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToFiniteBitsLE"><span class="hs-identifier hs-var hs-var">byteStringToFiniteBitsLE</span></a></span></span><span> </span><span id="local-6989586621680135625"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135625"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">(n -&gt; Word8 -&gt; n) -&gt; n -&gt; [Word8] -&gt; n
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldl</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621680135627"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621680135627"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621680135628"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621680135628"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621680135627"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; Int -&gt; n
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; n
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621680135628"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">([Word8] -&gt; n) -&gt; [Word8] -&gt; n
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8]
+forall a. [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">reverse</span></span><span> </span><span class="annot"><span class="annottext">([Word8] -&gt; [Word8]) -&gt; [Word8] -&gt; [Word8]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [Word8]
+</span><span class="hs-identifier hs-var">B.unpack</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135625"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToWord64"><span class="hs-identifier hs-type">byteStringToWord64</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-53"></span><span id="byteStringToWord64"><span class="annot"><span class="annottext">byteStringToWord64 :: ByteString -&gt; Word64
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToWord64"><span class="hs-identifier hs-var hs-var">byteStringToWord64</span></a></span></span><span> </span><span id="local-6989586621680135631"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135631"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135631"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">7</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Int -&gt; Word64
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">56</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135631"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Int -&gt; Word64
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">48</span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135631"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Int -&gt; Word64
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">40</span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135631"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Int -&gt; Word8
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">32</span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135631"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Int -&gt; Word64
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">24</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135631"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Int -&gt; Word64
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135631"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Int -&gt; Word64
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135631"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#word64ToByteString"><span class="hs-identifier hs-type">word64ToByteString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span>
+</span><span id="line-64"></span><span id="word64ToByteString"><span class="annot"><span class="annottext">word64ToByteString :: Word64 -&gt; ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#word64ToByteString"><span class="hs-identifier hs-var hs-var">word64ToByteString</span></a></span></span><span> </span><span id="local-6989586621680135633"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621680135633"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LazyByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BL.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(LazyByteString -&gt; ByteString) -&gt; LazyByteString -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; LazyByteString
+</span><span class="hs-identifier hs-var">B.toLazyByteString</span></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; LazyByteString) -&gt; Builder -&gt; LazyByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Builder
+</span><span class="hs-identifier hs-var">B.word64LE</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621680135633"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToWord32"><span class="hs-identifier hs-type">byteStringToWord32</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span>
+</span><span id="line-67"></span><span id="byteStringToWord32"><span class="annot"><span class="annottext">byteStringToWord32 :: ByteString -&gt; Word32
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToWord32"><span class="hs-identifier hs-var hs-var">byteStringToWord32</span></a></span></span><span> </span><span id="local-6989586621680135637"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135637"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135637"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Int -&gt; Word32
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">24</span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">Word32 -&gt; Word32 -&gt; Word32
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135637"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Int -&gt; Word32
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">Word32 -&gt; Word32 -&gt; Word32
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135637"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Int -&gt; Word32
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">`shiftL`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">Word32 -&gt; Word32 -&gt; Word32
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">.|.</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135637"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#word32ToByteString"><span class="hs-identifier hs-type">word32ToByteString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span>
+</span><span id="line-74"></span><span id="word32ToByteString"><span class="annot"><span class="annottext">word32ToByteString :: Word32 -&gt; ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#word32ToByteString"><span class="hs-identifier hs-var hs-var">word32ToByteString</span></a></span></span><span> </span><span id="local-6989586621680135638"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621680135638"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LazyByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BL.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(LazyByteString -&gt; ByteString) -&gt; LazyByteString -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; LazyByteString
+</span><span class="hs-identifier hs-var">B.toLazyByteString</span></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; LazyByteString) -&gt; Builder -&gt; LazyByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Builder
+</span><span class="hs-identifier hs-var">B.word32LE</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621680135638"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToBool"><span class="hs-identifier hs-type">byteStringToBool</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-77"></span><span id="byteStringToBool"><span class="annot"><span class="annottext">byteStringToBool :: ByteString -&gt; Bool
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToBool"><span class="hs-identifier hs-var hs-var">byteStringToBool</span></a></span></span><span> </span><span id="local-6989586621680135640"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135640"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135640"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><span class="hs-operator hs-var">`B.unsafeIndex`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#boolToByteString"><span class="hs-identifier hs-type">boolToByteString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span>
+</span><span id="line-80"></span><span id="boolToByteString"><span class="annot"><span class="annottext">boolToByteString :: Bool -&gt; ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#boolToByteString"><span class="hs-identifier hs-var hs-var">boolToByteString</span></a></span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; ByteString
+</span><span class="hs-identifier hs-var">B.singleton</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#boolToByteString"><span class="hs-identifier hs-var">boolToByteString</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; ByteString
+</span><span class="hs-identifier hs-var">B.singleton</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span class="hs-cpp">
+
+#if MIN_VERSION_unix(2, 8, 0)
+</span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteString"><span class="hs-identifier hs-type">readByteString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fd</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteCount</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span>
+</span><span id="line-85"></span><span id="readByteString"><span class="annot"><span class="annottext">readByteString :: Fd -&gt; ByteCount -&gt; IO ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteString"><span class="hs-identifier hs-var hs-var">readByteString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Fd -&gt; ByteCount -&gt; IO ByteString
+</span><span class="hs-identifier hs-var">fdRead</span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#writeByteString"><span class="hs-identifier hs-type">writeByteString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fd</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteCount</span></span><span>
+</span><span id="line-88"></span><span id="writeByteString"><span class="annot"><span class="annottext">writeByteString :: Fd -&gt; ByteString -&gt; IO ByteCount
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#writeByteString"><span class="hs-identifier hs-var hs-var">writeByteString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Fd -&gt; ByteString -&gt; IO ByteCount
+</span><span class="hs-identifier hs-var">fdWrite</span></span><span class="hs-cpp">
+#else
+</span><span class="hs-identifier">readByteString</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">Fd</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">ByteCount</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-identifier">B.ByteString</span><span>
+</span><span id="line-91"></span><span class="hs-identifier">readByteString</span><span> </span><span class="hs-identifier">fd</span><span> </span><span class="hs-identifier">n</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">(</span><span class="hs-identifier">s</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">_</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">fdRead</span><span> </span><span class="hs-identifier">fd</span><span> </span><span class="hs-identifier">n</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-identifier">return</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-identifier">BC8.pack</span><span> </span><span class="hs-identifier">s</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-identifier">writeByteString</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">Fd</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">B.ByteString</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-identifier">ByteCount</span><span>
+</span><span id="line-96"></span><span class="hs-identifier">writeByteString</span><span> </span><span class="hs-identifier">fd</span><span> </span><span class="hs-identifier">bs</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">fdWrite</span><span> </span><span class="hs-identifier">fd</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-identifier">BC8.unpack</span><span> </span><span class="hs-identifier">bs</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#writeByteStringWithSize"><span class="hs-identifier hs-type">writeByteStringWithSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fd</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span id="writeByteStringWithSize"><span class="annot"><span class="annottext">writeByteStringWithSize :: Fd -&gt; ByteString -&gt; IO ()
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#writeByteStringWithSize"><span class="hs-identifier hs-var hs-var">writeByteStringWithSize</span></a></span></span><span> </span><span id="local-6989586621680135643"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135643"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span id="local-6989586621680135644"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135644"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680135647"><span class="annot"><span class="annottext">n :: ByteString
+</span><a href="#local-6989586621680135647"><span class="hs-identifier hs-var hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#word32ToByteString"><span class="hs-identifier hs-var">word32ToByteString</span></a></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; ByteString) -&gt; Word32 -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word32) -&gt; Int -&gt; Word32
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><span class="hs-identifier hs-var">B.length</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135644"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">Fd -&gt; ByteString -&gt; IO ByteCount
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#writeByteString"><span class="hs-identifier hs-var">writeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135643"><span class="hs-identifier hs-var">fd</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135647"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="annot"><span class="annottext">Fd -&gt; ByteString -&gt; IO ByteCount
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#writeByteString"><span class="hs-identifier hs-var">writeByteString</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135643"><span class="hs-identifier hs-var">fd</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135644"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span id="local-6989586621680135440"><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#writeObject"><span class="hs-identifier hs-type">writeObject</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Serial</span></span><span> </span><span class="annot"><a href="#local-6989586621680135440"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fd</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680135440"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-107"></span><span id="writeObject"><span class="annot"><span class="annottext">writeObject :: forall a. Serial a =&gt; Fd -&gt; a -&gt; IO ()
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#writeObject"><span class="hs-identifier hs-var hs-var">writeObject</span></a></span></span><span> </span><span id="local-6989586621680135653"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135653"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span id="local-6989586621680135654"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680135654"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Fd -&gt; ByteString -&gt; IO ()
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#writeByteStringWithSize"><span class="hs-identifier hs-var">writeByteStringWithSize</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135653"><span class="hs-identifier hs-var">fd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Put -&gt; ByteString
+</span><span class="hs-identifier hs-var">runPutS</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Put
+forall a (m :: * -&gt; *). (Serial a, MonadPut m) =&gt; a -&gt; m ()
+forall (m :: * -&gt; *). MonadPut m =&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">serialize</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680135654"><span class="hs-identifier hs-var">obj</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#_readSize"><span class="hs-identifier hs-type">_readSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fd</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteCount</span></span><span>
+</span><span id="line-110"></span><span id="_readSize"><span class="annot"><span class="annottext">_readSize :: Fd -&gt; IO ByteCount
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#_readSize"><span class="hs-identifier hs-var hs-var">_readSize</span></a></span></span><span> </span><span id="local-6989586621680135656"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135656"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621680135657"><span class="annot"><a href="#local-6989586621680135657"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Fd -&gt; ByteCount -&gt; IO ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteString"><span class="hs-identifier hs-var">readByteString</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135656"><span class="hs-identifier hs-var">fd</span></a></span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">fromIntegral</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#byteStringToWord32"><span class="hs-identifier hs-type">byteStringToWord32</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680135657"><span class="hs-identifier hs-type">bs</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteStringWithSize"><span class="hs-identifier hs-type">readByteStringWithSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fd</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span>
+</span><span id="line-115"></span><span id="readByteStringWithSize"><span class="annot"><span class="annottext">readByteStringWithSize :: Fd -&gt; IO ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteStringWithSize"><span class="hs-identifier hs-var hs-var">readByteStringWithSize</span></a></span></span><span> </span><span id="local-6989586621680135658"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135658"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621680135659"><span class="annot"><a href="#local-6989586621680135659"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Fd -&gt; IO ByteCount
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#_readSize"><span class="hs-identifier hs-var">_readSize</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135658"><span class="hs-identifier hs-var">fd</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteString"><span class="hs-identifier hs-type">readByteString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680135658"><span class="hs-identifier hs-type">fd</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680135659"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span id="local-6989586621680135448"><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#readObject"><span class="hs-identifier hs-type">readObject</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Serial</span></span><span> </span><span class="annot"><a href="#local-6989586621680135448"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fd</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="#local-6989586621680135448"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-120"></span><span id="readObject"><span class="annot"><span class="annottext">readObject :: forall a. Serial a =&gt; Fd -&gt; IO a
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#readObject"><span class="hs-identifier hs-var hs-var">readObject</span></a></span></span><span> </span><span id="local-6989586621680135670"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135670"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-121"></span><span>  </span><span id="local-6989586621680135671"><span class="annot"><a href="#local-6989586621680135671"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Fd -&gt; IO ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteStringWithSize"><span class="hs-identifier hs-var">readByteStringWithSize</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135670"><span class="hs-identifier hs-var">fd</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">runGetS</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">deserialize</span></span><span> </span><span class="annot"><a href="#local-6989586621680135671"><span class="hs-identifier hs-type">bs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621680135672"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621680135672"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO a
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO a) -&gt; [Char] -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Failed to deserialize object: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621680135672"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621680135674"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680135674"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680135674"><span class="hs-identifier hs-var">obj</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span id="local-6989586621680135458"><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#nonBlockingReadObject"><span class="hs-identifier hs-type">nonBlockingReadObject</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Serial</span></span><span> </span><span class="annot"><a href="#local-6989586621680135458"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fd</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621680135458"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-127"></span><span id="nonBlockingReadObject"><span class="annot"><span class="annottext">nonBlockingReadObject :: forall a. Serial a =&gt; Fd -&gt; IO (Maybe a)
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#nonBlockingReadObject"><span class="hs-identifier hs-var hs-var">nonBlockingReadObject</span></a></span></span><span> </span><span id="local-6989586621680135684"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135684"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621680135685"><span class="annot"><a href="#local-6989586621680135685"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Fd -&gt; IO (Maybe ByteString)
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#nonBlockingReadByteStringWithSize"><span class="hs-identifier hs-var">nonBlockingReadByteStringWithSize</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135684"><span class="hs-identifier hs-var">fd</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621680135685"><span class="hs-identifier hs-type">bs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680135686"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135686"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-132"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Get a -&gt; ByteString -&gt; Either [Char] a
+forall a. Get a -&gt; ByteString -&gt; Either [Char] a
+</span><span class="hs-identifier hs-var">runGetS</span></span><span> </span><span class="annot"><span class="annottext">Get a
+forall a (m :: * -&gt; *). (Serial a, MonadGet m) =&gt; m a
+forall (m :: * -&gt; *). MonadGet m =&gt; m a
+</span><span class="hs-identifier hs-var">deserialize</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135686"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-133"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621680135687"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621680135687"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO (Maybe a)
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO (Maybe a)) -&gt; [Char] -&gt; IO (Maybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Failed to deserialize object: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621680135687"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-134"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621680135688"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680135688"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; IO (Maybe a)) -&gt; Maybe a -&gt; IO (Maybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680135688"><span class="hs-identifier hs-var">obj</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Serialize.html#nonBlockingReadByteStringWithSize"><span class="hs-identifier hs-type">nonBlockingReadByteStringWithSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fd</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span id="nonBlockingReadByteStringWithSize"><span class="annot"><span class="annottext">nonBlockingReadByteStringWithSize :: Fd -&gt; IO (Maybe ByteString)
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#nonBlockingReadByteStringWithSize"><span class="hs-identifier hs-var hs-var">nonBlockingReadByteStringWithSize</span></a></span></span><span> </span><span id="local-6989586621680135689"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135689"><span class="hs-identifier hs-var">fd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621680135690"><span class="annot"><a href="#local-6989586621680135690"><span class="hs-identifier hs-var">bytesToRead</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteCount -&gt; Maybe ByteCount
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(ByteCount -&gt; Maybe ByteCount)
+-&gt; IO ByteCount -&gt; IO (Maybe ByteCount)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Fd -&gt; IO ByteCount
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#_readSize"><span class="hs-identifier hs-var">_readSize</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135689"><span class="hs-identifier hs-var">fd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="annottext">IO (Maybe ByteCount)
+-&gt; (IOError -&gt; IO (Maybe ByteCount)) -&gt; IO (Maybe ByteCount)
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+</span><span class="hs-operator hs-var">`catch`</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="annottext">IOError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOError</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-141"></span><span>        </span><span id="local-6989586621680135691"><span class="annot"><a href="#local-6989586621680135691"><span class="hs-identifier hs-var">errno</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Errno
+</span><span class="hs-identifier hs-var">getErrno</span></span><span>
+</span><span id="line-142"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><a href="#local-6989586621680135691"><span class="hs-identifier hs-type">errno</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">==</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">eAGAIN</span></span><span>
+</span><span id="line-143"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Nothing</span></span><span>
+</span><span id="line-144"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="hs-identifier hs-type">error</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Failed to read from pipe&quot;</span></span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680135711"><span class="annot"><a href="#local-6989586621680135711"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680135712"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135712"><span class="hs-identifier hs-var">buf</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO ByteString
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135712"><span class="hs-identifier hs-var">buf</span></a></span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><a href="#local-6989586621680135711"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621680135713"><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135713"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621680135714"><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621680135714"><span class="hs-identifier hs-var">maybeBuf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-147"></span><span>        </span><span id="local-6989586621680135715"><span class="annot"><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-148"></span><span>          </span><span class="annot"><span class="annottext">Fd -&gt; ByteCount -&gt; IO ByteString
+</span><a href="Grisette.Lib.Synth.Util.Serialize.html#readByteString"><span class="hs-identifier hs-var">readByteString</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621680135689"><span class="hs-identifier hs-var">fd</span></a></span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135713"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; (IOError -&gt; IO ByteString) -&gt; IO ByteString
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+</span><span class="hs-operator hs-var">`catch`</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="annottext">IOError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IOError</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-149"></span><span>            </span><span id="local-6989586621680135716"><span class="annot"><a href="#local-6989586621680135716"><span class="hs-identifier hs-var">errno</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Errno
+</span><span class="hs-identifier hs-var">getErrno</span></span><span>
+</span><span id="line-150"></span><span>            </span><span class="hs-keyword">if</span><span> </span><span class="annot"><a href="#local-6989586621680135716"><span class="hs-identifier hs-type">errno</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">==</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">eAGAIN</span></span><span>
+</span><span id="line-151"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><a href="#local-6989586621680135711"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680135713"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680135714"><span class="hs-identifier hs-type">maybeBuf</span></a></span><span>
+</span><span id="line-152"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="hs-identifier hs-type">error</span></span><span> </span><span class="annot"><span class="hs-string">&quot;Failed to read from pipe&quot;</span></span><span>
+</span><span id="line-153"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680135719"><span class="annot"><a href="#local-6989586621680135719"><span class="hs-identifier hs-var hs-var">bytesRead</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ByteCount
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; ByteCount) -&gt; Int -&gt; ByteCount
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><span class="hs-identifier hs-var">B.length</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-154"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621680135714"><span class="hs-identifier hs-type">maybeBuf</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-155"></span><span>          </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-156"></span><span>            </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135719"><span class="hs-identifier hs-var">bytesRead</span></a></span><span> </span><span class="annot"><span class="annottext">ByteCount -&gt; ByteCount -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135713"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-157"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO ByteString
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-158"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ByteCount -&gt; Maybe ByteString -&gt; IO ByteString
+</span><a href="#local-6989586621680135711"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135713"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">ByteCount -&gt; ByteCount -&gt; ByteCount
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135719"><span class="hs-identifier hs-var">bytesRead</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680135720"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135720"><span class="hs-identifier hs-var">oldBuf</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-160"></span><span>            </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135719"><span class="hs-identifier hs-var">bytesRead</span></a></span><span> </span><span class="annot"><span class="annottext">ByteCount -&gt; ByteCount -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135713"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-161"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO ByteString
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ByteString) -&gt; ByteString -&gt; IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135720"><span class="hs-identifier hs-var">oldBuf</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-162"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ByteCount -&gt; Maybe ByteString -&gt; IO ByteString
+</span><a href="#local-6989586621680135711"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135713"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">ByteCount -&gt; ByteCount -&gt; ByteCount
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135719"><span class="hs-identifier hs-var">bytesRead</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe ByteString) -&gt; ByteString -&gt; Maybe ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135720"><span class="hs-identifier hs-var">oldBuf</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621680135690"><span class="hs-identifier hs-type">bytesToRead</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-164"></span><span>    </span><span class="annot"><span class="annottext">Maybe ByteCount
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe ByteString -&gt; IO (Maybe ByteString)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-165"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680135721"><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135721"><span class="hs-identifier hs-var">bytesToRead</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-166"></span><span>      </span><span id="local-6989586621680135722"><span class="annot"><a href="#local-6989586621680135722"><span class="hs-identifier hs-var">buf</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ByteCount -&gt; Maybe ByteString -&gt; IO ByteString
+</span><a href="#local-6989586621680135711"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">ByteCount
+</span><a href="#local-6989586621680135721"><span class="hs-identifier hs-var">bytesToRead</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-167"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><a href="#local-6989586621680135722"><span class="hs-identifier hs-type">buf</span></a></span><span>
+</span><span id="line-168"></span></pre></body></html>

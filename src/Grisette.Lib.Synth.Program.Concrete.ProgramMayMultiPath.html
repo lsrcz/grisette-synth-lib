@@ -1,0 +1,438 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier">ProgMayMultiPath</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">when</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Error.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">throwError</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.State</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">MonadState</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">get</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-identifier">MonadTrans</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">lift</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-identifier">StateT</span></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><span class="hs-identifier">evalStateT</span></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HM</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Grisette</span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">Mergeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">rootStrategy</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-identifier">MergingStrategy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">SimpleStrategy</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SortedStrategy</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="hs-identifier">MonadUnion</span></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><span class="hs-identifier">SimpleMergeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">mrgIte</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="hs-identifier">Union</span></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="hs-identifier">liftToMonadUnion</span></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="hs-identifier">merge</span></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Grisette.Lib.Control.Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">mrgReturn</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Grisette.Lib.Control.Monad.Except</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">mrgThrowError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Grisette.Lib.Control.Monad.State.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">mrgPut</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Grisette.Lib.Data.Foldable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">mrgTraverse_</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Grisette.Lib.Data.Traversable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">mrgTraverse</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Context.html"><span class="hs-identifier">Grisette.Lib.Synth.Context</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Context.html#MonadContext"><span class="hs-identifier">MonadContext</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Operator.OpSemantics.html"><span class="hs-identifier">Grisette.Lib.Synth.Operator.OpSemantics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Operator.OpSemantics.html#OpSemantics"><span class="hs-identifier">OpSemantics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Operator.OpSemantics.html#applyOp"><span class="hs-identifier">applyOp</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Operator.OpTyping.html"><span class="hs-identifier">Grisette.Lib.Synth.Operator.OpTyping</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Operator.OpTyping.html#OpTyping"><span class="hs-identifier">OpTyping</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Operator.OpTyping.html#OpTypeType"><span class="hs-identifier">OpTypeType</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.Concrete.Program</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Prog"><span class="hs-identifier">Prog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Prog"><span class="hs-identifier">Prog</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#ProgArg"><span class="hs-identifier">ProgArg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#progArgId"><span class="hs-identifier">progArgId</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#ProgRes"><span class="hs-identifier">ProgRes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#progResId"><span class="hs-identifier">progResId</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Stmt"><span class="hs-identifier">Stmt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Stmt"><span class="hs-identifier">Stmt</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgSemantics.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.ProgSemantics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgSemantics.html#ProgSemantics"><span class="hs-identifier">ProgSemantics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgSemantics.html#runProg"><span class="hs-identifier">runProg</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.ProgTyping</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTyping"><span class="hs-identifier">ProgTyping</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#typeProg"><span class="hs-identifier">typeProg</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.ProgUtil</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgUtil"><span class="hs-identifier">ProgUtil</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgOpType"><span class="hs-identifier">ProgOpType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgStmtType"><span class="hs-identifier">ProgStmtType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgTypeType"><span class="hs-identifier">ProgTypeType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgVarIdType"><span class="hs-identifier">ProgVarIdType</span></a></span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgUtilImpl"><span class="hs-identifier">ProgUtilImpl</span></a></span><span>
+</span><span id="line-55"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgArgIds"><span class="hs-identifier">getProgArgIds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgNumStmts"><span class="hs-identifier">getProgNumStmts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgResIds"><span class="hs-identifier">getProgResIds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgStmtAtIdx"><span class="hs-identifier">getProgStmtAtIdx</span></a></span><span>
+</span><span id="line-59"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html"><span class="hs-identifier">Grisette.Lib.Synth.Util.Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier">showText</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html"><span class="hs-identifier">Grisette.Lib.Synth.VarId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html#ConcreteVarId"><span class="hs-identifier">ConcreteVarId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">newtype</span><span> </span><span id="ProgMayMultiPath"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-var">ProgMayMultiPath</span></a></span></span><span> </span><span id="local-6989586621680166305"><span class="annot"><a href="#local-6989586621680166305"><span class="hs-identifier hs-type">op</span></a></span></span><span> </span><span id="local-6989586621680166306"><span class="annot"><a href="#local-6989586621680166306"><span class="hs-identifier hs-type">varId</span></a></span></span><span> </span><span id="local-6989586621680166307"><span class="annot"><a href="#local-6989586621680166307"><span class="hs-identifier hs-type">ty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ProgMayMultiPath"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-var">ProgMayMultiPath</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Prog"><span class="hs-identifier hs-type">Prog</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166305"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166306"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166307"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">newtype</span><span> </span><span id="MayMultiPathEnv"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-var">MayMultiPathEnv</span></a></span></span><span> </span><span id="local-6989586621680166087"><span class="annot"><a href="#local-6989586621680166087"><span class="hs-identifier hs-type">varId</span></a></span></span><span> </span><span id="local-6989586621680166088"><span class="annot"><a href="#local-6989586621680166088"><span class="hs-identifier hs-type">val</span></a></span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="MayMultiPathEnv"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-var">MayMultiPathEnv</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HM.HashMap</span></span><span> </span><span class="annot"><a href="#local-6989586621680166087"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Union</span></span><span> </span><span class="annot"><a href="#local-6989586621680166088"><span class="hs-identifier hs-type">val</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621680166056"><span id="local-6989586621680166057"><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html#ConcreteVarId"><span class="hs-identifier hs-type">ConcreteVarId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166056"><span class="hs-identifier hs-type">conVarId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Mergeable</span></span><span> </span><span class="annot"><a href="#local-6989586621680166057"><span class="hs-identifier hs-type">val</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Mergeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-type">MayMultiPathEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166056"><span class="hs-identifier hs-type">conVarId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166057"><span class="hs-identifier hs-type">val</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621680166336"><span class="annot"><span class="annottext">rootStrategy :: MergingStrategy (MayMultiPathEnv conVarId val)
+</span><span class="hs-identifier hs-var hs-var hs-var">rootStrategy</span></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">(MayMultiPathEnv conVarId val -&gt; HashSet conVarId)
+-&gt; (HashSet conVarId
+    -&gt; MergingStrategy (MayMultiPathEnv conVarId val))
+-&gt; MergingStrategy (MayMultiPathEnv conVarId val)
+forall idx a.
+(Ord idx, Typeable idx, Show idx) =&gt;
+(a -&gt; idx) -&gt; (idx -&gt; MergingStrategy a) -&gt; MergingStrategy a
+</span><span class="hs-identifier hs-var">SortedStrategy</span></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-type">MayMultiPathEnv</span></a></span><span> </span><span id="local-6989586621680166337"><span class="annot"><span class="annottext">HashMap conVarId (Union val)
+</span><a href="#local-6989586621680166337"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashMap conVarId (Union val) -&gt; HashSet conVarId
+forall k a. HashMap k a -&gt; HashSet k
+</span><span class="hs-identifier hs-var">HM.keysSet</span></span><span> </span><span class="annot"><span class="annottext">HashMap conVarId (Union val)
+</span><a href="#local-6989586621680166337"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">MergingStrategy (MayMultiPathEnv conVarId val)
+-&gt; HashSet conVarId
+-&gt; MergingStrategy (MayMultiPathEnv conVarId val)
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">(MergingStrategy (MayMultiPathEnv conVarId val)
+ -&gt; HashSet conVarId
+ -&gt; MergingStrategy (MayMultiPathEnv conVarId val))
+-&gt; MergingStrategy (MayMultiPathEnv conVarId val)
+-&gt; HashSet conVarId
+-&gt; MergingStrategy (MayMultiPathEnv conVarId val)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(SymBool
+ -&gt; MayMultiPathEnv conVarId val
+ -&gt; MayMultiPathEnv conVarId val
+ -&gt; MayMultiPathEnv conVarId val)
+-&gt; MergingStrategy (MayMultiPathEnv conVarId val)
+forall a. (SymBool -&gt; a -&gt; a -&gt; a) -&gt; MergingStrategy a
+</span><span class="hs-identifier hs-var">SimpleStrategy</span></span><span> </span><span class="annot"><span class="annottext">((SymBool
+  -&gt; MayMultiPathEnv conVarId val
+  -&gt; MayMultiPathEnv conVarId val
+  -&gt; MayMultiPathEnv conVarId val)
+ -&gt; MergingStrategy (MayMultiPathEnv conVarId val))
+-&gt; (SymBool
+    -&gt; MayMultiPathEnv conVarId val
+    -&gt; MayMultiPathEnv conVarId val
+    -&gt; MayMultiPathEnv conVarId val)
+-&gt; MergingStrategy (MayMultiPathEnv conVarId val)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680166340"><span class="annot"><span class="annottext">SymBool
+</span><a href="#local-6989586621680166340"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-type">MayMultiPathEnv</span></a></span><span> </span><span id="local-6989586621680166341"><span class="annot"><span class="annottext">HashMap conVarId (Union val)
+</span><a href="#local-6989586621680166341"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-type">MayMultiPathEnv</span></a></span><span> </span><span id="local-6989586621680166342"><span class="annot"><span class="annottext">HashMap conVarId (Union val)
+</span><a href="#local-6989586621680166342"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-77"></span><span>          </span><span class="annot"><span class="annottext">HashMap conVarId (Union val) -&gt; MayMultiPathEnv conVarId val
+forall varId val.
+HashMap varId (Union val) -&gt; MayMultiPathEnv varId val
+</span><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-var">MayMultiPathEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(HashMap conVarId (Union val) -&gt; MayMultiPathEnv conVarId val)
+-&gt; HashMap conVarId (Union val) -&gt; MayMultiPathEnv conVarId val
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-78"></span><span>            </span><span class="annot"><span class="annottext">(conVarId -&gt; Union val -&gt; Union val)
+-&gt; HashMap conVarId (Union val) -&gt; HashMap conVarId (Union val)
+forall k v1 v2. (k -&gt; v1 -&gt; v2) -&gt; HashMap k v1 -&gt; HashMap k v2
+</span><span class="hs-identifier hs-var">HM.mapWithKey</span></span><span>
+</span><span id="line-79"></span><span>              </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680166344"><span class="annot"><span class="annottext">conVarId
+</span><a href="#local-6989586621680166344"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621680166345"><span class="annot"><span class="annottext">Union val
+</span><a href="#local-6989586621680166345"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SymBool -&gt; Union val -&gt; Union val -&gt; Union val
+forall a. SimpleMergeable a =&gt; SymBool -&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">mrgIte</span></span><span> </span><span class="annot"><span class="annottext">SymBool
+</span><a href="#local-6989586621680166340"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Union val
+</span><a href="#local-6989586621680166345"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap conVarId (Union val)
+</span><a href="#local-6989586621680166342"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap conVarId (Union val) -&gt; conVarId -&gt; Union val
+forall k v.
+(Eq k, Hashable k, HasCallStack) =&gt;
+HashMap k v -&gt; k -&gt; v
+</span><span class="hs-operator hs-var">HM.!</span></span><span> </span><span class="annot"><span class="annottext">conVarId
+</span><a href="#local-6989586621680166344"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>              </span><span class="annot"><span class="annottext">HashMap conVarId (Union val)
+</span><a href="#local-6989586621680166341"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-82"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span id="local-6989586621680166095"><span id="local-6989586621680166096"><span id="local-6989586621680166099"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#addValMayMultiPath"><span class="hs-identifier hs-type">addValMayMultiPath</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html#ConcreteVarId"><span class="hs-identifier hs-type">ConcreteVarId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166095"><span class="hs-identifier hs-type">varId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Context.html#MonadContext"><span class="hs-identifier hs-type">MonadContext</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166096"><span class="hs-identifier hs-type">ctx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadUnion</span></span><span> </span><span class="annot"><a href="#local-6989586621680166096"><span class="hs-identifier hs-type">ctx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Mergeable</span></span><span> </span><span class="annot"><a href="#local-6989586621680166099"><span class="hs-identifier hs-type">val</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="#local-6989586621680166095"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><a href="#local-6989586621680166099"><span class="hs-identifier hs-type">val</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">StateT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-type">MayMultiPathEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166095"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166099"><span class="hs-identifier hs-type">val</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680166096"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-89"></span><span id="addValMayMultiPath"><span class="annot"><span class="annottext">addValMayMultiPath :: forall varId (ctx :: * -&gt; *) val.
+(ConcreteVarId varId, MonadContext ctx, MonadUnion ctx,
+ Mergeable val) =&gt;
+varId -&gt; val -&gt; StateT (MayMultiPathEnv varId val) ctx ()
+</span><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#addValMayMultiPath"><span class="hs-identifier hs-var hs-var">addValMayMultiPath</span></a></span></span><span> </span><span id="local-6989586621680166395"><span class="annot"><span class="annottext">varId
+</span><a href="#local-6989586621680166395"><span class="hs-identifier hs-var">varId</span></a></span></span><span> </span><span id="local-6989586621680166396"><span class="annot"><span class="annottext">val
+</span><a href="#local-6989586621680166396"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-type">MayMultiPathEnv</span></a></span><span> </span><span id="local-6989586621680166397"><span class="annot"><a href="#local-6989586621680166397"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StateT (MayMultiPathEnv varId val) ctx (MayMultiPathEnv varId val)
+forall s (m :: * -&gt; *). MonadState s m =&gt; m s
+</span><span class="hs-identifier hs-var">get</span></span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HM.member</span></span><span> </span><span class="annot"><a href="#local-6989586621680166395"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166397"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">.</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">mrgThrowError</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="hs-string">&quot;Variable &quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-type">showText</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166395"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot; is already defined.&quot;</span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">mrgPut</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-type">MayMultiPathEnv</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.insert</span></span><span> </span><span class="annot"><a href="#local-6989586621680166395"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">mrgReturn</span></span><span> </span><span class="annot"><a href="#local-6989586621680166396"><span class="hs-identifier hs-type">val</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680166397"><span class="hs-identifier hs-type">env</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span id="local-6989586621680166142"><span id="local-6989586621680166143"><span id="local-6989586621680166144"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#lookupValMayMultiPath"><span class="hs-identifier hs-type">lookupValMayMultiPath</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html#ConcreteVarId"><span class="hs-identifier hs-type">ConcreteVarId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166142"><span class="hs-identifier hs-type">varId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Context.html#MonadContext"><span class="hs-identifier hs-type">MonadContext</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166143"><span class="hs-identifier hs-type">ctx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadUnion</span></span><span> </span><span class="annot"><a href="#local-6989586621680166143"><span class="hs-identifier hs-type">ctx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Mergeable</span></span><span> </span><span class="annot"><a href="#local-6989586621680166144"><span class="hs-identifier hs-type">val</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><a href="#local-6989586621680166142"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">StateT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-type">MayMultiPathEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166142"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166144"><span class="hs-identifier hs-type">val</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680166143"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166144"><span class="hs-identifier hs-type">val</span></a></span></span></span></span><span>
+</span><span id="line-99"></span><span id="lookupValMayMultiPath"><span class="annot"><span class="annottext">lookupValMayMultiPath :: forall varId (ctx :: * -&gt; *) val.
+(ConcreteVarId varId, MonadContext ctx, MonadUnion ctx,
+ Mergeable val) =&gt;
+varId -&gt; StateT (MayMultiPathEnv varId val) ctx val
+</span><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#lookupValMayMultiPath"><span class="hs-identifier hs-var hs-var">lookupValMayMultiPath</span></a></span></span><span> </span><span id="local-6989586621680166430"><span class="annot"><span class="annottext">varId
+</span><a href="#local-6989586621680166430"><span class="hs-identifier hs-var">varId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-type">MayMultiPathEnv</span></a></span><span> </span><span id="local-6989586621680166431"><span class="annot"><a href="#local-6989586621680166431"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StateT (MayMultiPathEnv varId val) ctx (MayMultiPathEnv varId val)
+forall s (m :: * -&gt; *). MonadState s m =&gt; m s
+</span><span class="hs-identifier hs-var">get</span></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.lookup</span></span><span> </span><span class="annot"><a href="#local-6989586621680166430"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166431"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Union val)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; StateT (MayMultiPathEnv varId val) ctx val
+forall e (m :: * -&gt; *) a.
+(MonadError e m, TryMerge m, Mergeable a) =&gt;
+e -&gt; m a
+</span><span class="hs-identifier hs-var">mrgThrowError</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; StateT (MayMultiPathEnv varId val) ctx val)
+-&gt; Text -&gt; StateT (MayMultiPathEnv varId val) ctx val
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Variable &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">varId -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="annot"><span class="annottext">varId
+</span><a href="#local-6989586621680166430"><span class="hs-identifier hs-var">varId</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; is undefined.&quot;</span></span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680166433"><span class="annot"><span class="annottext">Union val
+</span><a href="#local-6989586621680166433"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Union val -&gt; StateT (MayMultiPathEnv varId val) ctx val
+forall a (u :: * -&gt; *).
+(Mergeable a, MonadUnion u) =&gt;
+Union a -&gt; u a
+</span><span class="hs-identifier hs-var">liftToMonadUnion</span></span><span> </span><span class="annot"><span class="annottext">Union val
+</span><a href="#local-6989586621680166433"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680166167"><span id="local-6989586621680166168"><span id="local-6989586621680166169"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Mergeable</span></span><span> </span><span class="annot"><a href="#local-6989586621680166167"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgTyping.html#ProgTyping"><span class="hs-identifier hs-type">ProgTyping</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166168"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166169"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166167"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621680166443"><span class="annot"><span class="annottext">typeProg :: ProgMayMultiPath op varId ty
+-&gt; TypeSignature (ProgTypeType (ProgMayMultiPath op varId ty))
+</span><a href="Grisette.Lib.Synth.Program.ProgTyping.html#typeProg"><span class="hs-identifier hs-var hs-var hs-var">typeProg</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span id="local-6989586621680166444"><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166444"><span class="hs-identifier hs-var">prog</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prog op varId ty -&gt; TypeSignature (ProgTypeType (Prog op varId ty))
+forall prog.
+ProgTyping prog =&gt;
+prog -&gt; TypeSignature (ProgTypeType prog)
+</span><a href="Grisette.Lib.Synth.Program.ProgTyping.html#typeProg"><span class="hs-identifier hs-var">typeProg</span></a></span><span> </span><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166444"><span class="hs-identifier hs-var">prog</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621680166192"><span id="local-6989586621680166193"><span id="local-6989586621680166194"><span id="local-6989586621680166195"><span id="local-6989586621680166196"><span id="local-6989586621680166197"><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Operator.OpSemantics.html#OpSemantics"><span class="hs-identifier hs-type">OpSemantics</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166192"><span class="hs-identifier hs-type">semObj</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166193"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166194"><span class="hs-identifier hs-type">val</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166195"><span class="hs-identifier hs-type">ctx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html#ConcreteVarId"><span class="hs-identifier hs-type">ConcreteVarId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166196"><span class="hs-identifier hs-type">varId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadUnion</span></span><span> </span><span class="annot"><a href="#local-6989586621680166195"><span class="hs-identifier hs-type">ctx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Mergeable</span></span><span> </span><span class="annot"><a href="#local-6989586621680166194"><span class="hs-identifier hs-type">val</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Mergeable</span></span><span> </span><span class="annot"><a href="#local-6989586621680166197"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><a href="#local-6989586621680166197"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Operator.OpTyping.html#OpTypeType"><span class="hs-identifier hs-type">OpTypeType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166193"><span class="hs-identifier hs-type">op</span></a></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgSemantics.html#ProgSemantics"><span class="hs-identifier hs-type">ProgSemantics</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166192"><span class="hs-identifier hs-type">semObj</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166193"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166196"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166197"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680166194"><span class="hs-identifier hs-type">val</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166195"><span class="hs-identifier hs-type">ctx</span></a></span></span></span></span></span></span></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621680166549"><span class="annot"><span class="annottext">runProg :: semObj
+-&gt; EvaledSymbolTable val ctx
+-&gt; ProgMayMultiPath op varId ty
+-&gt; [val]
+-&gt; ctx [val]
+</span><a href="Grisette.Lib.Synth.Program.ProgSemantics.html#runProg"><span class="hs-identifier hs-var hs-var hs-var">runProg</span></a></span></span><span> </span><span id="local-6989586621680166550"><span class="annot"><span class="annottext">semObj
+</span><a href="#local-6989586621680166550"><span class="hs-identifier hs-var">sem</span></a></span></span><span> </span><span id="local-6989586621680166551"><span class="annot"><span class="annottext">EvaledSymbolTable val ctx
+</span><a href="#local-6989586621680166551"><span class="hs-identifier hs-var">table</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Prog"><span class="hs-identifier hs-type">Prog</span></a></span><span> </span><span id="local-6989586621680166552"><span class="annot"><span class="annottext">[ProgArg varId ty]
+</span><a href="#local-6989586621680166552"><span class="hs-identifier hs-var">arg</span></a></span></span><span> </span><span id="local-6989586621680166553"><span class="annot"><span class="annottext">[Stmt op varId]
+</span><a href="#local-6989586621680166553"><span class="hs-identifier hs-var">stmts</span></a></span></span><span> </span><span id="local-6989586621680166554"><span class="annot"><span class="annottext">[ProgRes varId ty]
+</span><a href="#local-6989586621680166554"><span class="hs-identifier hs-var">ret</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621680166555"><span class="annot"><span class="annottext">[val]
+</span><a href="#local-6989586621680166555"><span class="hs-identifier hs-var">inputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ctx [val] -&gt; ctx [val]
+forall (m :: * -&gt; *) a. (SymBranching m, Mergeable a) =&gt; m a -&gt; m a
+</span><span class="hs-identifier hs-var">merge</span></span><span> </span><span class="annot"><span class="annottext">(ctx [val] -&gt; ctx [val]) -&gt; ctx [val] -&gt; ctx [val]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; ctx () -&gt; ctx ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[val] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[val]
+</span><a href="#local-6989586621680166555"><span class="hs-identifier hs-var">inputs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">[ProgArg varId ty] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[ProgArg varId ty]
+</span><a href="#local-6989586621680166552"><span class="hs-identifier hs-var">arg</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ctx () -&gt; ctx ()) -&gt; (Text -&gt; ctx ()) -&gt; Text -&gt; ctx ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ctx ()
+forall e (m :: * -&gt; *) a.
+(MonadError e m, TryMerge m, Mergeable a) =&gt;
+e -&gt; m a
+</span><span class="hs-identifier hs-var">mrgThrowError</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ctx ()) -&gt; Text -&gt; ctx ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Expected &quot;</span></span><span>
+</span><span id="line-121"></span><span>        </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ProgArg varId ty] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[ProgArg varId ty]
+</span><a href="#local-6989586621680166552"><span class="hs-identifier hs-var">arg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; arguments, but got &quot;</span></span><span>
+</span><span id="line-123"></span><span>        </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[val] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[val]
+</span><a href="#local-6989586621680166555"><span class="hs-identifier hs-var">inputs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>        </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; arguments.&quot;</span></span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680166558"><span class="annot"><span class="annottext">initialEnv :: MayMultiPathEnv varId val
+</span><a href="#local-6989586621680166558"><span class="hs-identifier hs-var hs-var hs-var">initialEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>          </span><span class="annot"><span class="annottext">HashMap varId (Union val) -&gt; MayMultiPathEnv varId val
+forall varId val.
+HashMap varId (Union val) -&gt; MayMultiPathEnv varId val
+</span><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#MayMultiPathEnv"><span class="hs-identifier hs-var">MayMultiPathEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(HashMap varId (Union val) -&gt; MayMultiPathEnv varId val)
+-&gt; ([Union val] -&gt; HashMap varId (Union val))
+-&gt; [Union val]
+-&gt; MayMultiPathEnv varId val
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[(varId, Union val)] -&gt; HashMap varId (Union val)
+forall k v. (Eq k, Hashable k) =&gt; [(k, v)] -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">HM.fromList</span></span><span> </span><span class="annot"><span class="annottext">([(varId, Union val)] -&gt; HashMap varId (Union val))
+-&gt; ([Union val] -&gt; [(varId, Union val)])
+-&gt; [Union val]
+-&gt; HashMap varId (Union val)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[varId] -&gt; [Union val] -&gt; [(varId, Union val)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProgArg varId ty -&gt; varId
+forall varId ty. ProgArg varId ty -&gt; varId
+</span><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#progArgId"><span class="hs-identifier hs-var">progArgId</span></a></span><span> </span><span class="annot"><span class="annottext">(ProgArg varId ty -&gt; varId) -&gt; [ProgArg varId ty] -&gt; [varId]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[ProgArg varId ty]
+</span><a href="#local-6989586621680166552"><span class="hs-identifier hs-var">arg</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Union val] -&gt; MayMultiPathEnv varId val)
+-&gt; [Union val] -&gt; MayMultiPathEnv varId val
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-127"></span><span>            </span><span class="annot"><span class="annottext">val -&gt; Union val
+forall (u :: * -&gt; *) a. (MonadTryMerge u, Mergeable a) =&gt; a -&gt; u a
+</span><span class="hs-identifier hs-var">mrgReturn</span></span><span> </span><span class="annot"><span class="annottext">(val -&gt; Union val) -&gt; [val] -&gt; [Union val]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[val]
+</span><a href="#local-6989586621680166555"><span class="hs-identifier hs-var">inputs</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680166561"><span class="annot"><span class="annottext">runStmt :: Stmt op varId -&gt; StateT (MayMultiPathEnv varId val) ctx ()
+</span><a href="#local-6989586621680166561"><span class="hs-identifier hs-var hs-var">runStmt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Stmt"><span class="hs-identifier hs-type">Stmt</span></a></span><span> </span><span id="local-6989586621680166562"><span class="annot"><span class="annottext">op
+</span><a href="#local-6989586621680166562"><span class="hs-identifier hs-var">op</span></a></span></span><span> </span><span id="local-6989586621680166563"><span class="annot"><span class="annottext">[varId]
+</span><a href="#local-6989586621680166563"><span class="hs-identifier hs-var">argIds</span></a></span></span><span> </span><span id="local-6989586621680166564"><span class="annot"><span class="annottext">[varId]
+</span><a href="#local-6989586621680166564"><span class="hs-identifier hs-var">resIds</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-129"></span><span>          </span><span id="local-6989586621680166565"><span class="annot"><a href="#local-6989586621680166565"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(varId -&gt; StateT (MayMultiPathEnv varId val) ctx val)
+-&gt; [varId] -&gt; StateT (MayMultiPathEnv varId val) ctx [val]
+forall a b (t :: * -&gt; *) (f :: * -&gt; *).
+(Mergeable b, Mergeable1 t, TryMerge f, Applicative f,
+ Traversable t) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+</span><span class="hs-identifier hs-var">mrgTraverse</span></span><span> </span><span class="annot"><span class="annottext">varId -&gt; StateT (MayMultiPathEnv varId val) ctx val
+forall varId (ctx :: * -&gt; *) val.
+(ConcreteVarId varId, MonadContext ctx, MonadUnion ctx,
+ Mergeable val) =&gt;
+varId -&gt; StateT (MayMultiPathEnv varId val) ctx val
+</span><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#lookupValMayMultiPath"><span class="hs-identifier hs-var">lookupValMayMultiPath</span></a></span><span> </span><span class="annot"><span class="annottext">[varId]
+</span><a href="#local-6989586621680166563"><span class="hs-identifier hs-var">argIds</span></a></span><span>
+</span><span id="line-130"></span><span>          </span><span id="local-6989586621680166566"><span class="annot"><a href="#local-6989586621680166566"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="hs-identifier hs-type">lift</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Operator.OpSemantics.html#applyOp"><span class="hs-identifier hs-type">applyOp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166550"><span class="hs-identifier hs-type">sem</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166551"><span class="hs-identifier hs-type">table</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166562"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166565"><span class="hs-identifier hs-type">args</span></a></span><span>
+</span><span id="line-131"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680166566"><span class="hs-identifier hs-type">res</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">/=</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680166564"><span class="hs-identifier hs-type">resIds</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">.</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">throwError</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
+</span><span id="line-132"></span><span>            </span><span class="annot"><span class="hs-string">&quot;Incorrect number of results.&quot;</span></span><span>
+</span><span id="line-133"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">mrgTraverse_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">uncurry</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#addValMayMultiPath"><span class="hs-identifier hs-type">addValMayMultiPath</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">zip</span></span><span> </span><span class="annot"><a href="#local-6989586621680166564"><span class="hs-identifier hs-type">resIds</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166566"><span class="hs-identifier hs-type">res</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="annottext">(StateT (MayMultiPathEnv varId val) ctx [val]
+ -&gt; MayMultiPathEnv varId val -&gt; ctx [val])
+-&gt; MayMultiPathEnv varId val
+-&gt; StateT (MayMultiPathEnv varId val) ctx [val]
+-&gt; ctx [val]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">StateT (MayMultiPathEnv varId val) ctx [val]
+-&gt; MayMultiPathEnv varId val -&gt; ctx [val]
+forall (m :: * -&gt; *) s a. Monad m =&gt; StateT s m a -&gt; s -&gt; m a
+</span><span class="hs-identifier hs-var">evalStateT</span></span><span> </span><span class="annot"><span class="annottext">MayMultiPathEnv varId val
+</span><a href="#local-6989586621680166558"><span class="hs-identifier hs-var">initialEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(StateT (MayMultiPathEnv varId val) ctx [val] -&gt; ctx [val])
+-&gt; StateT (MayMultiPathEnv varId val) ctx [val] -&gt; ctx [val]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-135"></span><span>      </span><span class="annot"><span class="annottext">(Stmt op varId -&gt; StateT (MayMultiPathEnv varId val) ctx ())
+-&gt; [Stmt op varId] -&gt; StateT (MayMultiPathEnv varId val) ctx ()
+forall (m :: * -&gt; *) (t :: * -&gt; *) a b.
+(Applicative m, TryMerge m, Foldable t) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><span class="hs-identifier hs-var">mrgTraverse_</span></span><span> </span><span class="annot"><span class="annottext">Stmt op varId -&gt; StateT (MayMultiPathEnv varId val) ctx ()
+</span><a href="#local-6989586621680166561"><span class="hs-identifier hs-var">runStmt</span></a></span><span> </span><span class="annot"><span class="annottext">[Stmt op varId]
+</span><a href="#local-6989586621680166553"><span class="hs-identifier hs-var">stmts</span></a></span><span>
+</span><span id="line-136"></span><span>      </span><span class="annot"><span class="annottext">(ProgRes varId ty -&gt; StateT (MayMultiPathEnv varId val) ctx val)
+-&gt; [ProgRes varId ty]
+-&gt; StateT (MayMultiPathEnv varId val) ctx [val]
+forall a b (t :: * -&gt; *) (f :: * -&gt; *).
+(Mergeable b, Mergeable1 t, TryMerge f, Applicative f,
+ Traversable t) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+</span><span class="hs-identifier hs-var">mrgTraverse</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">varId -&gt; StateT (MayMultiPathEnv varId val) ctx val
+forall varId (ctx :: * -&gt; *) val.
+(ConcreteVarId varId, MonadContext ctx, MonadUnion ctx,
+ Mergeable val) =&gt;
+varId -&gt; StateT (MayMultiPathEnv varId val) ctx val
+</span><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#lookupValMayMultiPath"><span class="hs-identifier hs-var">lookupValMayMultiPath</span></a></span><span> </span><span class="annot"><span class="annottext">(varId -&gt; StateT (MayMultiPathEnv varId val) ctx val)
+-&gt; (ProgRes varId ty -&gt; varId)
+-&gt; ProgRes varId ty
+-&gt; StateT (MayMultiPathEnv varId val) ctx val
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ProgRes varId ty -&gt; varId
+forall varId ty. ProgRes varId ty -&gt; varId
+</span><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#progResId"><span class="hs-identifier hs-var">progResId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ProgRes varId ty]
+</span><a href="#local-6989586621680166554"><span class="hs-identifier hs-var">ret</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680166256"><span id="local-6989586621680166257"><span id="local-6989586621680166258"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgUtilImpl"><span class="hs-identifier hs-type">ProgUtilImpl</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166256"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166257"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166258"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680166256"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Stmt"><span class="hs-identifier hs-type">Stmt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166256"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166257"><span class="hs-identifier hs-type">varId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621680166257"><span class="hs-identifier hs-type">varId</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621680166581"><span class="annot"><span class="annottext">getProgArgIds :: ProgMayMultiPath op varId ty -&gt; [varId]
+</span><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgArgIds"><span class="hs-identifier hs-var hs-var hs-var">getProgArgIds</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span id="local-6989586621680166582"><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166582"><span class="hs-identifier hs-var">prog</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prog op varId ty -&gt; [varId]
+forall prog op stmt varId.
+ProgUtilImpl prog op stmt varId =&gt;
+prog -&gt; [varId]
+</span><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgArgIds"><span class="hs-identifier hs-var">getProgArgIds</span></a></span><span> </span><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166582"><span class="hs-identifier hs-var">prog</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span id="local-6989586621680166585"><span class="annot"><span class="annottext">getProgResIds :: ProgMayMultiPath op varId ty -&gt; [varId]
+</span><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgResIds"><span class="hs-identifier hs-var hs-var hs-var">getProgResIds</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span id="local-6989586621680166586"><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166586"><span class="hs-identifier hs-var">prog</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prog op varId ty -&gt; [varId]
+forall prog op stmt varId.
+ProgUtilImpl prog op stmt varId =&gt;
+prog -&gt; [varId]
+</span><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgResIds"><span class="hs-identifier hs-var">getProgResIds</span></a></span><span> </span><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166586"><span class="hs-identifier hs-var">prog</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span id="local-6989586621680166589"><span class="annot"><span class="annottext">getProgNumStmts :: ProgMayMultiPath op varId ty -&gt; Int
+</span><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgNumStmts"><span class="hs-identifier hs-var hs-var hs-var">getProgNumStmts</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span id="local-6989586621680166590"><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166590"><span class="hs-identifier hs-var">prog</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prog op varId ty -&gt; Int
+forall prog op stmt varId.
+ProgUtilImpl prog op stmt varId =&gt;
+prog -&gt; Int
+</span><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgNumStmts"><span class="hs-identifier hs-var">getProgNumStmts</span></a></span><span> </span><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166590"><span class="hs-identifier hs-var">prog</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span id="local-6989586621680166595"><span class="annot"><span class="annottext">getProgStmtAtIdx :: forall (ctx :: * -&gt; *).
+MonadContext ctx =&gt;
+ProgMayMultiPath op varId ty -&gt; Int -&gt; ctx (Stmt op varId)
+</span><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgStmtAtIdx"><span class="hs-identifier hs-var hs-var hs-var">getProgStmtAtIdx</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span id="local-6989586621680166596"><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166596"><span class="hs-identifier hs-var">prog</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prog op varId ty -&gt; Int -&gt; ctx (Stmt op varId)
+forall prog op stmt varId (ctx :: * -&gt; *).
+(ProgUtilImpl prog op stmt varId, MonadContext ctx) =&gt;
+prog -&gt; Int -&gt; ctx stmt
+forall (ctx :: * -&gt; *).
+MonadContext ctx =&gt;
+Prog op varId ty -&gt; Int -&gt; ctx (Stmt op varId)
+</span><a href="Grisette.Lib.Synth.Program.ProgUtil.html#getProgStmtAtIdx"><span class="hs-identifier hs-var">getProgStmtAtIdx</span></a></span><span> </span><span class="annot"><span class="annottext">Prog op varId ty
+</span><a href="#local-6989586621680166596"><span class="hs-identifier hs-var">prog</span></a></span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680166164"><span id="local-6989586621680166165"><span id="local-6989586621680166166"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgUtil"><span class="hs-identifier hs-type">ProgUtil</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166164"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166165"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166166"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ProgTypeType"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgTypeType"><span class="hs-identifier hs-var">ProgTypeType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166164"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166165"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166166"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621680166166"><span class="hs-identifier hs-type">ty</span></a></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ProgStmtType"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgStmtType"><span class="hs-identifier hs-var">ProgStmtType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166164"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166165"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166166"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.Program.html#Stmt"><span class="hs-identifier hs-type">Stmt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166164"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166165"><span class="hs-identifier hs-type">varId</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ProgVarIdType"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgVarIdType"><span class="hs-identifier hs-var">ProgVarIdType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166164"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166165"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166166"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621680166165"><span class="hs-identifier hs-type">varId</span></a></span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ProgOpType"><span class="annot"><a href="Grisette.Lib.Synth.Program.ProgUtil.html#ProgOpType"><span class="hs-identifier hs-var">ProgOpType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath.html#ProgMayMultiPath"><span class="hs-identifier hs-type">ProgMayMultiPath</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166164"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166165"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680166166"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621680166164"><span class="hs-identifier hs-type">op</span></a></span><span>
+</span><span id="line-149"></span></pre></body></html>

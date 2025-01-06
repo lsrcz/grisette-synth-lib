@@ -1,0 +1,303 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.Concrete.OpToDot</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#VarIdToLabel"><span class="hs-identifier">VarIdToLabel</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#argumentsToFieldEdges"><span class="hs-identifier">argumentsToFieldEdges</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#resultsToFieldEdges"><span class="hs-identifier">resultsToFieldEdges</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">when</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Error.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">throwError</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">traverse_</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.GraphViz</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">DotEdge</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">DotEdge</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.GraphViz.Attributes.Complete</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">Attribute</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HeadPort</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TailPort</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-identifier">PortName</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">PN</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-identifier">PortPos</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">LabelledPort</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><span class="hs-identifier">RecordField</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">LabelledTarget</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-identifier">RecordFields</span></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HM</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TL</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html"><span class="hs-identifier">Grisette.Lib.Synth.Program.Concrete.OpPPrint</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#OpPPrint"><span class="hs-identifier">OpPPrint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#describeArguments"><span class="hs-identifier">describeArguments</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#prefixResults"><span class="hs-identifier">prefixResults</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#OpPPrintError"><span class="hs-identifier">OpPPrintError</span></a></span><span>
+</span><span id="line-28"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#IncorrectNumberOfArguments"><span class="hs-identifier">IncorrectNumberOfArguments</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#IncorrectNumberOfResults"><span class="hs-identifier">IncorrectNumberOfResults</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#RedefinedResult"><span class="hs-identifier">RedefinedResult</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#UndefinedArgument"><span class="hs-identifier">UndefinedArgument</span></a></span><span>
+</span><span id="line-32"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html"><span class="hs-identifier">Grisette.Lib.Synth.Util.Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier">showText</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html"><span class="hs-identifier">Grisette.Lib.Synth.VarId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html#ConcreteVarId"><span class="hs-identifier">ConcreteVarId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">type</span><span> </span><span id="VarIdToLabel"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#VarIdToLabel"><span class="hs-identifier hs-var">VarIdToLabel</span></a></span></span><span> </span><span id="local-6989586621680139746"><span class="annot"><a href="#local-6989586621680139746"><span class="hs-identifier hs-type">varId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.HashMap</span></span><span> </span><span class="annot"><a href="#local-6989586621680139746"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PortName</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span id="local-6989586621680139630"><span id="local-6989586621680139632"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#argumentsToFieldEdges"><span class="hs-identifier hs-type">argumentsToFieldEdges</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html#ConcreteVarId"><span class="hs-identifier hs-type">ConcreteVarId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139630"><span class="hs-identifier hs-type">varId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#OpPPrint"><span class="hs-identifier hs-type">OpPPrint</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139632"><span class="hs-identifier hs-type">op</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="#local-6989586621680139632"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621680139630"><span class="hs-identifier hs-type">varId</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#VarIdToLabel"><span class="hs-identifier hs-type">VarIdToLabel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139630"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#OpPPrintError"><span class="hs-identifier hs-type">OpPPrintError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139630"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139632"><span class="hs-identifier hs-type">op</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RecordFields</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">DotEdge</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">]</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-46"></span><span id="argumentsToFieldEdges"><span class="annot"><span class="annottext">argumentsToFieldEdges :: forall varId op.
+(ConcreteVarId varId, OpPPrint op) =&gt;
+Text
+-&gt; op
+-&gt; [varId]
+-&gt; VarIdToLabel varId
+-&gt; Either (OpPPrintError varId op) (RecordFields, [DotEdge Text])
+</span><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#argumentsToFieldEdges"><span class="hs-identifier hs-var hs-var">argumentsToFieldEdges</span></a></span></span><span> </span><span id="local-6989586621680139782"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680139782"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span> </span><span id="local-6989586621680139783"><span class="annot"><span class="annottext">op
+</span><a href="#local-6989586621680139783"><span class="hs-identifier hs-var">op</span></a></span></span><span> </span><span id="local-6989586621680139784"><span class="annot"><span class="annottext">[varId]
+</span><a href="#local-6989586621680139784"><span class="hs-identifier hs-var">argIds</span></a></span></span><span> </span><span id="local-6989586621680139785"><span class="annot"><span class="annottext">VarIdToLabel varId
+</span><a href="#local-6989586621680139785"><span class="hs-identifier hs-var">map</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621680139786"><span class="annot"><a href="#local-6989586621680139786"><span class="hs-identifier hs-var">argDescriptions</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">op -&gt; Either (OpPPrintError varId op) [Maybe Text]
+forall varId. op -&gt; Either (OpPPrintError varId op) [Maybe Text]
+forall op varId.
+OpPPrint op =&gt;
+op -&gt; Either (OpPPrintError varId op) [Maybe Text]
+</span><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#describeArguments"><span class="hs-identifier hs-var">describeArguments</span></a></span><span> </span><span class="annot"><span class="annottext">op
+</span><a href="#local-6989586621680139783"><span class="hs-identifier hs-var">op</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680139784"><span class="hs-identifier hs-type">argIds</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">/=</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680139786"><span class="hs-identifier hs-type">argDescriptions</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">throwError</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#IncorrectNumberOfArguments"><span class="hs-identifier hs-type">IncorrectNumberOfArguments</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139783"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680139786"><span class="hs-identifier hs-type">argDescriptions</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680139784"><span class="hs-identifier hs-type">argIds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680139795"><span class="annot"><a href="#local-6989586621680139795"><span class="hs-identifier hs-var hs-var">argPortAtPos</span></a></span></span><span> </span><span id="local-6989586621680139796"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139796"><span class="hs-identifier hs-var">argPos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; LazyText
+</span><span class="hs-identifier hs-var">TL.fromStrict</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; LazyText) -&gt; Text -&gt; LazyText
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;arg&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139796"><span class="hs-identifier hs-var">argPos</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680139801"><span class="annot"><a href="#local-6989586621680139801"><span class="hs-identifier hs-var hs-var">buildArgLabel</span></a></span></span><span> </span><span id="local-6989586621680139802"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139802"><span class="hs-identifier hs-var">argPos</span></a></span></span><span> </span><span id="local-6989586621680139803"><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621680139803"><span class="hs-identifier hs-var">argDesc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><span class="annottext">PortName -&gt; LazyText -&gt; RecordField
+</span><span class="hs-identifier hs-var">LabelledTarget</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LazyText -&gt; PortName
+</span><span class="hs-identifier hs-var">PN</span></span><span> </span><span class="annot"><span class="annottext">(LazyText -&gt; PortName) -&gt; LazyText -&gt; PortName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; LazyText
+forall {a}. Show a =&gt; a -&gt; LazyText
+</span><a href="#local-6989586621680139795"><span class="hs-identifier hs-var">argPortAtPos</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139802"><span class="hs-identifier hs-var">argPos</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(LazyText -&gt; RecordField) -&gt; LazyText -&gt; RecordField
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-54"></span><span>          </span><span class="annot"><span class="annottext">LazyText -&gt; (Text -&gt; LazyText) -&gt; Maybe Text -&gt; LazyText
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; LazyText
+forall {a}. Show a =&gt; a -&gt; LazyText
+</span><a href="#local-6989586621680139795"><span class="hs-identifier hs-var">argPortAtPos</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139802"><span class="hs-identifier hs-var">argPos</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text -&gt; LazyText
+</span><span class="hs-identifier hs-var">TL.fromStrict</span></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621680139803"><span class="hs-identifier hs-var">argDesc</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680139808"><span class="annot"><a href="#local-6989586621680139808"><span class="hs-identifier hs-var hs-var">argLabel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Maybe Text -&gt; RecordField)
+-&gt; [Integer] -&gt; [Maybe Text] -&gt; RecordFields
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><span class="hs-identifier hs-var">zipWith</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Maybe Text -&gt; RecordField
+forall {a}. Show a =&gt; a -&gt; Maybe Text -&gt; RecordField
+</span><a href="#local-6989586621680139801"><span class="hs-identifier hs-var">buildArgLabel</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[Maybe Text]
+</span><a href="#local-6989586621680139786"><span class="hs-identifier hs-var">argDescriptions</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680139830"><span class="annot"><a href="#local-6989586621680139830"><span class="hs-identifier hs-var hs-var">lookupLabel</span></a></span></span><span> </span><span id="local-6989586621680139831"><span class="annot"><span class="annottext">HashMap k a
+</span><a href="#local-6989586621680139831"><span class="hs-identifier hs-var">map</span></a></span></span><span> </span><span id="local-6989586621680139832"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680139832"><span class="hs-identifier hs-var">idx</span></a></span></span><span> </span><span id="local-6989586621680139833"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621680139833"><span class="hs-identifier hs-var">varId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><span class="annottext">m a -&gt; (a -&gt; m a) -&gt; Maybe a -&gt; m a
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span>
+</span><span id="line-58"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OpPPrintError k op -&gt; m a
+forall a. OpPPrintError k op -&gt; m a
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><span class="hs-identifier hs-var">throwError</span></span><span> </span><span class="annot"><span class="annottext">(OpPPrintError k op -&gt; m a) -&gt; OpPPrintError k op -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; k -&gt; OpPPrintError k op
+forall varId op. Int -&gt; varId -&gt; OpPPrintError varId op
+</span><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#UndefinedArgument"><span class="hs-identifier hs-var">UndefinedArgument</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680139832"><span class="hs-identifier hs-var">idx</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621680139833"><span class="hs-identifier hs-var">varId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>          </span><span class="annot"><span class="annottext">a -&gt; m a
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span>
+</span><span id="line-60"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">k -&gt; HashMap k a -&gt; Maybe a
+forall k v. (Eq k, Hashable k) =&gt; k -&gt; HashMap k v -&gt; Maybe v
+</span><span class="hs-identifier hs-var">HM.lookup</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621680139833"><span class="hs-identifier hs-var">varId</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap k a
+</span><a href="#local-6989586621680139831"><span class="hs-identifier hs-var">map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621680139835"><span class="annot"><a href="#local-6989586621680139835"><span class="hs-identifier hs-var">argPreLabels</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="hs-identifier hs-type">traverse</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">uncurry</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><a href="#local-6989586621680139830"><span class="hs-identifier hs-type">lookupLabel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139785"><span class="hs-identifier hs-type">map</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">zip</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="annot"><a href="#local-6989586621680139784"><span class="hs-identifier hs-type">argIds</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680139840"><span class="annot"><a href="#local-6989586621680139840"><span class="hs-identifier hs-var hs-var">preLabelToEdge</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680139841"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680139841"><span class="hs-identifier hs-var">from</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680139842"><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621680139842"><span class="hs-identifier hs-var">port</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621680139843"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139843"><span class="hs-identifier hs-var">argPos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>        </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Attributes -&gt; DotEdge Text
+forall n. n -&gt; n -&gt; Attributes -&gt; DotEdge n
+</span><span class="hs-identifier hs-var">DotEdge</span></span><span>
+</span><span id="line-64"></span><span>          </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680139841"><span class="hs-identifier hs-var">from</span></a></span><span>
+</span><span id="line-65"></span><span>          </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680139782"><span class="hs-identifier hs-var">nodeId</span></a></span><span>
+</span><span id="line-66"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">PortPos -&gt; Attribute
+</span><span class="hs-identifier hs-var">HeadPort</span></span><span> </span><span class="annot"><span class="annottext">(PortPos -&gt; Attribute) -&gt; PortPos -&gt; Attribute
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PortName -&gt; Maybe CompassPoint -&gt; PortPos
+</span><span class="hs-identifier hs-var">LabelledPort</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LazyText -&gt; PortName
+</span><span class="hs-identifier hs-var">PN</span></span><span> </span><span class="annot"><span class="annottext">(LazyText -&gt; PortName) -&gt; LazyText -&gt; PortName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; LazyText
+forall {a}. Show a =&gt; a -&gt; LazyText
+</span><a href="#local-6989586621680139795"><span class="hs-identifier hs-var">argPortAtPos</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139843"><span class="hs-identifier hs-var">argPos</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe CompassPoint
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>            </span><span class="annot"><span class="annottext">PortPos -&gt; Attribute
+</span><span class="hs-identifier hs-var">TailPort</span></span><span> </span><span class="annot"><span class="annottext">(PortPos -&gt; Attribute) -&gt; PortPos -&gt; Attribute
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PortName -&gt; Maybe CompassPoint -&gt; PortPos
+</span><span class="hs-identifier hs-var">LabelledPort</span></span><span> </span><span class="annot"><span class="annottext">PortName
+</span><a href="#local-6989586621680139842"><span class="hs-identifier hs-var">port</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe CompassPoint
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-68"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680139808"><span class="hs-identifier hs-type">argLabel</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">zipWith</span></span><span> </span><span class="annot"><a href="#local-6989586621680139840"><span class="hs-identifier hs-type">preLabelToEdge</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139835"><span class="hs-identifier hs-type">argPreLabels</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span id="local-6989586621680139709"><span id="local-6989586621680139710"><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#resultsToFieldEdges"><span class="hs-identifier hs-type">resultsToFieldEdges</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.VarId.html#ConcreteVarId"><span class="hs-identifier hs-type">ConcreteVarId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139709"><span class="hs-identifier hs-type">varId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#OpPPrint"><span class="hs-identifier hs-type">OpPPrint</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139710"><span class="hs-identifier hs-type">op</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="#local-6989586621680139710"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621680139709"><span class="hs-identifier hs-type">varId</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#VarIdToLabel"><span class="hs-identifier hs-type">VarIdToLabel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139709"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#OpPPrintError"><span class="hs-identifier hs-type">OpPPrintError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139709"><span class="hs-identifier hs-type">varId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139710"><span class="hs-identifier hs-type">op</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#VarIdToLabel"><span class="hs-identifier hs-type">VarIdToLabel</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139709"><span class="hs-identifier hs-type">varId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RecordFields</span></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-82"></span><span id="resultsToFieldEdges"><span class="annot"><span class="annottext">resultsToFieldEdges :: forall varId op.
+(ConcreteVarId varId, OpPPrint op) =&gt;
+Text
+-&gt; op
+-&gt; [varId]
+-&gt; VarIdToLabel varId
+-&gt; Either
+     (OpPPrintError varId op) (VarIdToLabel varId, RecordFields)
+</span><a href="Grisette.Lib.Synth.Program.Concrete.OpToDot.html#resultsToFieldEdges"><span class="hs-identifier hs-var hs-var">resultsToFieldEdges</span></a></span></span><span> </span><span id="local-6989586621680139871"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680139871"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span> </span><span id="local-6989586621680139872"><span class="annot"><span class="annottext">op
+</span><a href="#local-6989586621680139872"><span class="hs-identifier hs-var">op</span></a></span></span><span> </span><span id="local-6989586621680139873"><span class="annot"><span class="annottext">[varId]
+</span><a href="#local-6989586621680139873"><span class="hs-identifier hs-var">resIds</span></a></span></span><span> </span><span id="local-6989586621680139874"><span class="annot"><span class="annottext">VarIdToLabel varId
+</span><a href="#local-6989586621680139874"><span class="hs-identifier hs-var">map</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680139888"><span class="annot"><span class="annottext">ensureNotRedefined :: (Int, varId) -&gt; f ()
+</span><a href="#local-6989586621680139888"><span class="hs-identifier hs-var hs-var hs-var">ensureNotRedefined</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680139889"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680139889"><span class="hs-identifier hs-var">idx</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680139890"><span class="annot"><span class="annottext">varId
+</span><a href="#local-6989586621680139890"><span class="hs-identifier hs-var">varId</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; f () -&gt; f ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">varId -&gt; VarIdToLabel varId -&gt; Bool
+forall k a. (Eq k, Hashable k) =&gt; k -&gt; HashMap k a -&gt; Bool
+</span><span class="hs-identifier hs-var">HM.member</span></span><span> </span><span class="annot"><span class="annottext">varId
+</span><a href="#local-6989586621680139890"><span class="hs-identifier hs-var">varId</span></a></span><span> </span><span class="annot"><span class="annottext">VarIdToLabel varId
+</span><a href="#local-6989586621680139874"><span class="hs-identifier hs-var">map</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(f () -&gt; f ()) -&gt; f () -&gt; f ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">OpPPrintError varId op -&gt; f ()
+forall a. OpPPrintError varId op -&gt; f a
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><span class="hs-identifier hs-var">throwError</span></span><span> </span><span class="annot"><span class="annottext">(OpPPrintError varId op -&gt; f ()) -&gt; OpPPrintError varId op -&gt; f ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; varId -&gt; OpPPrintError varId op
+forall varId op. Int -&gt; varId -&gt; OpPPrintError varId op
+</span><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#RedefinedResult"><span class="hs-identifier hs-var">RedefinedResult</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680139889"><span class="hs-identifier hs-var">idx</span></a></span><span> </span><span class="annot"><span class="annottext">varId
+</span><a href="#local-6989586621680139890"><span class="hs-identifier hs-var">varId</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><span class="annottext">((Int, varId) -&gt; Either (OpPPrintError varId op) ())
+-&gt; [(Int, varId)] -&gt; Either (OpPPrintError varId op) ()
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Foldable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f ()
+</span><span class="hs-identifier hs-var">traverse_</span></span><span> </span><span class="annot"><span class="annottext">(Int, varId) -&gt; Either (OpPPrintError varId op) ()
+forall {f :: * -&gt; *} {op}.
+MonadError (OpPPrintError varId op) f =&gt;
+(Int, varId) -&gt; f ()
+</span><a href="#local-6989586621680139888"><span class="hs-identifier hs-var">ensureNotRedefined</span></a></span><span> </span><span class="annot"><span class="annottext">([(Int, varId)] -&gt; Either (OpPPrintError varId op) ())
+-&gt; [(Int, varId)] -&gt; Either (OpPPrintError varId op) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; [varId] -&gt; [(Int, varId)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[varId]
+</span><a href="#local-6989586621680139873"><span class="hs-identifier hs-var">resIds</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621680139892"><span class="annot"><a href="#local-6989586621680139892"><span class="hs-identifier hs-var">prefixes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">op -&gt; Either (OpPPrintError varId op) [Text]
+forall varId. op -&gt; Either (OpPPrintError varId op) [Text]
+forall op varId.
+OpPPrint op =&gt;
+op -&gt; Either (OpPPrintError varId op) [Text]
+</span><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#prefixResults"><span class="hs-identifier hs-var">prefixResults</span></a></span><span> </span><span class="annot"><span class="annottext">op
+</span><a href="#local-6989586621680139872"><span class="hs-identifier hs-var">op</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680139873"><span class="hs-identifier hs-type">resIds</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">/=</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680139892"><span class="hs-identifier hs-type">prefixes</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">throwError</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><a href="Grisette.Lib.Synth.Program.Concrete.OpPPrint.html#IncorrectNumberOfResults"><span class="hs-identifier hs-type">IncorrectNumberOfResults</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680139872"><span class="hs-identifier hs-type">op</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680139892"><span class="hs-identifier hs-type">prefixes</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">length</span></span><span> </span><span class="annot"><a href="#local-6989586621680139873"><span class="hs-identifier hs-type">resIds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680139897"><span class="annot"><a href="#local-6989586621680139897"><span class="hs-identifier hs-var hs-var">resPortAtPos</span></a></span></span><span> </span><span id="local-6989586621680139898"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139898"><span class="hs-identifier hs-var">argPos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; LazyText
+</span><span class="hs-identifier hs-var">TL.fromStrict</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; LazyText) -&gt; Text -&gt; LazyText
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;res&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Grisette.Lib.Synth.Util.Show.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139898"><span class="hs-identifier hs-var">argPos</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680139901"><span class="annot"><a href="#local-6989586621680139901"><span class="hs-identifier hs-var hs-var">buildResLabel</span></a></span></span><span> </span><span id="local-6989586621680139902"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139902"><span class="hs-identifier hs-var">argPos</span></a></span></span><span> </span><span id="local-6989586621680139903"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680139903"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-92"></span><span>        </span><span class="annot"><span class="annottext">PortName -&gt; LazyText -&gt; RecordField
+</span><span class="hs-identifier hs-var">LabelledTarget</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LazyText -&gt; PortName
+</span><span class="hs-identifier hs-var">PN</span></span><span> </span><span class="annot"><span class="annottext">(LazyText -&gt; PortName) -&gt; LazyText -&gt; PortName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; LazyText
+forall {a}. Show a =&gt; a -&gt; LazyText
+</span><a href="#local-6989586621680139897"><span class="hs-identifier hs-var">resPortAtPos</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621680139902"><span class="hs-identifier hs-var">argPos</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(LazyText -&gt; RecordField) -&gt; LazyText -&gt; RecordField
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; LazyText
+</span><span class="hs-identifier hs-var">TL.fromStrict</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680139903"><span class="hs-identifier hs-var">prefix</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680139907"><span class="annot"><a href="#local-6989586621680139907"><span class="hs-identifier hs-var hs-var">resLabel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Text -&gt; RecordField)
+-&gt; [Integer] -&gt; [Text] -&gt; RecordFields
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><span class="hs-identifier hs-var">zipWith</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Text -&gt; RecordField
+forall {a}. Show a =&gt; a -&gt; Text -&gt; RecordField
+</span><a href="#local-6989586621680139901"><span class="hs-identifier hs-var">buildResLabel</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621680139892"><span class="hs-identifier hs-var">prefixes</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">foldl</span></span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680139909"><span class="annot"><span class="annottext">VarIdToLabel varId
+</span><a href="#local-6989586621680139909"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680139910"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680139910"><span class="hs-identifier hs-var">resPos</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680139911"><span class="annot"><span class="annottext">varId
+</span><a href="#local-6989586621680139911"><span class="hs-identifier hs-var">resId</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>            </span><span class="annot"><span class="annottext">varId
+-&gt; (Text, PortName) -&gt; VarIdToLabel varId -&gt; VarIdToLabel varId
+forall k v.
+(Eq k, Hashable k) =&gt;
+k -&gt; v -&gt; HashMap k v -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">HM.insert</span></span><span> </span><span class="annot"><span class="annottext">varId
+</span><a href="#local-6989586621680139911"><span class="hs-identifier hs-var">resId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680139871"><span class="hs-identifier hs-var">nodeId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LazyText -&gt; PortName
+</span><span class="hs-identifier hs-var">PN</span></span><span> </span><span class="annot"><span class="annottext">(LazyText -&gt; PortName) -&gt; LazyText -&gt; PortName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; LazyText
+forall {a}. Show a =&gt; a -&gt; LazyText
+</span><a href="#local-6989586621680139897"><span class="hs-identifier hs-var">resPortAtPos</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621680139910"><span class="hs-identifier hs-var">resPos</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">VarIdToLabel varId
+</span><a href="#local-6989586621680139909"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-98"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><a href="#local-6989586621680139874"><span class="hs-identifier hs-type">map</span></a></span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">zip</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="annot"><a href="#local-6989586621680139873"><span class="hs-identifier hs-type">resIds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><a href="#local-6989586621680139907"><span class="hs-identifier hs-type">resLabel</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span></pre></body></html>
