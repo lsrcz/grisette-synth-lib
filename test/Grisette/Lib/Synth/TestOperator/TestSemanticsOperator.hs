@@ -53,7 +53,9 @@ import Grisette.Lib.Synth.Program.ComponentSketch
 import Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction
   ( OpSymmetryReduction (opCommutativeArgPos, opUnreorderable),
   )
-import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments, pformatOp, prefixResults))
+import Grisette.Lib.Synth.Program.Concrete
+  ( OpPPrint (describeArguments, pformatOp, prefixResults),
+  )
 import Grisette.Lib.Synth.Program.Concrete.Flatten
   ( OpFlatten (opForwardedSubProg),
   )
@@ -61,7 +63,7 @@ import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 
 data TestSemanticsOp = Add | DivMod | Inc | Double deriving (Generic)
 
@@ -113,7 +115,7 @@ instance
   applyOp _ _ Add l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
-        <> showText (length l)
+        <> showAsText (length l)
         <> " arguments."
   applyOp _ _ DivMod [x, y] = do
     when (y == 0) $ mrgThrowError "ArithException: divide by zero"
@@ -121,19 +123,19 @@ instance
   applyOp _ _ DivMod l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
-        <> showText (length l)
+        <> showAsText (length l)
         <> " arguments."
   applyOp _ _ Inc [x] = return [x + 1]
   applyOp _ _ Inc l =
     mrgThrowError $
       "Incorrect number of arguments for inc, expected 1 arguments, but got "
-        <> showText (length l)
+        <> showAsText (length l)
         <> " arguments."
   applyOp _ _ Double [x] = return [x + x]
   applyOp _ _ Double l =
     mrgThrowError $
       "Incorrect number of arguments for dec, expected 1 arguments, but got "
-        <> showText (length l)
+        <> showAsText (length l)
         <> " arguments."
 
 instance
@@ -144,29 +146,29 @@ instance
   applyOp _ _ Add l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
-        <> showText (length l)
+        <> showAsText (length l)
         <> " arguments."
   applyOp _ _ DivMod [x, y] = do
     r <- liftToMonadUnion $ runExceptT $ safeDivMod x y
     case r of
-      Left (e :: ArithException) -> mrgThrowError $ "ArithException: " <> showText e
+      Left (e :: ArithException) -> mrgThrowError $ "ArithException: " <> showAsText e
       Right (d, m) -> mrgReturn [d, m]
   applyOp _ _ DivMod l =
     mrgThrowError $
       "Incorrect number of arguments for add, expected 2 arguments, but got "
-        <> showText (length l)
+        <> showAsText (length l)
         <> " arguments."
   applyOp _ _ Inc [x] = return [x + 1]
   applyOp _ _ Inc l =
     mrgThrowError $
       "Incorrect number of arguments for inc, expected 1 arguments, but got "
-        <> showText (length l)
+        <> showAsText (length l)
         <> " arguments."
   applyOp _ _ Double [x] = return [x + x]
   applyOp _ _ Double l =
     mrgThrowError $
       "Incorrect number of arguments for dec, expected 1 arguments, but got "
-        <> showText (length l)
+        <> showAsText (length l)
         <> " arguments."
 
 instance (MonadContext ctx) => OpTyping TestSemanticsOp ctx where

@@ -518,7 +518,7 @@ semanticsTest = testGroup "Semantics" $ do
              in Result (progRes0Val .== 1) [1],
           semanticsTestCaseIdentifier = "x"
         }
-      ]
+    ]
   return $ testCase name $ do
     let actual =
           flip runFreshT ident $ runProg TestSemanticsObj mempty prog args ::

@@ -34,7 +34,7 @@ import Grisette.Lib.Synth.Program.ProgSemantics
   ( EvaledSymbolTable,
     runEvaledSymbol,
   )
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 import Value
   ( ValueBuilder (BoolValType, IntValType, mkBool, mkInt),
     ValueExtractor (getBool, getInt),
@@ -52,7 +52,7 @@ intInt2IntOp _ f [a, b] = do
   mrgReturn [mkInt $ f aInt bInt]
 intInt2IntOp opName _ operands =
   mrgThrowError $
-    opName <> " cannot accept " <> showText (length operands) <> " values"
+    opName <> " cannot accept " <> showAsText (length operands) <> " values"
 
 intInt2BoolOp ::
   ( MonadContext ctx,
@@ -70,7 +70,7 @@ intInt2BoolOp _ f [a, b] = do
   mrgReturn [mkBool $ f aInt bInt]
 intInt2BoolOp opName _ operands =
   mrgThrowError $
-    opName <> " cannot accept " <> showText (length operands) <> " values"
+    opName <> " cannot accept " <> showAsText (length operands) <> " values"
 
 class IfContext bool ctx where
   ifC :: (Mergeable val) => bool -> ctx val -> ctx val -> ctx val

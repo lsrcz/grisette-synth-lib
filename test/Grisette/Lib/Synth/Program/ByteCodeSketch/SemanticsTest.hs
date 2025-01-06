@@ -220,7 +220,7 @@ semanticsTest = testGroup "Semantics" $ do
           semanticsTestCaseExpected =
             ErrorResult "Insufficient result IDs."
         }
-      ]
+    ]
   return $ testCase name $ do
     let actual =
           runProg TestSemanticsObj mempty prog args ::

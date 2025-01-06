@@ -105,7 +105,7 @@ semanticsTest =
             semanticsTestCaseArgs = [1, 2],
             semanticsTestCaseExpected = Left "Variable 3 is undefined."
           }
-        ]
+      ]
     [ testCase name $ do
         let actual =
               runProg

@@ -167,7 +167,7 @@ import Grisette.Lib.Synth.Util.Pretty
     renderDoc,
     (<+>),
   )
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 data Stmt op varId = Stmt
@@ -332,7 +332,7 @@ stmtToDotNode ::
     (DotNode T.Text, [DotEdge T.Text])
 stmtToDotNode progName index stmt@(Stmt op argIds resIds) = do
   map <- get
-  let nodeId = progName <> "_stmt" <> showText index
+  let nodeId = progName <> "_stmt" <> showAsText index
   (argFields, edges) <-
     case argumentsToFieldEdges nodeId op argIds map of
       Left err -> throwError $ StmtPPrintError stmt index err
@@ -380,11 +380,11 @@ progToDotSubGraph key (Prog argList stmtList resList) = do
               ],
             shape Record
           ]
-  let resPortAtPos pos = TL.fromStrict $ "res" <> showText pos
+  let resPortAtPos pos = TL.fromStrict $ "res" <> showAsText pos
   let resLabel pos res =
         TL.fromStrict $
           "res"
-            <> showText pos
+            <> showAsText pos
             <> ": "
             <> renderDoc 80 (pformat (progResType res))
   let buildResField pos res =
@@ -501,7 +501,7 @@ addVal ::
 addVal varId val = do
   env <- get
   when (HM.member varId env) . throwError $
-    "Variable " <> showText varId <> " is already defined."
+    "Variable " <> showAsText varId <> " is already defined."
   put $ HM.insert varId val env
 
 lookupVal ::
@@ -511,7 +511,7 @@ lookupVal ::
 lookupVal varId = do
   env <- get
   case HM.lookup varId env of
-    Nothing -> throwError $ "Variable " <> showText varId <> " is undefined."
+    Nothing -> throwError $ "Variable " <> showAsText varId <> " is undefined."
     Just val -> return val
 
 instance
@@ -527,9 +527,9 @@ instance
   runProg sem table (Prog arg stmts ret) inputs = tryMerge $ do
     when (length inputs /= length arg) . throwError $
       "Expected "
-        <> showText (length arg)
+        <> showAsText (length arg)
         <> " arguments, but got "
-        <> showText (length inputs)
+        <> showAsText (length inputs)
         <> " arguments."
     let initialEnv = HM.fromList $ zip (progArgId <$> arg) inputs
     let runStmt (Stmt op argIds resIds) = do

@@ -42,7 +42,7 @@ import Grisette.Lib.Synth.Program.Concrete
   )
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 import Test.Framework (Test, TestOptions' (topt_timeout), plusTestOptions)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
@@ -84,7 +84,7 @@ prog =
     ( fmap
         ( \i ->
             Stmt
-              (MayAddOneOp $ ssym $ identifier $ "s" <> showText i)
+              (MayAddOneOp $ ssym $ identifier $ "s" <> showAsText i)
               [i]
               [i + 1]
         )

@@ -69,5 +69,5 @@ toConTest = testGroup "ToCon" $ do
                 [Concrete.Stmt Inc [0] [2]]
                 [Concrete.ProgRes 2 IntType]
         }
-      ]
+    ]
   return $ testCase name $ toCon prog @?= expected

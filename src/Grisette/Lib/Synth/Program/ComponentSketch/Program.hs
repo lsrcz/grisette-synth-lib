@@ -129,7 +129,7 @@ import Grisette.Lib.Synth.Program.SymbolTable
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId, RelatedVarId, SymbolicVarId)
 
 data Stmt op symVarId = Stmt
@@ -436,8 +436,8 @@ connected = do
           symImplies (defDisabled .&& defId .== useId) useDisabled
         symAssertWith "Def/use with same ID does not have the same value." $
           useDisabled .|| symImplies (defId .== useId) (defVal .== useVal)
-      | IdValPair defDisabled defId defVal <- def,
-        IdValPair useDisabled useId useVal <- use
+    | IdValPair defDisabled defId defVal <- def,
+      IdValPair useDisabled useId useVal <- use
     ]
 
 defDistinct ::
@@ -477,9 +477,9 @@ instance
     flip mrgEvalStateT (CollectedDefUse [] []) $ do
       symAssertWith
         ( "Expected "
-            <> showText (length arg)
+            <> showAsText (length arg)
             <> " arguments, but got "
-            <> showText (length inputs)
+            <> showAsText (length inputs)
             <> " arguments."
         )
         $ length inputs .== length arg
@@ -599,8 +599,8 @@ statementsDirectDep src dest =
   symAny
     (uncurry (.==))
     [ (srcResId, destArgId)
-      | srcResId <- stmtResIds src,
-        destArgId <- stmtArgIds dest
+    | srcResId <- stmtResIds src,
+      destArgId <- stmtArgIds dest
     ]
     .&& symNot (stmtDisabled src)
     .&& symNot (stmtDisabled dest)

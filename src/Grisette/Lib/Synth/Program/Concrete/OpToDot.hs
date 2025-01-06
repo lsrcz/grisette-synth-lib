@@ -31,7 +31,7 @@ import Grisette.Lib.Synth.Program.Concrete.OpPPrint
         UndefinedArgument
       ),
   )
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 type VarIdToLabel varId = HM.HashMap varId (T.Text, PortName)
@@ -48,7 +48,7 @@ argumentsToFieldEdges nodeId op argIds map = do
   when (length argIds /= length argDescriptions) $
     throwError $
       IncorrectNumberOfArguments op (length argDescriptions) (length argIds)
-  let argPortAtPos argPos = TL.fromStrict $ "arg" <> showText argPos
+  let argPortAtPos argPos = TL.fromStrict $ "arg" <> showAsText argPos
   let buildArgLabel argPos argDesc =
         LabelledTarget (PN $ argPortAtPos argPos) $
           maybe (argPortAtPos argPos) TL.fromStrict argDesc
@@ -87,7 +87,7 @@ resultsToFieldEdges nodeId op resIds map = do
   when (length resIds /= length prefixes) $
     throwError $
       IncorrectNumberOfResults op (length prefixes) (length resIds)
-  let resPortAtPos argPos = TL.fromStrict $ "res" <> showText argPos
+  let resPortAtPos argPos = TL.fromStrict $ "res" <> showAsText argPos
   let buildResLabel argPos prefix =
         LabelledTarget (PN $ resPortAtPos argPos) $ TL.fromStrict prefix
   let resLabel = zipWith buildResLabel [0 ..] prefixes

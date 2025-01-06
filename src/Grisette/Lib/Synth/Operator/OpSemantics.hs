@@ -34,7 +34,7 @@ import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
 import Grisette.Lib.Synth.Program.ProgSemantics (EvaledSymbolTable)
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 
 class (MonadContext ctx, OpTyping op ctx) => OpSemantics semObj op val ctx where
   applyOp ::
@@ -63,7 +63,7 @@ unaryOp _ f [a] = do
   mrgReturn [v]
 unaryOp name _ l =
   mrgThrowError $
-    "Expected 1 arguments for " <> name <> ", but got " <> showText (length l)
+    "Expected 1 arguments for " <> name <> ", but got " <> showAsText (length l)
 
 pureBinaryOp ::
   (MonadContext ctx, Mergeable val) =>
@@ -84,7 +84,7 @@ binaryOp _ f [a, b] = do
   mrgReturn [v]
 binaryOp name _ l =
   mrgThrowError $
-    "Expected 2 arguments for " <> name <> ", but got " <> showText (length l)
+    "Expected 2 arguments for " <> name <> ", but got " <> showAsText (length l)
 
 pureTernaryOp ::
   (MonadContext ctx, Mergeable val) =>
@@ -105,7 +105,7 @@ ternaryOp _ f [a, b, c] = do
   mrgReturn [v]
 ternaryOp name _ l =
   mrgThrowError $
-    "Expected 3 arguments for " <> name <> ", but got " <> showText (length l)
+    "Expected 3 arguments for " <> name <> ", but got " <> showAsText (length l)
 
 instance
   ( MonadUnion ctx,

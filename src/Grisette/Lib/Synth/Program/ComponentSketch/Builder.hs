@@ -50,7 +50,7 @@ import Grisette.Lib.Synth.Program.ComponentSketch.Program
     Stmt (Stmt, stmtDisabled, stmtMustBeAfter, stmtResIds),
   )
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 
 newtype StmtExtraConstraint op symVarId = StmtExtraConstraint
   { stmtMustBeAfterStmts :: [Stmt op symVarId]
@@ -213,7 +213,7 @@ instance
   where
   mkFreshProg argTypes freshStmts retTypes =
     ( ( Prog
-          [ProgArg ("arg" <> showText n) ty | (n, ty) <- zip [0 ..] argTypes]
+          [ProgArg ("arg" <> showAsText n) ty | (n, ty) <- zip [0 ..] argTypes]
       )
         . concat
         <$> sequence freshStmts

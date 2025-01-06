@@ -58,7 +58,7 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getProgStmtAtIdx
       ),
   )
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 newtype ProgMayMultiPath op varId ty = ProgMayMultiPath (Prog op varId ty)
@@ -76,8 +76,7 @@ instance
       ( const $ SimpleStrategy $ \c (MayMultiPathEnv l) (MayMultiPathEnv r) ->
           MayMultiPathEnv $
             HM.mapWithKey
-              ( \k v -> mrgIte c v (r HM.! k)
-              )
+              (\k v -> mrgIte c v (r HM.! k))
               l
       )
 
@@ -89,7 +88,7 @@ addValMayMultiPath ::
 addValMayMultiPath varId val = do
   MayMultiPathEnv env <- get
   when (HM.member varId env) . mrgThrowError $
-    "Variable " <> showText varId <> " is already defined."
+    "Variable " <> showAsText varId <> " is already defined."
   mrgPut $ MayMultiPathEnv $ HM.insert varId (mrgReturn val) env
 
 lookupValMayMultiPath ::
@@ -99,7 +98,7 @@ lookupValMayMultiPath ::
 lookupValMayMultiPath varId = do
   MayMultiPathEnv env <- get
   case HM.lookup varId env of
-    Nothing -> mrgThrowError $ "Variable " <> showText varId <> " is undefined."
+    Nothing -> mrgThrowError $ "Variable " <> showAsText varId <> " is undefined."
     Just val -> liftToMonadUnion val
 
 instance (Mergeable ty) => ProgTyping (ProgMayMultiPath op varId ty) where
@@ -118,9 +117,9 @@ instance
   runProg sem table (ProgMayMultiPath (Prog arg stmts ret)) inputs = merge $ do
     when (length inputs /= length arg) . mrgThrowError $
       "Expected "
-        <> showText (length arg)
+        <> showAsText (length arg)
         <> " arguments, but got "
-        <> showText (length inputs)
+        <> showAsText (length inputs)
         <> " arguments."
     let initialEnv =
           MayMultiPathEnv . HM.fromList . zip (progArgId <$> arg) $

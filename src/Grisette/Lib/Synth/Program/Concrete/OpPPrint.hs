@@ -48,7 +48,7 @@ import Grisette.Lib.Synth.Util.Pretty
     parenCommaList,
     parenCommaListIfNotSingle,
   )
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
 data OpPPrintError varId op
@@ -193,7 +193,7 @@ prettyResults op varIds map = do
   let finalPrefixes = if null prefixes then "r" <$ varIds else prefixes
   let names =
         zipWith
-          (\prefix varId -> prefix <> showText (toInteger varId))
+          (\prefix varId -> prefix <> showAsText (toInteger varId))
           finalPrefixes
           varIds
   let newMap = HM.union map $ HM.fromList $ zip varIds names

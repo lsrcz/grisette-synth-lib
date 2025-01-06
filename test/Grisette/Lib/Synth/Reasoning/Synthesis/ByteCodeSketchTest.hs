@@ -137,7 +137,7 @@ byteCodeSketchTest =
             byteCodeSynthesisTestCaseSpec = divModTwiceSpec,
             byteCodeSynthesisTestCaseGen = divModTwiceGen
           }
-        ]
+      ]
     let verifier =
           QuickCheckFuzzer
             { quickCheckFuzzerSymSemantics = TestSemanticsObj,

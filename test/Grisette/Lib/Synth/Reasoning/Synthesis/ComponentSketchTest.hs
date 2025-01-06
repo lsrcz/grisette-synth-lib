@@ -356,7 +356,7 @@ componentSketchTest =
             (sketchTable, namePostFix) <-
               [ (sharedSketchTable, ""),
                 (sharedSketchUnionTable, "/union")
-                ]
+              ]
             ComponentSynthesisTestCase
               name
               (spec :: [Integer] -> ConcreteContext ([Integer], matcher))
@@ -394,7 +394,7 @@ componentSketchTest =
                     componentSynthesisTestCaseSynthGen = divModTwiceGen,
                     componentSynthesisTestCaseFuzzGen = divModTwiceGen
                   }
-                ]
+              ]
 
             return $ testCase (name <> namePostFix) $ do
               result <-

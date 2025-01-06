@@ -88,7 +88,7 @@ import Grisette.Lib.Synth.Program.SymbolTable
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId, RelatedVarId, SymbolicVarId)
 
 data Stmt op conVarId symVarId = Stmt
@@ -184,8 +184,7 @@ instance
       ( const $ SimpleStrategy $ \c (Env l) (Env r) ->
           Env $
             HM.mapWithKey
-              ( \k v -> mrgIte c v (r HM.! k)
-              )
+              (\k v -> mrgIte c v (r HM.! k))
               l
       )
 
@@ -201,7 +200,7 @@ addVal ::
 addVal varId val = do
   Env env <- get
   when (HM.member varId env) . mrgThrowError $
-    "Variable " <> showText varId <> " is already defined."
+    "Variable " <> showAsText varId <> " is already defined."
   mrgPut $ Env $ HM.insert varId val env
 
 lookupVal ::
@@ -251,9 +250,9 @@ instance
   runProg sem table (Prog arg stmts ret) inputs = do
     when (length inputs /= length arg) . mrgThrowError $
       "Expected "
-        <> showText (length arg)
+        <> showAsText (length arg)
         <> " arguments, but got "
-        <> showText (length inputs)
+        <> showAsText (length inputs)
         <> " arguments."
     let initialEnv = Env $ HM.fromList $ zip (progArgId <$> arg) inputs
     let runStmt (Stmt op argIds argNum resIds resNum) = do

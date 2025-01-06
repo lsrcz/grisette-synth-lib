@@ -173,7 +173,7 @@ toDotTest =
                     RedefinedResult 0 1,
                 testStmtNewMap = env
               }
-            ]
+          ]
         return $ testCase name $ do
           let actual = flip runStateT env $ stmtToDotNode "prog" index stmt
           actual @?= (,newMap) <$> expected,
@@ -305,7 +305,7 @@ toDotTest =
                                 [edge00, edge01, edge10, edger0, edger1]
                             }
               }
-            ]
+          ]
         return $ testCase name $ do
           let actual = progToDotSubGraph "prog" prog
           actual @?= expected

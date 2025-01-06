@@ -142,7 +142,7 @@ prettyTest =
                     RedefinedResult 0 1,
                 testStmtNewMap = env
               }
-            ]
+          ]
         return $ testGroup groupName $ do
           let doc = flip runStateT env $ prettyStmt index stmt
           [ testCase "loose" $ do
@@ -258,7 +258,7 @@ prettyTest =
                 testProgLooseExpectedResult = Left $ ResultUndefined 0 2,
                 testProgCompactExpectedResult = Left $ ResultUndefined 0 2
               }
-            ]
+          ]
         return $ testGroup groupName $ do
           let doc = prettyProg "prog" prog
           [ testCase "loose" $ renderDoc 80 <$> doc @?= loose,

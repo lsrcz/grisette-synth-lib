@@ -90,5 +90,5 @@ toConTest = testGroup "ToCon" $ do
                 ]
                 [Concrete.ProgRes 4 IntType, Concrete.ProgRes 5 IntType]
         }
-      ]
+    ]
   return $ testCase name $ toCon prog @?= expected

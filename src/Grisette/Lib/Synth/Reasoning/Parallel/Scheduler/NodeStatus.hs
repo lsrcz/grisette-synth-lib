@@ -45,7 +45,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
     ProcessResponse,
     Track (FastTrack, SlowTrack),
   )
-import Grisette.Lib.Synth.Util.Show (showText)
+import Grisette.Lib.Synth.Util.Show (showAsText)
 
 data NodeStatus conProg
   = NodeFastTrackViable
@@ -407,7 +407,7 @@ nodeFastTrackRefiningTransition oldCost oldProg (Right (Failure _ Unsat)) =
   (NodeSucceeded Nothing FastTrack oldCost oldProg, MarkFailure)
 nodeFastTrackRefiningTransition oldCost oldProg (Right (Failure _ failure)) =
   ( NodeSucceeded
-      (Just $ "Solver finally failed with: " <> showText failure)
+      (Just $ "Solver finally failed with: " <> showAsText failure)
       FastTrack
       oldCost
       oldProg,
@@ -452,7 +452,7 @@ nodeSlowTrackRefiningTransition oldCost oldProg (Right (Failure _ Unsat)) =
   (NodeSucceeded Nothing SlowTrack oldCost oldProg, MarkFailure)
 nodeSlowTrackRefiningTransition oldCost oldProg (Right (Failure _ failure)) =
   ( NodeSucceeded
-      (Just $ "Solver finally failed with: " <> showText failure)
+      (Just $ "Solver finally failed with: " <> showAsText failure)
       SlowTrack
       oldCost
       oldProg,

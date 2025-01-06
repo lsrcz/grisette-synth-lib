@@ -32,30 +32,6 @@ import Grisette
   ( PPrint (pformat),
     viaShow,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
-  ( Message (Failure),
-    Process (pgid, pid),
-    ProcessConfig
-      ( ProcessConfig,
-        costObj,
-        countNumProgsEvidence,
-        doDeadCodeElimination,
-        easySketchFromFastResult,
-        easySynthTimeout,
-        exactCost,
-        initialCost,
-        logConfig,
-        nodeId,
-        sketchSpec,
-        sketchSymbol,
-        transcriptSMT,
-        verifiers
-      ),
-    ProcessResponse,
-    getProcessResponse,
-    runRequestInSubProcess,
-    sendNewMinimalCost,
-  )
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
   ( SchedulerConfig
@@ -112,6 +88,30 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
       ),
     nodeStatusIsNotYetStarted,
     nodeStatusIsRunning,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
+  ( Message (Failure),
+    Process (pgid, pid),
+    ProcessConfig
+      ( ProcessConfig,
+        costObj,
+        countNumProgsEvidence,
+        doDeadCodeElimination,
+        easySketchFromFastResult,
+        easySynthTimeout,
+        exactCost,
+        initialCost,
+        logConfig,
+        nodeId,
+        sketchSpec,
+        sketchSymbol,
+        transcriptSMT,
+        verifiers
+      ),
+    ProcessResponse,
+    getProcessResponse,
+    runRequestInSubProcess,
+    sendNewMinimalCost,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( NodeInfo (nodeSplitted),
