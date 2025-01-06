@@ -10,13 +10,6 @@ import Grisette.Lib.Synth.Program.ComponentSketchTest (componentSketchTest)
 import Grisette.Lib.Synth.Program.ConcreteTest (concreteTest)
 import Grisette.Lib.Synth.Reasoning.FuzzingTest (fuzzingTest)
 import Grisette.Lib.Synth.Reasoning.Parallel.DCTreeTest (dcTreeTest)
-import Grisette.Lib.Synth.Reasoning.Parallel.RefinableTaskHandleTest
-  ( refinableTaskHandleTest,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.SynthesisTaskHandleTest
-  ( synthesisTaskHandleTest,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPoolTest (threadPoolTest)
 import Grisette.Lib.Synth.Reasoning.SynthesisTest (synthesisTest)
 import Grisette.Lib.Synth.Util.PrettyTest (prettyTest)
 import Grisette.Lib.Synth.Util.ShowTest (showTest)
@@ -38,9 +31,6 @@ tests =
     componentSketchTest,
     fuzzingTest,
     synthesisTest,
-    threadPoolTest,
-    synthesisTaskHandleTest,
-    refinableTaskHandleTest,
     dcTreeTest,
     choiceTest
     -- builtinProgConstraintsTest

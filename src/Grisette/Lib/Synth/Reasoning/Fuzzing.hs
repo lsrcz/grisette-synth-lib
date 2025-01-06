@@ -46,7 +46,6 @@ import Grisette.Lib.Synth.Reasoning.Matcher
   ( EqMatcher (EqMatcher),
     Matcher (match),
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.ThreadPool (CancellingException)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( ConExampleConstraint,
     Example (Example),
@@ -55,6 +54,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
     SomeVerifier (SomeVerifier),
     SymExampleConstraint,
   )
+import Grisette.Lib.Synth.Util.Exception (CancellingException)
 import Test.QuickCheck.Counterexamples
   ( Args (chatty),
     Gen,
