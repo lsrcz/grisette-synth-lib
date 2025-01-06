@@ -3,7 +3,7 @@
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Sketch
   ( addRootSketch,
-    splitNode
+    splitNode,
   )
 where
 
@@ -20,6 +20,7 @@ import Grisette.Lib.Synth.Program.Choice.Counting
   ( countNumChoicesWithEvidence,
     countNumProgsWithEvidence,
   )
+import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum (lowestSeqNum), PartitionSpec (partitionSpec))
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
@@ -90,13 +91,15 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         schedulerStartTime,
         stopped
       ),
-    getPriority, getIsSplitted, getSketchTable, setIsSplitted,
+    getIsSplitted,
+    getPriority,
+    getSketchTable,
+    setIsSplitted,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition (nodeInferFailureTransition)
 import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
-import System.Log.Logger (Priority (NOTICE, DEBUG))
-import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum(lowestSeqNum), PartitionSpec (partitionSpec))
-import System.Random.Stateful (UniformRange(uniformRM))
+import System.Log.Logger (Priority (DEBUG, NOTICE))
+import System.Random.Stateful (UniformRange (uniformRM))
 
 _addSubSketches ::
   ProcessScheduler
@@ -241,7 +244,6 @@ addRootSketch
       nest 2 $
         vsep ["Adding root sketch: ", pformat sketch]
     void $ _addSubSketches scheduler Nothing (HM.fromList [(sketch, 1)])
-
 
 splitNode ::
   ProcessScheduler

@@ -136,8 +136,7 @@ data ParallelSynthesisNoSolutionResult = ParallelSynthesisNoSolutionResult
     undeterminedRatio :: Double
   }
 
-data ParallelSynthesisSolutionFoundResult conProg
-  = ParallelSynthesisSolutionFoundResult
+data ParallelSynthesisSolutionFoundResult conProg = ParallelSynthesisSolutionFoundResult
   { aggregatedTime :: UTCTime,
     initialCost :: Maybe Int,
     bestCost :: Int,
