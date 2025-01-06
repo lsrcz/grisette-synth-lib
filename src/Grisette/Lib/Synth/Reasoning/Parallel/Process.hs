@@ -99,7 +99,8 @@ import Grisette.Lib.Synth.Program.SymbolTable
     filterByReachableSymbols,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.DCTree (NodeId (NodeId))
-import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig (LogConfig (LogConfig, baseDir, progName), logRootDir)
+import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig (
+  LogConfig (LogConfig, baseDir, progName), logRootDir)
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example,
     RunSynthesisTask (solverRunSynthesisTaskExtractCex),
@@ -122,7 +123,7 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
         SynthesisVerifierFailure
       ),
   )
-import Grisette.Lib.Synth.Util.Log (logMultiLineDoc)
+import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import Grisette.Lib.Synth.Util.Serialize
   ( byteStringToWord64,
     nonBlockingReadObject,

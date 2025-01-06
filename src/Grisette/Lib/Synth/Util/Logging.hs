@@ -1,4 +1,4 @@
-module Grisette.Lib.Synth.Util.Log
+module Grisette.Lib.Synth.Util.Logging
   ( logMultiLine,
     logMultiLineText,
     logMultiLineDoc,

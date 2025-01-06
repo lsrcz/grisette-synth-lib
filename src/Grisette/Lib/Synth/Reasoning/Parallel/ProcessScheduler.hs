@@ -109,7 +109,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
     numNodes,
     rootNodes,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig (LogConfig (LogConfig), logRootDir)
+import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig (
+  LogConfig (LogConfig), logRootDir)
 import Grisette.Lib.Synth.Reasoning.Parallel.NodeState
   ( NodeState
       ( NodeState,
@@ -202,7 +203,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Process
     sendNewMinimalCost,
   )
 import Grisette.Lib.Synth.Util.Exception (catchErrno)
-import Grisette.Lib.Synth.Util.Log (logMultiLineDoc)
+import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import Numeric (showFFloat)
 import System.Exit (ExitCode (ExitSuccess))
 import System.Log.Logger (Logger, Priority (DEBUG, NOTICE, WARNING))
