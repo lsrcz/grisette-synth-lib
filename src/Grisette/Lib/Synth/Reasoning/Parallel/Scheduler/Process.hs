@@ -12,7 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Grisette.Lib.Synth.Reasoning.Parallel.Process
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( ProcessConfig (..),
     NewMinimalCostMessage (..),
     TwoTrackVerifiers (..),
@@ -84,7 +84,11 @@ import Grisette.Lib.Synth.Context
     ConcreteContext,
     SymbolicContext,
   )
-import Grisette.Lib.Synth.Program.Choice.Counting (CountNumProgsEvidence, countNumChoicesWithEvidence, countNumProgsWithEvidence)
+import Grisette.Lib.Synth.Program.Choice.Counting
+  ( CountNumProgsEvidence,
+    countNumChoicesWithEvidence,
+    countNumProgsWithEvidence,
+  )
 import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum, PartitionSpec)
 import Grisette.Lib.Synth.Program.Concrete
   ( ProgPPrint,
@@ -97,8 +101,8 @@ import Grisette.Lib.Synth.Program.SymbolTable
     SymbolTable,
     filterByReachableSymbols,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree (NodeId (NodeId))
-import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree (NodeId (NodeId))
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig
   ( LogConfig (LogConfig, baseDir, progName),
     defaultFormatter,
     logRootDir,

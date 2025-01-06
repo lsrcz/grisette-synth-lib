@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Grisette.Lib.Synth.Reasoning.Parallel.DCTree
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
   ( NodeId (..),
     DCTree,
     nodeParent,

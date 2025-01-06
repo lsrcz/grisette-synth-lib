@@ -37,33 +37,9 @@ import Grisette.Lib.Synth.Program.Choice.Counting
     CountNumProgsEvidence (CountNumProgsEvidence),
   )
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
-  ( NodeId,
-    leafNodes,
-    numNodes,
-    rootNodes,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeState
-  ( NodeState
-      ( NodeState,
-        nodeEndTime,
-        nodeMajorResponseReverseLog,
-        nodeResponseReverseLog,
-        nodeStartTime,
-        nodeStatus
-      ),
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
-  ( nodeStatusBestProgWithCost,
-    nodeStatusIsDetermined,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.Process
-  ( processResponseIsFastTrackSuccess,
-    processResponseIsSlowTrackSuccess,
-  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
-  ( ProcessSchedulerConfig
-      ( ProcessSchedulerConfig,
+  ( SchedulerConfig
+      ( SchedulerConfig,
         biasedDrawProbability,
         cmdline,
         costObj,
@@ -93,9 +69,33 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         verifiers
       ),
   )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
+  ( NodeId,
+    leafNodes,
+    numNodes,
+    rootNodes,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
+  ( NodeState
+      ( NodeState,
+        nodeEndTime,
+        nodeMajorResponseReverseLog,
+        nodeResponseReverseLog,
+        nodeStartTime,
+        nodeStatus
+      ),
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
+  ( nodeStatusBestProgWithCost,
+    nodeStatusIsDetermined,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
+  ( processResponseIsFastTrackSuccess,
+    processResponseIsSlowTrackSuccess,
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
-  ( ProcessScheduler
-      ( ProcessScheduler,
+  ( Scheduler
+      ( Scheduler,
         config,
         currentMinimalCost,
         dcTree,
@@ -197,7 +197,7 @@ resultAggregatedTime (SolutionFound ParallelSynthesisSolutionFoundResult {..}) =
   aggregatedTime
 
 getParallelSynthesisResult ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -210,8 +210,8 @@ getParallelSynthesisResult ::
     matcher ->
   IO (ParallelSynthesisResult conProg)
 getParallelSynthesisResult
-  scheduler@ProcessScheduler
-    { config = ProcessSchedulerConfig {..},
+  scheduler@Scheduler
+    { config = SchedulerConfig {..},
       ..
     } = do
     cost <- getCurrentMinimalCost scheduler
@@ -311,10 +311,10 @@ getParallelSynthesisResult
           _ -> go cost rest
 
 printResults ::
-  ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher ->
+  Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher ->
   ParallelSynthesisResult conProg ->
   IO ()
-printResults ProcessScheduler {config = ProcessSchedulerConfig {..}, ..} result = do
+printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
   let numOfNodesInLattice = resultNumOfNodesInLattice result
   let numOfUndeterminedLeaves = resultNumOfUndeterminedLeaves result
   let numOfUndeterminedPrograms = resultNumOfUndeterminedPrograms result
@@ -382,7 +382,7 @@ printResults ProcessScheduler {config = ProcessSchedulerConfig {..}, ..} result 
 writeResultsCSV ::
   FilePath ->
   ParallelSynthesisResult conProg ->
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg

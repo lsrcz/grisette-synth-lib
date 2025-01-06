@@ -22,31 +22,9 @@ import Grisette
     nest,
     vsep,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
-  ( NodeId,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeState
-  ( NodeState
-      ( NodeState,
-        nodeResponseReverseLog,
-        nodeStartTime
-      ),
-    nodeStateInferFailureTransition,
-    nodeStateResetTransition,
-    nodeStateStartTransition,
-    nodeStateTransition,
-    pformatNodeStateSummary,
-    pformatNodeStateSummaryWithElapsedTime,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus (NodeAction)
-import Grisette.Lib.Synth.Reasoning.Parallel.Process
-  ( ProcessResponse,
-    processResponseIsGotExample,
-    processResponseNewCost,
-  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
-  ( ProcessSchedulerConfig
-      ( ProcessSchedulerConfig,
+  ( SchedulerConfig
+      ( SchedulerConfig,
         biasedDrawProbability,
         cmdline,
         costObj,
@@ -76,9 +54,31 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         verifiers
       ),
   )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
+  ( NodeId,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
+  ( NodeState
+      ( NodeState,
+        nodeResponseReverseLog,
+        nodeStartTime
+      ),
+    nodeStateInferFailureTransition,
+    nodeStateResetTransition,
+    nodeStateStartTransition,
+    nodeStateTransition,
+    pformatNodeStateSummary,
+    pformatNodeStateSummaryWithElapsedTime,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus (NodeAction)
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
+  ( ProcessResponse,
+    processResponseIsGotExample,
+    processResponseNewCost,
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
-  ( ProcessScheduler
-      ( ProcessScheduler,
+  ( Scheduler
+      ( Scheduler,
         config,
         currentMinimalCost,
         dcTree,
@@ -100,7 +100,7 @@ import Grisette.Lib.Synth.Util.Show (showDiffTime)
 import System.Log.Logger (Priority (NOTICE))
 
 nodeTransition ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -115,8 +115,8 @@ nodeTransition ::
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher ->
   IO NodeAction
 nodeTransition
-  scheduler@ProcessScheduler
-    { config = ProcessSchedulerConfig {..},
+  scheduler@Scheduler
+    { config = SchedulerConfig {..},
       ..
     }
   nid
@@ -176,7 +176,7 @@ nodeTransition
       _ -> error "Should not happen: node not found"
 
 nodeInferFailureTransition ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -189,7 +189,7 @@ nodeInferFailureTransition ::
     matcher ->
   NodeId ->
   IO ()
-nodeInferFailureTransition ProcessScheduler {..} nid = do
+nodeInferFailureTransition Scheduler {..} nid = do
   logMultiLineDoc (logger config) NOTICE $
     "Node " <> pformat nid <> " inferred failure"
   nodeStates' <- readIORef nodeStates
@@ -200,7 +200,7 @@ nodeInferFailureTransition ProcessScheduler {..} nid = do
     Nothing -> error "Should not happen"
 
 nodeStartTransition ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -213,7 +213,7 @@ nodeStartTransition ::
     matcher ->
   NodeId ->
   IO ()
-nodeStartTransition ProcessScheduler {..} nid = do
+nodeStartTransition Scheduler {..} nid = do
   logMultiLineDoc (logger config) NOTICE $
     "Node " <> pformat nid <> " started"
   nodeStates' <- readIORef nodeStates
@@ -224,7 +224,7 @@ nodeStartTransition ProcessScheduler {..} nid = do
     Nothing -> error "Should not happen"
 
 nodeResetTransition ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -237,7 +237,7 @@ nodeResetTransition ::
     matcher ->
   NodeId ->
   IO ()
-nodeResetTransition ProcessScheduler {..} nid = do
+nodeResetTransition Scheduler {..} nid = do
   logMultiLineDoc (logger config) NOTICE $
     "Node " <> pformat nid <> " reset"
   nodeStates' <- readIORef nodeStates

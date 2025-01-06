@@ -10,8 +10,15 @@
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
 
-module Grisette.Lib.Synth.Reasoning.Parallel.ProcessScheduler
-  ( ProcessSchedulerConfig (..),
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler
+  ( LogConfig (..),
+    getDefaultLogger,
+    getLogConfig,
+    ProcessCostConstraint,
+    ProcessConstraint,
+    ConProgConstraint,
+    TwoTrackVerifiers (..),
+    SchedulerConfig (..),
     ParallelSynthesisResult (..),
     ParallelSynthesisSolutionFoundResult (..),
     ParallelSynthesisNoSolutionResult (..),
@@ -33,67 +40,18 @@ import Data.Time
   )
 import GHC.Conc.Signal (setHandler)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
-import qualified Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue as Q
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
-  ( NodeId,
-    nodeFailed,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
-  ( LogConfig,
-    logRootDir,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
-  ( NodeAction
-      ( CleanUpAndSplitSketch,
-        MarkFailure,
-        Refine,
-        RefineAndSplitSketch
-      ),
-  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
-  ( checkResponse,
-    killIfTimeout,
-    killNode,
-    markAllChildrenSuccess,
-    markAllSiblingChildrenSuccess,
-    markFailure,
-    markSuccess,
-    refineNode,
-    resetIfJustStarted,
-    startQueued,
-  )
+import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Result
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
-  ( ProcessScheduler
-      ( ProcessScheduler,
-        config,
-        currentMinimalCost,
-        dcTree,
-        nodeInfo,
-        nodeQueue,
-        nodeStates,
-        nodeToProcess,
-        processToNode,
-        processes,
-        queueLock,
-        randGen,
-        schedulerStartTime,
-        stopped
-      ),
-    getCurrentMinimalCost,
-    getNumQueuedProcess,
-    getNumRunningProcess,
-    newProcessScheduler,
-  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Sketch
-  ( addRootSketch,
-    splitNode,
-  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
-  ( reportStatistics,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats (logTreeStats)
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats
 import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import System.Exit (ExitCode (ExitSuccess))
 import System.Log.Logger (Priority (DEBUG, NOTICE))
@@ -107,7 +65,7 @@ import System.Posix
 -- Actions
 
 runAction ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -135,7 +93,7 @@ runAction scheduler nid action =
       refineNode scheduler nid nodeBestCostKnowledge
 
 step ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -148,7 +106,7 @@ step ::
     matcher ->
   IO ()
 step
-  scheduler@ProcessScheduler {config = ProcessSchedulerConfig {..}, ..} = do
+  scheduler@Scheduler {config = SchedulerConfig {..}, ..} = do
     startCost <- getCurrentMinimalCost scheduler
     curNodeToProcess <- readIORef nodeToProcess
     cancelledNodes <-
@@ -190,7 +148,7 @@ step
 
 shutdownScheduler ::
   Bool ->
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -202,7 +160,7 @@ shutdownScheduler ::
     conVal
     matcher ->
   IO ()
-shutdownScheduler printInfo scheduler@ProcessScheduler {..} = do
+shutdownScheduler printInfo scheduler@Scheduler {..} = do
   writeIORef stopped True
   writeIORef nodeQueue (Q.empty (biasedDrawProbability config))
   when printInfo $
@@ -216,7 +174,7 @@ shutdownScheduler printInfo scheduler@ProcessScheduler {..} = do
 
 installSchedulerSignalHandler ::
   LogConfig ->
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -228,7 +186,7 @@ installSchedulerSignalHandler ::
     conVal
     matcher ->
   IO ()
-installSchedulerSignalHandler logConfig scheduler@ProcessScheduler {..} = do
+installSchedulerSignalHandler logConfig scheduler@Scheduler {..} = do
   let handler printInfo = do
         takeMVar queueLock
         results <- getParallelSynthesisResult scheduler
@@ -248,7 +206,7 @@ installSchedulerSignalHandler logConfig scheduler@ProcessScheduler {..} = do
   return ()
 
 initialSplit ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -260,7 +218,7 @@ initialSplit ::
     conVal
     matcher ->
   IO ()
-initialSplit scheduler@ProcessScheduler {..} = do
+initialSplit scheduler@Scheduler {..} = do
   oldNodeInfo <- readIORef nodeInfo
   let workingList = HM.keys oldNodeInfo
   go workingList []
@@ -278,7 +236,7 @@ initialSplit scheduler@ProcessScheduler {..} = do
           go rest $ r ++ newWorkingList
 
 runWithScheduler ::
-  ProcessSchedulerConfig
+  SchedulerConfig
     sketchSpec
     sketch
     conProg
@@ -292,9 +250,9 @@ runWithScheduler ::
   [SymbolTable sketchSpec] ->
   IO (ParallelSynthesisResult conProg)
 runWithScheduler
-  config@ProcessSchedulerConfig {..}
+  config@SchedulerConfig {..}
   sketches = do
-    scheduler <- newProcessScheduler config
+    scheduler <- newScheduler config
     installSchedulerSignalHandler logConfig scheduler
     mapM_ (addRootSketch scheduler) sketches
     initialSplit scheduler

@@ -1,7 +1,7 @@
-module Grisette.Lib.Synth.Reasoning.Parallel.DCTreeTest (dcTreeTest) where
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTreeTest (dcTreeTest) where
 
 import qualified Data.HashSet as HS
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
   ( DCTree,
     NodeId (NodeId),
     allChildrenNodes,

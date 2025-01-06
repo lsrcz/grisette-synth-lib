@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Grisette.Lib.Synth.Reasoning.Parallel.NodeState
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
   ( NodeMessageLog,
     NodeMessageAbsoluteTimeLog,
     NodeMessageRelativeTimeLog,
@@ -23,7 +23,7 @@ import Control.Monad (unless, when)
 import Data.Maybe (isJust)
 import Data.Time (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Grisette (Doc, viaShow, (<+>))
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( NodeAction,
     NodeStatus (NodeNotYetStarted, NodeStarted),
     nodeStatusInferFailureTransition,
@@ -32,7 +32,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
     nodeStatusTransition,
     pformatNodeStatusSummary,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.Process
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message
       ( Failure,
         FastTrackEasySynthFailure,

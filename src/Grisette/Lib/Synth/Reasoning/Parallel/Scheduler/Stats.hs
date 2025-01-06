@@ -66,44 +66,9 @@ import Grisette
     nest,
     vsep,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
-  ( NodeId,
-    nodeDepth,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig (logRootDir)
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeState
-  ( NodeState (nodeStatus),
-    nodeStateCurrentElapsedTime,
-    nodeStateMajorRelativeTimeLog,
-    nodeStateNumCollectedExamples,
-    nodeStateNumInProgressExamples,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
-  ( nodeStatusIsFastSuccess,
-    nodeStatusIsFastTerminated,
-    nodeStatusIsFastTrackEasySynthFailure,
-    nodeStatusIsFastTrackRefining,
-    nodeStatusIsFastTrackViable,
-    nodeStatusIsFastUnknown,
-    nodeStatusIsFastUnsat,
-    nodeStatusIsInferredFailure,
-    nodeStatusIsJustStarted,
-    nodeStatusIsNotYetStarted,
-    nodeStatusIsSlowSuccess,
-    nodeStatusIsSlowTerminated,
-    nodeStatusIsSlowTrackRefining,
-    nodeStatusIsSlowUnknown,
-    nodeStatusIsSlowUnsat,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.Process
-  ( processResponseIsFastTrackEasySynthFailure,
-    processResponseIsFastTrackSuccess,
-    processResponseIsFastTrackViable,
-    processResponseIsSlowTrackSuccess,
-  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
-  ( ProcessSchedulerConfig
-      ( ProcessSchedulerConfig,
+  ( SchedulerConfig
+      ( SchedulerConfig,
         biasedDrawProbability,
         cmdline,
         costObj,
@@ -133,9 +98,44 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         verifiers
       ),
   )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
+  ( NodeId,
+    nodeDepth,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig (logRootDir)
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
+  ( NodeState (nodeStatus),
+    nodeStateCurrentElapsedTime,
+    nodeStateMajorRelativeTimeLog,
+    nodeStateNumCollectedExamples,
+    nodeStateNumInProgressExamples,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
+  ( nodeStatusIsFastSuccess,
+    nodeStatusIsFastTerminated,
+    nodeStatusIsFastTrackEasySynthFailure,
+    nodeStatusIsFastTrackRefining,
+    nodeStatusIsFastTrackViable,
+    nodeStatusIsFastUnknown,
+    nodeStatusIsFastUnsat,
+    nodeStatusIsInferredFailure,
+    nodeStatusIsJustStarted,
+    nodeStatusIsNotYetStarted,
+    nodeStatusIsSlowSuccess,
+    nodeStatusIsSlowTerminated,
+    nodeStatusIsSlowTrackRefining,
+    nodeStatusIsSlowUnknown,
+    nodeStatusIsSlowUnsat,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
+  ( processResponseIsFastTrackEasySynthFailure,
+    processResponseIsFastTrackSuccess,
+    processResponseIsFastTrackViable,
+    processResponseIsSlowTrackSuccess,
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
-  ( ProcessScheduler
-      ( ProcessScheduler,
+  ( Scheduler
+      ( Scheduler,
         config,
         currentMinimalCost,
         dcTree,
@@ -483,7 +483,7 @@ _plotStatistics path title stats = do
   return ()
 
 _collectAllStats ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -495,7 +495,7 @@ _collectAllStats ::
     conVal
     matcher ->
   IO (Stats, HM.HashMap Int Stats)
-_collectAllStats ProcessScheduler {..} = do
+_collectAllStats Scheduler {..} = do
   curTime <- getCurrentTime
   results <- HM.toList <$> readIORef nodeStates
   allStats <- _collectStats curTime results
@@ -518,7 +518,7 @@ _collectAllStats ProcessScheduler {..} = do
 _logStatistics ::
   Doc ann ->
   Stats ->
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -533,7 +533,7 @@ _logStatistics ::
 _logStatistics
   firstLine
   stats
-  ProcessScheduler {config = ProcessSchedulerConfig {..}, ..} = do
+  Scheduler {config = SchedulerConfig {..}, ..} = do
     let statistics =
           [ ("Fast viable" :: String, fastTrackViableStats stats),
             ("Fast refining", fastTrackRefiningStats stats),
@@ -615,7 +615,7 @@ _logStatistics
 
 _layeredStatistics ::
   HM.HashMap Int Stats ->
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -629,7 +629,7 @@ _layeredStatistics ::
   IO ()
 _layeredStatistics
   depthStats
-  scheduler@ProcessScheduler {config = ProcessSchedulerConfig {..}, ..} = do
+  scheduler@Scheduler {config = SchedulerConfig {..}, ..} = do
     let maxDepth = maximum $ HM.keys depthStats
     let go depth
           | depth > maxDepth = return ()
@@ -647,7 +647,7 @@ _layeredStatistics
     unless (HM.null depthStats) $ go 0
 
 reportStatistics ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -660,8 +660,8 @@ reportStatistics ::
     matcher ->
   IO ()
 reportStatistics
-  scheduler@ProcessScheduler
-    { config = ProcessSchedulerConfig {..},
+  scheduler@Scheduler
+    { config = SchedulerConfig {..},
       ..
     } = do
     (stats, layerStats) <- _collectAllStats scheduler

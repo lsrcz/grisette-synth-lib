@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue
   ( Priority (..),
     numericPriority,
     BiasedQueue,
@@ -12,14 +12,14 @@ module Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue
     setPriority,
     insert,
     size,
-    Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue.null,
+    Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.null,
     popMin,
   )
 where
 
 import qualified Data.HashPSQ as PSQ
 import Grisette (PPrint, deriveGADT)
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree (NodeId)
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree (NodeId)
 import System.Random.Stateful (AtomicGenM, StdGen, UniformRange (uniformRM))
 
 data Priority = Priority

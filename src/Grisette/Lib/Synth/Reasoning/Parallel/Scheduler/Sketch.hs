@@ -20,28 +20,15 @@ import Grisette.Lib.Synth.Program.Choice.Counting
   ( countNumChoicesWithEvidence,
     countNumProgsWithEvidence,
   )
-import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum (lowestSeqNum), PartitionSpec (partitionSpec))
+import Grisette.Lib.Synth.Program.Choice.Split
+  ( LowestSeqNum (lowestSeqNum),
+    PartitionSpec (partitionSpec),
+  )
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
-import qualified Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue as Q
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
-  ( NodeId,
-    insertRootSketches,
-    insertSplittedSketches,
-    nodeFailed,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeState
-  ( NodeState
-      ( NodeState
-      ),
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
-  ( NodeStatus
-      ( NodeNotYetStarted
-      ),
-  )
+import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
-  ( ProcessSchedulerConfig
-      ( ProcessSchedulerConfig,
+  ( SchedulerConfig
+      ( SchedulerConfig,
         biasedDrawProbability,
         cmdline,
         costObj,
@@ -71,12 +58,28 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         verifiers
       ),
   )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
+  ( NodeId,
+    insertRootSketches,
+    insertSplittedSketches,
+    nodeFailed,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
+  ( NodeState
+      ( NodeState
+      ),
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
+  ( NodeStatus
+      ( NodeNotYetStarted
+      ),
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( NodeInfo
       ( NodeInfo
       ),
-    ProcessScheduler
-      ( ProcessScheduler,
+    Scheduler
+      ( Scheduler,
         config,
         currentMinimalCost,
         dcTree,
@@ -102,7 +105,7 @@ import System.Log.Logger (Priority (DEBUG, NOTICE))
 import System.Random.Stateful (UniformRange (uniformRM))
 
 _addSubSketches ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -117,7 +120,7 @@ _addSubSketches ::
   HM.HashMap (SymbolTable sketchSpec) Double ->
   IO [NodeId]
 _addSubSketches
-  scheduler@ProcessScheduler {config = ProcessSchedulerConfig {..}, ..}
+  scheduler@Scheduler {config = SchedulerConfig {..}, ..}
   parentId
   sketchPriorities = do
     oldDcTree <- readIORef dcTree
@@ -224,7 +227,7 @@ _addSubSketches
     return $ toList sketchesToNodeId
 
 addRootSketch ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -238,7 +241,7 @@ addRootSketch ::
   SymbolTable sketchSpec ->
   IO () -- NodeId
 addRootSketch
-  scheduler@ProcessScheduler {config = ProcessSchedulerConfig {..}}
+  scheduler@Scheduler {config = SchedulerConfig {..}}
   sketch = do
     logMultiLineDoc logger NOTICE $
       nest 2 $
@@ -246,7 +249,7 @@ addRootSketch
     void $ _addSubSketches scheduler Nothing (HM.fromList [(sketch, 1)])
 
 splitNode ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -261,7 +264,7 @@ splitNode ::
   NodeId ->
   IO [NodeId]
 splitNode
-  scheduler@ProcessScheduler {config = ProcessSchedulerConfig {..}}
+  scheduler@Scheduler {config = SchedulerConfig {..}}
   success
   nodeId = do
     nodeSplitted <- getIsSplitted scheduler nodeId

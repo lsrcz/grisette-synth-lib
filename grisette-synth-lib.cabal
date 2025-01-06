@@ -63,16 +63,15 @@ library
       Grisette.Lib.Synth.Reasoning.Fuzzing
       Grisette.Lib.Synth.Reasoning.IOPair
       Grisette.Lib.Synth.Reasoning.Matcher
-      Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue
-      Grisette.Lib.Synth.Reasoning.Parallel.DCTree
-      Grisette.Lib.Synth.Reasoning.Parallel.Exception
-      Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
-      Grisette.Lib.Synth.Reasoning.Parallel.NodeState
-      Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
-      Grisette.Lib.Synth.Reasoning.Parallel.Process
-      Grisette.Lib.Synth.Reasoning.Parallel.ProcessScheduler
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler
       Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue
       Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
       Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Result
       Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
       Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Sketch
@@ -258,7 +257,7 @@ test-suite spec
       Grisette.Lib.Synth.Program.Concrete.TypingTest
       Grisette.Lib.Synth.Program.ConcreteTest
       Grisette.Lib.Synth.Reasoning.FuzzingTest
-      Grisette.Lib.Synth.Reasoning.Parallel.DCTreeTest
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTreeTest
       Grisette.Lib.Synth.Reasoning.ReverseMatcher
       Grisette.Lib.Synth.Reasoning.Synthesis.ByteCodeSketchTest
       Grisette.Lib.Synth.Reasoning.Synthesis.ComponentSketchTest

@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig
   ( LogConfig (..),
     logRootDir,
     getLogConfig,

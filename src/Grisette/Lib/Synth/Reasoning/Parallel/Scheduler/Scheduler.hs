@@ -4,9 +4,9 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
-  ( ProcessScheduler (..),
+  ( Scheduler (..),
     NodeInfo (..),
-    newProcessScheduler,
+    newScheduler,
     getCPid,
     getProcessByCPid,
     getProcess,
@@ -42,26 +42,26 @@ import Data.Time
   )
 import Foreign.C (eBADF)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
-import qualified Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue as Q
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
+import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
+  ( SchedulerConfig,
+    biasedDrawProbability,
+    initialMinimalCost,
+    schedulerRandomSeed,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
   ( DCTree,
     NodeId,
     emptyDCTree,
     nodeDepth,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeState
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
   ( NodeState (nodeStatus),
     nodeStateCurrentElapsedTime,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus (NodeStatus)
-import Grisette.Lib.Synth.Reasoning.Parallel.Process
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus (NodeStatus)
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Process (pipeRd, pipeWr),
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
-  ( ProcessSchedulerConfig,
-    biasedDrawProbability,
-    initialMinimalCost,
-    schedulerRandomSeed,
   )
 import Grisette.Lib.Synth.Util.Exception (catchErrno)
 import System.Posix
@@ -82,7 +82,7 @@ data NodeInfo sketchSpec = NodeInfo
   }
 
 data
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -94,9 +94,9 @@ data
     conVal
     matcher
   where
-  ProcessScheduler ::
+  Scheduler ::
     { config ::
-        ProcessSchedulerConfig
+        SchedulerConfig
           sketchSpec
           sketch
           conProg
@@ -125,7 +125,7 @@ data
       stopped :: IORef Bool,
       schedulerStartTime :: UTCTime
     } ->
-    ProcessScheduler
+    Scheduler
       sketchSpec
       sketch
       conProg
@@ -137,8 +137,8 @@ data
       conVal
       matcher
 
-newProcessScheduler ::
-  ProcessSchedulerConfig
+newScheduler ::
+  SchedulerConfig
     sketchSpec
     sketch
     conProg
@@ -150,7 +150,7 @@ newProcessScheduler ::
     conVal
     matcher ->
   IO
-    ( ProcessScheduler
+    ( Scheduler
         sketchSpec
         sketch
         conProg
@@ -162,7 +162,7 @@ newProcessScheduler ::
         conVal
         matcher
     )
-newProcessScheduler config = do
+newScheduler config = do
   randGen <- newAtomicGenM (mkStdGen (schedulerRandomSeed config))
   nodeInfo <- newIORef HM.empty
   nodeStates <- newIORef HM.empty
@@ -175,10 +175,10 @@ newProcessScheduler config = do
   queueLock <- newMVar ()
   stopped <- newIORef False
   schedulerStartTime <- getCurrentTime
-  return $ ProcessScheduler {..}
+  return $ Scheduler {..}
 
 getCPid ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -191,11 +191,11 @@ getCPid ::
     matcher ->
   NodeId ->
   IO Int32
-getCPid ProcessScheduler {..} nid =
+getCPid Scheduler {..} nid =
   readIORef nodeToProcess >>= \m -> return $ m HM.! nid
 
 getProcessByCPid ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -208,11 +208,11 @@ getProcessByCPid ::
     matcher ->
   Int32 ->
   IO Process
-getProcessByCPid ProcessScheduler {..} cpid =
+getProcessByCPid Scheduler {..} cpid =
   readIORef processes >>= \m -> return $ m HM.! cpid
 
 getProcess ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -230,7 +230,7 @@ getProcess scheduler nid = do
   getProcessByCPid scheduler cpid
 
 getCurrentMinimalCost ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -242,10 +242,10 @@ getCurrentMinimalCost ::
     conVal
     matcher ->
   IO (Maybe Int)
-getCurrentMinimalCost ProcessScheduler {..} = readIORef currentMinimalCost
+getCurrentMinimalCost Scheduler {..} = readIORef currentMinimalCost
 
 getCurrentTimeout ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -258,14 +258,14 @@ getCurrentTimeout ::
     matcher ->
   NodeId ->
   IO Int
-getCurrentTimeout ProcessScheduler {..} nid = do
+getCurrentTimeout Scheduler {..} nid = do
   nodeInfo <- readIORef nodeInfo
   case HM.lookup nid nodeInfo of
     Just NodeInfo {nodeTimeoutSeconds} -> return nodeTimeoutSeconds
     Nothing -> error "Should not happen: node info not found"
 
 getCurrentElapsedTime ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -278,13 +278,13 @@ getCurrentElapsedTime ::
     matcher ->
   NodeId ->
   IO NominalDiffTime
-getCurrentElapsedTime ProcessScheduler {..} nid = do
+getCurrentElapsedTime Scheduler {..} nid = do
   curTime <- getCurrentTime
   nodeStates <- readIORef nodeStates
   return $ nodeStateCurrentElapsedTime curTime $ nodeStates HM.! nid
 
 getStatus ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -297,12 +297,12 @@ getStatus ::
     matcher ->
   NodeId ->
   IO (NodeStatus conProg)
-getStatus ProcessScheduler {..} nid = do
+getStatus Scheduler {..} nid = do
   nodeStates <- readIORef nodeStates
   return $ nodeStatus $ nodeStates HM.! nid
 
 getNodeInfo ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -315,12 +315,12 @@ getNodeInfo ::
     matcher ->
   NodeId ->
   IO (NodeInfo sketchSpec)
-getNodeInfo ProcessScheduler {..} nid = do
+getNodeInfo Scheduler {..} nid = do
   nodeInfo <- readIORef nodeInfo
   return $ nodeInfo HM.! nid
 
 getDepth ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -333,12 +333,12 @@ getDepth ::
     matcher ->
   NodeId ->
   IO Int
-getDepth ProcessScheduler {..} nid = do
+getDepth Scheduler {..} nid = do
   dcTree <- readIORef dcTree
   return $ nodeDepth dcTree nid
 
 getIsSplitted ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -351,12 +351,12 @@ getIsSplitted ::
     matcher ->
   NodeId ->
   IO Bool
-getIsSplitted ProcessScheduler {..} nid = do
+getIsSplitted Scheduler {..} nid = do
   nodeInfo <- readIORef nodeInfo
   return $ nodeSplitted $ nodeInfo HM.! nid
 
 getSketchTable ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -369,12 +369,12 @@ getSketchTable ::
     matcher ->
   NodeId ->
   IO (SymbolTable sketchSpec)
-getSketchTable ProcessScheduler {..} nid = do
+getSketchTable Scheduler {..} nid = do
   nodeInfo <- readIORef nodeInfo
   return $ nodeSketchTable $ nodeInfo HM.! nid
 
 getPriority ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -387,12 +387,12 @@ getPriority ::
     matcher ->
   NodeId ->
   IO Q.Priority
-getPriority ProcessScheduler {..} nid = do
+getPriority Scheduler {..} nid = do
   nodeInfo <- readIORef nodeInfo
   return $ nodePriority $ nodeInfo HM.! nid
 
 getNumRunningProcess ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -404,10 +404,10 @@ getNumRunningProcess ::
     conVal
     matcher ->
   IO Int
-getNumRunningProcess ProcessScheduler {..} = length <$> readIORef processes
+getNumRunningProcess Scheduler {..} = length <$> readIORef processes
 
 getNumQueuedProcess ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -419,10 +419,10 @@ getNumQueuedProcess ::
     conVal
     matcher ->
   IO Int
-getNumQueuedProcess ProcessScheduler {..} = Q.size <$> readIORef nodeQueue
+getNumQueuedProcess Scheduler {..} = Q.size <$> readIORef nodeQueue
 
 setIsSplitted ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -436,11 +436,11 @@ setIsSplitted ::
   NodeId ->
   Bool ->
   IO ()
-setIsSplitted ProcessScheduler {..} nid isSplitted = do
+setIsSplitted Scheduler {..} nid isSplitted = do
   modifyIORef' nodeInfo $ HM.adjust (\ni -> ni {nodeSplitted = isSplitted}) nid
 
 setPriority ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -454,12 +454,12 @@ setPriority ::
   NodeId ->
   Q.Priority ->
   IO ()
-setPriority ProcessScheduler {..} nid priority = do
+setPriority Scheduler {..} nid priority = do
   modifyIORef' nodeInfo $ HM.adjust (\ni -> ni {nodePriority = priority}) nid
   modifyIORef' nodeQueue $ Q.setPriority nid priority
 
 setTimeout ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -473,14 +473,14 @@ setTimeout ::
   NodeId ->
   Int ->
   IO ()
-setTimeout ProcessScheduler {..} nid timeout = do
+setTimeout Scheduler {..} nid timeout = do
   modifyIORef' nodeInfo $
     HM.adjust
       (\ni -> ni {nodeTimeoutSeconds = timeout})
       nid
 
 removeProcessByCPid ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -493,7 +493,7 @@ removeProcessByCPid ::
     matcher ->
   Int32 ->
   IO ()
-removeProcessByCPid ProcessScheduler {..} cpid = do
+removeProcessByCPid Scheduler {..} cpid = do
   process <- readIORef processes >>= \m -> return $ m HM.! cpid
   let ec e v = if v == eBADF then return () else throwIO e
   catchErrno (closeFd $ pipeRd process) ec
@@ -504,7 +504,7 @@ removeProcessByCPid ProcessScheduler {..} cpid = do
   modifyIORef' nodeToProcess $ HM.delete nid
 
 removeProcess ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -522,7 +522,7 @@ removeProcess scheduler nid = do
   removeProcessByCPid scheduler cpid
 
 updateCurrentMinimalCost ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -535,7 +535,7 @@ updateCurrentMinimalCost ::
     matcher ->
   Maybe Int ->
   IO ()
-updateCurrentMinimalCost ProcessScheduler {..} newCost = do
+updateCurrentMinimalCost Scheduler {..} newCost = do
   modifyIORef' currentMinimalCost $ \case
     Nothing -> newCost
     Just oldCost -> case newCost of

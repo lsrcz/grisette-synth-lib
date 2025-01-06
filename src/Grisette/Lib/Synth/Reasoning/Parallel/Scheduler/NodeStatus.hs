@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( NodeStatus (..),
     NodeAction (..),
     nodeStatusIsRunning,
@@ -34,7 +34,7 @@ import GHC.Generics (Generic)
 import Grisette (Doc, PPrint (pformat), SolvingFailure (Unsat), nest, vsep)
 import Grisette.Lib.Synth.Program.Concrete (ProgPPrint)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
-import Grisette.Lib.Synth.Reasoning.Parallel.Process
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message
       ( Failure,
         FastTrackEasySynthFailure,

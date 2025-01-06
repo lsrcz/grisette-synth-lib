@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
-  ( ProcessSchedulerConfig (..),
+  ( SchedulerConfig (..),
   )
 where
 
@@ -12,10 +12,10 @@ import Grisette.Lib.Synth.Program.Choice.Counting
   ( CountNumProgsEvidence,
   )
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
-import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig
   ( LogConfig,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.Process
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( ConProgConstraint,
     ProcessConstraint,
     TwoTrackVerifiers,
@@ -23,7 +23,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Process
 import System.Log.Logger (Logger)
 
 data
-  ProcessSchedulerConfig
+  SchedulerConfig
     sketchSpec
     sketch
     conProg
@@ -35,7 +35,7 @@ data
     conVal
     matcher
   where
-  ProcessSchedulerConfig ::
+  SchedulerConfig ::
     ( ProcessConstraint
         sketchSpec
         sketch
@@ -79,7 +79,7 @@ data
       pollIntervalSeconds :: Double,
       biasedDrawProbability :: Double
     } ->
-    ProcessSchedulerConfig
+    SchedulerConfig
       sketchSpec
       sketch
       conProg

@@ -22,20 +22,9 @@ import Grisette
     vsep,
     (<+>),
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
-  ( NodeId,
-    nodeDividedChildren,
-    rootNodes,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeState
-  ( pformatNodeStateSummaryWithElapsedTime,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
-  ( nodeStatusIsDetermined,
-  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
-  ( ProcessSchedulerConfig
-      ( ProcessSchedulerConfig,
+  ( SchedulerConfig
+      ( SchedulerConfig,
         biasedDrawProbability,
         cmdline,
         costObj,
@@ -65,9 +54,20 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         verifiers
       ),
   )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
+  ( NodeId,
+    nodeDividedChildren,
+    rootNodes,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
+  ( pformatNodeStateSummaryWithElapsedTime,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
+  ( nodeStatusIsDetermined,
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
-  ( ProcessScheduler
-      ( ProcessScheduler,
+  ( Scheduler
+      ( Scheduler,
         config,
         currentMinimalCost,
         dcTree,
@@ -91,7 +91,7 @@ import System.Log.Logger (Priority)
 logTreeStats ::
   Priority ->
   Bool ->
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -106,7 +106,7 @@ logTreeStats ::
 logTreeStats
   level
   onlyUndetermined
-  scheduler@ProcessScheduler {config = ProcessSchedulerConfig {..}, ..} = do
+  scheduler@Scheduler {config = SchedulerConfig {..}, ..} = do
     logMultiLineDoc logger level $
       if onlyUndetermined
         then "Dumping stats for undetermined nodes."

@@ -32,32 +32,7 @@ import Grisette
   ( PPrint (pformat),
     viaShow,
   )
-import qualified Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue as Q
-import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
-  ( NodeId,
-    allChildrenNodes,
-    allSiblingNodes,
-    markNodeFailed,
-    nodeFailed,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
-  ( NodeAction,
-    NodeStatus
-      ( NodeFailed,
-        NodeFastTrackEasySynthFailure,
-        NodeFastTrackRefining,
-        NodeFastTrackViable,
-        NodeInferredFailure,
-        NodeNotYetStarted,
-        NodeSlowTrackRefining,
-        NodeStarted,
-        NodeSucceeded,
-        NodeTerminated
-      ),
-    nodeStatusIsNotYetStarted,
-    nodeStatusIsRunning,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.Process
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message (Failure),
     Process (pgid, pid),
     ProcessConfig
@@ -81,9 +56,10 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Process
     runRequestInSubProcess,
     sendNewMinimalCost,
   )
+import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
-  ( ProcessSchedulerConfig
-      ( ProcessSchedulerConfig,
+  ( SchedulerConfig
+      ( SchedulerConfig,
         biasedDrawProbability,
         cmdline,
         costObj,
@@ -113,10 +89,34 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         verifiers
       ),
   )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
+  ( NodeId,
+    allChildrenNodes,
+    allSiblingNodes,
+    markNodeFailed,
+    nodeFailed,
+  )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
+  ( NodeAction,
+    NodeStatus
+      ( NodeFailed,
+        NodeFastTrackEasySynthFailure,
+        NodeFastTrackRefining,
+        NodeFastTrackViable,
+        NodeInferredFailure,
+        NodeNotYetStarted,
+        NodeSlowTrackRefining,
+        NodeStarted,
+        NodeSucceeded,
+        NodeTerminated
+      ),
+    nodeStatusIsNotYetStarted,
+    nodeStatusIsRunning,
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( NodeInfo (nodeSplitted),
-    ProcessScheduler
-      ( ProcessScheduler,
+    Scheduler
+      ( Scheduler,
         config,
         currentMinimalCost,
         dcTree,
@@ -163,7 +163,7 @@ import System.Posix
   )
 
 _getNodeResponse ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -181,7 +181,7 @@ _getNodeResponse ::
         (ProcessResponse conProg symSemObj symVal conSemObj conVal matcher)
     )
 _getNodeResponse
-  scheduler@ProcessScheduler {config = ProcessSchedulerConfig {..}}
+  scheduler@Scheduler {config = SchedulerConfig {..}}
   blk
   nid = do
     process <- getProcess scheduler nid
@@ -193,7 +193,7 @@ _getNodeResponse
     return response
 
 killNode ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -214,7 +214,7 @@ killNode scheduler nid = do
   return response
 
 checkResponse ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -227,14 +227,14 @@ checkResponse ::
     matcher ->
   NodeId ->
   IO (Maybe NodeAction)
-checkResponse scheduler@ProcessScheduler {..} nid = do
+checkResponse scheduler@Scheduler {..} nid = do
   response <- _getNodeResponse scheduler False nid
   case response of
     Nothing -> return Nothing
     Just response -> Just <$> nodeTransition scheduler nid response
 
 killIfTimeout ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -247,7 +247,7 @@ killIfTimeout ::
     matcher ->
   NodeId ->
   IO (Maybe NodeAction)
-killIfTimeout scheduler@ProcessScheduler {..} nid = do
+killIfTimeout scheduler@Scheduler {..} nid = do
   timeout <- getCurrentTimeout scheduler nid
   elapsedTime <- getCurrentElapsedTime scheduler nid
   if nominalDiffTimeToSeconds elapsedTime > fromIntegral timeout
@@ -257,7 +257,7 @@ killIfTimeout scheduler@ProcessScheduler {..} nid = do
     else return Nothing
 
 _killInferredFailure ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -270,7 +270,7 @@ _killInferredFailure ::
     matcher ->
   NodeId ->
   IO ()
-_killInferredFailure scheduler@ProcessScheduler {..} nid = do
+_killInferredFailure scheduler@Scheduler {..} nid = do
   cpid <- HM.lookup nid <$> readIORef nodeToProcess
   case cpid of
     Nothing -> modifyIORef' nodeQueue $ Q.delete nid
@@ -283,7 +283,7 @@ _killInferredFailure scheduler@ProcessScheduler {..} nid = do
       return ()
 
 _setInferredFailure ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -296,7 +296,7 @@ _setInferredFailure ::
     matcher ->
   NodeId ->
   IO ()
-_setInferredFailure scheduler@ProcessScheduler {..} nid = do
+_setInferredFailure scheduler@Scheduler {..} nid = do
   status <- getStatus scheduler nid
   case status of
     NodeInferredFailure -> error "Should not happen"
@@ -317,7 +317,7 @@ _setInferredFailure scheduler@ProcessScheduler {..} nid = do
 
 _startNode ::
   forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher.
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -331,7 +331,7 @@ _startNode ::
   NodeId ->
   IO ()
 _startNode
-  scheduler@ProcessScheduler {config = ProcessSchedulerConfig {..}, ..}
+  scheduler@Scheduler {config = SchedulerConfig {..}, ..}
   nid = do
     sketchSpec <- getSketchTable scheduler nid
     status <- getStatus scheduler nid
@@ -391,7 +391,7 @@ _startNode
     modifyIORef' nodeToProcess $ HM.insert nid cpid
 
 resetIfJustStarted ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -404,7 +404,7 @@ resetIfJustStarted ::
     matcher ->
   NodeId ->
   IO ()
-resetIfJustStarted scheduler@ProcessScheduler {..} nid = do
+resetIfJustStarted scheduler@Scheduler {..} nid = do
   status <- getStatus scheduler nid
   case status of
     NodeStarted {} -> do
@@ -424,7 +424,7 @@ resetIfJustStarted scheduler@ProcessScheduler {..} nid = do
     _ -> return ()
 
 _startQueuedImpl ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -436,7 +436,7 @@ _startQueuedImpl ::
     conVal
     matcher ->
   IO ()
-_startQueuedImpl scheduler@ProcessScheduler {..} = do
+_startQueuedImpl scheduler@Scheduler {..} = do
   nodeQueue' <- readIORef nodeQueue
   runningNum <- getNumRunningProcess scheduler
   when (Q.null nodeQueue') $ do
@@ -470,7 +470,7 @@ _startQueuedImpl scheduler@ProcessScheduler {..} = do
     _startQueuedImpl scheduler
 
 startQueued ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -487,7 +487,7 @@ startQueued scheduler = do
   unless stopped $ _startQueuedImpl scheduler
 
 refineNode ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -501,7 +501,7 @@ refineNode ::
   NodeId ->
   Maybe Int ->
   IO ()
-refineNode scheduler@ProcessScheduler {..} nid bestCostKnowledge = do
+refineNode scheduler@Scheduler {..} nid bestCostKnowledge = do
   status <- getStatus scheduler nid
   if not (nodeStatusIsRunning status)
     then
@@ -530,7 +530,7 @@ refineNode scheduler@ProcessScheduler {..} nid bestCostKnowledge = do
       sendNewMinimalCost currentCost process
 
 markFailure ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -543,14 +543,14 @@ markFailure ::
     matcher ->
   NodeId ->
   IO ()
-markFailure scheduler@ProcessScheduler {..} nid = do
+markFailure scheduler@Scheduler {..} nid = do
   dcTree' <- readIORef dcTree
   let (inferredFailure, newDcTree) = markNodeFailed dcTree' nid
   mapM_ (_setInferredFailure scheduler) inferredFailure
   writeIORef dcTree newDcTree
 
 markSuccess ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -563,7 +563,7 @@ markSuccess ::
     matcher ->
   NodeId ->
   IO ()
-markSuccess scheduler@ProcessScheduler {..} nid = do
+markSuccess scheduler@Scheduler {..} nid = do
   priority <- getPriority scheduler nid
   let newPriority = priority {Q.knownWorking = True}
   when (newPriority /= priority) $
@@ -575,7 +575,7 @@ markSuccess scheduler@ProcessScheduler {..} nid = do
   setTimeout scheduler nid newTimeout
 
 _markAncestorKnownWorking ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -588,7 +588,7 @@ _markAncestorKnownWorking ::
     matcher ->
   NodeId ->
   IO ()
-_markAncestorKnownWorking scheduler@ProcessScheduler {..} nid = do
+_markAncestorKnownWorking scheduler@Scheduler {..} nid = do
   priority <- getPriority scheduler nid
   let newPriority = priority {Q.ancestorKnownWorking = True}
   when (newPriority /= priority) $
@@ -597,7 +597,7 @@ _markAncestorKnownWorking scheduler@ProcessScheduler {..} nid = do
   setPriority scheduler nid newPriority
 
 _markAncestorSiblingKnownWorking ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -610,7 +610,7 @@ _markAncestorSiblingKnownWorking ::
     matcher ->
   NodeId ->
   IO ()
-_markAncestorSiblingKnownWorking scheduler@ProcessScheduler {..} nid = do
+_markAncestorSiblingKnownWorking scheduler@Scheduler {..} nid = do
   priority <- getPriority scheduler nid
   let newPriority = priority {Q.ancestorSiblingKnownWorking = True}
   when (newPriority /= priority) $
@@ -619,7 +619,7 @@ _markAncestorSiblingKnownWorking scheduler@ProcessScheduler {..} nid = do
   setPriority scheduler nid newPriority
 
 markAllChildrenSuccess ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -632,14 +632,14 @@ markAllChildrenSuccess ::
     matcher ->
   NodeId ->
   IO ()
-markAllChildrenSuccess scheduler@ProcessScheduler {..} nid = do
+markAllChildrenSuccess scheduler@Scheduler {..} nid = do
   markSuccess scheduler nid
   dcTree <- readIORef dcTree
   _markAncestorKnownWorking scheduler nid
   mapM_ (_markAncestorKnownWorking scheduler) $ allChildrenNodes dcTree nid
 
 markAllSiblingChildrenSuccess ::
-  ProcessScheduler
+  Scheduler
     sketchSpec
     sketch
     conProg
@@ -652,7 +652,7 @@ markAllSiblingChildrenSuccess ::
     matcher ->
   NodeId ->
   IO ()
-markAllSiblingChildrenSuccess scheduler@ProcessScheduler {..} nid = do
+markAllSiblingChildrenSuccess scheduler@Scheduler {..} nid = do
   markSuccess scheduler nid
   dcTree <- readIORef dcTree
   mapM_ (_markAncestorSiblingKnownWorking scheduler) $ allSiblingNodes dcTree nid
