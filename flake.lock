@@ -79,16 +79,16 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1736137470,
-        "narHash": "sha256-t9RcvLPmXV7N9KALxT9dKi8pisskFGo7ZNt8zM3inSU=",
+        "lastModified": 1736142479,
+        "narHash": "sha256-rg3ctG7sbApouy7oydQZaRXrBCW3tG1EYOG9xDxSKYw=",
         "owner": "lsrcz",
         "repo": "grisette",
-        "rev": "e65b44fbe8baa485d4529458abc49d3020b324d2",
+        "rev": "c9c04f5f28fd55dd4a533268f18be8aa0ed11fa2",
         "type": "github"
       },
       "original": {
         "owner": "lsrcz",
-        "ref": "nix-abstractions",
+        "ref": "main",
         "repo": "grisette",
         "type": "github"
       }
@@ -99,11 +99,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1736137160,
-        "narHash": "sha256-OlM8cuo84kkRD7rfFz616gvgFGo+Whc+Kq4vz0Dc7Po=",
+        "lastModified": 1736139197,
+        "narHash": "sha256-r7Mhn0sdleG24vAhiuHmhsSNGREhxKoSYQLKJA/+YX4=",
         "owner": "lsrcz",
         "repo": "grisette-nix-build-env",
-        "rev": "1e16613160a6d45800f89afedcb81b6d57eef615",
+        "rev": "b7512ffea4b52041729a282a0a2477e7d0289b88",
         "type": "github"
       },
       "original": {

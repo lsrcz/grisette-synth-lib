@@ -3,7 +3,7 @@
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.grisette-nix-build-env.url = "github:lsrcz/grisette-nix-build-env/main";
-  inputs.grisette.url = "github:lsrcz/grisette/nix-abstractions";
+  inputs.grisette.url = "github:lsrcz/grisette/main";
 
   outputs = { self, nixpkgs, flake-utils, grisette-nix-build-env, grisette }:
     flake-utils.lib.eachDefaultSystem (system:
