@@ -100,6 +100,7 @@ import Grisette.Lib.Synth.Program.SymbolTable
 import Grisette.Lib.Synth.Reasoning.Parallel.DCTree (NodeId (NodeId))
 import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
   ( LogConfig (LogConfig, baseDir, progName),
+    defaultFormatter,
     logRootDir,
   )
 import Grisette.Lib.Synth.Reasoning.Synthesis
@@ -136,7 +137,6 @@ import Grisette.Lib.Synth.Util.Serialize
   )
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 import System.Exit (ExitCode (ExitFailure, ExitSuccess))
-import System.Log.Formatter (simpleLogFormatter)
 import System.Log.Handler (LogHandler (setFormatter))
 import System.Log.Handler.Simple (fileHandler)
 import System.Log.Logger
@@ -167,19 +167,16 @@ import System.Posix.Types (CPid (CPid), Fd, ProcessGroupID, ProcessID)
 _createLogger :: LogConfig -> NodeId -> IO Logger
 _createLogger logConfig@LogConfig {..} (NodeId nodeId) = do
   let loggerName = T.unpack progName <> "-" <> show nodeId
-  let defaultFormatter lh =
-        return $
-          setFormatter
-            lh
-            ( simpleLogFormatter $
-                "[$time : $loggername@" <> show nodeId <> " : $prio] $msg"
-            )
+  defaultFormatter <-
+    defaultFormatter
+      ("[$time : $loggername@" <> show nodeId <> " : $prio] $msg")
+  let setDefaultFormatter lh = return $ setFormatter lh defaultFormatter
   let rootDir = logRootDir logConfig
   h <-
     fileHandler
       (rootDir <> "/" <> show nodeId <> ".log")
       DEBUG
-      >>= defaultFormatter
+      >>= setDefaultFormatter
   updateGlobalLogger
     loggerName
     (setHandlers [h] . setLevel DEBUG . removeHandler)

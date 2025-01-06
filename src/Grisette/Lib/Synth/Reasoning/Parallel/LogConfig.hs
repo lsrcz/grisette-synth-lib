@@ -1,20 +1,30 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
   ( LogConfig (..),
     logRootDir,
     getLogConfig,
+    defaultFormatter,
     getDefaultLogger,
   )
 where
 
 import qualified Data.Text as T
-import Data.Time (getZonedTime)
+import Data.Time
+  ( defaultTimeLocale,
+    diffUTCTime,
+    formatTime,
+    getCurrentTime,
+    getZonedTime,
+    zonedTimeToUTC,
+  )
+import Grisette.Lib.Synth.Util.Show (showDiffTime)
 import System.Directory.Extra (createDirectoryIfMissing)
 import System.IO (stderr)
-import System.Log.Formatter (simpleLogFormatter)
+import System.Log.Formatter (LogFormatter, varFormatter)
 import System.Log.Handler (LogHandler (setFormatter))
 import System.Log.Handler.Simple (fileHandler, streamHandler)
 import System.Log.Logger
@@ -46,19 +56,35 @@ getLogConfig baseDir progName = do
   createDirectoryIfMissing True (logRootDir logConfig)
   return logConfig
 
+defaultFormatter :: forall a. String -> IO (LogFormatter a)
+defaultFormatter format = do
+  loggerCreatedTime <- getCurrentTime
+  return $
+    varFormatter
+      [ ( "time",
+          do
+            time <- getZonedTime
+            let diffTime =
+                  diffUTCTime (zonedTimeToUTC time) loggerCreatedTime
+            return $
+              formatTime defaultTimeLocale "%F %X" time
+                ++ " ("
+                ++ showDiffTime diffTime
+                ++ ")"
+        )
+      ]
+      format
+
 getDefaultLogger :: LogConfig -> Bool -> IO Logger
 getDefaultLogger logConfig@LogConfig {..} enableDebugLogging = do
   logger <- getLogger (T.unpack progName)
   updateGlobalLogger rootLoggerName removeHandler
-  let defaultFormatter lh =
-        return $
-          setFormatter
-            lh
-            (simpleLogFormatter "[$time : $loggername : $prio] $msg")
+  defaultFormatter <- defaultFormatter "[$time : $loggername : $prio] $msg"
+  let setDefaultFormatter lh = return $ setFormatter lh defaultFormatter
   let rootDir = logRootDir logConfig
-  hdebug <- fileHandler (rootDir <> "/debug.log") DEBUG >>= defaultFormatter
-  h <- fileHandler (rootDir <> "/notice.log") NOTICE >>= defaultFormatter
-  hstderr <- streamHandler stderr NOTICE >>= defaultFormatter
+  hdebug <- fileHandler (rootDir <> "/debug.log") DEBUG >>= setDefaultFormatter
+  h <- fileHandler (rootDir <> "/notice.log") NOTICE >>= setDefaultFormatter
+  hstderr <- streamHandler stderr NOTICE >>= setDefaultFormatter
   let logger' =
         setHandlers ([h, hstderr] ++ [hdebug | enableDebugLogging])
           . setLevel DEBUG
