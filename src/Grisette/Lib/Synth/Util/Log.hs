@@ -1,4 +1,4 @@
-module Grisette.Lib.Synth.Reasoning.Parallel.LogMultiLine
+module Grisette.Lib.Synth.Util.Log
   ( logMultiLine,
     logMultiLineText,
     logMultiLineDoc,
@@ -7,9 +7,8 @@ module Grisette.Lib.Synth.Reasoning.Parallel.LogMultiLine
 where
 
 import qualified Data.Text as T
-import Grisette (PPrint (pformat))
+import Grisette (Doc, PPrint (pformat))
 import Grisette.Lib.Synth.Util.Pretty (renderDoc)
-import Prettyprinter (Doc)
 import System.Console.ANSI
   ( Color (Blue, Green, Red, Yellow),
     ColorIntensity (Vivid),

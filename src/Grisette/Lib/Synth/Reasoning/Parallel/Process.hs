@@ -100,14 +100,6 @@ import Grisette.Lib.Synth.Program.SymbolTable
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.DCTree (NodeId (NodeId))
 import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig (LogConfig (LogConfig, baseDir, progName), logRootDir)
-import Grisette.Lib.Synth.Reasoning.Parallel.LogMultiLine (logMultiLineDoc)
-import Grisette.Lib.Synth.Reasoning.Parallel.Serialize
-  ( byteStringToWord64,
-    nonBlockingReadObject,
-    readObject,
-    word64ToByteString,
-    writeObject,
-  )
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example,
     RunSynthesisTask (solverRunSynthesisTaskExtractCex),
@@ -129,6 +121,16 @@ import Grisette.Lib.Synth.Reasoning.Synthesis
         SynthesisSuccess,
         SynthesisVerifierFailure
       ),
+  )
+import Grisette.Lib.Synth.Util.Log (logMultiLineDoc)
+import Grisette.Lib.Synth.Util.Serialize
+  ( byteStringToWord64,
+    nonBlockingReadObject,
+    readByteString,
+    readObject,
+    word64ToByteString,
+    writeByteString,
+    writeObject,
   )
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 import System.Exit (ExitCode (ExitFailure, ExitSuccess))
@@ -157,7 +159,7 @@ import System.Posix
     sigINT,
     sigTERM,
   )
-import System.Posix.ByteString (fdRead, fdWrite, setFdOption)
+import System.Posix.ByteString (setFdOption)
 import System.Posix.Types (CPid (CPid), Fd, ProcessGroupID, ProcessID)
 
 _createLogger :: LogConfig -> NodeId -> IO Logger
@@ -227,6 +229,7 @@ type ProcessConstraint
     Typeable symVal,
     PPrint conVal,
     Hashable sketchSpec,
+    Eq sketchSpec,
     LowestSeqNum sketchSpec,
     PartitionSpec sketchSpec
   )
@@ -642,7 +645,7 @@ runRequestInSubProcess config processConfig@ProcessConfig {..} = do
     closeFd wrHost
     pid <- getProcessID
     pgid <- createProcessGroupFor pid
-    fdWrite wrChild $ word64ToByteString $ fromIntegral pgid
+    writeByteString wrChild $ word64ToByteString $ fromIntegral pgid
     logger <- _createLogger logConfig nodeId
     stateRef <-
       newIORef $
@@ -668,7 +671,7 @@ runRequestInSubProcess config processConfig@ProcessConfig {..} = do
       loop solver InitialStep
   closeFd rdChild
   closeFd wrChild
-  pgidBs <- fdRead rdHost 8
+  pgidBs <- readByteString rdHost 8
   setFdOption rdHost NonBlockingRead True
   let pgid = fromIntegral $ byteStringToWord64 pgidBs
   return $ Process pid pgid rdHost wrHost

@@ -89,12 +89,12 @@ packages:
   original:
     hackage: th-compat-0.1.2
 - completed:
-    hackage: QuickCheck-2.14@sha256:3f536a4b86bef7ec39025f04ef8d76c5ac5a78ba0b42e660b25d0a8f9c811045,7004
+    hackage: QuickCheck-2.14.1@sha256:843e6428c2d80656a0cbff61929d3924e8b450841b6dfba463d0b3f41a48265c,8006
     pantry-tree:
-      sha256: 7067593c50ff2e5e83c637ac73009f4bd8f43c29ff256e976bbb14674033abe9
-      size: 2203
+      sha256: 543c1e661669b7235d3846b08ad3d1f6f6cba0d81c285dbfc15a28e148a347ed
+      size: 2315
   original:
-    hackage: QuickCheck-2.14
+    hackage: QuickCheck-2.14.1
 - completed:
     hackage: intern-0.9.2@sha256:85eae3bd0a6cbfc622c0c70aa476641971bcd5e59dbc4c7a4b17888e432a5bd5,1619
     pantry-tree:
@@ -109,20 +109,6 @@ packages:
       size: 1135
   original:
     hackage: array-0.5.4.0
-- completed:
-    hackage: random-1.1@sha256:7b67624fd76ddf97c206de0801dc7e888097e9d572974be9b9ea6551d76965df,1777
-    pantry-tree:
-      sha256: 14a1b01728c5584e87c9fa00746a66e28ffd89dd2c0eabd334c8463953496e1b
-      size: 637
-  original:
-    hackage: random-1.1
-- completed:
-    hackage: splitmix-0.0.5@sha256:4a49661be63f5aea0e132e9ab51be918789bb4dceb4ab9b15b85ba9cbbef5999,5412
-    pantry-tree:
-      sha256: b41d4f60cfabab8b02840906191013ee06fe2357371103a471c7cc55eda9e462
-      size: 1148
-  original:
-    hackage: splitmix-0.0.5
 - completed:
     hackage: vector-0.12.1.2@sha256:9291bc581f36e51d5bda9fce57cb980fbec3dd292996896f285fef39eb80a9a0,7364
     pantry-tree:
@@ -253,6 +239,55 @@ packages:
   original:
     commit: 4e9afe48e5a592aacdc54646379ec0d62b956e5f
     git: https://github.com/lsrcz/grisette.git
+- completed:
+    hackage: random-1.2.0@sha256:195506fedaa7c31c1fa2a747e9b49b4a5d1f0b09dd8f1291f23a771656faeec3,6097
+    pantry-tree:
+      sha256: 77505a2919b4d1d84abc36c995046f661741251e58a592ed826b7c1aee1c044c
+      size: 1259
+  original:
+    hackage: random-1.2.0
+- completed:
+    hackage: Chart-1.9.3@sha256:ee5e3a78ba1a4747c3162702f69d9312218a4bee81d36b314f18745859c1ee51,2948
+    pantry-tree:
+      sha256: c1a6a912e46a67f4d274c5244236507c1e669b553964093df0710eaa4ababa55
+      size: 3031
+  original:
+    hackage: Chart-1.9.3
+- completed:
+    hackage: Chart-cairo-1.9.3@sha256:5d6f005b5d3d74453a979eb2c6a1777c92ce02eae9e019abbe03a0e008cb8aea,924
+    pantry-tree:
+      sha256: 204f29235d182cc8c8ab40d0a37387e78c1dadc684e190c85e1643521483e681
+      size: 238
+  original:
+    hackage: Chart-cairo-1.9.3
+- completed:
+    hackage: splitmix-0.1@sha256:d50c4d0801a35be7875a040470c09863342514930c82a7d25780a6c2efc4fda9,5249
+    pantry-tree:
+      sha256: 2c884d06818f79030551aab192eee23734fd499361f4f4dcb4c51d1b1b2d786e
+      size: 1148
+  original:
+    hackage: splitmix-0.1
+- completed:
+    hackage: cairo-0.13.10.0@sha256:7bce41dbfb1aa9a6723cd4373b3cfb55ecd3564df3a668afe74692f3b32f32c7,4271
+    pantry-tree:
+      sha256: 10dea7c5189d913ae553e2f82276bc45eee9c11123f0626be09b85e5d2e56a5a
+      size: 2831
+  original:
+    hackage: cairo-0.13.10.0
+- completed:
+    hackage: lens-4.19.2@sha256:d4d704141d7c322bbfb746157b0709f3b966dfec92421f571c34069893af08cc,16062
+    pantry-tree:
+      sha256: 4f42e9dc7319a047dddd8dd090aa705bf35638670d06b783c1c310b56650167e
+      size: 8330
+  original:
+    hackage: lens-4.19.2
+- completed:
+    hackage: gtk2hs-buildtools-0.13.11.0@sha256:b75cb6b3068d746f568aaf35a968a2e5ac8a3f9cad45eb62f9acedd6b6a7905e,5413
+    pantry-tree:
+      sha256: 5cdde948effd302f941fc839170e6797703226d305676a6bebc3cc69207a6e7e
+      size: 3588
+  original:
+    hackage: gtk2hs-buildtools-0.13.11.0
 snapshots:
 - completed:
     sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68

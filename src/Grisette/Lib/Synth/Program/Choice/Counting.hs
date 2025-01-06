@@ -90,6 +90,7 @@ choiceTreeSplitIntoTypesMap ::
   forall sketchSpec.
   ( OpTyping sketchSpec AngelicContext,
     Mergeable (OpTypeType sketchSpec),
+    Eq (OpTypeType sketchSpec),
     Hashable (OpTypeType sketchSpec),
     SplitChoice sketchSpec
   ) =>
@@ -139,6 +140,7 @@ instance
   ( SplitChoice sketchSpec,
     OpTyping sketchSpec AngelicContext,
     ty0 ~ OpTypeType sketchSpec,
+    Eq ty0,
     Hashable ty0,
     Mergeable ty0,
     ValidArgument ty0

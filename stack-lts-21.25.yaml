@@ -44,6 +44,10 @@ extra-deps:
   - git: https://github.com/lsrcz/grisette.git
     commit: 4e9afe48e5a592aacdc54646379ec0d62b956e5f
   - quickcheck-with-counterexamples-1.2
+  - Chart-cairo-1.9.4.1
+
+  - cairo-0.13.11.0
+  - gtk2hs-buildtools-0.13.11.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

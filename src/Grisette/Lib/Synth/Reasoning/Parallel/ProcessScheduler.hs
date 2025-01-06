@@ -110,7 +110,6 @@ import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
     rootNodes,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig (LogConfig (LogConfig), logRootDir)
-import Grisette.Lib.Synth.Reasoning.Parallel.LogMultiLine (logMultiLineDoc)
 import Grisette.Lib.Synth.Reasoning.Parallel.NodeState
   ( NodeState
       ( NodeState,
@@ -203,6 +202,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Process
     sendNewMinimalCost,
   )
 import Grisette.Lib.Synth.Util.Exception (catchErrno)
+import Grisette.Lib.Synth.Util.Log (logMultiLineDoc)
 import Numeric (showFFloat)
 import System.Exit (ExitCode (ExitSuccess))
 import System.Log.Logger (Logger, Priority (DEBUG, NOTICE, WARNING))
@@ -2761,16 +2761,16 @@ debugLogAllStats
                         fromMaybe mempty $
                           nodeDividedChildren dcTree nid
               if
-                  | null children -> return $ result <+> "{}"
-                  | onlyUndetermined && nodeStatusIsDetermined status ->
-                      return $ result <+> "{...}"
-                  | otherwise -> do
-                      childrenDocs <- mapM walkNode children
-                      return $
-                        vsep
-                          [ nest 2 $ vsep $ [result <+> "{", vsep childrenDocs],
-                            "}"
-                          ]
+                | null children -> return $ result <+> "{}"
+                | onlyUndetermined && nodeStatusIsDetermined status ->
+                    return $ result <+> "{...}"
+                | otherwise -> do
+                    childrenDocs <- mapM walkNode children
+                    return $
+                      vsep
+                        [ nest 2 $ vsep $ [result <+> "{", vsep childrenDocs],
+                          "}"
+                        ]
         nodeResult :: NodeId -> IO (Doc ann)
         nodeResult nid = do
           state <- (HM.! nid) <$> readIORef nodeStates

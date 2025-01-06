@@ -22,6 +22,27 @@ packages:
       size: 724
   original:
     hackage: quickcheck-with-counterexamples-1.2
+- completed:
+    hackage: Chart-cairo-1.9.4.1@sha256:e4e87e18ba5d6acf85a4442f2d6d3ffe2fa1f9b339140978cf49059c00d9d03f,1067
+    pantry-tree:
+      sha256: 7b5c99484437cec3a20dfcb882a68d6df08658ad0550c0a1419c51f61488954e
+      size: 239
+  original:
+    hackage: Chart-cairo-1.9.4.1
+- completed:
+    hackage: cairo-0.13.11.0@sha256:02aa5c7046d5fd5c8d348bfb9b891a11678a6c7ed110fa14c00ad13d7858b0ca,4267
+    pantry-tree:
+      sha256: 38919d0779978568d595c8fddabf48d839c954bea02812ba3eb930f5e0331a8c
+      size: 2831
+  original:
+    hackage: cairo-0.13.11.0
+- completed:
+    hackage: gtk2hs-buildtools-0.13.11.0@sha256:b75cb6b3068d746f568aaf35a968a2e5ac8a3f9cad45eb62f9acedd6b6a7905e,5413
+    pantry-tree:
+      sha256: 5cdde948effd302f941fc839170e6797703226d305676a6bebc3cc69207a6e7e
+      size: 3588
+  original:
+    hackage: gtk2hs-buildtools-0.13.11.0
 snapshots:
 - completed:
     sha256: a81fb3877c4f9031e1325eb3935122e608d80715dc16b586eb11ddbff8671ecd

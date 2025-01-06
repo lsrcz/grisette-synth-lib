@@ -50,6 +50,11 @@ extra-deps:
   - unordered-containers-0.2.17.0
   - ordered-containers-0.2.3
   - sbv-8.17
+  - Chart-1.9.3
+  - Chart-cairo-1.9.3
+
+  - cairo-0.13.10.0
+  - gtk2hs-buildtools-0.13.11.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

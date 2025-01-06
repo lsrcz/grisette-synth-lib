@@ -12,8 +12,8 @@ where
 
 import qualified Data.Text as T
 import Data.Time (getZonedTime)
-import GHC.IO.StdHandles (stderr)
 import System.Directory.Extra (createDirectoryIfMissing)
+import System.IO (stderr)
 import System.Log.Formatter (simpleLogFormatter)
 import System.Log.Handler (LogHandler (setFormatter))
 import System.Log.Handler.Simple (fileHandler, streamHandler)

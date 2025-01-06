@@ -1,6 +1,7 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Grisette.Lib.Synth.Reasoning.Parallel.Serialize
+module Grisette.Lib.Synth.Util.Serialize
   ( finiteBitsToByteStringLE,
     byteStringToFiniteBitsLE,
     byteStringToWord64,
@@ -15,20 +16,26 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Serialize
     readObject,
     nonBlockingReadByteStringWithSize,
     nonBlockingReadObject,
+    readByteString,
+    writeByteString,
   )
 where
 
+#if !MIN_VERSION_unix(2, 8, 0)
+import qualified Data.ByteString.Char8 as BC8
+#endif
 import Control.Exception (catch)
 import Data.Bits (Bits (shiftL, shiftR, (.|.)), FiniteBits (finiteBitSize))
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Unsafe as B
 import Data.Bytes.Get (runGetS)
 import Data.Bytes.Put (runPutS)
 import Data.Bytes.Serial (Serial (deserialize, serialize))
 import Data.Word (Word32, Word64)
 import Foreign.C (eAGAIN, getErrno)
-import System.Posix (Fd)
+import System.Posix (ByteCount, Fd)
 import System.Posix.IO.ByteString (fdRead, fdWrite)
 
 finiteBitsToByteStringLE :: (FiniteBits n, Integral n) => n -> B.ByteString
@@ -54,7 +61,7 @@ byteStringToWord64 s =
     .|. fromIntegral (s `B.unsafeIndex` 0)
 
 word64ToByteString :: Word64 -> B.ByteString
-word64ToByteString w = B.toStrict $ B.toLazyByteString $ B.word64LE w
+word64ToByteString w = BL.toStrict $ B.toLazyByteString $ B.word64LE w
 
 byteStringToWord32 :: B.ByteString -> Word32
 byteStringToWord32 s =
@@ -64,7 +71,7 @@ byteStringToWord32 s =
     .|. fromIntegral (s `B.unsafeIndex` 0)
 
 word32ToByteString :: Word32 -> B.ByteString
-word32ToByteString w = B.toStrict $ B.toLazyByteString $ B.word32LE w
+word32ToByteString w = BL.toStrict $ B.toLazyByteString $ B.word32LE w
 
 byteStringToBool :: B.ByteString -> Bool
 byteStringToBool bs = bs `B.unsafeIndex` 0 /= 0
@@ -73,21 +80,41 @@ boolToByteString :: Bool -> B.ByteString
 boolToByteString True = B.singleton 1
 boolToByteString False = B.singleton 0
 
+#if MIN_VERSION_unix(2, 8, 0)
+readByteString :: Fd -> ByteCount -> IO B.ByteString
+readByteString = fdRead
+
+writeByteString :: Fd -> B.ByteString -> IO ByteCount
+writeByteString = fdWrite
+#else
+readByteString :: Fd -> ByteCount -> IO B.ByteString
+readByteString fd n = do
+  (s, _) <- fdRead fd n
+  return $ BC8.pack s
+
+writeByteString :: Fd -> B.ByteString -> IO ByteCount
+writeByteString fd bs = fdWrite fd $ BC8.unpack bs
+#endif
+
 writeByteStringWithSize :: Fd -> B.ByteString -> IO ()
 writeByteStringWithSize fd bs = do
   let n = word32ToByteString $ fromIntegral $ B.length bs
-  fdWrite fd n
-  fdWrite fd bs
+  writeByteString fd n
+  writeByteString fd bs
   return ()
 
 writeObject :: (Serial a) => Fd -> a -> IO ()
 writeObject fd obj = writeByteStringWithSize fd (runPutS (serialize obj))
 
+_readSize :: Fd -> IO ByteCount
+_readSize fd = do
+  bs <- readByteString fd 4
+  return $ fromIntegral $ byteStringToWord32 bs
+
 readByteStringWithSize :: Fd -> IO B.ByteString
 readByteStringWithSize fd = do
-  bs <- fdRead fd 4
-  let n = fromIntegral $ byteStringToWord32 bs
-  fdRead fd n
+  n <- _readSize fd
+  readByteString fd n
 
 readObject :: (Serial a) => Fd -> IO a
 readObject fd = do
@@ -109,7 +136,7 @@ nonBlockingReadObject fd = do
 nonBlockingReadByteStringWithSize :: Fd -> IO (Maybe B.ByteString)
 nonBlockingReadByteStringWithSize fd = do
   bytesToRead <-
-    (Just . byteStringToWord32 <$> fdRead fd 4)
+    (Just <$> _readSize fd)
       `catch` \(_ :: IOError) -> do
         errno <- getErrno
         if errno == eAGAIN
@@ -118,7 +145,7 @@ nonBlockingReadByteStringWithSize fd = do
   let go 0 (Just buf) = return buf
       go i maybeBuf = do
         r <-
-          fdRead fd i `catch` \(_ :: IOError) -> do
+          readByteString fd i `catch` \(_ :: IOError) -> do
             errno <- getErrno
             if errno == eAGAIN
               then go i maybeBuf
@@ -136,5 +163,5 @@ nonBlockingReadByteStringWithSize fd = do
   case bytesToRead of
     Nothing -> return Nothing
     Just bytesToRead -> do
-      buf <- go (fromIntegral bytesToRead) Nothing
+      buf <- go bytesToRead Nothing
       return $ Just buf
