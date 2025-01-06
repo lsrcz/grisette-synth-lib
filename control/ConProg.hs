@@ -93,8 +93,7 @@ instance (MonadContext ctx) => OpTyping (Op intVal) ctx where
   typeOp (If sig _ _) = mrgReturn $ typeIf sig
 
 instance
-  ( HasSemantics (Value intVal boolVal) ctx
-  ) =>
+  (HasSemantics (Value intVal boolVal) ctx) =>
   OpSemantics DefaultSem (Op intVal) (Value intVal boolVal) ctx
   where
   applyOp _ _ Plus = applyPlus

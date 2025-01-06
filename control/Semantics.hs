@@ -122,8 +122,7 @@ applyIntConst i [] = mrgReturn [mkInt i]
 applyIntConst _ _ = mrgThrowError "const op should accept no operands"
 
 applyIf ::
-  ( HasSemantics val ctx
-  ) =>
+  (HasSemantics val ctx) =>
   EvaledSymbolTable val ctx ->
   T.Text ->
   T.Text ->
