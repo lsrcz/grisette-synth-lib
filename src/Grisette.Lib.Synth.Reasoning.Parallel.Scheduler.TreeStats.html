@@ -1,0 +1,901 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE MultiWayIf #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats.html"><span class="hs-identifier">Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats.html#logTreeStats"><span class="hs-identifier">logTreeStats</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HM</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashSet</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HS</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.IORef</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">readIORef</span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">sort</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromMaybe</span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Time</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">getCurrentTime</span></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Grisette</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">Doc</span></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-identifier">PPrint</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">pformat</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-identifier">nest</span></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="hs-identifier">vsep</span></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.DCTree.html"><span class="hs-identifier">Grisette.Lib.Synth.Reasoning.Parallel.DCTree</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.DCTree.html#NodeId"><span class="hs-identifier">NodeId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.DCTree.html#nodeDividedChildren"><span class="hs-identifier">nodeDividedChildren</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.DCTree.html#rootNodes"><span class="hs-identifier">rootNodes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.NodeState.html"><span class="hs-identifier">Grisette.Lib.Synth.Reasoning.Parallel.NodeState</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.NodeState.html#pformatNodeStateSummaryWithElapsedTime"><span class="hs-identifier">pformatNodeStateSummaryWithElapsedTime</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus.html"><span class="hs-identifier">Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus.html#nodeStatusIsDetermined"><span class="hs-identifier">nodeStatusIsDetermined</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html"><span class="hs-identifier">Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#ProcessSchedulerConfig"><span class="hs-identifier">ProcessSchedulerConfig</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#ProcessSchedulerConfig"><span class="hs-identifier">ProcessSchedulerConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#biasedDrawProbability"><span class="hs-identifier">biasedDrawProbability</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#cmdline"><span class="hs-identifier">cmdline</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#costObj"><span class="hs-identifier">costObj</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#countNumProgsEvidence"><span class="hs-identifier">countNumProgsEvidence</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#doDeadCodeElimination"><span class="hs-identifier">doDeadCodeElimination</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#easySketchFromFastResult"><span class="hs-identifier">easySketchFromFastResult</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#exactCost"><span class="hs-identifier">exactCost</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#fastTrackTimeoutSeconds"><span class="hs-identifier">fastTrackTimeoutSeconds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#initialMinimalCost"><span class="hs-identifier">initialMinimalCost</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#initialSplitRatio"><span class="hs-identifier">initialSplitRatio</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#initialTimeoutSeconds"><span class="hs-identifier">initialTimeoutSeconds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#logConfig"><span class="hs-identifier">logConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#logger"><span class="hs-identifier">logger</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#parallelism"><span class="hs-identifier">parallelism</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#pollIntervalSeconds"><span class="hs-identifier">pollIntervalSeconds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#restartRunningTimeThresholdSeconds"><span class="hs-identifier">restartRunningTimeThresholdSeconds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#rootPriority"><span class="hs-identifier">rootPriority</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#schedulerRandomSeed"><span class="hs-identifier">schedulerRandomSeed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#schedulerTimeoutSeconds"><span class="hs-identifier">schedulerTimeoutSeconds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#solverConfig"><span class="hs-identifier">solverConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#subNodePriorityMultiplier"><span class="hs-identifier">subNodePriorityMultiplier</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#subNodeRandomMultiplierRange"><span class="hs-identifier">subNodeRandomMultiplierRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#successNodeNewTimeoutSeconds"><span class="hs-identifier">successNodeNewTimeoutSeconds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#synthesisSketchSymbol"><span class="hs-identifier">synthesisSketchSymbol</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#targetCost"><span class="hs-identifier">targetCost</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#transcriptSMT"><span class="hs-identifier">transcriptSMT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#verifiers"><span class="hs-identifier">verifiers</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html"><span class="hs-identifier">Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#ProcessScheduler"><span class="hs-identifier">ProcessScheduler</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#ProcessScheduler"><span class="hs-identifier">ProcessScheduler</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-identifier">config</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#currentMinimalCost"><span class="hs-identifier">currentMinimalCost</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#dcTree"><span class="hs-identifier">dcTree</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#nodeInfo"><span class="hs-identifier">nodeInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#nodeQueue"><span class="hs-identifier">nodeQueue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#nodeStates"><span class="hs-identifier">nodeStates</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#nodeToProcess"><span class="hs-identifier">nodeToProcess</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-78"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#processToNode"><span class="hs-identifier">processToNode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#processes"><span class="hs-identifier">processes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#queueLock"><span class="hs-identifier">queueLock</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#randGen"><span class="hs-identifier">randGen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#schedulerStartTime"><span class="hs-identifier">schedulerStartTime</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-83"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#stopped"><span class="hs-identifier">stopped</span></a></span><span>
+</span><span id="line-84"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#getIsSplitted"><span class="hs-identifier">getIsSplitted</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#getStatus"><span class="hs-identifier">getStatus</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html"><span class="hs-identifier">Grisette.Lib.Synth.Util.Logging</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier">logMultiLineDoc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Log.Logger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Priority</span></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span id="local-6989586621680192810"><span id="local-6989586621680192811"><span id="local-6989586621680192812"><span id="local-6989586621680192813"><span id="local-6989586621680192814"><span id="local-6989586621680192815"><span id="local-6989586621680192816"><span id="local-6989586621680192817"><span id="local-6989586621680192818"><span id="local-6989586621680192819"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats.html#logTreeStats"><span class="hs-identifier hs-type">logTreeStats</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Priority</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#ProcessScheduler"><span class="hs-identifier hs-type">ProcessScheduler</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><a href="#local-6989586621680192810"><span class="hs-identifier hs-type">sketchSpec</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><a href="#local-6989586621680192811"><span class="hs-identifier hs-type">sketch</span></a></span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><a href="#local-6989586621680192812"><span class="hs-identifier hs-type">conProg</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><a href="#local-6989586621680192813"><span class="hs-identifier hs-type">costObj</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><a href="#local-6989586621680192814"><span class="hs-identifier hs-type">cost</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><a href="#local-6989586621680192815"><span class="hs-identifier hs-type">symSemObj</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><a href="#local-6989586621680192816"><span class="hs-identifier hs-type">symVal</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><a href="#local-6989586621680192817"><span class="hs-identifier hs-type">conSemObj</span></a></span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><a href="#local-6989586621680192818"><span class="hs-identifier hs-type">conVal</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span class="annot"><a href="#local-6989586621680192819"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-105"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-106"></span><span id="logTreeStats"><span class="annot"><span class="annottext">logTreeStats :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+Priority
+-&gt; Bool
+-&gt; ProcessScheduler
+     sketchSpec
+     sketch
+     conProg
+     costObj
+     cost
+     symSemObj
+     symVal
+     conSemObj
+     conVal
+     matcher
+-&gt; IO ()
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats.html#logTreeStats"><span class="hs-identifier hs-var hs-var">logTreeStats</span></a></span></span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621680193259"><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680193259"><span class="hs-identifier hs-var">level</span></a></span></span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621680193260"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680193260"><span class="hs-identifier hs-var">onlyUndetermined</span></a></span></span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621680193261"><span class="annot"><span class="annottext">scheduler :: ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+</span><a href="#local-6989586621680193261"><span class="hs-identifier hs-var">scheduler</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#ProcessScheduler"><span class="hs-identifier hs-type">ProcessScheduler</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">config :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; ProcessSchedulerConfig
+     sketchSpec
+     sketch
+     conProg
+     costObj
+     cost
+     symSemObj
+     symVal
+     conSemObj
+     conVal
+     matcher
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#ProcessSchedulerConfig"><span class="hs-identifier hs-type">ProcessSchedulerConfig</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680193278"><span id="local-6989586621680193279"><span id="local-6989586621680193280"><span id="local-6989586621680193281"><span id="local-6989586621680193282"><span id="local-6989586621680193283"><span id="local-6989586621680193284"><span id="local-6989586621680193285"><span id="local-6989586621680193286"><span id="local-6989586621680193287"><span id="local-6989586621680193288"><span id="local-6989586621680193289"><span id="local-6989586621680193290"><span id="local-6989586621680193291"><span id="local-6989586621680193292"><span id="local-6989586621680193293"><span id="local-6989586621680193294"><span id="local-6989586621680193295"><span id="local-6989586621680193296"><span id="local-6989586621680193297"><span id="local-6989586621680193298"><span id="local-6989586621680193299"><span id="local-6989586621680193300"><span id="local-6989586621680193301"><span id="local-6989586621680193302"><span id="local-6989586621680193303"><span id="local-6989586621680193304"><span class="annot"><span class="annottext">costObj
+Bool
+Double
+Int
+Maybe Int
+Maybe String
+Maybe (CountNumProgsEvidence (SymbolTable sketchSpec))
+Maybe (SymbolTable conProg -&gt; SymbolTable sketchSpec)
+(Double, Double)
+GrisetteSMTConfig
+Logger
+Text
+LogConfig
+Logger -&gt; TwoTrackVerifiers sketch conProg
+biasedDrawProbability :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Double
+cmdline :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Maybe String
+costObj :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; costObj
+countNumProgsEvidence :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Maybe (CountNumProgsEvidence (SymbolTable sketchSpec))
+doDeadCodeElimination :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Bool
+easySketchFromFastResult :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Maybe (SymbolTable conProg -&gt; SymbolTable sketchSpec)
+exactCost :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Maybe Int
+fastTrackTimeoutSeconds :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Int
+initialMinimalCost :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Maybe Int
+initialSplitRatio :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Int
+initialTimeoutSeconds :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Int
+logConfig :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; LogConfig
+logger :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Logger
+parallelism :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Int
+pollIntervalSeconds :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Double
+restartRunningTimeThresholdSeconds :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Int
+rootPriority :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Double
+schedulerRandomSeed :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Int
+schedulerTimeoutSeconds :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Maybe Int
+solverConfig :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; GrisetteSMTConfig
+subNodePriorityMultiplier :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Double
+subNodeRandomMultiplierRange :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; (Double, Double)
+successNodeNewTimeoutSeconds :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Int
+synthesisSketchSymbol :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Text
+targetCost :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Int
+transcriptSMT :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Bool
+verifiers :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessSchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Logger -&gt; TwoTrackVerifiers sketch conProg
+initialTimeoutSeconds :: Int
+schedulerTimeoutSeconds :: Maybe Int
+initialSplitRatio :: Int
+solverConfig :: GrisetteSMTConfig
+rootPriority :: Double
+subNodePriorityMultiplier :: Double
+subNodeRandomMultiplierRange :: (Double, Double)
+verifiers :: Logger -&gt; TwoTrackVerifiers sketch conProg
+countNumProgsEvidence :: Maybe (CountNumProgsEvidence (SymbolTable sketchSpec))
+logConfig :: LogConfig
+logger :: Logger
+costObj :: costObj
+parallelism :: Int
+initialMinimalCost :: Maybe Int
+targetCost :: Int
+exactCost :: Maybe Int
+restartRunningTimeThresholdSeconds :: Int
+fastTrackTimeoutSeconds :: Int
+easySketchFromFastResult :: Maybe (SymbolTable conProg -&gt; SymbolTable sketchSpec)
+synthesisSketchSymbol :: Text
+successNodeNewTimeoutSeconds :: Int
+cmdline :: Maybe String
+transcriptSMT :: Bool
+doDeadCodeElimination :: Bool
+schedulerRandomSeed :: Int
+pollIntervalSeconds :: Double
+biasedDrawProbability :: Double
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#biasedDrawProbability"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span id="local-6989586621680193305"><span id="local-6989586621680193306"><span id="local-6989586621680193307"><span id="local-6989586621680193308"><span id="local-6989586621680193309"><span id="local-6989586621680193310"><span id="local-6989586621680193311"><span id="local-6989586621680193312"><span id="local-6989586621680193313"><span id="local-6989586621680193314"><span id="local-6989586621680193315"><span id="local-6989586621680193316"><span class="annot"><span class="annottext">IORef Bool
+IORef (Maybe Int)
+IORef (HashMap Int32 NodeId)
+IORef (HashMap Int32 Process)
+IORef (HashMap NodeId Int32)
+IORef
+  (HashMap
+     NodeId
+     (NodeState conProg symSemObj symVal conSemObj conVal matcher))
+IORef (HashMap NodeId (NodeInfo sketchSpec))
+IORef (DCTree (SymbolTable sketchSpec))
+IORef BiasedQueue
+MVar ()
+AtomicGenM StdGen
+UTCTime
+currentMinimalCost :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; IORef (Maybe Int)
+dcTree :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; IORef (DCTree (SymbolTable sketchSpec))
+nodeInfo :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; IORef (HashMap NodeId (NodeInfo sketchSpec))
+nodeQueue :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; IORef BiasedQueue
+nodeStates :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; IORef
+     (HashMap
+        NodeId
+        (NodeState conProg symSemObj symVal conSemObj conVal matcher))
+nodeToProcess :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; IORef (HashMap NodeId Int32)
+processToNode :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; IORef (HashMap Int32 NodeId)
+processes :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; IORef (HashMap Int32 Process)
+queueLock :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; MVar ()
+randGen :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; AtomicGenM StdGen
+schedulerStartTime :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; UTCTime
+stopped :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+ProcessScheduler
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; IORef Bool
+randGen :: AtomicGenM StdGen
+nodeInfo :: IORef (HashMap NodeId (NodeInfo sketchSpec))
+nodeStates :: IORef
+  (HashMap
+     NodeId
+     (NodeState conProg symSemObj symVal conSemObj conVal matcher))
+nodeQueue :: IORef BiasedQueue
+processes :: IORef (HashMap Int32 Process)
+processToNode :: IORef (HashMap Int32 NodeId)
+nodeToProcess :: IORef (HashMap NodeId Int32)
+dcTree :: IORef (DCTree (SymbolTable sketchSpec))
+currentMinimalCost :: IORef (Maybe Int)
+queueLock :: MVar ()
+stopped :: IORef Bool
+schedulerStartTime :: UTCTime
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#currentMinimalCost"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Doc Any -&gt; IO ()
+forall ann. Logger -&gt; Priority -&gt; Doc ann -&gt; IO ()
+</span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-var">logMultiLineDoc</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
+</span><a href="#local-6989586621680193288"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680193259"><span class="hs-identifier hs-var">level</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc Any -&gt; IO ()) -&gt; Doc Any -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680193260"><span class="hs-identifier hs-var">onlyUndetermined</span></a></span><span>
+</span><span id="line-112"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Doc Any
+</span><span class="hs-string">&quot;Dumping stats for undetermined nodes.&quot;</span></span><span>
+</span><span id="line-113"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Doc Any
+</span><span class="hs-string">&quot;Dumping stats for all nodes.&quot;</span></span><span>
+</span><span id="line-114"></span><span>    </span><span id="local-6989586621680193317"><span class="annot"><a href="#local-6989586621680193317"><span class="hs-identifier hs-var">curTime</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO UTCTime
+</span><span class="hs-identifier hs-var">getCurrentTime</span></span><span>
+</span><span id="line-115"></span><span>    </span><span id="local-6989586621680193318"><span class="annot"><a href="#local-6989586621680193318"><span class="hs-identifier hs-var">dcTree</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="hs-identifier hs-type">readIORef</span></span><span> </span><span class="annot"><a href="#local-6989586621680193312"><span class="hs-identifier hs-type">dcTree</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680193321"><span class="annot"><a href="#local-6989586621680193321"><span class="hs-identifier hs-var hs-var">allRootNodes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[NodeId] -&gt; [NodeId]
+forall a. Ord a =&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">sort</span></span><span> </span><span class="annot"><span class="annottext">([NodeId] -&gt; [NodeId]) -&gt; [NodeId] -&gt; [NodeId]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">HashSet NodeId -&gt; [NodeId]
+forall a. HashSet a -&gt; [a]
+</span><span class="hs-identifier hs-var">HS.toList</span></span><span> </span><span class="annot"><span class="annottext">(HashSet NodeId -&gt; [NodeId]) -&gt; HashSet NodeId -&gt; [NodeId]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">DCTree (SymbolTable sketchSpec) -&gt; HashSet NodeId
+forall sketchSpec. DCTree sketchSpec -&gt; HashSet NodeId
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.DCTree.html#rootNodes"><span class="hs-identifier hs-var">rootNodes</span></a></span><span> </span><span class="annot"><span class="annottext">DCTree (SymbolTable sketchSpec)
+</span><a href="#local-6989586621680193318"><span class="hs-identifier hs-var">dcTree</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680193139"><span class="annot"><a href="#local-6989586621680193323"><span class="hs-identifier hs-type">walkNode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Doc</span></span><span> </span><span class="annot"><a href="#local-6989586621680193139"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-118"></span><span>        </span><span id="local-6989586621680193323"><span class="annot"><a href="#local-6989586621680193323"><span class="hs-identifier hs-var hs-var">walkNode</span></a></span></span><span> </span><span id="local-6989586621680193340"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680193340"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-119"></span><span>          </span><span id="local-6989586621680193341"><span class="annot"><a href="#local-6989586621680193341"><span class="hs-identifier hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; IO (Doc ann)
+forall ann. NodeId -&gt; IO (Doc ann)
+</span><a href="#local-6989586621680193342"><span class="hs-identifier hs-var">nodeResult</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680193340"><span class="hs-identifier hs-var">nid</span></a></span><span>
+</span><span id="line-120"></span><span>          </span><span id="local-6989586621680193343"><span class="annot"><a href="#local-6989586621680193343"><span class="hs-identifier hs-var">status</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#getStatus"><span class="hs-identifier hs-type">getStatus</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193261"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193340"><span class="hs-identifier hs-type">nid</span></a></span><span>
+</span><span id="line-121"></span><span>          </span><span id="local-6989586621680193344"><span class="annot"><a href="#local-6989586621680193344"><span class="hs-identifier hs-var">splitted</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#getIsSplitted"><span class="hs-identifier hs-type">getIsSplitted</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193261"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193340"><span class="hs-identifier hs-type">nid</span></a></span><span>
+</span><span id="line-122"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="hs-identifier hs-type">not</span></span><span> </span><span class="annot"><a href="#local-6989586621680193344"><span class="hs-identifier hs-type">splitted</span></a></span><span>
+</span><span id="line-123"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><a href="#local-6989586621680193341"><span class="hs-identifier hs-type">result</span></a></span><span>
+</span><span id="line-124"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-125"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680193353"><span class="annot"><a href="#local-6989586621680193353"><span class="hs-identifier hs-var hs-var">children</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>                    </span><span class="annot"><span class="annottext">[NodeId] -&gt; [NodeId]
+forall a. Ord a =&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">sort</span></span><span> </span><span class="annot"><span class="annottext">([NodeId] -&gt; [NodeId]) -&gt; [NodeId] -&gt; [NodeId]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-127"></span><span>                      </span><span class="annot"><span class="annottext">HashSet NodeId -&gt; [NodeId]
+forall a. HashSet a -&gt; [a]
+</span><span class="hs-identifier hs-var">HS.toList</span></span><span> </span><span class="annot"><span class="annottext">(HashSet NodeId -&gt; [NodeId]) -&gt; HashSet NodeId -&gt; [NodeId]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-128"></span><span>                        </span><span class="annot"><span class="annottext">HashSet NodeId -&gt; Maybe (HashSet NodeId) -&gt; HashSet NodeId
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="annot"><span class="annottext">HashSet NodeId
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">(Maybe (HashSet NodeId) -&gt; HashSet NodeId)
+-&gt; Maybe (HashSet NodeId) -&gt; HashSet NodeId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-129"></span><span>                          </span><span class="annot"><span class="annottext">DCTree (SymbolTable sketchSpec) -&gt; NodeId -&gt; Maybe (HashSet NodeId)
+forall sketchSpec.
+DCTree sketchSpec -&gt; NodeId -&gt; Maybe (HashSet NodeId)
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.DCTree.html#nodeDividedChildren"><span class="hs-identifier hs-var">nodeDividedChildren</span></a></span><span> </span><span class="annot"><span class="annottext">DCTree (SymbolTable sketchSpec)
+</span><a href="#local-6989586621680193318"><span class="hs-identifier hs-var">dcTree</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680193340"><span class="hs-identifier hs-var">nid</span></a></span><span>
+</span><span id="line-130"></span><span>              </span><span class="hs-keyword">if</span><span>
+</span><span id="line-131"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">null</span></span><span> </span><span class="annot"><a href="#local-6989586621680193353"><span class="hs-identifier hs-type">children</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><a href="#local-6989586621680193341"><span class="hs-identifier hs-type">result</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;{}&quot;</span></span><span>
+</span><span id="line-132"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="#local-6989586621680193260"><span class="hs-identifier hs-type">onlyUndetermined</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&amp;&amp;</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus.html#nodeStatusIsDetermined"><span class="hs-identifier hs-type">nodeStatusIsDetermined</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193343"><span class="hs-identifier hs-type">status</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>                    </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><a href="#local-6989586621680193341"><span class="hs-identifier hs-type">result</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;{...}&quot;</span></span><span>
+</span><span id="line-134"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">otherwise</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-135"></span><span>                    </span><span id="local-6989586621680193356"><span class="annot"><a href="#local-6989586621680193356"><span class="hs-identifier hs-var">childrenDocs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="hs-identifier hs-type">mapM</span></span><span> </span><span class="annot"><a href="#local-6989586621680193323"><span class="hs-identifier hs-type">walkNode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193353"><span class="hs-identifier hs-type">children</span></a></span><span>
+</span><span id="line-136"></span><span>                    </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
+</span><span id="line-137"></span><span>                      </span><span class="annot"><span class="hs-identifier hs-type">vsep</span></span><span>
+</span><span id="line-138"></span><span>                        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="hs-identifier hs-type">nest</span></span><span> </span><span class="annot"><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">vsep</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621680193341"><span class="hs-identifier hs-type">result</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;{&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">vsep</span></span><span> </span><span class="annot"><a href="#local-6989586621680193356"><span class="hs-identifier hs-type">childrenDocs</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-139"></span><span>                          </span><span class="annot"><span class="hs-string">&quot;}&quot;</span></span><span>
+</span><span id="line-140"></span><span>                        </span><span class="hs-special">]</span><span>
+</span><span id="line-141"></span><span>        </span><span id="local-6989586621680193358"><span class="annot"><a href="#local-6989586621680193342"><span class="hs-identifier hs-type">nodeResult</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Doc</span></span><span> </span><span class="annot"><a href="#local-6989586621680193358"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-142"></span><span>        </span><span id="local-6989586621680193342"><span class="annot"><a href="#local-6989586621680193342"><span class="hs-identifier hs-var hs-var">nodeResult</span></a></span></span><span> </span><span id="local-6989586621680193372"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680193372"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-143"></span><span>          </span><span id="local-6989586621680193373"><span class="annot"><a href="#local-6989586621680193373"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap
+  NodeId
+  (NodeState conProg symSemObj symVal conSemObj conVal matcher)
+-&gt; NodeId
+-&gt; NodeState conProg symSemObj symVal conSemObj conVal matcher
+forall k v.
+(Eq k, Hashable k, HasCallStack) =&gt;
+HashMap k v -&gt; k -&gt; v
+</span><span class="hs-operator hs-var">HM.!</span></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680193372"><span class="hs-identifier hs-var">nid</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(HashMap
+   NodeId
+   (NodeState conProg symSemObj symVal conSemObj conVal matcher)
+ -&gt; NodeState conProg symSemObj symVal conSemObj conVal matcher)
+-&gt; IO
+     (HashMap
+        NodeId
+        (NodeState conProg symSemObj symVal conSemObj conVal matcher))
+-&gt; IO (NodeState conProg symSemObj symVal conSemObj conVal matcher)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">IORef
+  (HashMap
+     NodeId
+     (NodeState conProg symSemObj symVal conSemObj conVal matcher))
+-&gt; IO
+     (HashMap
+        NodeId
+        (NodeState conProg symSemObj symVal conSemObj conVal matcher))
+forall a. IORef a -&gt; IO a
+</span><span class="hs-identifier hs-var">readIORef</span></span><span> </span><span class="annot"><span class="annottext">IORef
+  (HashMap
+     NodeId
+     (NodeState conProg symSemObj symVal conSemObj conVal matcher))
+</span><a href="#local-6989586621680193307"><span class="hs-identifier hs-var">nodeStates</span></a></span><span>
+</span><span id="line-144"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
+</span><span id="line-145"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">pformat</span></span><span> </span><span class="annot"><a href="#local-6989586621680193372"><span class="hs-identifier hs-type">nid</span></a></span><span>
+</span><span id="line-146"></span><span>              </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot;: &quot;</span></span><span>
+</span><span id="line-147"></span><span>              </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.NodeState.html#pformatNodeStateSummaryWithElapsedTime"><span class="hs-identifier hs-type">pformatNodeStateSummaryWithElapsedTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193317"><span class="hs-identifier hs-type">curTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193373"><span class="hs-identifier hs-type">state</span></a></span><span>
+</span><span id="line-148"></span><span>    </span><span id="local-6989586621680193376"><span class="annot"><a href="#local-6989586621680193376"><span class="hs-identifier hs-var">doc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="hs-identifier hs-type">vsep</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">traverse</span></span><span> </span><span class="annot"><a href="#local-6989586621680193323"><span class="hs-identifier hs-type">walkNode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193321"><span class="hs-identifier hs-type">allRootNodes</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-type">logMultiLineDoc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193288"><span class="hs-identifier hs-type">logger</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193259"><span class="hs-identifier hs-type">level</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680193376"><span class="hs-identifier hs-type">doc</span></a></span><span>
+</span><span id="line-150"></span></pre></body></html>

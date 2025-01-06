@@ -533,6 +533,8 @@ writeByteString :: Fd -> ByteString -> IO ByteCount
 
 module Grisette.Lib.Synth.Util.Show
 showText :: Show a => a -> Text
+showFloat :: RealFloat a => a -> String
+showDiffTime :: NominalDiffTime -> String
 
 module Grisette.Lib.Synth.VarId
 type ConcreteVarId varId = (PPrint varId, Show varId, Eq varId, Hashable varId, Integral varId, Typeable varId, Mergeable varId)
@@ -2351,8 +2353,6 @@ Process :: ProcessID -> ProcessGroupID -> Fd -> Fd -> Process
 [pgid] :: Process -> ProcessGroupID
 [pipeRd] :: Process -> Fd
 [pipeWr] :: Process -> Fd
-data LogConfig
-LogConfig :: FilePath -> Text -> String -> LogConfig
 type ProcessResponse conProg symSemObj symVal conSemObj conVal matcher = Either Text Message conProg symSemObj symVal conSemObj conVal matcher
 type ProcessCostConstraint costObj cost conProg sketch = (ProgCost costObj conProg Int ConcreteContext, ProgCost costObj sketch cost SymbolicContext, ProgCost costObj sketch cost AngelicContext)
 type ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher = (GenSymSimple sketchSpec sketch, ProcessCostConstraint costObj cost conProg sketch, ProgPPrint sketchSpec, ProgPPrint conProg, EvalSym sketch, ToCon sketch conProg, ProgReachableSymbols conProg, SymOrd cost, Mergeable cost, Num cost, Serial conProg, Serial cost, Serial conVal, Serial symSemObj, Serial conSemObj, Serial matcher, Typeable sketch, Typeable symSemObj, Typeable conSemObj, Typeable conVal, Typeable matcher, Typeable symVal, PPrint conVal, Hashable sketchSpec, Eq sketchSpec, LowestSeqNum sketchSpec, PartitionSpec sketchSpec)
@@ -2418,6 +2418,10 @@ instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
+
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
+data ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+[ProcessSchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
 
 module Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
 data NodeStatus conProg
@@ -2503,10 +2507,134 @@ nodeStateInferFailureTransition :: NodeState conProg symSemObj symVal conSemObj 
 nodeStateNumCollectedExamples :: NodeState conProg symSemObj symVal conSemObj conVal matcher -> Int
 nodeStateNumInProgressExamples :: NodeState conProg symSemObj symVal conSemObj conVal matcher -> Int
 
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
+data ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+[ProcessScheduler] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher. ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> AtomicGenM StdGen -> IORef (HashMap NodeId (NodeInfo sketchSpec)) -> IORef (HashMap NodeId (NodeState conProg symSemObj symVal conSemObj conVal matcher)) -> IORef BiasedQueue -> IORef (HashMap Int32 Process) -> IORef (HashMap Int32 NodeId) -> IORef (HashMap NodeId Int32) -> IORef (DCTree (SymbolTable sketchSpec)) -> IORef (Maybe Int) -> MVar () -> IORef Bool -> UTCTime -> ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+data NodeInfo sketchSpec
+NodeInfo :: Bool -> SymbolTable sketchSpec -> Priority -> Int -> NodeInfo sketchSpec
+[nodeSplitted] :: NodeInfo sketchSpec -> Bool
+[nodeSketchTable] :: NodeInfo sketchSpec -> SymbolTable sketchSpec
+[nodePriority] :: NodeInfo sketchSpec -> Priority
+[nodeTimeoutSeconds] :: NodeInfo sketchSpec -> Int
+newProcessScheduler :: ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO (ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher)
+getCPid :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Int32
+getProcessByCPid :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Int32 -> IO Process
+getProcess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Process
+getCurrentMinimalCost :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO (Maybe Int)
+getCurrentTimeout :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Int
+getCurrentElapsedTime :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO NominalDiffTime
+getStatus :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (NodeStatus conProg)
+getNodeInfo :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (NodeInfo sketchSpec)
+getDepth :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Int
+getIsSplitted :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Bool
+getSketchTable :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (SymbolTable sketchSpec)
+getPriority :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Priority
+getNumRunningProcess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO Int
+getNumQueuedProcess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO Int
+setIsSplitted :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Bool -> IO ()
+setPriority :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Priority -> IO ()
+setTimeout :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Int -> IO ()
+removeProcessByCPid :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Int32 -> IO ()
+removeProcess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+updateCurrentMinimalCost :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Maybe Int -> IO ()
+
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats
+logTreeStats :: Priority -> Bool -> ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
+
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition
+nodeTransition :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> IO NodeAction
+nodeResetTransition :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+nodeStartTransition :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+nodeInferFailureTransition :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
+reportStatistics :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
+
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Sketch
+addRootSketch :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> SymbolTable sketchSpec -> IO ()
+splitNode :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Bool -> NodeId -> IO [NodeId]
+
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
+killNode :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (ProcessResponse conProg symSemObj symVal conSemObj conVal matcher)
+killIfTimeout :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (Maybe NodeAction)
+checkResponse :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (Maybe NodeAction)
+resetIfJustStarted :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+startQueued :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
+refineNode :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Maybe Int -> IO ()
+markFailure :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+markSuccess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+markAllChildrenSuccess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+markAllSiblingChildrenSuccess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Result
+data ParallelSynthesisResult conProg
+NoSolutionFound :: ParallelSynthesisNoSolutionResult -> ParallelSynthesisResult conProg
+SolutionFound :: ParallelSynthesisSolutionFoundResult conProg -> ParallelSynthesisResult conProg
+data ParallelSynthesisNoSolutionResult
+ParallelSynthesisNoSolutionResult :: UTCTime -> Int -> Int -> Integer -> Integer -> Double -> ParallelSynthesisNoSolutionResult
+[aggregatedTime] :: ParallelSynthesisNoSolutionResult -> UTCTime
+[numOfNodesInLattice] :: ParallelSynthesisNoSolutionResult -> Int
+[numOfUndeterminedLeaves] :: ParallelSynthesisNoSolutionResult -> Int
+[numOfRootPrograms] :: ParallelSynthesisNoSolutionResult -> Integer
+[numOfUndeterminedPrograms] :: ParallelSynthesisNoSolutionResult -> Integer
+[undeterminedRatio] :: ParallelSynthesisNoSolutionResult -> Double
+data ParallelSynthesisSolutionFoundResult conProg
+ParallelSynthesisSolutionFoundResult :: UTCTime -> Maybe Int -> Int -> [ParallelSynthesisSolution conProg] -> Int -> Int -> Integer -> Integer -> Double -> ParallelSynthesisSolutionFoundResult conProg
+[aggregatedTime] :: ParallelSynthesisSolutionFoundResult conProg -> UTCTime
+[initialCost] :: ParallelSynthesisSolutionFoundResult conProg -> Maybe Int
+[bestCost] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[solutions] :: ParallelSynthesisSolutionFoundResult conProg -> [ParallelSynthesisSolution conProg]
+[numOfNodesInLattice] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[numOfUndeterminedLeaves] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[numOfRootPrograms] :: ParallelSynthesisSolutionFoundResult conProg -> Integer
+[numOfUndeterminedPrograms] :: ParallelSynthesisSolutionFoundResult conProg -> Integer
+[undeterminedRatio] :: ParallelSynthesisSolutionFoundResult conProg -> Double
+data ParallelSynthesisSolution conProg
+ParallelSynthesisSolution :: NodeId -> UTCTime -> UTCTime -> UTCTime -> Bool -> SymbolTable conProg -> ParallelSynthesisSolution conProg
+[_nodeId] :: ParallelSynthesisSolution conProg -> NodeId
+[startTime] :: ParallelSynthesisSolution conProg -> UTCTime
+[resultTime] :: ParallelSynthesisSolution conProg -> UTCTime
+[_lastMsgTime] :: ParallelSynthesisSolution conProg -> UTCTime
+[_finished] :: ParallelSynthesisSolution conProg -> Bool
+[_program] :: ParallelSynthesisSolution conProg -> SymbolTable conProg
+getParallelSynthesisResult :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO (ParallelSynthesisResult conProg)
+printResults :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> ParallelSynthesisResult conProg -> IO ()
+writeResultsCSV :: FilePath -> ParallelSynthesisResult conProg -> ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
+
 module Grisette.Lib.Synth.Reasoning.Parallel.ProcessScheduler
 data ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
 [ProcessSchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
-runWithScheduler :: ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> [SymbolTable sketchSpec] -> IO ()
+data ParallelSynthesisResult conProg
+NoSolutionFound :: ParallelSynthesisNoSolutionResult -> ParallelSynthesisResult conProg
+SolutionFound :: ParallelSynthesisSolutionFoundResult conProg -> ParallelSynthesisResult conProg
+data ParallelSynthesisSolutionFoundResult conProg
+ParallelSynthesisSolutionFoundResult :: UTCTime -> Maybe Int -> Int -> [ParallelSynthesisSolution conProg] -> Int -> Int -> Integer -> Integer -> Double -> ParallelSynthesisSolutionFoundResult conProg
+[aggregatedTime] :: ParallelSynthesisSolutionFoundResult conProg -> UTCTime
+[initialCost] :: ParallelSynthesisSolutionFoundResult conProg -> Maybe Int
+[bestCost] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[solutions] :: ParallelSynthesisSolutionFoundResult conProg -> [ParallelSynthesisSolution conProg]
+[numOfNodesInLattice] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[numOfUndeterminedLeaves] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[numOfRootPrograms] :: ParallelSynthesisSolutionFoundResult conProg -> Integer
+[numOfUndeterminedPrograms] :: ParallelSynthesisSolutionFoundResult conProg -> Integer
+[undeterminedRatio] :: ParallelSynthesisSolutionFoundResult conProg -> Double
+data ParallelSynthesisNoSolutionResult
+ParallelSynthesisNoSolutionResult :: UTCTime -> Int -> Int -> Integer -> Integer -> Double -> ParallelSynthesisNoSolutionResult
+[aggregatedTime] :: ParallelSynthesisNoSolutionResult -> UTCTime
+[numOfNodesInLattice] :: ParallelSynthesisNoSolutionResult -> Int
+[numOfUndeterminedLeaves] :: ParallelSynthesisNoSolutionResult -> Int
+[numOfRootPrograms] :: ParallelSynthesisNoSolutionResult -> Integer
+[numOfUndeterminedPrograms] :: ParallelSynthesisNoSolutionResult -> Integer
+[undeterminedRatio] :: ParallelSynthesisNoSolutionResult -> Double
+data ParallelSynthesisSolution conProg
+ParallelSynthesisSolution :: NodeId -> UTCTime -> UTCTime -> UTCTime -> Bool -> SymbolTable conProg -> ParallelSynthesisSolution conProg
+[_nodeId] :: ParallelSynthesisSolution conProg -> NodeId
+[startTime] :: ParallelSynthesisSolution conProg -> UTCTime
+[resultTime] :: ParallelSynthesisSolution conProg -> UTCTime
+[_lastMsgTime] :: ParallelSynthesisSolution conProg -> UTCTime
+[_finished] :: ParallelSynthesisSolution conProg -> Bool
+[_program] :: ParallelSynthesisSolution conProg -> SymbolTable conProg
+runWithScheduler :: ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> [SymbolTable sketchSpec] -> IO (ParallelSynthesisResult conProg)
 
 module Grisette.Lib.Synth.Program.ByteCodeSketch.Program
 data Stmt op conVarId symVarId
