@@ -298,7 +298,7 @@ data
       conVal
       matcher
 
-data NewMinimalCostMessage = NewMinimalCostMessage
+newtype NewMinimalCostMessage = NewMinimalCostMessage
   { newMinimalCost :: Maybe Int
   }
 
@@ -666,8 +666,8 @@ runRequestInSubProcess config processConfig@ProcessConfig {..} = do
             SlowTrackSynthStep ->
               slowTrackSynthStep solver processConfig stateRef
             TerminationStep -> error "Should not happen"
-          when (not $ isTerminationStep nextStep) $ loop solver nextStep
-    withSolver config {sbvConfig = (sbvConfig config)} $ \solver ->
+          unless (isTerminationStep nextStep) $ loop solver nextStep
+    withSolver config {sbvConfig = sbvConfig config} $ \solver ->
       loop solver InitialStep
   closeFd rdChild
   closeFd wrChild
@@ -780,7 +780,7 @@ fastTrackSynthStep handle processConfig@ProcessConfig {..} stateRef = do
         FastTrackViable nextTrack examples cost prog
       if isJust easySketchFromFastResult
         then return $ FastTrackEasySynthStep prog
-        else return $ SlowTrackSynthStep
+        else return SlowTrackSynthStep
     SynthesisSolverFailure failure -> do
       logMultiLineDoc logger NOTICE $
         nest 2 $
@@ -896,7 +896,8 @@ fastTrackEasySynthStep
           NOTICE
           "Fast track easy synth timed out or crashed, switch to slow track."
         cost <- _readKnownMinimalCost stateRef
-        _sendAndWaitForNewMinimalCost stateRef $
+        _sendAndWaitForNewMinimalCost
+          stateRef
           ( FastTrackEasySynthFailure cost [] ::
               Message conProg symSemObj symVal conSemObj conVal matcher
           )

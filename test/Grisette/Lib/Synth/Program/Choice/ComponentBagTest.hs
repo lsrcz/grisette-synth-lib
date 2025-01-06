@@ -123,7 +123,7 @@ componentBagTest =
                   )
                 ]
                 [IntType]
-        (renderDoc 80 $ fromRight undefined (pformatProg "bag" bag))
+        renderDoc 80 (fromRight undefined (pformatProg "bag" bag))
           @?= T.intercalate
             "\n"
             [ "sketch bag(IntType, IntType) -> IntType:",

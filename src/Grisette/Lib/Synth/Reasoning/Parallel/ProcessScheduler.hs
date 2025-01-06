@@ -1282,7 +1282,7 @@ addSubSketches
     writeIORef dcTree newDcTree
     let initialState = NodeState NodeNotYetStarted Nothing Nothing [] [] []
     modifyIORef' nodeStates $ \nodeStates' ->
-      foldr (`HM.insert` initialState) nodeStates' $ toList sketchesToNodeId
+      foldr (`HM.insert` initialState) nodeStates' sketchesToNodeId
     let taskPriority nid =
           parentBasePriority
             { Q.basePriority = childrenBasePriority,
@@ -1321,19 +1321,17 @@ addSubSketches
     numsInfo <- case countNumProgsEvidence of
       Just countNumProgsEvidence -> do
         let nodeIdToNumChoices =
-              HM.fromList
-                $ fmap
-                  ( \(sketch, nid) ->
-                      (nid, countNumChoicesWithEvidence countNumProgsEvidence sketch)
-                  )
-                $ HM.toList sketchesToNodeId
+              HM.fromList $
+                ( \(sketch, nid) ->
+                    (nid, countNumChoicesWithEvidence countNumProgsEvidence sketch)
+                )
+                  <$> HM.toList sketchesToNodeId
         let nodeIdToNumWellTyped =
-              HM.fromList
-                $ fmap
-                  ( \(sketch, nid) ->
-                      (nid, countNumProgsWithEvidence countNumProgsEvidence sketch)
-                  )
-                $ HM.toList sketchesToNodeId
+              HM.fromList $
+                ( \(sketch, nid) ->
+                    (nid, countNumProgsWithEvidence countNumProgsEvidence sketch)
+                )
+                  <$> HM.toList sketchesToNodeId
         return
           [ "Num of choices in sketches: ",
             pformat nodeIdToNumChoices,
@@ -2761,16 +2759,16 @@ debugLogAllStats
                         fromMaybe mempty $
                           nodeDividedChildren dcTree nid
               if
-                  | null children -> return $ result <+> "{}"
-                  | onlyUndetermined && nodeStatusIsDetermined status ->
-                      return $ result <+> "{...}"
-                  | otherwise -> do
-                      childrenDocs <- mapM walkNode children
-                      return $
-                        vsep
-                          [ nest 2 $ vsep $ [result <+> "{", vsep childrenDocs],
-                            "}"
-                          ]
+                | null children -> return $ result <+> "{}"
+                | onlyUndetermined && nodeStatusIsDetermined status ->
+                    return $ result <+> "{...}"
+                | otherwise -> do
+                    childrenDocs <- mapM walkNode children
+                    return $
+                      vsep
+                        [ nest 2 $ vsep [result <+> "{", vsep childrenDocs],
+                          "}"
+                        ]
         nodeResult :: NodeId -> IO (Doc ann)
         nodeResult nid = do
           state <- (HM.! nid) <$> readIORef nodeStates

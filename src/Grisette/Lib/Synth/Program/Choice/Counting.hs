@@ -64,7 +64,7 @@ splitIntoTypes op = types
       map
         ( \case
             ExceptT (Single (Right t)) -> t
-            _ -> error $ "Type inference failed"
+            _ -> error "Type inference failed"
         )
         types'
 

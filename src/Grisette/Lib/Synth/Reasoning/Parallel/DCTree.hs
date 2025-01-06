@@ -81,9 +81,7 @@ leafNodes DCTree {..} =
           <$> filter
             ( \node ->
                 HS.null (_nodeExtraChildren node)
-                  && case _nodeDividedChildren node of
-                    Just children -> HS.null children
-                    Nothing -> True
+                  && maybe True HS.null (_nodeDividedChildren node)
             )
             nodes
 
@@ -161,7 +159,7 @@ insertRootSketch ::
   DCTree sketchSpec ->
   sketchSpec ->
   (NodeId, DCTree sketchSpec)
-insertRootSketch tree sketch = _insertSketch tree Nothing sketch
+insertRootSketch tree = _insertSketch tree Nothing
 
 insertRootSketches ::
   (Hashable sketchSpec) =>

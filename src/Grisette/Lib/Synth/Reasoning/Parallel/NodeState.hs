@@ -19,7 +19,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.NodeState
   )
 where
 
-import Control.Monad (when)
+import Control.Monad (unless, when)
 import Data.Maybe (isJust)
 import Data.Time (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Grisette (Doc, viaShow, (<+>))
@@ -85,7 +85,7 @@ nodeStateCurrentElapsedTime curTime NodeState {..} = do
   case (nodeStartTime, nodeEndTime) of
     (Just startTime, Just endTime) -> diffUTCTime endTime startTime
     (Just startTime, Nothing) -> diffUTCTime curTime startTime
-    (Nothing, Just _) -> error $ "Should not happen"
+    (Nothing, Just _) -> error "Should not happen"
     (Nothing, Nothing) -> 0
 
 pformatNodeStateSummary ::
@@ -120,7 +120,7 @@ nodeStateStartTransition ::
   NodeState conProg symSemObj symVal conSemObj conVal matcher ->
   IO (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 nodeStateStartTransition NodeState {..} = do
-  when (not (nodeStatusIsNotYetStarted nodeStatus)) $
+  unless (nodeStatusIsNotYetStarted nodeStatus) $
     error "Can only start a node that is not yet started"
   curTime <- getCurrentTime
   return

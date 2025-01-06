@@ -55,7 +55,7 @@ deriveGADT [''ComponentBag] (allClasses012 \\ pprintClasses)
 
 instance LowestSeqNum (ComponentBag opSpec ty) where
   lowestSeqNum succeeded (ComponentBag _ components _) =
-    combineLowestSeqNum $ map (lowestSeqNum succeeded . fst) $ components
+    combineLowestSeqNum $ map (lowestSeqNum succeeded . fst) components
 
 partitionChoices ::
   Int -> (ChoiceTree opSpec, Int) -> [[(ChoiceTree opSpec, Int)]]
