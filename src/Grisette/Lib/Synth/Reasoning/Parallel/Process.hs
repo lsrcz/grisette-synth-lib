@@ -99,8 +99,10 @@ import Grisette.Lib.Synth.Program.SymbolTable
     filterByReachableSymbols,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.DCTree (NodeId (NodeId))
-import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig (
-  LogConfig (LogConfig, baseDir, progName), logRootDir)
+import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
+  ( LogConfig (LogConfig, baseDir, progName),
+    logRootDir,
+  )
 import Grisette.Lib.Synth.Reasoning.Synthesis
   ( Example,
     RunSynthesisTask (solverRunSynthesisTaskExtractCex),

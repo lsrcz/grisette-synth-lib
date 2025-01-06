@@ -109,8 +109,10 @@ import Grisette.Lib.Synth.Reasoning.Parallel.DCTree
     numNodes,
     rootNodes,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig (
-  LogConfig (LogConfig), logRootDir)
+import Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
+  ( LogConfig (LogConfig),
+    logRootDir,
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.NodeState
   ( NodeState
       ( NodeState,
