@@ -227,16 +227,6 @@ instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Li
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
 
-module Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
-data LogConfig
-LogConfig :: FilePath -> Text -> String -> LogConfig
-[baseDir] :: LogConfig -> FilePath
-[progName] :: LogConfig -> Text
-[timeStamp] :: LogConfig -> String
-logRootDir :: LogConfig -> FilePath
-getLogConfig :: FilePath -> String -> IO LogConfig
-getDefaultLogger :: LogConfig -> Bool -> IO Logger
-
 module Grisette.Lib.Synth.TypeSignature
 data TypeSignature ty
 TypeSignature :: [ty] -> [ty] -> TypeSignature ty
@@ -535,6 +525,17 @@ module Grisette.Lib.Synth.Util.Show
 showText :: Show a => a -> Text
 showFloat :: RealFloat a => a -> String
 showDiffTime :: NominalDiffTime -> String
+
+module Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
+data LogConfig
+LogConfig :: FilePath -> Text -> String -> LogConfig
+[baseDir] :: LogConfig -> FilePath
+[progName] :: LogConfig -> Text
+[timeStamp] :: LogConfig -> String
+logRootDir :: LogConfig -> FilePath
+getLogConfig :: FilePath -> String -> IO LogConfig
+defaultFormatter :: String -> IO (LogFormatter a)
+getDefaultLogger :: LogConfig -> Bool -> IO Logger
 
 module Grisette.Lib.Synth.VarId
 type ConcreteVarId varId = (PPrint varId, Show varId, Eq varId, Hashable varId, Integral varId, Typeable varId, Mergeable varId)
