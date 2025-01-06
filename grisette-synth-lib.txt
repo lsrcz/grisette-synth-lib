@@ -136,7 +136,7 @@ instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Li
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Matcher.EqMatcher
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Matcher.EqMatcher
 
-module Grisette.Lib.Synth.Reasoning.Parallel.DCTree
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
 newtype NodeId
 NodeId :: Int -> NodeId
 data DCTree sketchSpec
@@ -158,23 +158,23 @@ directSiblingNodes :: DCTree sketchSpec -> NodeId -> HashSet NodeId
 allChildrenNodes :: DCTree sketchSpec -> NodeId -> HashSet NodeId
 allSiblingNodes :: DCTree sketchSpec -> NodeId -> HashSet NodeId
 rootNodes :: DCTree sketchSpec -> HashSet NodeId
-instance GHC.Classes.Eq a => GHC.Classes.Eq (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.DCTree a)
-instance GHC.Classes.Eq a => GHC.Classes.Eq (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.Node a)
-instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.DCTree.NodeId
-instance Data.Hashable.Class.Hashable a => Data.Hashable.Class.Hashable (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.DCTree a)
-instance Data.Hashable.Class.Hashable a => Data.Hashable.Class.Hashable (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.Node a)
-instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.DCTree.NodeId
-instance GHC.Classes.Ord a => GHC.Classes.Ord (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.DCTree a)
-instance GHC.Classes.Ord a => GHC.Classes.Ord (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.Node a)
-instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.DCTree.NodeId
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint a => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.DCTree a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint a => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.Node a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.DCTree.NodeId
-instance GHC.Internal.Show.Show a => GHC.Internal.Show.Show (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.DCTree a)
-instance GHC.Internal.Show.Show a => GHC.Internal.Show.Show (Grisette.Lib.Synth.Reasoning.Parallel.DCTree.Node a)
-instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.DCTree.NodeId
+instance GHC.Classes.Eq a => GHC.Classes.Eq (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.DCTree a)
+instance GHC.Classes.Eq a => GHC.Classes.Eq (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.Node a)
+instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.NodeId
+instance Data.Hashable.Class.Hashable a => Data.Hashable.Class.Hashable (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.DCTree a)
+instance Data.Hashable.Class.Hashable a => Data.Hashable.Class.Hashable (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.Node a)
+instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.NodeId
+instance GHC.Classes.Ord a => GHC.Classes.Ord (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.DCTree a)
+instance GHC.Classes.Ord a => GHC.Classes.Ord (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.Node a)
+instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.NodeId
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint a => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.DCTree a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint a => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.Node a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.NodeId
+instance GHC.Internal.Show.Show a => GHC.Internal.Show.Show (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.DCTree a)
+instance GHC.Internal.Show.Show a => GHC.Internal.Show.Show (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.Node a)
+instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.NodeId
 
-module Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue
 data Priority
 Priority :: Double -> Double -> Bool -> Bool -> Bool -> Priority
 [basePriority] :: Priority -> Double
@@ -191,41 +191,10 @@ insert :: NodeId -> Priority -> BiasedQueue -> BiasedQueue
 size :: BiasedQueue -> Int
 null :: BiasedQueue -> Bool
 popMin :: AtomicGenM StdGen -> BiasedQueue -> IO (NodeId, Bool, BiasedQueue)
-instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue.Priority
-instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue.Priority
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue.Priority
-instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.BiasedQueue.Priority
-
-module Grisette.Lib.Synth.Reasoning.Parallel.Exception
-data SynthesisTaskException
-SynthesisTaskCancelled :: SynthesisTaskException
-SynthesisTaskTimeout :: SynthesisTaskException
-SynthesisTaskSolverDead :: SynthesisTaskException
-SynthesisTaskIndexOutOfBounds :: SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Data.Binary.Class.Binary Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance GHC.Internal.Exception.Type.Exception Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance GHC.Internal.Generics.Generic Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Control.DeepSeq.NFData Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Data.Bytes.Serial.Serial Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Data.Serialize.Serialize Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException) Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException)
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Exception.SynthesisTaskException
+instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.Priority
+instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.Priority
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.Priority
+instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.Priority
 
 module Grisette.Lib.Synth.TypeSignature
 data TypeSignature ty
@@ -526,7 +495,7 @@ showText :: Show a => a -> Text
 showFloat :: RealFloat a => a -> String
 showDiffTime :: NominalDiffTime -> String
 
-module Grisette.Lib.Synth.Reasoning.Parallel.LogConfig
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig
 data LogConfig
 LogConfig :: FilePath -> Text -> String -> LogConfig
 [baseDir] :: LogConfig -> FilePath
@@ -2315,7 +2284,7 @@ instance (Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice sketchSpec, Gri
 instance Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice sketchSpec => Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs (Grisette.Lib.Synth.Program.Concrete.Program.Prog (Grisette.Lib.Synth.Program.Choice.ChoiceTree.ChoiceTree sketchSpec) conVarId conTy)
 instance Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs prog => Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs (Grisette.Lib.Synth.Program.SymbolTable.SymbolTable prog)
 
-module Grisette.Lib.Synth.Reasoning.Parallel.Process
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
 data ProcessConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
 [ProcessConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => costObj -> SymbolTable sketchSpec -> Text -> LogConfig -> NodeId -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Bool -> Bool -> Int -> Maybe Int -> Maybe Int -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> ProcessConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
 newtype NewMinimalCostMessage
@@ -2367,64 +2336,60 @@ processResponseIsFastTrackSuccess :: ProcessResponse conProg symSemObj symVal co
 processResponseIsSlowTrackSuccess :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
 processResponseIsFastTrackEasySynthFailure :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
 processResponseIsFastTrackViable :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Data.Binary.Class.Binary Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Data.Binary.Class.Binary Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Process.Process
-instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance GHC.Internal.Generics.Generic (Grisette.Lib.Synth.Reasoning.Parallel.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
-instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Process.Process
-instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Control.DeepSeq.NFData Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Control.DeepSeq.NFData Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance (Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint conProg, Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint conVal) => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Reasoning.Parallel.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Process.Process
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance (Data.Bytes.Serial.Serial conProg, Data.Bytes.Serial.Serial symSemObj, Data.Bytes.Serial.Serial conSemObj, Data.Bytes.Serial.Serial conVal, Data.Bytes.Serial.Serial matcher) => Data.Bytes.Serial.Serial (Grisette.Lib.Synth.Reasoning.Parallel.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
-instance Data.Bytes.Serial.Serial Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Data.Bytes.Serial.Serial Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Data.Serialize.Serialize Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Data.Serialize.Serialize Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance (GHC.Internal.Show.Show conVal, GHC.Internal.Show.Show conProg) => GHC.Internal.Show.Show (Grisette.Lib.Synth.Reasoning.Parallel.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
-instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Process.Process
-instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon Grisette.Lib.Synth.Reasoning.Parallel.Process.Track Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage) Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Process.Track) Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Process.Track Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Process.Track (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Process.Track)
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Process.NewMinimalCostMessage
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Process.Track
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Data.Binary.Class.Binary Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Data.Binary.Class.Binary Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Process
+instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance GHC.Internal.Generics.Generic (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
+instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Process
+instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Control.DeepSeq.NFData Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Control.DeepSeq.NFData Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance (Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint conProg, Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint conVal) => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Process
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance (Data.Bytes.Serial.Serial conProg, Data.Bytes.Serial.Serial symSemObj, Data.Bytes.Serial.Serial conSemObj, Data.Bytes.Serial.Serial conVal, Data.Bytes.Serial.Serial matcher) => Data.Bytes.Serial.Serial (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
+instance Data.Bytes.Serial.Serial Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Data.Bytes.Serial.Serial Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Data.Serialize.Serialize Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Data.Serialize.Serialize Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance (GHC.Internal.Show.Show conVal, GHC.Internal.Show.Show conProg) => GHC.Internal.Show.Show (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
+instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Process
+instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage) Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track) Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track)
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 
-module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
-data ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
-[ProcessSchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
-
-module Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
 data NodeStatus conProg
 NodeFastTrackViable :: Track -> SymbolTable conProg -> NodeStatus conProg
 [_curTrack] :: NodeStatus conProg -> Track
@@ -2480,12 +2445,12 @@ nodeStatusTransition :: NodeStatus conProg -> ProcessResponse conProg symSemObj 
 pformatNodeStatusSummary :: NodeStatus conProg -> Doc ann
 nodeStatusIsEnded :: NodeStatus conProg -> Bool
 nodeStatusIsDetermined :: NodeStatus conProg -> Bool
-instance GHC.Classes.Eq conProg => GHC.Classes.Eq (Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus.NodeStatus conProg)
-instance GHC.Internal.Generics.Generic (Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus.NodeStatus conProg)
-instance Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint conProg => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus.NodeStatus conProg)
-instance GHC.Internal.Show.Show conProg => GHC.Internal.Show.Show (Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus.NodeStatus conProg)
+instance GHC.Classes.Eq conProg => GHC.Classes.Eq (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus.NodeStatus conProg)
+instance GHC.Internal.Generics.Generic (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus.NodeStatus conProg)
+instance Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint conProg => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus.NodeStatus conProg)
+instance GHC.Internal.Show.Show conProg => GHC.Internal.Show.Show (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus.NodeStatus conProg)
 
-module Grisette.Lib.Synth.Reasoning.Parallel.NodeState
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
 type NodeMessageLog time conProg symSemObj symVal conSemObj conVal matcher = [(time, ProcessResponse conProg symSemObj symVal conSemObj conVal matcher)]
 type NodeMessageAbsoluteTimeLog conProg symSemObj symVal conSemObj conVal matcher = NodeMessageLog UTCTime conProg symSemObj symVal conSemObj conVal matcher
 type NodeMessageRelativeTimeLog conProg symSemObj symVal conSemObj conVal matcher = NodeMessageLog NominalDiffTime conProg symSemObj symVal conSemObj conVal matcher
@@ -2508,64 +2473,56 @@ nodeStateInferFailureTransition :: NodeState conProg symSemObj symVal conSemObj 
 nodeStateNumCollectedExamples :: NodeState conProg symSemObj symVal conSemObj conVal matcher -> Int
 nodeStateNumInProgressExamples :: NodeState conProg symSemObj symVal conSemObj conVal matcher -> Int
 
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
+data SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+[SchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
-data ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
-[ProcessScheduler] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher. ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> AtomicGenM StdGen -> IORef (HashMap NodeId (NodeInfo sketchSpec)) -> IORef (HashMap NodeId (NodeState conProg symSemObj symVal conSemObj conVal matcher)) -> IORef BiasedQueue -> IORef (HashMap Int32 Process) -> IORef (HashMap Int32 NodeId) -> IORef (HashMap NodeId Int32) -> IORef (DCTree (SymbolTable sketchSpec)) -> IORef (Maybe Int) -> MVar () -> IORef Bool -> UTCTime -> ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+data Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+[Scheduler] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher. SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> AtomicGenM StdGen -> IORef (HashMap NodeId (NodeInfo sketchSpec)) -> IORef (HashMap NodeId (NodeState conProg symSemObj symVal conSemObj conVal matcher)) -> IORef BiasedQueue -> IORef (HashMap Int32 Process) -> IORef (HashMap Int32 NodeId) -> IORef (HashMap NodeId Int32) -> IORef (DCTree (SymbolTable sketchSpec)) -> IORef (Maybe Int) -> MVar () -> IORef Bool -> UTCTime -> Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
 data NodeInfo sketchSpec
 NodeInfo :: Bool -> SymbolTable sketchSpec -> Priority -> Int -> NodeInfo sketchSpec
 [nodeSplitted] :: NodeInfo sketchSpec -> Bool
 [nodeSketchTable] :: NodeInfo sketchSpec -> SymbolTable sketchSpec
 [nodePriority] :: NodeInfo sketchSpec -> Priority
 [nodeTimeoutSeconds] :: NodeInfo sketchSpec -> Int
-newProcessScheduler :: ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO (ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher)
-getCPid :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Int32
-getProcessByCPid :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Int32 -> IO Process
-getProcess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Process
-getCurrentMinimalCost :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO (Maybe Int)
-getCurrentTimeout :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Int
-getCurrentElapsedTime :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO NominalDiffTime
-getStatus :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (NodeStatus conProg)
-getNodeInfo :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (NodeInfo sketchSpec)
-getDepth :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Int
-getIsSplitted :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Bool
-getSketchTable :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (SymbolTable sketchSpec)
-getPriority :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Priority
-getNumRunningProcess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO Int
-getNumQueuedProcess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO Int
-setIsSplitted :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Bool -> IO ()
-setPriority :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Priority -> IO ()
-setTimeout :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Int -> IO ()
-removeProcessByCPid :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Int32 -> IO ()
-removeProcess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
-updateCurrentMinimalCost :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Maybe Int -> IO ()
+newScheduler :: SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO (Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher)
+getCPid :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Int32
+getProcessByCPid :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Int32 -> IO Process
+getProcess :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Process
+getCurrentMinimalCost :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO (Maybe Int)
+getCurrentTimeout :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Int
+getCurrentElapsedTime :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO NominalDiffTime
+getStatus :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (NodeStatus conProg)
+getNodeInfo :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (NodeInfo sketchSpec)
+getDepth :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Int
+getIsSplitted :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Bool
+getSketchTable :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (SymbolTable sketchSpec)
+getPriority :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO Priority
+getNumRunningProcess :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO Int
+getNumQueuedProcess :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO Int
+setIsSplitted :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Bool -> IO ()
+setPriority :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Priority -> IO ()
+setTimeout :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Int -> IO ()
+removeProcessByCPid :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Int32 -> IO ()
+removeProcess :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+updateCurrentMinimalCost :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Maybe Int -> IO ()
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats
-logTreeStats :: Priority -> Bool -> ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
+logTreeStats :: Priority -> Bool -> Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition
-nodeTransition :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> IO NodeAction
-nodeResetTransition :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
-nodeStartTransition :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
-nodeInferFailureTransition :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+nodeTransition :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> IO NodeAction
+nodeResetTransition :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+nodeStartTransition :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+nodeInferFailureTransition :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
-reportStatistics :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
+reportStatistics :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Sketch
-addRootSketch :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> SymbolTable sketchSpec -> IO ()
-splitNode :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Bool -> NodeId -> IO [NodeId]
-
-module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
-killNode :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (ProcessResponse conProg symSemObj symVal conSemObj conVal matcher)
-killIfTimeout :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (Maybe NodeAction)
-checkResponse :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (Maybe NodeAction)
-resetIfJustStarted :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
-startQueued :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
-refineNode :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Maybe Int -> IO ()
-markFailure :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
-markSuccess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
-markAllChildrenSuccess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
-markAllSiblingChildrenSuccess :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+addRootSketch :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> SymbolTable sketchSpec -> IO ()
+splitNode :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Bool -> NodeId -> IO [NodeId]
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Result
 data ParallelSynthesisResult conProg
@@ -2598,13 +2555,39 @@ ParallelSynthesisSolution :: NodeId -> UTCTime -> UTCTime -> UTCTime -> Bool -> 
 [_lastMsgTime] :: ParallelSynthesisSolution conProg -> UTCTime
 [_finished] :: ParallelSynthesisSolution conProg -> Bool
 [_program] :: ParallelSynthesisSolution conProg -> SymbolTable conProg
-getParallelSynthesisResult :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO (ParallelSynthesisResult conProg)
-printResults :: ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> ParallelSynthesisResult conProg -> IO ()
-writeResultsCSV :: FilePath -> ParallelSynthesisResult conProg -> ProcessScheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
+getParallelSynthesisResult :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO (ParallelSynthesisResult conProg)
+printResults :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> ParallelSynthesisResult conProg -> IO ()
+writeResultsCSV :: FilePath -> ParallelSynthesisResult conProg -> Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
 
-module Grisette.Lib.Synth.Reasoning.Parallel.ProcessScheduler
-data ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
-[ProcessSchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
+killNode :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (ProcessResponse conProg symSemObj symVal conSemObj conVal matcher)
+killIfTimeout :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (Maybe NodeAction)
+checkResponse :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO (Maybe NodeAction)
+resetIfJustStarted :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+startQueued :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
+refineNode :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> Maybe Int -> IO ()
+markFailure :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+markSuccess :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+markAllChildrenSuccess :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+markAllSiblingChildrenSuccess :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> NodeId -> IO ()
+
+module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler
+data LogConfig
+LogConfig :: FilePath -> Text -> String -> LogConfig
+[baseDir] :: LogConfig -> FilePath
+[progName] :: LogConfig -> Text
+[timeStamp] :: LogConfig -> String
+getDefaultLogger :: LogConfig -> Bool -> IO Logger
+getLogConfig :: FilePath -> String -> IO LogConfig
+type ProcessCostConstraint costObj cost conProg sketch = (ProgCost costObj conProg Int ConcreteContext, ProgCost costObj sketch cost SymbolicContext, ProgCost costObj sketch cost AngelicContext)
+type ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher = (GenSymSimple sketchSpec sketch, ProcessCostConstraint costObj cost conProg sketch, ProgPPrint sketchSpec, ProgPPrint conProg, EvalSym sketch, ToCon sketch conProg, ProgReachableSymbols conProg, SymOrd cost, Mergeable cost, Num cost, Serial conProg, Serial cost, Serial conVal, Serial symSemObj, Serial conSemObj, Serial matcher, Typeable sketch, Typeable symSemObj, Typeable conSemObj, Typeable conVal, Typeable matcher, Typeable symVal, PPrint conVal, Hashable sketchSpec, Eq sketchSpec, LowestSeqNum sketchSpec, PartitionSpec sketchSpec)
+type ConProgConstraint conProg conOp conVarId conType = (ConcreteVarId conVarId, conProg ~ Prog conOp conVarId conType, OpPPrint conOp, Show conOp, PPrint conType, Show conType)
+data TwoTrackVerifiers sketch conProg
+TwoTrackVerifiers :: [SomeVerifier sketch conProg] -> [SomeVerifier sketch conProg] -> TwoTrackVerifiers sketch conProg
+[fastTrackVerifiers] :: TwoTrackVerifiers sketch conProg -> [SomeVerifier sketch conProg]
+[slowTrackVerifiers] :: TwoTrackVerifiers sketch conProg -> [SomeVerifier sketch conProg]
+data SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+[SchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
 data ParallelSynthesisResult conProg
 NoSolutionFound :: ParallelSynthesisNoSolutionResult -> ParallelSynthesisResult conProg
 SolutionFound :: ParallelSynthesisSolutionFoundResult conProg -> ParallelSynthesisResult conProg
@@ -2635,7 +2618,7 @@ ParallelSynthesisSolution :: NodeId -> UTCTime -> UTCTime -> UTCTime -> Bool -> 
 [_lastMsgTime] :: ParallelSynthesisSolution conProg -> UTCTime
 [_finished] :: ParallelSynthesisSolution conProg -> Bool
 [_program] :: ParallelSynthesisSolution conProg -> SymbolTable conProg
-runWithScheduler :: ProcessSchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> [SymbolTable sketchSpec] -> IO (ParallelSynthesisResult conProg)
+runWithScheduler :: SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> [SymbolTable sketchSpec] -> IO (ParallelSynthesisResult conProg)
 
 module Grisette.Lib.Synth.Program.ByteCodeSketch.Program
 data Stmt op conVarId symVarId
