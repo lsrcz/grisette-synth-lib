@@ -2761,16 +2761,16 @@ debugLogAllStats
                         fromMaybe mempty $
                           nodeDividedChildren dcTree nid
               if
-                | null children -> return $ result <+> "{}"
-                | onlyUndetermined && nodeStatusIsDetermined status ->
-                    return $ result <+> "{...}"
-                | otherwise -> do
-                    childrenDocs <- mapM walkNode children
-                    return $
-                      vsep
-                        [ nest 2 $ vsep $ [result <+> "{", vsep childrenDocs],
-                          "}"
-                        ]
+                  | null children -> return $ result <+> "{}"
+                  | onlyUndetermined && nodeStatusIsDetermined status ->
+                      return $ result <+> "{...}"
+                  | otherwise -> do
+                      childrenDocs <- mapM walkNode children
+                      return $
+                        vsep
+                          [ nest 2 $ vsep $ [result <+> "{", vsep childrenDocs],
+                            "}"
+                          ]
         nodeResult :: NodeId -> IO (Doc ann)
         nodeResult nid = do
           state <- (HM.! nid) <$> readIORef nodeStates
