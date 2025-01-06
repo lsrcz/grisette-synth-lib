@@ -19,7 +19,6 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Process
     Track (..),
     Message (..),
     Process (..),
-    LogConfig (..),
     ProcessResponse,
     ProcessCostConstraint,
     ProcessConstraint,

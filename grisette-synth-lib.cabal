@@ -71,6 +71,14 @@ library
       Grisette.Lib.Synth.Reasoning.Parallel.NodeStatus
       Grisette.Lib.Synth.Reasoning.Parallel.Process
       Grisette.Lib.Synth.Reasoning.Parallel.ProcessScheduler
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Result
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Sketch
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition
+      Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats
       Grisette.Lib.Synth.Reasoning.Synthesis
       Grisette.Lib.Synth.Reasoning.Verification
       Grisette.Lib.Synth.TypeSignature

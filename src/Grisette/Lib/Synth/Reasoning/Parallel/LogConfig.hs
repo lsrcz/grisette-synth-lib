@@ -17,7 +17,17 @@ import System.IO (stderr)
 import System.Log.Formatter (simpleLogFormatter)
 import System.Log.Handler (LogHandler (setFormatter))
 import System.Log.Handler.Simple (fileHandler, streamHandler)
-import System.Log.Logger (Logger, Priority (DEBUG, NOTICE), getLogger, removeHandler, rootLoggerName, saveGlobalLogger, setHandlers, setLevel, updateGlobalLogger)
+import System.Log.Logger
+  ( Logger,
+    Priority (DEBUG, NOTICE),
+    getLogger,
+    removeHandler,
+    rootLoggerName,
+    saveGlobalLogger,
+    setHandlers,
+    setLevel,
+    updateGlobalLogger,
+  )
 
 data LogConfig = LogConfig
   { baseDir :: FilePath,
