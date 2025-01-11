@@ -19,7 +19,6 @@
 # resolver: https://example.com/snapshots/2018-01-01.yaml
 resolver:
   url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml
-
 # User packages to be built.
 # Various formats can be used as shown in the example below.
 #
@@ -31,7 +30,6 @@ resolver:
 #   - wai
 packages:
   - .
-
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
 # forks / in-progress versions pinned to a git hash. For example:
@@ -52,7 +50,6 @@ extra-deps:
   - sbv-8.17
   - Chart-1.9.3
   - Chart-cairo-1.9.3
-
   - cairo-0.13.10.0
   - gtk2hs-buildtools-0.13.11.0
 

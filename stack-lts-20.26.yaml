@@ -18,7 +18,6 @@
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
 resolver: lts-20.26
-
 # User packages to be built.
 # Various formats can be used as shown in the example below.
 #
@@ -45,7 +44,6 @@ extra-deps:
     commit: 4e9afe48e5a592aacdc54646379ec0d62b956e5f
   - quickcheck-with-counterexamples-1.2
   - Chart-cairo-1.9.3
-
   - cairo-0.13.10.0
   - gtk2hs-buildtools-0.13.11.0
 

@@ -27,3 +27,4 @@ cabal.project.local~
 *.o-boot
 .DS_Store
 result
+.pre-commit-config.yaml

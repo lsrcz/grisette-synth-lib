@@ -1,5 +1,4 @@
 name: Auto format by ormolu
-
 on:
   pull_request:
   push:
@@ -7,7 +6,6 @@ on:
       - main
       - development
       - "releases/*"
-
 jobs:
   ormolu:
     runs-on: ubuntu-latest
