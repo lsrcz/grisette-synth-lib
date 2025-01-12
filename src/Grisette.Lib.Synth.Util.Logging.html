@@ -24,187 +24,187 @@
 </span><span id="line-24"></span><span>
 </span><span id="line-25"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#priorityToColor"><span class="hs-identifier hs-type">priorityToColor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Priority</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
 </span><span id="line-26"></span><span id="priorityToColor"><span class="annot"><span class="annottext">priorityToColor :: Priority -&gt; String
-</span><a href="Grisette.Lib.Synth.Util.Logging.html#priorityToColor"><span class="hs-identifier hs-var hs-var">priorityToColor</span></a></span></span><span> </span><span id="local-6989586621680135714"><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135714"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135714"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="Grisette.Lib.Synth.Util.Logging.html#priorityToColor"><span class="hs-identifier hs-var hs-var">priorityToColor</span></a></span></span><span> </span><span id="local-6989586621680127281"><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127281"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127281"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-27"></span><span>  </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">DEBUG</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color -&gt; String
-</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621680127282"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
 </span><span class="hs-identifier hs-var">Blue</span></span><span>
 </span><span id="line-28"></span><span>  </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">INFO</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color -&gt; String
-</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621680127282"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
 </span><span class="hs-identifier hs-var">Green</span></span><span>
 </span><span id="line-29"></span><span>  </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">NOTICE</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color -&gt; String
-</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621680127282"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
 </span><span class="hs-identifier hs-var">Green</span></span><span>
 </span><span id="line-30"></span><span>  </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">WARNING</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color -&gt; String
-</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621680127282"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
 </span><span class="hs-identifier hs-var">Yellow</span></span><span>
 </span><span id="line-31"></span><span>  </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">ERROR</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color -&gt; String
-</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621680127282"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
 </span><span class="hs-identifier hs-var">Red</span></span><span>
 </span><span id="line-32"></span><span>  </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">CRITICAL</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color -&gt; String
-</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621680127282"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
 </span><span class="hs-identifier hs-var">Red</span></span><span>
 </span><span id="line-33"></span><span>  </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">ALERT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color -&gt; String
-</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621680127282"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
 </span><span class="hs-identifier hs-var">Red</span></span><span>
 </span><span id="line-34"></span><span>  </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">EMERGENCY</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Color -&gt; String
-</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621680127282"><span class="hs-identifier hs-var">code</span></a></span><span> </span><span class="annot"><span class="annottext">Color
 </span><span class="hs-identifier hs-var">Red</span></span><span>
 </span><span id="line-35"></span><span>  </span><span class="hs-keyword">where</span><span>
-</span><span id="line-36"></span><span>    </span><span id="local-6989586621680135715"><span class="annot"><span class="annottext">code :: Color -&gt; String
-</span><a href="#local-6989586621680135715"><span class="hs-identifier hs-var hs-var">code</span></a></span></span><span> </span><span id="local-6989586621680135716"><span class="annot"><span class="annottext">Color
-</span><a href="#local-6989586621680135716"><span class="hs-identifier hs-var">color</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SGR] -&gt; String
+</span><span id="line-36"></span><span>    </span><span id="local-6989586621680127282"><span class="annot"><span class="annottext">code :: Color -&gt; String
+</span><a href="#local-6989586621680127282"><span class="hs-identifier hs-var hs-var">code</span></a></span></span><span> </span><span id="local-6989586621680127283"><span class="annot"><span class="annottext">Color
+</span><a href="#local-6989586621680127283"><span class="hs-identifier hs-var">color</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SGR] -&gt; String
 </span><span class="hs-identifier hs-var">setSGRCode</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ConsoleLayer -&gt; ColorIntensity -&gt; Color -&gt; SGR
 </span><span class="hs-identifier hs-var">SetColor</span></span><span> </span><span class="annot"><span class="annottext">ConsoleLayer
 </span><span class="hs-identifier hs-var">Foreground</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
 </span><span class="hs-identifier hs-var">Vivid</span></span><span> </span><span class="annot"><span class="annottext">Color
-</span><a href="#local-6989586621680135716"><span class="hs-identifier hs-var">color</span></a></span><span class="hs-special">]</span><span>
+</span><a href="#local-6989586621680127283"><span class="hs-identifier hs-var">color</span></a></span><span class="hs-special">]</span><span>
 </span><span id="line-37"></span><span>
 </span><span id="line-38"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logLWithColoredMarker"><span class="hs-identifier hs-type">logLWithColoredMarker</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logger</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Priority</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
 </span><span id="line-39"></span><span id="logLWithColoredMarker"><span class="annot"><span class="annottext">logLWithColoredMarker :: Logger -&gt; Priority -&gt; String -&gt; String -&gt; IO ()
-</span><a href="Grisette.Lib.Synth.Util.Logging.html#logLWithColoredMarker"><span class="hs-identifier hs-var hs-var">logLWithColoredMarker</span></a></span></span><span> </span><span id="local-6989586621680135718"><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135718"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680135719"><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135719"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span id="local-6989586621680135720"><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135720"><span class="hs-identifier hs-var">marker</span></a></span></span><span> </span><span id="local-6989586621680135721"><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135721"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
-</span><span id="line-40"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680135722"><span class="annot"><span class="annottext">color :: String
-</span><a href="#local-6989586621680135722"><span class="hs-identifier hs-var hs-var">color</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Priority -&gt; String
+</span><a href="Grisette.Lib.Synth.Util.Logging.html#logLWithColoredMarker"><span class="hs-identifier hs-var hs-var">logLWithColoredMarker</span></a></span></span><span> </span><span id="local-6989586621680127285"><span class="annot"><span class="annottext">Logger
+</span><a href="#local-6989586621680127285"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680127286"><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127286"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span id="local-6989586621680127287"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127287"><span class="hs-identifier hs-var">marker</span></a></span></span><span> </span><span id="local-6989586621680127288"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127288"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680127289"><span class="annot"><span class="annottext">color :: String
+</span><a href="#local-6989586621680127289"><span class="hs-identifier hs-var hs-var">color</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Priority -&gt; String
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#priorityToColor"><span class="hs-identifier hs-var">priorityToColor</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135719"><span class="hs-identifier hs-var">prio</span></a></span><span>
+</span><a href="#local-6989586621680127286"><span class="hs-identifier hs-var">prio</span></a></span><span>
 </span><span id="line-41"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; String -&gt; IO ()
 </span><span class="hs-identifier hs-var">logL</span></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135718"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135719"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; String -&gt; IO ()
+</span><a href="#local-6989586621680127285"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127286"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; String -&gt; IO ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135722"><span class="hs-identifier hs-var">color</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+</span><a href="#local-6989586621680127289"><span class="hs-identifier hs-var">color</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135720"><span class="hs-identifier hs-var">marker</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+</span><a href="#local-6989586621680127287"><span class="hs-identifier hs-var">marker</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[SGR] -&gt; String
 </span><span class="hs-identifier hs-var">setSGRCode</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">SGR
 </span><span class="hs-identifier hs-var">Reset</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135721"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><a href="#local-6989586621680127288"><span class="hs-identifier hs-var">msg</span></a></span><span>
 </span><span id="line-42"></span><span>
 </span><span id="line-43"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLine"><span class="hs-identifier hs-type">logMultiLine</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logger</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Priority</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
 </span><span id="line-44"></span><span id="logMultiLine"><span class="annot"><span class="annottext">logMultiLine :: Logger -&gt; Priority -&gt; String -&gt; IO ()
-</span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLine"><span class="hs-identifier hs-var hs-var">logMultiLine</span></a></span></span><span> </span><span id="local-6989586621680135723"><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135723"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680135724"><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135724"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span id="local-6989586621680135725"><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135725"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-45"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680135726"><span class="annot"><span class="annottext">allLines :: [String]
-</span><a href="#local-6989586621680135726"><span class="hs-identifier hs-var hs-var">allLines</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; [String]
+</span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLine"><span class="hs-identifier hs-var hs-var">logMultiLine</span></a></span></span><span> </span><span id="local-6989586621680127290"><span class="annot"><span class="annottext">Logger
+</span><a href="#local-6989586621680127290"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680127291"><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127291"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span id="local-6989586621680127292"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127292"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680127293"><span class="annot"><span class="annottext">allLines :: [String]
+</span><a href="#local-6989586621680127293"><span class="hs-identifier hs-var hs-var">allLines</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; [String]
 </span><span class="hs-identifier hs-var">lines</span></span><span> </span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135725"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><a href="#local-6989586621680127292"><span class="hs-identifier hs-var">msg</span></a></span><span>
 </span><span id="line-46"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Int
 forall a. [a] -&gt; Int
 forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
 </span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[String]
-</span><a href="#local-6989586621680135726"><span class="hs-identifier hs-var">allLines</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621680127293"><span class="hs-identifier hs-var">allLines</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-47"></span><span>    </span><span class="annot"><span class="annottext">Int
 </span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; String -&gt; String -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logLWithColoredMarker"><span class="hs-identifier hs-var">logLWithColoredMarker</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135723"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135724"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127290"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127291"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;&gt; &quot;</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;&lt;empty message&gt;&quot;</span></span><span>
 </span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">Int
 </span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; String -&gt; String -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logLWithColoredMarker"><span class="hs-identifier hs-var">logLWithColoredMarker</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135723"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135724"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127290"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127291"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;&gt; &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; String
 forall a. HasCallStack =&gt; [a] -&gt; a
 </span><span class="hs-identifier hs-var">head</span></span><span> </span><span class="annot"><span class="annottext">[String]
-</span><a href="#local-6989586621680135726"><span class="hs-identifier hs-var">allLines</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621680127293"><span class="hs-identifier hs-var">allLines</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">Int
 </span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-50"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680135732"><span class="annot"><span class="annottext">goRemaining :: [String] -&gt; IO ()
-</span><a href="#local-6989586621680135732"><span class="hs-identifier hs-var hs-var hs-var">goRemaining</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+</span><span id="line-50"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680127299"><span class="annot"><span class="annottext">goRemaining :: [String] -&gt; IO ()
+</span><a href="#local-6989586621680127299"><span class="hs-identifier hs-var hs-var hs-var">goRemaining</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
 forall a. a -&gt; IO a
 forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
 </span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><span id="line-51"></span><span>          </span><span class="annot"><a href="#local-6989586621680135732"><span class="hs-identifier hs-var">goRemaining</span></a></span><span> </span><span class="hs-special">[</span><span id="local-6989586621680135733"><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135733"><span class="hs-identifier hs-var">lastLine</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-51"></span><span>          </span><span class="annot"><a href="#local-6989586621680127299"><span class="hs-identifier hs-var">goRemaining</span></a></span><span> </span><span class="hs-special">[</span><span id="local-6989586621680127300"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127300"><span class="hs-identifier hs-var">lastLine</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span>
 </span><span id="line-52"></span><span>            </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; String -&gt; String -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logLWithColoredMarker"><span class="hs-identifier hs-var">logLWithColoredMarker</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135723"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135724"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127290"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127291"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;&#9492; &quot;</span></span><span> </span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135733"><span class="hs-identifier hs-var">lastLine</span></a></span><span>
-</span><span id="line-53"></span><span>          </span><span class="annot"><a href="#local-6989586621680135732"><span class="hs-identifier hs-var">goRemaining</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680135734"><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135734"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621680135735"><span class="annot"><span class="annottext">[String]
-</span><a href="#local-6989586621680135735"><span class="hs-identifier hs-var">ls</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><a href="#local-6989586621680127300"><span class="hs-identifier hs-var">lastLine</span></a></span><span>
+</span><span id="line-53"></span><span>          </span><span class="annot"><a href="#local-6989586621680127299"><span class="hs-identifier hs-var">goRemaining</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621680127301"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127301"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621680127302"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621680127302"><span class="hs-identifier hs-var">ls</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
 </span><span id="line-54"></span><span>            </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; String -&gt; String -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logLWithColoredMarker"><span class="hs-identifier hs-var">logLWithColoredMarker</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135723"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135724"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127290"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127291"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;&#9474; &quot;</span></span><span> </span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621680135734"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><a href="#local-6989586621680127301"><span class="hs-identifier hs-var">l</span></a></span><span>
 </span><span id="line-55"></span><span>            </span><span class="annot"><span class="annottext">[String] -&gt; IO ()
-</span><a href="#local-6989586621680135732"><span class="hs-identifier hs-var">goRemaining</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
-</span><a href="#local-6989586621680135735"><span class="hs-identifier hs-var">ls</span></a></span><span>
+</span><a href="#local-6989586621680127299"><span class="hs-identifier hs-var">goRemaining</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621680127302"><span class="hs-identifier hs-var">ls</span></a></span><span>
 </span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; String -&gt; String -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logLWithColoredMarker"><span class="hs-identifier hs-var">logLWithColoredMarker</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135723"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135724"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680127290"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127291"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;&#9484; &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; String
 forall a. HasCallStack =&gt; [a] -&gt; a
 </span><span class="hs-identifier hs-var">head</span></span><span> </span><span class="annot"><span class="annottext">[String]
-</span><a href="#local-6989586621680135726"><span class="hs-identifier hs-var">allLines</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621680127293"><span class="hs-identifier hs-var">allLines</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; IO ()
-</span><a href="#local-6989586621680135732"><span class="hs-identifier hs-var">goRemaining</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; [String]
+</span><a href="#local-6989586621680127299"><span class="hs-identifier hs-var">goRemaining</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; [String]
 forall a. HasCallStack =&gt; [a] -&gt; [a]
 </span><span class="hs-identifier hs-var">tail</span></span><span> </span><span class="annot"><span class="annottext">[String]
-</span><a href="#local-6989586621680135726"><span class="hs-identifier hs-var">allLines</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621680127293"><span class="hs-identifier hs-var">allLines</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-58"></span><span>
 </span><span id="line-59"></span><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineText"><span class="hs-identifier hs-type">logMultiLineText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logger</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Priority</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
 </span><span id="line-60"></span><span id="logMultiLineText"><span class="annot"><span class="annottext">logMultiLineText :: Logger -&gt; Priority -&gt; Text -&gt; IO ()
-</span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineText"><span class="hs-identifier hs-var hs-var">logMultiLineText</span></a></span></span><span> </span><span id="local-6989586621680135737"><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135737"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680135738"><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135738"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; String -&gt; IO ()
+</span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineText"><span class="hs-identifier hs-var hs-var">logMultiLineText</span></a></span></span><span> </span><span id="local-6989586621680127304"><span class="annot"><span class="annottext">Logger
+</span><a href="#local-6989586621680127304"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680127305"><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127305"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; String -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLine"><span class="hs-identifier hs-var">logMultiLine</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135737"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135738"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; (Text -&gt; String) -&gt; Text -&gt; IO ()
+</span><a href="#local-6989586621680127304"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127305"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; (Text -&gt; String) -&gt; Text -&gt; IO ()
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
 </span><span class="hs-identifier hs-var">T.unpack</span></span><span>
 </span><span id="line-61"></span><span>
-</span><span id="line-62"></span><span id="local-6989586621680135664"><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-type">logMultiLineDoc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logger</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Priority</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Doc</span></span><span> </span><span class="annot"><a href="#local-6989586621680135664"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-62"></span><span id="local-6989586621680127231"><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-type">logMultiLineDoc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logger</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Priority</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Doc</span></span><span> </span><span class="annot"><a href="#local-6989586621680127231"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
 </span><span id="line-63"></span><span id="logMultiLineDoc"><span class="annot"><span class="annottext">logMultiLineDoc :: forall ann. Logger -&gt; Priority -&gt; Doc ann -&gt; IO ()
-</span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-var hs-var">logMultiLineDoc</span></a></span></span><span> </span><span id="local-6989586621680135741"><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135741"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680135742"><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135742"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Text -&gt; IO ()
+</span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-var hs-var">logMultiLineDoc</span></a></span></span><span> </span><span id="local-6989586621680127308"><span class="annot"><span class="annottext">Logger
+</span><a href="#local-6989586621680127308"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680127309"><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127309"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Text -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineText"><span class="hs-identifier hs-var">logMultiLineText</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135741"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135742"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; IO ()) -&gt; (Doc ann -&gt; Text) -&gt; Doc ann -&gt; IO ()
+</span><a href="#local-6989586621680127308"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127309"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; IO ()) -&gt; (Doc ann -&gt; Text) -&gt; Doc ann -&gt; IO ()
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann -&gt; Text
 forall ann. Int -&gt; Doc ann -&gt; Text
 </span><a href="Grisette.Lib.Synth.Util.Pretty.html#renderDoc"><span class="hs-identifier hs-var">renderDoc</span></a></span><span> </span><span class="annot"><span class="annottext">Int
 </span><span class="hs-number">120</span></span><span>
 </span><span id="line-64"></span><span>
-</span><span id="line-65"></span><span id="local-6989586621680135668"><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLinePretty"><span class="hs-identifier hs-type">logMultiLinePretty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PPrint</span></span><span> </span><span class="annot"><a href="#local-6989586621680135668"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logger</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Priority</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680135668"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-65"></span><span id="local-6989586621680127235"><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLinePretty"><span class="hs-identifier hs-type">logMultiLinePretty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PPrint</span></span><span> </span><span class="annot"><a href="#local-6989586621680127235"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Logger</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Priority</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621680127235"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
 </span><span id="line-66"></span><span id="logMultiLinePretty"><span class="annot"><span class="annottext">logMultiLinePretty :: forall a. PPrint a =&gt; Logger -&gt; Priority -&gt; a -&gt; IO ()
-</span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLinePretty"><span class="hs-identifier hs-var hs-var">logMultiLinePretty</span></a></span></span><span> </span><span id="local-6989586621680135745"><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135745"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680135746"><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135746"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Doc Any -&gt; IO ()
+</span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLinePretty"><span class="hs-identifier hs-var hs-var">logMultiLinePretty</span></a></span></span><span> </span><span id="local-6989586621680127312"><span class="annot"><span class="annottext">Logger
+</span><a href="#local-6989586621680127312"><span class="hs-identifier hs-var">logger</span></a></span></span><span> </span><span id="local-6989586621680127313"><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127313"><span class="hs-identifier hs-var">prio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Doc Any -&gt; IO ()
 forall ann. Logger -&gt; Priority -&gt; Doc ann -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-var">logMultiLineDoc</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680135745"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680135746"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc Any -&gt; IO ()) -&gt; (a -&gt; Doc Any) -&gt; a -&gt; IO ()
+</span><a href="#local-6989586621680127312"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680127313"><span class="hs-identifier hs-var">prio</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc Any -&gt; IO ()) -&gt; (a -&gt; Doc Any) -&gt; a -&gt; IO ()
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Doc Any
 forall ann. a -&gt; Doc ann

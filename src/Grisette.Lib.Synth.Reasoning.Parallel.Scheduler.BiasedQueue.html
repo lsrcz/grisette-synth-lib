@@ -35,11 +35,11 @@
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#ancestorSiblingKnownWorking"><span class="hs-identifier hs-var hs-var">ancestorSiblingKnownWorking</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
 </span><span id="line-31"></span><span>  </span><span class="hs-special">}</span><span>
 </span><span id="line-32"></span><span>
-</span><span id="line-33"></span><span id="local-6989586621680133468"><span id="local-6989586621680133472"><span id="local-6989586621680133516"><span id="local-6989586621680133519"><span id="local-6989586621680133530"><span id="local-6989586621680133534"><span id="local-6989586621680133544"><span id="local-6989586621680133548"><span class="hs-identifier">deriveGADT</span><span> </span><span class="hs-special">[</span><span class="hs-special">''</span><span class="hs-identifier">Priority</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">''</span><span class="hs-identifier">Show</span><span class="hs-special">,</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Eq</span><span class="hs-special">,</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">PPrint</span><span class="hs-special">]</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-33"></span><span id="local-6989586621680125035"><span id="local-6989586621680125039"><span id="local-6989586621680125083"><span id="local-6989586621680125086"><span id="local-6989586621680125097"><span id="local-6989586621680125101"><span id="local-6989586621680125111"><span id="local-6989586621680125115"><span class="hs-identifier">deriveGADT</span><span> </span><span class="hs-special">[</span><span class="hs-special">''</span><span class="hs-identifier">Priority</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">''</span><span class="hs-identifier">Show</span><span class="hs-special">,</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Eq</span><span class="hs-special">,</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">PPrint</span><span class="hs-special">]</span></span></span></span></span></span></span></span></span><span>
 </span><span id="line-34"></span><span>
 </span><span id="line-35"></span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#numericPriority"><span class="hs-identifier hs-type">numericPriority</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span>
 </span><span id="line-36"></span><span id="numericPriority"><span class="annot"><span class="annottext">numericPriority :: Priority -&gt; Double
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#numericPriority"><span class="hs-identifier hs-var hs-var">numericPriority</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680133584"><span id="local-6989586621680133585"><span id="local-6989586621680133586"><span id="local-6989586621680133587"><span id="local-6989586621680133588"><span class="annot"><span class="annottext">Bool
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#numericPriority"><span class="hs-identifier hs-var hs-var">numericPriority</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680125151"><span id="local-6989586621680125152"><span id="local-6989586621680125153"><span id="local-6989586621680125154"><span id="local-6989586621680125155"><span class="annot"><span class="annottext">Bool
 Double
 basePriority :: Priority -&gt; Double
 randomPriority :: Priority -&gt; Double
@@ -52,55 +52,55 @@ knownWorking :: Bool
 ancestorKnownWorking :: Bool
 ancestorSiblingKnownWorking :: Bool
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#basePriority"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133584"><span class="hs-identifier hs-var">basePriority</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+</span><a href="#local-6989586621680125151"><span class="hs-identifier hs-var">basePriority</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
 forall a. Num a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133585"><span class="hs-identifier hs-var">randomPriority</span></a></span><span>
+</span><a href="#local-6989586621680125152"><span class="hs-identifier hs-var">randomPriority</span></a></span><span>
 </span><span id="line-37"></span><span>
-</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680133593"><span id="local-6989586621680133596"><span id="local-6989586621680133600"><span id="local-6989586621680133603"><span id="local-6989586621680133606"><span id="local-6989586621680133609"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-39"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span id="local-6989586621680133618"><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133618"><span class="hs-identifier hs-var">p1</span></a></span></span><span> </span><span id="local-6989586621680133619"><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133619"><span class="hs-identifier hs-var">r1</span></a></span></span><span> </span><span id="local-6989586621680133620"><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133620"><span class="hs-identifier hs-var">k1</span></a></span></span><span> </span><span id="local-6989586621680133621"><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133621"><span class="hs-identifier hs-var">pk1</span></a></span></span><span> </span><span id="local-6989586621680133622"><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133622"><span class="hs-identifier hs-var">ask1</span></a></span></span><span> </span><span id="local-6989586621680133623"><span class="annot"><span class="annottext">&lt;= :: Priority -&gt; Priority -&gt; Bool
-</span><a href="#local-6989586621680133623"><span class="hs-operator hs-var hs-var hs-var">&lt;=</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span id="local-6989586621680133625"><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133625"><span class="hs-identifier hs-var">p2</span></a></span></span><span> </span><span id="local-6989586621680133626"><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133626"><span class="hs-identifier hs-var">r2</span></a></span></span><span> </span><span id="local-6989586621680133627"><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133627"><span class="hs-identifier hs-var">k2</span></a></span></span><span> </span><span id="local-6989586621680133628"><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133628"><span class="hs-identifier hs-var">pk2</span></a></span></span><span> </span><span id="local-6989586621680133629"><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133629"><span class="hs-identifier hs-var">ask2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680125160"><span id="local-6989586621680125163"><span id="local-6989586621680125167"><span id="local-6989586621680125170"><span id="local-6989586621680125173"><span id="local-6989586621680125176"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span id="local-6989586621680125185"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621680125185"><span class="hs-identifier hs-var">p1</span></a></span></span><span> </span><span id="local-6989586621680125186"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621680125186"><span class="hs-identifier hs-var">r1</span></a></span></span><span> </span><span id="local-6989586621680125187"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680125187"><span class="hs-identifier hs-var">k1</span></a></span></span><span> </span><span id="local-6989586621680125188"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680125188"><span class="hs-identifier hs-var">pk1</span></a></span></span><span> </span><span id="local-6989586621680125189"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680125189"><span class="hs-identifier hs-var">ask1</span></a></span></span><span> </span><span id="local-6989586621680125190"><span class="annot"><span class="annottext">&lt;= :: Priority -&gt; Priority -&gt; Bool
+</span><a href="#local-6989586621680125190"><span class="hs-operator hs-var hs-var hs-var">&lt;=</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span id="local-6989586621680125192"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621680125192"><span class="hs-identifier hs-var">p2</span></a></span></span><span> </span><span id="local-6989586621680125193"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621680125193"><span class="hs-identifier hs-var">r2</span></a></span></span><span> </span><span id="local-6989586621680125194"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680125194"><span class="hs-identifier hs-var">k2</span></a></span></span><span> </span><span id="local-6989586621680125195"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680125195"><span class="hs-identifier hs-var">pk2</span></a></span></span><span> </span><span id="local-6989586621680125196"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680125196"><span class="hs-identifier hs-var">ask2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
 </span><span id="line-40"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133620"><span class="hs-identifier hs-var">k1</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="#local-6989586621680125187"><span class="hs-identifier hs-var">k1</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
 forall a. Eq a =&gt; a -&gt; a -&gt; Bool
 </span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133627"><span class="hs-identifier hs-var">k2</span></a></span><span>
+</span><a href="#local-6989586621680125194"><span class="hs-identifier hs-var">k2</span></a></span><span>
 </span><span id="line-41"></span><span>      </span><span class="hs-keyword">then</span><span>
 </span><span id="line-42"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133621"><span class="hs-identifier hs-var">pk1</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="#local-6989586621680125188"><span class="hs-identifier hs-var">pk1</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
 forall a. Eq a =&gt; a -&gt; a -&gt; Bool
 </span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133628"><span class="hs-identifier hs-var">pk2</span></a></span><span>
+</span><a href="#local-6989586621680125195"><span class="hs-identifier hs-var">pk2</span></a></span><span>
 </span><span id="line-43"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133622"><span class="hs-identifier hs-var">ask1</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="#local-6989586621680125189"><span class="hs-identifier hs-var">ask1</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
 forall a. Eq a =&gt; a -&gt; a -&gt; Bool
 </span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133629"><span class="hs-identifier hs-var">ask2</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133618"><span class="hs-identifier hs-var">p1</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+</span><a href="#local-6989586621680125196"><span class="hs-identifier hs-var">ask2</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621680125185"><span class="hs-identifier hs-var">p1</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
 forall a. Num a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133619"><span class="hs-identifier hs-var">r1</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+</span><a href="#local-6989586621680125186"><span class="hs-identifier hs-var">r1</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
 forall a. Ord a =&gt; a -&gt; a -&gt; Bool
 </span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133625"><span class="hs-identifier hs-var">p2</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+</span><a href="#local-6989586621680125192"><span class="hs-identifier hs-var">p2</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
 forall a. Num a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133626"><span class="hs-identifier hs-var">r2</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133622"><span class="hs-identifier hs-var">ask1</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621680125193"><span class="hs-identifier hs-var">r2</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680125189"><span class="hs-identifier hs-var">ask1</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-44"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133621"><span class="hs-identifier hs-var">pk1</span></a></span><span>
+</span><a href="#local-6989586621680125188"><span class="hs-identifier hs-var">pk1</span></a></span><span>
 </span><span id="line-45"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133620"><span class="hs-identifier hs-var">k1</span></a></span><span>
+</span><a href="#local-6989586621680125187"><span class="hs-identifier hs-var">k1</span></a></span><span>
 </span><span id="line-46"></span><span>
 </span><span id="line-47"></span><span class="hs-keyword">data</span><span> </span><span id="BiasedQueue"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-var">BiasedQueue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BiasedQueue"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-var">BiasedQueue</span></a></span></span><span>
 </span><span id="line-48"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="baseQueue"><span class="annot"><span class="annottext">BiasedQueue -&gt; HashPSQ NodeId Priority NodeId
@@ -113,8 +113,8 @@ forall a. Num a =&gt; a -&gt; a -&gt; a
 </span><span id="line-52"></span><span>
 </span><span id="line-53"></span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#empty"><span class="hs-identifier hs-type">empty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span>
 </span><span id="line-54"></span><span id="empty"><span class="annot"><span class="annottext">empty :: Double -&gt; BiasedQueue
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#empty"><span class="hs-identifier hs-var hs-var">empty</span></a></span></span><span> </span><span id="local-6989586621680133634"><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133634"><span class="hs-identifier hs-var">biasProbability</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#empty"><span class="hs-identifier hs-var hs-var">empty</span></a></span></span><span> </span><span id="local-6989586621680125201"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621680125201"><span class="hs-identifier hs-var">biasProbability</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
 </span><span id="line-55"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">baseQueue :: HashPSQ NodeId Priority NodeId
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#baseQueue"><span class="hs-identifier hs-var">baseQueue</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
 forall k p v. HashPSQ k p v
@@ -128,8 +128,8 @@ biasProbability :: Double
 </span><span id="line-56"></span><span>
 </span><span id="line-57"></span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#delete"><span class="hs-identifier hs-type">delete</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span>
 </span><span id="line-58"></span><span id="delete"><span class="annot"><span class="annottext">delete :: NodeId -&gt; BiasedQueue -&gt; BiasedQueue
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#delete"><span class="hs-identifier hs-var hs-var">delete</span></a></span></span><span> </span><span id="local-6989586621680133636"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133636"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680133637"><span id="local-6989586621680133638"><span id="local-6989586621680133639"><span class="annot"><span class="annottext">Double
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#delete"><span class="hs-identifier hs-var hs-var">delete</span></a></span></span><span> </span><span id="local-6989586621680125203"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125203"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680125204"><span id="local-6989586621680125205"><span id="local-6989586621680125206"><span class="annot"><span class="annottext">Double
 HashPSQ NodeId Double NodeId
 HashPSQ NodeId Priority NodeId
 baseQueue :: BiasedQueue -&gt; HashPSQ NodeId Priority NodeId
@@ -147,8 +147,8 @@ forall k p v.
 (Hashable k, Ord k, Ord p) =&gt;
 k -&gt; HashPSQ k p v -&gt; HashPSQ k p v
 </span><span class="hs-identifier hs-var">PSQ.delete</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133636"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
-</span><a href="#local-6989586621680133637"><span class="hs-identifier hs-var">baseQueue</span></a></span><span class="hs-special">,</span><span>
+</span><a href="#local-6989586621680125203"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
+</span><a href="#local-6989586621680125204"><span class="hs-identifier hs-var">baseQueue</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">simpleQueue :: HashPSQ NodeId Double NodeId
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#simpleQueue"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeId
 -&gt; HashPSQ NodeId Double NodeId -&gt; HashPSQ NodeId Double NodeId
@@ -156,8 +156,8 @@ forall k p v.
 (Hashable k, Ord k, Ord p) =&gt;
 k -&gt; HashPSQ k p v -&gt; HashPSQ k p v
 </span><span class="hs-identifier hs-var">PSQ.delete</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133636"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
-</span><a href="#local-6989586621680133638"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span class="hs-special">,</span><span>
+</span><a href="#local-6989586621680125203"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
+</span><a href="#local-6989586621680125205"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-62"></span><span>      </span><span class="annot"><span class="annottext">Double
 biasProbability :: Double
 biasProbability :: Double
@@ -166,9 +166,9 @@ biasProbability :: Double
 </span><span id="line-64"></span><span>
 </span><span id="line-65"></span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#setPriority"><span class="hs-identifier hs-type">setPriority</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span>
 </span><span id="line-66"></span><span id="setPriority"><span class="annot"><span class="annottext">setPriority :: NodeId -&gt; Priority -&gt; BiasedQueue -&gt; BiasedQueue
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#setPriority"><span class="hs-identifier hs-var hs-var">setPriority</span></a></span></span><span> </span><span id="local-6989586621680133641"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133641"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span id="local-6989586621680133642"><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680133642"><span class="hs-identifier hs-var">priority</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680133643"><span id="local-6989586621680133644"><span id="local-6989586621680133645"><span class="annot"><span class="annottext">Double
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#setPriority"><span class="hs-identifier hs-var hs-var">setPriority</span></a></span></span><span> </span><span id="local-6989586621680125208"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125208"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span id="local-6989586621680125209"><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680125209"><span class="hs-identifier hs-var">priority</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680125210"><span id="local-6989586621680125211"><span id="local-6989586621680125212"><span class="annot"><span class="annottext">Double
 HashPSQ NodeId Double NodeId
 HashPSQ NodeId Priority NodeId
 baseQueue :: BiasedQueue -&gt; HashPSQ NodeId Priority NodeId
@@ -186,14 +186,14 @@ forall k p v.
 (Ord k, Hashable k, Ord p) =&gt;
 k -&gt; HashPSQ k p v -&gt; Maybe (p, v)
 </span><span class="hs-identifier hs-var">PSQ.lookup</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133641"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
-</span><a href="#local-6989586621680133643"><span class="hs-identifier hs-var">baseQueue</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621680125208"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
+</span><a href="#local-6989586621680125210"><span class="hs-identifier hs-var">baseQueue</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-69"></span><span>        </span><span class="annot"><span class="annottext">Maybe (Priority, NodeId)
 </span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
-</span><a href="#local-6989586621680133643"><span class="hs-identifier hs-var">baseQueue</span></a></span><span>
+</span><a href="#local-6989586621680125210"><span class="hs-identifier hs-var">baseQueue</span></a></span><span>
 </span><span id="line-70"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Priority
-</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680133647"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133647"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680125214"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125214"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NodeId
 -&gt; Priority
 -&gt; NodeId
 -&gt; HashPSQ NodeId Priority NodeId
@@ -202,24 +202,24 @@ forall k p v.
 (Ord k, Hashable k, Ord p) =&gt;
 k -&gt; p -&gt; v -&gt; HashPSQ k p v -&gt; HashPSQ k p v
 </span><span class="hs-identifier hs-var">PSQ.insert</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133641"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680133642"><span class="hs-identifier hs-var">priority</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133647"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
-</span><a href="#local-6989586621680133643"><span class="hs-identifier hs-var">baseQueue</span></a></span><span class="hs-special">,</span><span>
+</span><a href="#local-6989586621680125208"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680125209"><span class="hs-identifier hs-var">priority</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125214"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
+</span><a href="#local-6989586621680125210"><span class="hs-identifier hs-var">baseQueue</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">simpleQueue :: HashPSQ NodeId Double NodeId
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#simpleQueue"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; HashPSQ NodeId Double NodeId -&gt; Maybe (Double, NodeId)
 forall k p v.
 (Ord k, Hashable k, Ord p) =&gt;
 k -&gt; HashPSQ k p v -&gt; Maybe (p, v)
 </span><span class="hs-identifier hs-var">PSQ.lookup</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133641"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
-</span><a href="#local-6989586621680133644"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621680125208"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
+</span><a href="#local-6989586621680125211"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-72"></span><span>        </span><span class="annot"><span class="annottext">Maybe (Double, NodeId)
 </span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
-</span><a href="#local-6989586621680133644"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span>
+</span><a href="#local-6989586621680125211"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span>
 </span><span id="line-73"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
-</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680133649"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133649"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680125216"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125216"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NodeId
 -&gt; Double
 -&gt; NodeId
 -&gt; HashPSQ NodeId Double NodeId
@@ -228,11 +228,11 @@ forall k p v.
 (Ord k, Hashable k, Ord p) =&gt;
 k -&gt; p -&gt; v -&gt; HashPSQ k p v -&gt; HashPSQ k p v
 </span><span class="hs-identifier hs-var">PSQ.insert</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133641"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Priority -&gt; Double
+</span><a href="#local-6989586621680125208"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Priority -&gt; Double
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#numericPriority"><span class="hs-identifier hs-var">numericPriority</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680133642"><span class="hs-identifier hs-var">priority</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133649"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
-</span><a href="#local-6989586621680133644"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span class="hs-special">,</span><span>
+</span><a href="#local-6989586621680125209"><span class="hs-identifier hs-var">priority</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125216"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
+</span><a href="#local-6989586621680125211"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">Double
 biasProbability :: Double
 biasProbability :: Double
@@ -241,9 +241,9 @@ biasProbability :: Double
 </span><span id="line-76"></span><span>
 </span><span id="line-77"></span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#insert"><span class="hs-identifier hs-type">insert</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span>
 </span><span id="line-78"></span><span id="insert"><span class="annot"><span class="annottext">insert :: NodeId -&gt; Priority -&gt; BiasedQueue -&gt; BiasedQueue
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#insert"><span class="hs-identifier hs-var hs-var">insert</span></a></span></span><span> </span><span id="local-6989586621680133650"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133650"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span id="local-6989586621680133651"><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680133651"><span class="hs-identifier hs-var">priority</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680133652"><span id="local-6989586621680133653"><span id="local-6989586621680133654"><span class="annot"><span class="annottext">Double
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#insert"><span class="hs-identifier hs-var hs-var">insert</span></a></span></span><span> </span><span id="local-6989586621680125217"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125217"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span id="local-6989586621680125218"><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680125218"><span class="hs-identifier hs-var">priority</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680125219"><span id="local-6989586621680125220"><span id="local-6989586621680125221"><span class="annot"><span class="annottext">Double
 HashPSQ NodeId Double NodeId
 HashPSQ NodeId Priority NodeId
 baseQueue :: BiasedQueue -&gt; HashPSQ NodeId Priority NodeId
@@ -264,10 +264,10 @@ forall k p v.
 (Ord k, Hashable k, Ord p) =&gt;
 k -&gt; p -&gt; v -&gt; HashPSQ k p v -&gt; HashPSQ k p v
 </span><span class="hs-identifier hs-var">PSQ.insert</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133650"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680133651"><span class="hs-identifier hs-var">priority</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133650"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
-</span><a href="#local-6989586621680133652"><span class="hs-identifier hs-var">baseQueue</span></a></span><span class="hs-special">,</span><span>
+</span><a href="#local-6989586621680125217"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680125218"><span class="hs-identifier hs-var">priority</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125217"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
+</span><a href="#local-6989586621680125219"><span class="hs-identifier hs-var">baseQueue</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-81"></span><span>      </span><span class="annot"><span class="annottext">simpleQueue :: HashPSQ NodeId Double NodeId
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#simpleQueue"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeId
 -&gt; Double
@@ -278,11 +278,11 @@ forall k p v.
 (Ord k, Hashable k, Ord p) =&gt;
 k -&gt; p -&gt; v -&gt; HashPSQ k p v -&gt; HashPSQ k p v
 </span><span class="hs-identifier hs-var">PSQ.insert</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133650"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Priority -&gt; Double
+</span><a href="#local-6989586621680125217"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Priority -&gt; Double
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#numericPriority"><span class="hs-identifier hs-var">numericPriority</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
-</span><a href="#local-6989586621680133651"><span class="hs-identifier hs-var">priority</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133650"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
-</span><a href="#local-6989586621680133653"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span class="hs-special">,</span><span>
+</span><a href="#local-6989586621680125218"><span class="hs-identifier hs-var">priority</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125217"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
+</span><a href="#local-6989586621680125220"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">Double
 biasProbability :: Double
 biasProbability :: Double
@@ -291,7 +291,7 @@ biasProbability :: Double
 </span><span id="line-84"></span><span>
 </span><span id="line-85"></span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#size"><span class="hs-identifier hs-type">size</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
 </span><span id="line-86"></span><span id="size"><span class="annot"><span class="annottext">size :: BiasedQueue -&gt; Int
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#size"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680133655"><span id="local-6989586621680133656"><span id="local-6989586621680133657"><span class="annot"><span class="annottext">Double
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#size"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680125222"><span id="local-6989586621680125223"><span id="local-6989586621680125224"><span class="annot"><span class="annottext">Double
 HashPSQ NodeId Double NodeId
 HashPSQ NodeId Priority NodeId
 baseQueue :: BiasedQueue -&gt; HashPSQ NodeId Priority NodeId
@@ -303,11 +303,11 @@ biasProbability :: Double
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#baseQueue"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId -&gt; Int
 forall k p v. HashPSQ k p v -&gt; Int
 </span><span class="hs-identifier hs-var">PSQ.size</span></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
-</span><a href="#local-6989586621680133655"><span class="hs-identifier hs-var">baseQueue</span></a></span><span>
+</span><a href="#local-6989586621680125222"><span class="hs-identifier hs-var">baseQueue</span></a></span><span>
 </span><span id="line-87"></span><span>
 </span><span id="line-88"></span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#null"><span class="hs-identifier hs-type">null</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
 </span><span id="line-89"></span><span id="null"><span class="annot"><span class="annottext">null :: BiasedQueue -&gt; Bool
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#null"><span class="hs-identifier hs-var hs-var">null</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680133659"><span id="local-6989586621680133660"><span id="local-6989586621680133661"><span class="annot"><span class="annottext">Double
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#null"><span class="hs-identifier hs-var hs-var">null</span></a></span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680125226"><span id="local-6989586621680125227"><span id="local-6989586621680125228"><span class="annot"><span class="annottext">Double
 HashPSQ NodeId Double NodeId
 HashPSQ NodeId Priority NodeId
 baseQueue :: BiasedQueue -&gt; HashPSQ NodeId Priority NodeId
@@ -319,13 +319,13 @@ biasProbability :: Double
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#baseQueue"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId -&gt; Bool
 forall k p v. HashPSQ k p v -&gt; Bool
 </span><span class="hs-identifier hs-var">PSQ.null</span></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
-</span><a href="#local-6989586621680133659"><span class="hs-identifier hs-var">baseQueue</span></a></span><span>
+</span><a href="#local-6989586621680125226"><span class="hs-identifier hs-var">baseQueue</span></a></span><span>
 </span><span id="line-90"></span><span>
 </span><span id="line-91"></span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#popMin"><span class="hs-identifier hs-type">popMin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AtomicGenM</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">StdGen</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-92"></span><span id="popMin"><span class="annot"><span class="annottext">popMin :: AtomicGenM StdGen -&gt; BiasedQueue -&gt; IO (NodeId, Bool, BiasedQueue)
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#popMin"><span class="hs-identifier hs-var hs-var">popMin</span></a></span></span><span> </span><span id="local-6989586621680133663"><span class="annot"><span class="annottext">AtomicGenM StdGen
-</span><a href="#local-6989586621680133663"><span class="hs-identifier hs-var">randGen</span></a></span></span><span> </span><span id="local-6989586621680133664"><span class="annot"><span class="annottext">queue :: BiasedQueue
-</span><a href="#local-6989586621680133664"><span class="hs-identifier hs-var">queue</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680133665"><span id="local-6989586621680133666"><span id="local-6989586621680133667"><span class="annot"><span class="annottext">Double
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#popMin"><span class="hs-identifier hs-var hs-var">popMin</span></a></span></span><span> </span><span id="local-6989586621680125230"><span class="annot"><span class="annottext">AtomicGenM StdGen
+</span><a href="#local-6989586621680125230"><span class="hs-identifier hs-var">randGen</span></a></span></span><span> </span><span id="local-6989586621680125231"><span class="annot"><span class="annottext">queue :: BiasedQueue
+</span><a href="#local-6989586621680125231"><span class="hs-identifier hs-var">queue</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#BiasedQueue"><span class="hs-identifier hs-type">BiasedQueue</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680125232"><span id="local-6989586621680125233"><span id="local-6989586621680125234"><span class="annot"><span class="annottext">Double
 HashPSQ NodeId Double NodeId
 HashPSQ NodeId Priority NodeId
 baseQueue :: BiasedQueue -&gt; HashPSQ NodeId Priority NodeId
@@ -337,23 +337,23 @@ biasProbability :: Double
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#baseQueue"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
 </span><span id="line-93"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeId
 </span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Priority
-</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680133671"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133671"><span class="hs-identifier hs-var hs-var">nodeIdBiased</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId -&gt; Maybe (NodeId, Priority, NodeId)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680125238"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125238"><span class="hs-identifier hs-var hs-var">nodeIdBiased</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId -&gt; Maybe (NodeId, Priority, NodeId)
 forall k p v.
 (Hashable k, Ord k, Ord p) =&gt;
 HashPSQ k p v -&gt; Maybe (k, p, v)
 </span><span class="hs-identifier hs-var">PSQ.findMin</span></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Priority NodeId
-</span><a href="#local-6989586621680133665"><span class="hs-identifier hs-var">baseQueue</span></a></span><span>
+</span><a href="#local-6989586621680125232"><span class="hs-identifier hs-var">baseQueue</span></a></span><span>
 </span><span id="line-94"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeId
 </span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Double
-</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680133676"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133676"><span class="hs-identifier hs-var hs-var">nodeIdRandom</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId -&gt; Maybe (NodeId, Double, NodeId)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680125243"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125243"><span class="hs-identifier hs-var hs-var">nodeIdRandom</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId -&gt; Maybe (NodeId, Double, NodeId)
 forall k p v.
 (Hashable k, Ord k, Ord p) =&gt;
 HashPSQ k p v -&gt; Maybe (k, p, v)
 </span><span class="hs-identifier hs-var">PSQ.findMin</span></span><span> </span><span class="annot"><span class="annottext">HashPSQ NodeId Double NodeId
-</span><a href="#local-6989586621680133666"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span>
-</span><span id="line-95"></span><span>  </span><span id="local-6989586621680133677"><span class="annot"><a href="#local-6989586621680133677"><span class="hs-identifier hs-var">randVar</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Double, Double) -&gt; AtomicGenM StdGen -&gt; IO Double
+</span><a href="#local-6989586621680125233"><span class="hs-identifier hs-var">simpleQueue</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621680125244"><span class="annot"><a href="#local-6989586621680125244"><span class="hs-identifier hs-var">randVar</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Double, Double) -&gt; AtomicGenM StdGen -&gt; IO Double
 forall a g (m :: * -&gt; *).
 (UniformRange a, StatefulGen g m) =&gt;
 (a, a) -&gt; g -&gt; m a
@@ -363,15 +363,15 @@ StatefulGen g m =&gt;
 </span><span class="hs-identifier hs-var">uniformRM</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
 </span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Double
 </span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AtomicGenM StdGen
-</span><a href="#local-6989586621680133663"><span class="hs-identifier hs-var">randGen</span></a></span><span>
-</span><span id="line-96"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680133679"><span class="annot"><a href="#local-6989586621680133679"><span class="hs-identifier hs-var hs-var">pickBiased</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133677"><span class="hs-identifier hs-var">randVar</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+</span><a href="#local-6989586621680125230"><span class="hs-identifier hs-var">randGen</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680125246"><span class="annot"><a href="#local-6989586621680125246"><span class="hs-identifier hs-var hs-var">pickBiased</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621680125244"><span class="hs-identifier hs-var">randVar</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
 forall a. Ord a =&gt; a -&gt; a -&gt; Bool
 </span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Double
-</span><a href="#local-6989586621680133667"><span class="hs-identifier hs-var">biasProbability</span></a></span><span>
-</span><span id="line-97"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680133681"><span class="annot"><a href="#local-6989586621680133681"><span class="hs-identifier hs-var hs-var">nodeId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
-</span><a href="#local-6989586621680133679"><span class="hs-identifier hs-var">pickBiased</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133671"><span class="hs-identifier hs-var">nodeIdBiased</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680133676"><span class="hs-identifier hs-var">nodeIdRandom</span></a></span><span>
-</span><span id="line-98"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680133681"><span class="hs-identifier hs-type">nodeId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621680133679"><span class="hs-identifier hs-type">pickBiased</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#delete"><span class="hs-identifier hs-type">delete</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680133681"><span class="hs-identifier hs-type">nodeId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680133664"><span class="hs-identifier hs-type">queue</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621680125234"><span class="hs-identifier hs-var">biasProbability</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680125248"><span class="annot"><a href="#local-6989586621680125248"><span class="hs-identifier hs-var hs-var">nodeId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680125246"><span class="hs-identifier hs-var">pickBiased</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125238"><span class="hs-identifier hs-var">nodeIdBiased</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680125243"><span class="hs-identifier hs-var">nodeIdRandom</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621680125248"><span class="hs-identifier hs-type">nodeId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621680125246"><span class="hs-identifier hs-type">pickBiased</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.html#delete"><span class="hs-identifier hs-type">delete</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680125248"><span class="hs-identifier hs-type">nodeId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680125231"><span class="hs-identifier hs-type">queue</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-99"></span></pre></body></html>
