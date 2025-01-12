@@ -63,6 +63,10 @@ executables:
     source-dirs: arith
     main: Main.hs
     dependencies: grisette-synth-lib
+  arith-sum:
+    source-dirs: arith-sum
+    main: Main.hs
+    dependencies: grisette-synth-lib
   control:
     source-dirs: control
     main: Main.hs

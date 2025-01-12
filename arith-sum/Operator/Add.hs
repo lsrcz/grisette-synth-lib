@@ -1,0 +1,76 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
+
+module Operator.Add (Add (..), add) where
+
+import qualified Data.HashSet as HS
+import Data.List ((\\))
+import EvalMode (MonadEvalContext)
+import Grisette
+  ( LogicalOp (false),
+    PPrint (pformat),
+    allClasses0,
+    deriveGADT,
+    mrgReturn,
+    pprintClasses,
+  )
+import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Operator.OpReachableSymbols
+  ( OpReachableSymbols (opReachableSymbols),
+  )
+import Grisette.Lib.Synth.Operator.OpSemantics
+  ( DefaultSem,
+    OpSemantics (applyOp),
+    pureBinaryOp,
+  )
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( DefaultType,
+    OpTyping (OpTypeType, typeOp),
+    binaryDefaultType,
+    simpleTyping,
+  )
+import Grisette.Lib.Synth.Program.ComponentSketch
+  ( OpSymmetryReduction (opCommutativeArgPos, opUnreorderable),
+  )
+import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments))
+import Grisette.Lib.Synth.Program.Sum (type (:<:) (inj))
+import Grisette.Unified (GetInteger)
+
+data Add = Add
+
+add :: (Add :<: op) => op
+add = inj Add
+
+deriveGADT [''Add] (allClasses0 \\ pprintClasses)
+
+instance (MonadContext ctx) => OpTyping Add ctx where
+  type OpTypeType Add = DefaultType
+  typeOp = simpleTyping $ const binaryDefaultType
+
+instance
+  (MonadEvalContext mode ctx, i ~ GetInteger mode) =>
+  OpSemantics DefaultSem Add i ctx
+  where
+  applyOp _ _ Add = pureBinaryOp "Add" (+)
+
+instance PPrint Add where
+  pformat Add = "add"
+
+instance OpPPrint Add where
+  describeArguments Add = Right [Just "lhs", Just "rhs"]
+
+instance OpSymmetryReduction Add where
+  opUnreorderable _ _ = false
+  opCommutativeArgPos Add = mrgReturn [[0, 1]]
+
+instance OpReachableSymbols Add where
+  opReachableSymbols _ = HS.empty

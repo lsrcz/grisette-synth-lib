@@ -58,7 +58,7 @@ library
     Grisette.Lib.Synth.Program.ProgToDot
     Grisette.Lib.Synth.Program.ProgTyping
     Grisette.Lib.Synth.Program.ProgUtil
-    Grisette.Lib.Synth.Program.SumProg
+    Grisette.Lib.Synth.Program.Sum
     Grisette.Lib.Synth.Program.SymbolTable
     Grisette.Lib.Synth.Reasoning.Fuzzing
     Grisette.Lib.Synth.Reasoning.IOPair
@@ -138,6 +138,59 @@ executable arith
     Paths_grisette_synth_lib
 
   hs-source-dirs:   arith
+  ghc-options:
+    -Wextra -Wcompat -Widentities -Wincomplete-record-updates
+    -Wmissing-export-lists -Wmissing-home-modules
+    -Wmissing-import-lists -Wpartial-fields -Wunused-type-patterns
+    -Wno-x-partial -Wno-unrecognised-warning-flags
+
+  build-depends:
+      ansi-terminal
+    , async
+    , base                             >=4.14        && <5
+    , binary
+    , bytes
+    , bytestring
+    , cereal
+    , Chart                            >=1.9.3       && <1.10
+    , Chart-cairo                      >=1.9.3       && <1.10
+    , containers
+    , deepseq
+    , extra
+    , graphviz                         >=2999.20.0.4 && <3000
+    , grisette                         >=0.11        && <0.12
+    , grisette-synth-lib
+    , hashable                         >=1.3         && <1.6
+    , hslogger
+    , mtl                              >=2.2.2       && <2.4
+    , ordered-containers               >=0.2.3       && <0.3
+    , prettyprinter                    >=1.5         && <1.8
+    , psqueues
+    , QuickCheck                       >=2.14.1      && <2.16
+    , quickcheck-with-counterexamples  >=1.2         && <1.3
+    , random                           >=1.2         && <1.3
+    , safe-exceptions
+    , sbv                              >=8.17        && <12
+    , stm
+    , template-haskell
+    , text                             >=1.2.4.1     && <2.2
+    , time
+    , unix
+    , unordered-containers             >=0.2.11      && <0.3
+
+  default-language: Haskell2010
+
+executable arith-sum
+  main-is:          Main.hs
+  other-modules:
+    Arith
+    EvalMode
+    Operator.Add
+    Operator.AddImm
+    Operator.Mul
+    Paths_grisette_synth_lib
+
+  hs-source-dirs:   arith-sum
   ghc-options:
     -Wextra -Wcompat -Widentities -Wincomplete-record-updates
     -Wmissing-export-lists -Wmissing-home-modules

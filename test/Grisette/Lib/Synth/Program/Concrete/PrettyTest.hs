@@ -20,7 +20,7 @@ import Grisette.Lib.Synth.Program.Concrete
     prettyStmt,
   )
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
-import Grisette.Lib.Synth.Program.SumProg (SumProg (SumProgL, SumProgR))
+import Grisette.Lib.Synth.Program.Sum ((:|) (InLeft, InRight))
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   ( TestPrettyExtOp (TestPrettyExtOp),
@@ -286,9 +286,9 @@ prettyTest =
                 [ProgRes 2 PrettyType1]
         let table =
               SymbolTable
-                [ ("ext", SumProgL progExt),
-                  ("prog1", SumProgR prog1),
-                  ("prog2", SumProgR prog2)
+                [ ("ext", InLeft progExt),
+                  ("prog1", InRight prog1),
+                  ("prog2", InRight prog2)
                 ]
         let doc = pformat table
         [ testCase "loose" $ do

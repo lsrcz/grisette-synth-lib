@@ -1,0 +1,84 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
+
+module Operator.AddImm (AddImm (..), addImm) where
+
+import qualified Data.HashSet as HS
+import Data.List ((\\))
+import EvalMode (EvalMode, MonadEvalContext, deriveGADTWithEvalMode)
+import Grisette
+  ( LogicalOp (false),
+    PPrint (pformat),
+    ToSym (toSym),
+    allClasses0,
+    mrgReturn,
+    pprintClasses,
+  )
+import Grisette.Lib.Synth.Operator.OpReachableSymbols
+  ( OpReachableSymbols (opReachableSymbols),
+  )
+import Grisette.Lib.Synth.Operator.OpSemantics
+  ( DefaultSem,
+    OpSemantics (applyOp),
+    pureUnaryOp,
+  )
+import Grisette.Lib.Synth.Operator.OpTyping
+  ( DefaultType,
+    OpTyping (OpTypeType, typeOp),
+    simpleTyping,
+    unaryDefaultType,
+  )
+import Grisette.Lib.Synth.Program.ComponentSketch
+  ( OpSymmetryReduction (opCommutativeArgPos, opUnreorderable),
+  )
+import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments))
+import Grisette.Lib.Synth.Program.Sum (type (:<:) (inj))
+import Grisette.Unified
+  ( EvalModeConvertible (withModeConvertible),
+    EvalModeTag (C),
+    GetInteger,
+  )
+
+newtype AddImm mode = AddImm (GetInteger mode)
+
+addImm :: (AddImm mode :<: op) => GetInteger mode -> op
+addImm = inj . AddImm
+
+deriveGADTWithEvalMode [''AddImm] (allClasses0 \\ pprintClasses)
+
+instance (MonadEvalContext mode ctx) => OpTyping (AddImm mode) ctx where
+  type OpTypeType (AddImm mode) = DefaultType
+  typeOp = simpleTyping $ const unaryDefaultType
+
+instance
+  ( MonadEvalContext mode ctx,
+    i ~ GetInteger mode1,
+    EvalMode mode1,
+    EvalModeConvertible mode mode1
+  ) =>
+  OpSemantics DefaultSem (AddImm mode) i ctx
+  where
+  applyOp _ _ (AddImm i) =
+    pureUnaryOp "Add" (+ withModeConvertible @mode @mode1 (toSym i) (toSym i))
+
+instance PPrint (AddImm 'C) where
+  pformat (AddImm v) = "add[imm=" <> pformat v <> "]"
+
+instance OpPPrint (AddImm 'C) where
+  describeArguments (AddImm _) = Right [Just "lhs"]
+
+instance OpSymmetryReduction (AddImm mode) where
+  opUnreorderable _ _ = false
+  opCommutativeArgPos (AddImm _) = mrgReturn []
+
+instance OpReachableSymbols (AddImm mode) where
+  opReachableSymbols _ = HS.empty
