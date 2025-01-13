@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
     Grisette.Lib.Synth.Context
+    Grisette.Lib.Synth.Operator.OpParser
     Grisette.Lib.Synth.Operator.OpReachableSymbols
     Grisette.Lib.Synth.Operator.OpSemantics
     Grisette.Lib.Synth.Operator.OpTyping
@@ -53,6 +54,7 @@ library
     Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel
     Grisette.Lib.Synth.Program.NullProg
     Grisette.Lib.Synth.Program.ProgCost
+    Grisette.Lib.Synth.Program.ProgParser
     Grisette.Lib.Synth.Program.ProgPPrint
     Grisette.Lib.Synth.Program.ProgSemantics
     Grisette.Lib.Synth.Program.ProgToDot
@@ -80,9 +82,11 @@ library
     Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.TreeStats
     Grisette.Lib.Synth.Reasoning.Synthesis
     Grisette.Lib.Synth.Reasoning.Verification
+    Grisette.Lib.Synth.Type.TypeParser
     Grisette.Lib.Synth.TypeSignature
     Grisette.Lib.Synth.Util.Exception
     Grisette.Lib.Synth.Util.Logging
+    Grisette.Lib.Synth.Util.Parser
     Grisette.Lib.Synth.Util.Pretty
     Grisette.Lib.Synth.Util.Serialize
     Grisette.Lib.Synth.Util.Show
@@ -113,8 +117,10 @@ library
     , grisette                         >=0.11        && <0.12
     , hashable                         >=1.3         && <1.6
     , hslogger
+    , megaparsec
     , mtl                              >=2.2.2       && <2.4
     , ordered-containers               >=0.2.3       && <0.3
+    , parser-combinators
     , prettyprinter                    >=1.5         && <1.8
     , psqueues
     , QuickCheck                       >=2.14.1      && <2.16
@@ -162,8 +168,10 @@ executable arith
     , grisette-synth-lib
     , hashable                         >=1.3         && <1.6
     , hslogger
+    , megaparsec
     , mtl                              >=2.2.2       && <2.4
     , ordered-containers               >=0.2.3       && <0.3
+    , parser-combinators
     , prettyprinter                    >=1.5         && <1.8
     , psqueues
     , QuickCheck                       >=2.14.1      && <2.16
@@ -215,8 +223,10 @@ executable arith-sum
     , grisette-synth-lib
     , hashable                         >=1.3         && <1.6
     , hslogger
+    , megaparsec
     , mtl                              >=2.2.2       && <2.4
     , ordered-containers               >=0.2.3       && <0.3
+    , parser-combinators
     , prettyprinter                    >=1.5         && <1.8
     , psqueues
     , QuickCheck                       >=2.14.1      && <2.16
@@ -268,8 +278,10 @@ executable control
     , grisette-synth-lib
     , hashable                         >=1.3         && <1.6
     , hslogger
+    , megaparsec
     , mtl                              >=2.2.2       && <2.4
     , ordered-containers               >=0.2.3       && <0.3
+    , parser-combinators
     , prettyprinter                    >=1.5         && <1.8
     , psqueues
     , QuickCheck                       >=2.14.1      && <2.16
@@ -318,6 +330,7 @@ test-suite spec
     Grisette.Lib.Synth.Program.Concrete.FlattenTest
     Grisette.Lib.Synth.Program.Concrete.GenSymSimpleTest
     Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest
+    Grisette.Lib.Synth.Program.Concrete.ParserTest
     Grisette.Lib.Synth.Program.Concrete.PartitionTest
     Grisette.Lib.Synth.Program.Concrete.PrettyTest
     Grisette.Lib.Synth.Program.Concrete.ProgCostTest
@@ -367,8 +380,10 @@ test-suite spec
     , hashable                         >=1.3         && <1.6
     , hslogger
     , HUnit                            >=1.6
+    , megaparsec
     , mtl                              >=2.2.2       && <2.4
     , ordered-containers               >=0.2.3       && <0.3
+    , parser-combinators
     , prettyprinter                    >=1.5         && <1.8
     , psqueues
     , QuickCheck                       >=2.14.1      && <2.16

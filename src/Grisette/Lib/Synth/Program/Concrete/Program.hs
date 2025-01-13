@@ -9,6 +9,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -47,6 +48,7 @@ module Grisette.Lib.Synth.Program.Concrete.Program
   )
 where
 
+import Control.Applicative ((<|>))
 import Control.Monad (when)
 import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.State
@@ -95,12 +97,18 @@ import Grisette
     tryMerge,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Operator.OpParser (OpParser (opParser))
 import Grisette.Lib.Synth.Operator.OpReachableSymbols
   ( OpReachableSymbols (opReachableSymbols),
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType))
-import Grisette.Lib.Synth.Program.Choice.Split (LowestSeqNum (lowestSeqNum), PartitionSpec (partitionSpec), lowestSeqNumList, partitionSpecList)
+import Grisette.Lib.Synth.Program.Choice.Split
+  ( LowestSeqNum (lowestSeqNum),
+    PartitionSpec (partitionSpec),
+    lowestSeqNumList,
+    partitionSpecList,
+  )
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( OpPPrint (pformatOp),
     OpPPrintError,
@@ -121,6 +129,7 @@ import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
 import Grisette.Lib.Synth.Program.ProgPPrint
   ( ProgPPrint (pformatProg),
   )
+import Grisette.Lib.Synth.Program.ProgParser (ProgParser (progParser))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgToDot
   ( ProgToDot (toDotProg),
@@ -154,8 +163,17 @@ import Grisette.Lib.Synth.Program.SymbolTable
   ( ProgReachableSymbols (progReachableSymbols),
     SymbolTable (SymbolTable),
   )
+import Grisette.Lib.Synth.Type.TypeParser (TypeParser (typeParser))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
+  )
+import Grisette.Lib.Synth.Util.Parser
+  ( CharParser,
+    colon,
+    identifier,
+    parenCommaSep,
+    parenCommaSepOrSingleton,
+    symbol,
   )
 import Grisette.Lib.Synth.Util.Pretty
   ( Doc,
@@ -169,6 +187,7 @@ import Grisette.Lib.Synth.Util.Pretty
   )
 import Grisette.Lib.Synth.Util.Show (showAsText)
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
+import Text.Megaparsec (MonadParsec (try))
 
 data Stmt op varId = Stmt
   { stmtOp :: op,
@@ -642,3 +661,91 @@ instance
       goStmt (Stmt op argIds resIds) = do
         newOp <- simpleFresh op
         return $ Stmt newOp argIds resIds
+
+-- Parsing
+
+progArgParser ::
+  (Num varId, TypeParser ty, CharParser e s m) => varId -> m (ProgArg varId ty)
+progArgParser n = do
+  i <- identifier
+  colon
+  ProgArg i n <$> typeParser
+
+progArgListParser ::
+  (Num varId, TypeParser ty, CharParser e s m) =>
+  m ([ProgArg varId ty], HM.HashMap T.Text varId)
+progArgListParser = do
+  r <- parenCommaSep (progArgParser 0)
+  let refined =
+        zipWith
+          (\i (ProgArg n _ t) -> ProgArg n i t)
+          (fromIntegral <$> [0 ..])
+          r
+  let map = HM.fromList [(progArgName a, progArgId a) | a <- refined]
+  return (refined, map)
+
+progRetTypeListParser :: (TypeParser ty, CharParser e s m) => m [ty]
+progRetTypeListParser = parenCommaSepOrSingleton typeParser
+
+mapLookup ::
+  (CharParser e s m) =>
+  HM.HashMap T.Text varId -> [T.Text] -> m [varId]
+mapLookup _ [] = return []
+mapLookup map (i : is) = case HM.lookup i map of
+  Just v -> (v :) <$> mapLookup map is
+  Nothing -> fail $ "Unknown argument name: " <> T.unpack i
+
+argListParser :: (CharParser e s m) => HM.HashMap T.Text varId -> m [varId]
+argListParser map = do
+  r <- parenCommaSep identifier
+  mapLookup map r
+
+resListParser ::
+  (CharParser e s m, Num varId) =>
+  HM.HashMap T.Text varId -> m ([varId], HM.HashMap T.Text varId)
+resListParser map = do
+  r <- parenCommaSepOrSingleton identifier
+  let l = take (length r) $ fromIntegral <$> [(HM.size map) ..]
+  return (l, HM.union map $ HM.fromList $ zip r l)
+
+stmtParser ::
+  (CharParser e s m, Num varId, OpParser op) =>
+  HM.HashMap T.Text varId -> m (Stmt op varId, HM.HashMap T.Text varId)
+stmtParser map = do
+  (resList, newMap) <- resListParser map
+  symbol "="
+  op <- opParser
+  argList <- argListParser map
+  return (Stmt op argList resList, newMap)
+
+progResListParser ::
+  (CharParser e s m) =>
+  [ty] ->
+  HM.HashMap T.Text varId ->
+  m [ProgRes varId ty]
+progResListParser types map = do
+  symbol "return"
+  r <- parenCommaSepOrSingleton identifier
+  lst <- mapLookup map r
+  when (length lst /= length types) $ fail "Mismatched return types"
+  return $ zipWith ProgRes lst types
+
+instance
+  (OpParser op, TypeParser ty, Num varId) =>
+  ProgParser (Prog op varId ty)
+  where
+  progParser = do
+    symbol "def"
+    name <- identifier
+    (progArgList, map) <- progArgListParser
+    symbol "->"
+    progResTypeList <- progRetTypeListParser
+    symbol ":"
+    let goResList map = ([],) <$> progResListParser progResTypeList map
+    let go map =
+          try (goResList map) <|> do
+            (stmt, newMap) <- stmtParser map
+            (remainingStmtList, resList) <- go newMap
+            return (stmt : remainingStmtList, resList)
+    (stmtList, resList) <- go map
+    return (name, Prog progArgList stmtList resList)

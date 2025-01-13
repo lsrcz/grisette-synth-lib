@@ -10,6 +10,8 @@
 
 module Grisette.Lib.Synth.Program.Sum ((:|) (..), (:<:) (..)) where
 
+import Control.Applicative ((<|>))
+import Data.Bifunctor (Bifunctor (second))
 import Data.Functor.Classes
   ( Show1 (liftShowsPrec),
     Show2 (liftShowsPrec2),
@@ -30,6 +32,7 @@ import Grisette
     pprintClasses,
     showClasses,
   )
+import Grisette.Lib.Synth.Operator.OpParser (OpParser (opParser))
 import Grisette.Lib.Synth.Operator.OpReachableSymbols
   ( OpReachableSymbols (opReachableSymbols),
   )
@@ -57,6 +60,7 @@ import Grisette.Lib.Synth.Program.Concrete.Program
   )
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost))
 import Grisette.Lib.Synth.Program.ProgCost (ProgCost (progCost))
+import Grisette.Lib.Synth.Program.ProgParser (ProgParser (progParser))
 import Grisette.Lib.Synth.Program.ProgSemantics (ProgSemantics (runProg))
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
 import Grisette.Lib.Synth.Program.ProgUtil
@@ -84,6 +88,8 @@ import Grisette.Lib.Synth.Program.ProgUtil
       ),
   )
 import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols))
+import Grisette.Lib.Synth.Type.TypeParser (TypeParser (typeParser))
+import Text.Megaparsec (try)
 
 data (:|) l r = InLeft l | InRight r deriving (Generic)
 
@@ -339,3 +345,25 @@ instance
   where
   progReachableSymbols (InLeft l) = progReachableSymbols l
   progReachableSymbols (InRight r) = progReachableSymbols r
+
+instance
+  {-# OVERLAPPABLE #-}
+  (OpParser l, OpParser r) =>
+  OpParser ((:|) l r)
+  where
+  opParser = try (InLeft <$> opParser) <|> try (InRight <$> opParser)
+
+instance
+  {-# OVERLAPPABLE #-}
+  (TypeParser l, TypeParser r) =>
+  TypeParser ((:|) l r)
+  where
+  typeParser = try (InLeft <$> typeParser) <|> try (InRight <$> typeParser)
+
+instance
+  {-# OVERLAPPABLE #-}
+  (ProgParser l, ProgParser r) =>
+  ProgParser ((:|) l r)
+  where
+  progParser =
+    try (second InLeft <$> progParser) <|> try (second InRight <$> progParser)

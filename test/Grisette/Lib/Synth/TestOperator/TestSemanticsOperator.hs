@@ -20,6 +20,7 @@ module Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   )
 where
 
+import Control.Applicative (Alternative ((<|>)))
 import Control.DeepSeq (NFData (rnf))
 import Control.Exception (ArithException)
 import Control.Monad (when)
@@ -39,6 +40,7 @@ import Grisette
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Control.Monad.Except (mrgThrowError)
 import Grisette.Lib.Synth.Context (MonadContext)
+import Grisette.Lib.Synth.Operator.OpParser (OpParser (opParser))
 import Grisette.Lib.Synth.Operator.OpReachableSymbols
   ( OpReachableSymbols (opReachableSymbols),
   )
@@ -60,10 +62,13 @@ import Grisette.Lib.Synth.Program.Concrete.Flatten
   ( OpFlatten (opForwardedSubProg),
   )
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost))
+import Grisette.Lib.Synth.Type.TypeParser (TypeParser (typeParser))
 import Grisette.Lib.Synth.TypeSignature
   ( TypeSignature (TypeSignature),
   )
+import Grisette.Lib.Synth.Util.Parser (symbol)
 import Grisette.Lib.Synth.Util.Show (showAsText)
+import Text.Megaparsec (MonadParsec (try))
 
 data TestSemanticsOp = Add | DivMod | Inc | Double deriving (Generic)
 
@@ -76,6 +81,13 @@ instance OpPPrint TestSemanticsOp where
   pformatOp DivMod = "divmod"
   pformatOp Inc = "inc"
   pformatOp Double = "double"
+
+instance OpParser TestSemanticsOp where
+  opParser =
+    try (symbol "add" >> return Add)
+      <|> try (symbol "divmod" >> return DivMod)
+      <|> try (symbol "inc" >> return Inc)
+      <|> try (symbol "double" >> return Double)
 
 instance GenSymSimple TestSemanticsOp TestSemanticsOp where
   simpleFresh = return
@@ -101,6 +113,9 @@ instance NFData TestSemanticsObj where
 data TestSemanticsType = IntType deriving (Generic)
 
 deriveGADT [''TestSemanticsType] allClasses0
+
+instance TypeParser TestSemanticsType where
+  typeParser = try (symbol "IntType") >> return IntType
 
 instance GenSymSimple TestSemanticsType TestSemanticsType where
   simpleFresh = return
