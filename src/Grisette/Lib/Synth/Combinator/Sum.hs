@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Grisette.Lib.Synth.Program.Sum ((:|) (..), (:<:) (..)) where
+module Grisette.Lib.Synth.Combinator.Sum ((:|) (..), (:<:) (..)) where
 
 import Control.Applicative ((<|>))
 import Data.Bifunctor (Bifunctor (second))
@@ -20,7 +20,8 @@ import Data.Functor.Classes
 import Data.List ((\\))
 import GHC.Generics (Generic)
 import Grisette
-  ( GenSymSimple (simpleFresh),
+  ( GenSym (fresh),
+    GenSymSimple (simpleFresh),
     LogicalOp (true),
     PPrint (pformatList, pformatPrec),
     PPrint1 (liftPFormatPrec),
@@ -28,10 +29,12 @@ import Grisette
     ToCon (toCon),
     allClasses012,
     deriveGADT,
+    mrgFmap,
     pformatPrec1,
     pprintClasses,
     showClasses,
   )
+import Grisette.Lib.Synth.Combinator.Embed ((:<:) (inj, prj))
 import Grisette.Lib.Synth.Operator.OpParser (OpParser (opParser))
 import Grisette.Lib.Synth.Operator.OpReachableSymbols
   ( OpReachableSymbols (opReachableSymbols),
@@ -50,7 +53,9 @@ import Grisette.Lib.Synth.Program.ComponentSketch
   ( OpSymmetryReduction (opCommutativeArgPos, opUnreorderable),
   )
 import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments))
-import Grisette.Lib.Synth.Program.Concrete.Flatten (OpFlatten (opForwardedSubProg))
+import Grisette.Lib.Synth.Program.Concrete.Flatten
+  ( OpFlatten (opForwardedSubProg),
+  )
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
   ( OpPPrint (pformatOp, prefixResults),
   )
@@ -87,7 +92,9 @@ import Grisette.Lib.Synth.Program.ProgUtil
         getStmtResIds
       ),
   )
-import Grisette.Lib.Synth.Program.SymbolTable (ProgReachableSymbols (progReachableSymbols))
+import Grisette.Lib.Synth.Program.SymbolTable
+  ( ProgReachableSymbols (progReachableSymbols),
+  )
 import Grisette.Lib.Synth.Type.TypeParser (TypeParser (typeParser))
 import Text.Megaparsec (try)
 
@@ -120,14 +127,6 @@ instance (PPrint l) => PPrint1 ((:|) l) where
 
 instance (PPrint l, PPrint r) => PPrint ((:|) l r) where
   pformatPrec = pformatPrec1
-
-class sub :<: sup where
-  inj :: sub -> sup
-  prj :: sup -> Maybe sub
-
-instance {-# OVERLAPPING #-} a :<: a where
-  inj = id
-  prj = Just
 
 instance {-# OVERLAPPING #-} a :<: (a :| b) where
   inj = InLeft
@@ -252,6 +251,10 @@ instance (PartitionSpec l, PartitionSpec r) => PartitionSpec ((:|) l r) where
   partitionSpec seqNum (InRight r) =
     [InRight r | r <- partitionSpec seqNum r]
 
+instance (GenSym l0 l1, GenSym r0 r1) => GenSym ((:|) l0 r0) ((:|) l1 r1) where
+  fresh (InLeft l) = mrgFmap InLeft <$> fresh l
+  fresh (InRight r) = mrgFmap InRight <$> fresh r
+
 instance
   (GenSymSimple l0 l1, GenSymSimple r0 r1) =>
   GenSymSimple ((:|) l0 r0) ((:|) l1 r1)
@@ -288,7 +291,6 @@ instance
   opReachableSymbols (InRight r) = opReachableSymbols r
 
 instance
-  {-# OVERLAPPABLE #-}
   (OpSymmetryReduction l, OpSymmetryReduction r) =>
   OpSymmetryReduction ((:|) l r)
   where
@@ -347,21 +349,18 @@ instance
   progReachableSymbols (InRight r) = progReachableSymbols r
 
 instance
-  {-# OVERLAPPABLE #-}
   (OpParser l, OpParser r) =>
   OpParser ((:|) l r)
   where
   opParser = try (InLeft <$> opParser) <|> try (InRight <$> opParser)
 
 instance
-  {-# OVERLAPPABLE #-}
   (TypeParser l, TypeParser r) =>
   TypeParser ((:|) l r)
   where
   typeParser = try (InLeft <$> typeParser) <|> try (InRight <$> typeParser)
 
 instance
-  {-# OVERLAPPABLE #-}
   (ProgParser l, ProgParser r) =>
   ProgParser ((:|) l r)
   where

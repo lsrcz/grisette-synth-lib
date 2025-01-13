@@ -23,6 +23,7 @@ import Grisette
     mrgReturn,
     pprintClasses,
   )
+import Grisette.Lib.Synth.Combinator.Sum (type (:<:) (inj))
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpReachableSymbols
   ( OpReachableSymbols (opReachableSymbols),
@@ -42,7 +43,6 @@ import Grisette.Lib.Synth.Program.ComponentSketch
   ( OpSymmetryReduction (opCommutativeArgPos, opUnreorderable),
   )
 import Grisette.Lib.Synth.Program.Concrete (OpPPrint (describeArguments))
-import Grisette.Lib.Synth.Program.Sum (type (:<:) (inj))
 import Grisette.Unified (GetInteger)
 
 data Mul = Mul

@@ -5,6 +5,7 @@
 module Grisette.Lib.Synth.Program.Concrete.ParserTest (parserTest) where
 
 import Data.Void (Void)
+import Grisette.Lib.Synth.Combinator.Sum (type (:<:) (inj), type (:|))
 import Grisette.Lib.Synth.Operator.OpParser (OpParser (opParser))
 import Grisette.Lib.Synth.Program.Concrete
   ( Prog (Prog),
@@ -13,7 +14,6 @@ import Grisette.Lib.Synth.Program.Concrete
     Stmt (Stmt),
   )
 import Grisette.Lib.Synth.Program.ProgParser (progTableParser)
-import Grisette.Lib.Synth.Program.Sum (type (:<:) (inj), type (:|))
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (Add, Double, Inc),

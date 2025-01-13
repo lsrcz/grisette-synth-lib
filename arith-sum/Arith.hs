@@ -10,10 +10,10 @@
 module Arith (Op, ConProg, Sketch) where
 
 import Grisette (SymInteger)
+import Grisette.Lib.Synth.Combinator.Sum (type (:|))
 import Grisette.Lib.Synth.Operator.OpTyping (DefaultType)
 import qualified Grisette.Lib.Synth.Program.ComponentSketch as Component
 import qualified Grisette.Lib.Synth.Program.Concrete as Concrete
-import Grisette.Lib.Synth.Program.Sum (type (:|))
 import Grisette.Unified (EvalModeTag (C, S))
 import Operator.Add (Add)
 import Operator.AddImm (AddImm)

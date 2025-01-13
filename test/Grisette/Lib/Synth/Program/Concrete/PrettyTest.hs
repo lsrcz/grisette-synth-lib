@@ -8,6 +8,7 @@ import Control.Monad.State (StateT (runStateT))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
 import Grisette (PPrint (pformat))
+import Grisette.Lib.Synth.Combinator.Sum ((:|) (InLeft, InRight))
 import Grisette.Lib.Synth.Program.Concrete
   ( OpPPrintError (RedefinedResult, UndefinedArgument),
     Prog (Prog),
@@ -20,7 +21,6 @@ import Grisette.Lib.Synth.Program.Concrete
     prettyStmt,
   )
 import Grisette.Lib.Synth.Program.ProgTyping (ProgTyping (typeProg))
-import Grisette.Lib.Synth.Program.Sum ((:|) (InLeft, InRight))
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable (SymbolTable))
 import Grisette.Lib.Synth.TestOperator.TestPrettyOperator
   ( TestPrettyExtOp (TestPrettyExtOp),
