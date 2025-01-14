@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
     Grisette.Lib.Synth.Combinator.Embed
+    Grisette.Lib.Synth.Combinator.Invoke
     Grisette.Lib.Synth.Combinator.Null
     Grisette.Lib.Synth.Combinator.Sum
     Grisette.Lib.Synth.Context
