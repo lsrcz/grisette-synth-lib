@@ -64,6 +64,7 @@ import Grisette
     LogicalOp (true),
     Mergeable,
     PPrint (pformat),
+    SMTConfig (transcript),
     Solvable (con),
     Solver,
     SolvingFailure,
@@ -670,8 +671,22 @@ runRequestInSubProcess config processConfig@ProcessConfig {..} = do
               slowTrackSynthStep solver processConfig stateRef
             TerminationStep -> error "Should not happen"
           unless (isTerminationStep nextStep) $ loop solver nextStep
-    withSolver config {sbvConfig = sbvConfig config} $ \solver ->
-      loop solver InitialStep
+    let NodeId nid = nodeId
+    withSolver
+      config
+        { sbvConfig =
+            (sbvConfig config)
+              { transcript =
+                  if transcriptSMT
+                    then
+                      Just $
+                        logRootDir logConfig <> "/" <> show nid <> ".smt2"
+                    else
+                      Nothing
+              }
+        }
+      $ \solver ->
+        loop solver InitialStep
   closeFd rdChild
   closeFd wrChild
   pgidBs <- readByteString rdHost 8
