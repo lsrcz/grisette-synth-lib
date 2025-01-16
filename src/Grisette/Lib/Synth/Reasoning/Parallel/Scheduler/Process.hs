@@ -507,7 +507,7 @@ _solverRunSynthRequest
           SynthesisBoundCostTask
             { synthesisVerifiers =
                 fastTrackVerifiers
-                  ++ (if isFastTrack then slowTrackVerifiers else []),
+                  ++ (if isFastTrack then [] else slowTrackVerifiers),
               synthesisSymCostObj = costObj,
               synthesisSketchTable = sketch,
               synthesisSketchSymbol = sketchSymbol,
