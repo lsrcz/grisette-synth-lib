@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( NodeStatus (..),
@@ -7,18 +8,12 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
     nodeStatusIsRunning,
     nodeStatusIsNotYetStarted,
     nodeStatusBestProgWithCost,
-    nodeStatusIsFastTrackViable,
-    nodeStatusIsFastTrackRefining,
-    nodeStatusIsFastTrackEasySynthFailure,
-    nodeStatusIsSlowTrackRefining,
-    nodeStatusIsFastSuccess,
-    nodeStatusIsSlowSuccess,
-    nodeStatusIsFastUnsat,
-    nodeStatusIsSlowUnsat,
-    nodeStatusIsFastUnknown,
-    nodeStatusIsSlowUnknown,
-    nodeStatusIsFastTerminated,
-    nodeStatusIsSlowTerminated,
+    nodeStatusIsViable,
+    nodeStatusIsRefining,
+    nodeStatusIsSuccess,
+    nodeStatusIsUnsat,
+    nodeStatusIsUnknown,
+    nodeStatusIsTerminated,
     nodeStatusIsInferredFailure,
     nodeStatusIsJustStarted,
     nodeStatusInferFailureTransition,
@@ -36,33 +31,29 @@ import Grisette.Lib.Synth.Program.Concrete (ProgPPrint)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message
-      ( Failure,
-        FastTrackEasySynthFailure,
-        FastTrackViable,
+      ( EasySynthFailure,
+        Failure,
         GotExample,
-        Success
+        Success,
+        Viable
       ),
     ProcessResponse,
-    Track (FastTrack, SlowTrack),
   )
 import Grisette.Lib.Synth.Util.Show (showAsText)
 
 data NodeStatus conProg
-  = NodeFastTrackViable
-      { _curTrack :: Track,
+  = NodeViable
+      { _curTrack :: Int,
         _viableProg :: SymbolTable conProg
       }
-  | NodeFastTrackEasySynthFailure -- initial examples
-  | NodeFastTrackRefining {_cost :: Int, _prog :: SymbolTable conProg}
-  | NodeSlowTrackRefining {_cost :: Int, _prog :: SymbolTable conProg}
+  | NodeRefining {_curTrack :: Int, _cost :: Int, _prog :: SymbolTable conProg}
   | NodeSucceeded
       { _lastIterErrorMsg :: Maybe T.Text,
-        _track :: Track,
         _cost :: Int,
         _prog :: SymbolTable conProg
       }
-  | NodeFailed {_fastTrackViable :: Bool, _failure :: SolvingFailure}
-  | NodeTerminated {_fastTrackViable :: Bool, _errorMsg :: T.Text}
+  | NodeFailed {_failure :: SolvingFailure}
+  | NodeTerminated {_errorMsg :: T.Text}
   | NodeInferredFailure
   | NodeStarted
   | NodeNotYetStarted
@@ -70,75 +61,59 @@ data NodeStatus conProg
 
 pformatNodeStatusSummary :: NodeStatus conProg -> Doc ann
 pformatNodeStatusSummary NodeInferredFailure = "NodeInferredFailure"
-pformatNodeStatusSummary (NodeTerminated fastTrackViable _) =
-  "NodeTerminated "
-    <> (if fastTrackViable then "(fast track viable) " else "")
+pformatNodeStatusSummary (NodeTerminated _) =
+  "NodeTerminated"
 pformatNodeStatusSummary NodeNotYetStarted = "NodeNotYetStarted"
-pformatNodeStatusSummary (NodeFastTrackRefining cost _) =
-  "NodeFastTrackRefining (cost " <> pformat cost <> ")"
-pformatNodeStatusSummary NodeFastTrackEasySynthFailure =
-  "NodeFastTrackEasySynthFailure"
-pformatNodeStatusSummary (NodeSlowTrackRefining cost _) =
-  "NodeSlowTrackRefining (cost " <> pformat cost <> ")"
-pformatNodeStatusSummary (NodeFastTrackViable track _) =
-  "NodeFastTrackViable (next track: " <> pformat track <> ")"
-pformatNodeStatusSummary (NodeSucceeded maybeCrashMessage track cost _) =
+pformatNodeStatusSummary (NodeRefining track cost _) =
+  "NodeRefining (track "
+    <> pformat track
+    <> ", cost "
+    <> pformat cost
+    <> ")"
+pformatNodeStatusSummary (NodeViable track _) =
+  "NodeViable (track: " <> pformat track <> ")"
+pformatNodeStatusSummary (NodeSucceeded maybeCrashMessage cost _) =
   "NodeSucceeded (cost "
     <> pformat cost
-    <> ", track"
-    <> pformat track
     <> case maybeCrashMessage of
       Nothing -> ")"
       Just _ -> ", not finished)"
-pformatNodeStatusSummary (NodeFailed fastTrackViable r) =
+pformatNodeStatusSummary (NodeFailed r) =
   "NodeFailed "
-    <> (if fastTrackViable then "(fast track viable) " else "")
     <> pformat r
 pformatNodeStatusSummary NodeStarted =
   "NodeStarted"
 
 instance (ProgPPrint conProg) => PPrint (NodeStatus conProg) where
   pformat NodeInferredFailure = "NodeInferredFailure"
-  pformat (NodeTerminated fastTrackViable t) =
+  pformat (NodeTerminated t) =
     "NodeTerminated "
-      <> (if fastTrackViable then "(fast track viable) " else "")
       <> pformat t
   pformat NodeNotYetStarted = "NodeNotYetStarted"
-  pformat (NodeFastTrackRefining cost m) =
+  pformat (NodeRefining track cost m) =
     nest 2 $
       vsep
-        [ "NodeFastTrackRefining (cost "
+        [ "NodeRefining (track "
+            <> pformat track
+            <> ", cost "
             <> pformat cost
             <> ")",
           pformat m
         ]
-  pformat NodeFastTrackEasySynthFailure =
+  pformat (NodeViable track m) =
     nest 2 $
       vsep
-        [ "NodeFastTrackEasySynthFailure"
-        ]
-  pformat (NodeSlowTrackRefining cost m) =
-    nest 2 $
-      vsep
-        [ "NodeSlowTrackRefining (cost "
-            <> pformat cost,
+        [ "NodeViable (track "
+            <> pformat track
+            <> ")",
           pformat m
         ]
-  pformat (NodeFastTrackViable track m) =
-    nest 2 $
-      vsep
-        [ "NodeFastTrackViable ",
-          "Next track is " <> pformat track,
-          pformat m
-        ]
-  pformat (NodeSucceeded maybeCrashMessage track cost m) =
+  pformat (NodeSucceeded maybeCrashMessage cost m) =
     nest 2 $
       vsep $
         concat
           [ [ "NodeSucceeded (cost "
                 <> pformat cost
-                <> ", track"
-                <> pformat track
                 <> ")"
             ],
             case maybeCrashMessage of
@@ -146,19 +121,14 @@ instance (ProgPPrint conProg) => PPrint (NodeStatus conProg) where
               Just msg -> ["Not finished because " <> pformat msg],
             [pformat m]
           ]
-  pformat (NodeFailed fastTrackViable r) =
-    "NodeFailed "
-      <> (if fastTrackViable then "(fast track viable) " else "")
-      <> pformat r
+  pformat (NodeFailed r) = "NodeFailed " <> pformat r
   pformat NodeStarted =
     "NodeStarted"
 
 nodeStatusIsRunning :: NodeStatus conProg -> Bool
 nodeStatusIsRunning NodeStarted {} = True
-nodeStatusIsRunning NodeFastTrackViable {} = True
-nodeStatusIsRunning NodeFastTrackRefining {} = True
-nodeStatusIsRunning NodeFastTrackEasySynthFailure {} = True
-nodeStatusIsRunning NodeSlowTrackRefining {} = True
+nodeStatusIsRunning NodeViable {} = True
+nodeStatusIsRunning NodeRefining {} = True
 nodeStatusIsRunning _ = False
 
 nodeStatusIsDetermined :: NodeStatus conProg -> Bool
@@ -171,67 +141,41 @@ nodeStatusIsNotYetStarted :: NodeStatus conProg -> Bool
 nodeStatusIsNotYetStarted NodeNotYetStarted = True
 nodeStatusIsNotYetStarted _ = False
 
-nodeStatusBestProgWithCost :: NodeStatus conProg -> Maybe (Int, SymbolTable conProg)
-nodeStatusBestProgWithCost NodeFastTrackViable {} = Nothing
-nodeStatusBestProgWithCost (NodeFastTrackRefining cost m) = Just (cost, m)
-nodeStatusBestProgWithCost NodeFastTrackEasySynthFailure = Nothing
-nodeStatusBestProgWithCost (NodeSlowTrackRefining cost m) = Just (cost, m)
-nodeStatusBestProgWithCost (NodeSucceeded _ _ cost m) = Just (cost, m)
+nodeStatusBestProgWithCost ::
+  NodeStatus conProg -> Maybe (Int, SymbolTable conProg)
+nodeStatusBestProgWithCost NodeViable {} = Nothing
+nodeStatusBestProgWithCost (NodeRefining _ cost m) = Just (cost, m)
+nodeStatusBestProgWithCost (NodeSucceeded _ cost m) = Just (cost, m)
 nodeStatusBestProgWithCost NodeFailed {} = Nothing
-nodeStatusBestProgWithCost (NodeTerminated _ _) = Nothing
+nodeStatusBestProgWithCost (NodeTerminated _) = Nothing
 nodeStatusBestProgWithCost NodeInferredFailure = Nothing
 nodeStatusBestProgWithCost NodeStarted {} = Nothing
 nodeStatusBestProgWithCost NodeNotYetStarted = Nothing
 
-nodeStatusIsFastTrackViable :: NodeStatus conProg -> Bool
-nodeStatusIsFastTrackViable NodeFastTrackViable {} = True
-nodeStatusIsFastTrackViable _ = False
+nodeStatusIsViable :: NodeStatus conProg -> Bool
+nodeStatusIsViable NodeViable {} = True
+nodeStatusIsViable _ = False
 
-nodeStatusIsFastTrackRefining :: NodeStatus conProg -> Bool
-nodeStatusIsFastTrackRefining NodeFastTrackRefining {} = True
-nodeStatusIsFastTrackRefining _ = False
+nodeStatusIsRefining :: NodeStatus conProg -> Bool
+nodeStatusIsRefining NodeRefining {} = True
+nodeStatusIsRefining _ = False
 
-nodeStatusIsFastTrackEasySynthFailure :: NodeStatus conProg -> Bool
-nodeStatusIsFastTrackEasySynthFailure NodeFastTrackEasySynthFailure {} = True
-nodeStatusIsFastTrackEasySynthFailure _ = False
+nodeStatusIsSuccess :: NodeStatus conProg -> Bool
+nodeStatusIsSuccess NodeSucceeded {} = True
+nodeStatusIsSuccess _ = False
 
-nodeStatusIsSlowTrackRefining :: NodeStatus conProg -> Bool
-nodeStatusIsSlowTrackRefining NodeSlowTrackRefining {} = True
-nodeStatusIsSlowTrackRefining _ = False
+nodeStatusIsUnsat :: NodeStatus conProg -> Bool
+nodeStatusIsUnsat (NodeFailed Unsat) = True
+nodeStatusIsUnsat _ = False
 
-nodeStatusIsFastSuccess :: NodeStatus conProg -> Bool
-nodeStatusIsFastSuccess NodeSucceeded {_track = FastTrack} = True
-nodeStatusIsFastSuccess _ = False
+nodeStatusIsUnknown :: NodeStatus conProg -> Bool
+nodeStatusIsUnknown (NodeFailed Unsat) = False
+nodeStatusIsUnknown (NodeFailed _) = True
+nodeStatusIsUnknown _ = False
 
-nodeStatusIsSlowSuccess :: NodeStatus conProg -> Bool
-nodeStatusIsSlowSuccess NodeSucceeded {_track = SlowTrack} = True
-nodeStatusIsSlowSuccess _ = False
-
-nodeStatusIsFastUnsat :: NodeStatus conProg -> Bool
-nodeStatusIsFastUnsat (NodeFailed False Unsat) = True
-nodeStatusIsFastUnsat _ = False
-
-nodeStatusIsSlowUnsat :: NodeStatus conProg -> Bool
-nodeStatusIsSlowUnsat (NodeFailed True Unsat) = True
-nodeStatusIsSlowUnsat _ = False
-
-nodeStatusIsFastUnknown :: NodeStatus conProg -> Bool
-nodeStatusIsFastUnknown (NodeFailed _ Unsat) = False
-nodeStatusIsFastUnknown (NodeFailed False _) = True
-nodeStatusIsFastUnknown _ = False
-
-nodeStatusIsSlowUnknown :: NodeStatus conProg -> Bool
-nodeStatusIsSlowUnknown (NodeFailed _ Unsat) = False
-nodeStatusIsSlowUnknown (NodeFailed True _) = True
-nodeStatusIsSlowUnknown _ = False
-
-nodeStatusIsFastTerminated :: NodeStatus conProg -> Bool
-nodeStatusIsFastTerminated (NodeTerminated False _) = True
-nodeStatusIsFastTerminated _ = False
-
-nodeStatusIsSlowTerminated :: NodeStatus conProg -> Bool
-nodeStatusIsSlowTerminated (NodeTerminated True _) = True
-nodeStatusIsSlowTerminated _ = False
+nodeStatusIsTerminated :: NodeStatus conProg -> Bool
+nodeStatusIsTerminated (NodeTerminated _) = True
+nodeStatusIsTerminated _ = False
 
 nodeStatusIsInferredFailure :: NodeStatus conProg -> Bool
 nodeStatusIsInferredFailure NodeInferredFailure = True
@@ -246,10 +190,8 @@ nodeStatusIsEnded NodeSucceeded {} = True
 nodeStatusIsEnded NodeFailed {} = True
 nodeStatusIsEnded NodeTerminated {} = True
 nodeStatusIsEnded NodeInferredFailure = True
-nodeStatusIsEnded NodeFastTrackViable {} = False
-nodeStatusIsEnded NodeFastTrackEasySynthFailure = False
-nodeStatusIsEnded NodeFastTrackRefining {} = False
-nodeStatusIsEnded NodeSlowTrackRefining {} = False
+nodeStatusIsEnded NodeViable {} = False
+nodeStatusIsEnded NodeRefining {} = False
 nodeStatusIsEnded NodeStarted = False
 nodeStatusIsEnded NodeNotYetStarted = False
 
@@ -270,18 +212,11 @@ nodeStatusInferFailureTransition NodeFailed {} =
   error "Should not happen" -- status
 nodeStatusInferFailureTransition status@NodeInferredFailure {} = status
 nodeStatusInferFailureTransition NodeTerminated {} = NodeInferredFailure
-nodeStatusInferFailureTransition (NodeSucceeded _ track cost prog) =
-  NodeSucceeded Nothing track cost prog
-nodeStatusInferFailureTransition (NodeFastTrackViable {}) =
-  NodeInferredFailure
-nodeStatusInferFailureTransition NodeFastTrackEasySynthFailure =
-  NodeInferredFailure
-nodeStatusInferFailureTransition
-  (NodeFastTrackRefining cost prog) =
-    NodeSucceeded Nothing FastTrack cost prog
-nodeStatusInferFailureTransition
-  (NodeSlowTrackRefining cost prog) =
-    NodeSucceeded Nothing SlowTrack cost prog
+nodeStatusInferFailureTransition (NodeSucceeded _ cost prog) =
+  NodeSucceeded Nothing cost prog
+nodeStatusInferFailureTransition (NodeViable {}) = NodeInferredFailure
+nodeStatusInferFailureTransition (NodeRefining _ cost prog) =
+  NodeSucceeded Nothing cost prog
 nodeStatusInferFailureTransition NodeStarted {} = NodeInferredFailure
 nodeStatusInferFailureTransition NodeNotYetStarted = NodeInferredFailure
 
@@ -295,185 +230,84 @@ nodeStatusTransition NodeInferredFailure = error "Should not happen"
 nodeStatusTransition NodeTerminated {} = error "Should not happen"
 nodeStatusTransition NodeNotYetStarted = error "Shouldnot happen"
 nodeStatusTransition NodeStarted = nodeStartedTransition
-nodeStatusTransition (NodeFastTrackViable FastTrack oldProg) =
-  nodeFastTrackViableFastTrackTransition oldProg
-nodeStatusTransition (NodeFastTrackViable SlowTrack oldProg) =
-  nodeFastTrackViableSlowTrackTransition oldProg
-nodeStatusTransition NodeFastTrackEasySynthFailure =
-  nodeFastTrackEasySynthFailureTransition
-nodeStatusTransition (NodeFastTrackRefining oldCost oldProg) =
-  nodeFastTrackRefiningTransition oldCost oldProg
-nodeStatusTransition (NodeSlowTrackRefining oldCost oldProg) =
-  nodeSlowTrackRefiningTransition oldCost oldProg
+nodeStatusTransition oldStatus@(NodeViable {}) = nodeViableTransition oldStatus
+nodeStatusTransition NodeRefining {..} =
+  nodeRefiningTransition _curTrack _cost _prog
 
 nodeStartedTransition ::
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher ->
   (NodeStatus conProg, NodeAction)
 nodeStartedTransition (Left msg) =
-  (NodeTerminated False msg, CleanUpAndSplitSketch)
+  (NodeTerminated msg, CleanUpAndSplitSketch)
 nodeStartedTransition (Right (Failure _ failure)) =
-  (NodeFailed False failure, MarkFailure)
-nodeStartedTransition (Right (FastTrackViable FastTrack _ cost prog)) =
-  (NodeFastTrackViable FastTrack prog, RefineAndSplitSketch cost)
-nodeStartedTransition (Right (FastTrackViable SlowTrack _ cost prog)) =
-  (NodeFastTrackViable SlowTrack prog, RefineAndSplitSketch cost)
-nodeStartedTransition (Right (FastTrackEasySynthFailure _ _)) =
+  (NodeFailed failure, MarkFailure)
+nodeStartedTransition (Right (Viable curTrack _ cost prog)) =
+  (NodeViable curTrack prog, RefineAndSplitSketch cost)
+nodeStartedTransition (Right EasySynthFailure {}) =
   error "Should not happen"
-nodeStartedTransition (Right (Success FastTrack _ _ _)) =
-  error "Should not happen"
-nodeStartedTransition (Right (Success SlowTrack _ cost prog)) =
-  (NodeSlowTrackRefining cost prog, RefineAndSplitSketch $ Just cost)
+nodeStartedTransition (Right (Success _ curTrack _ cost prog)) =
+  (NodeRefining curTrack cost prog, RefineAndSplitSketch $ Just cost)
 nodeStartedTransition (Right (GotExample _ cost)) =
   (NodeStarted, Refine False cost)
 
-nodeFastTrackViableFastTrackTransition ::
-  SymbolTable conProg ->
+nodeViableTransition ::
+  NodeStatus conProg ->
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher ->
   (NodeStatus conProg, NodeAction)
-nodeFastTrackViableFastTrackTransition _ (Left msg) =
-  (NodeTerminated True msg, CleanUpAndSplitSketch)
-nodeFastTrackViableFastTrackTransition _ (Right (Failure _ failure)) =
-  (NodeFailed True failure, MarkFailure)
-nodeFastTrackViableFastTrackTransition _ (Right FastTrackViable {}) =
-  error "Should not happen"
-nodeFastTrackViableFastTrackTransition
-  _
-  (Right (FastTrackEasySynthFailure cost _)) =
-    (NodeFastTrackEasySynthFailure, Refine True cost)
-nodeFastTrackViableFastTrackTransition
-  _
-  (Right (Success FastTrack _ cost newProg)) =
-    (NodeFastTrackRefining cost newProg, Refine True $ Just cost)
-nodeFastTrackViableFastTrackTransition _ (Right (Success SlowTrack _ _ _)) =
-  error "Should not happen"
-nodeFastTrackViableFastTrackTransition oldProg (Right (GotExample _ cost)) =
-  (NodeFastTrackViable FastTrack oldProg, Refine True cost)
+nodeViableTransition _ (Left msg) =
+  (NodeTerminated msg, CleanUpAndSplitSketch)
+nodeViableTransition _ (Right (Failure _ failure)) =
+  (NodeFailed failure, MarkFailure)
+nodeViableTransition _ (Right (Viable curTrack _ cost prog)) =
+  (NodeViable curTrack prog, RefineAndSplitSketch cost)
+nodeViableTransition oldStatus (Right (EasySynthFailure _ cost _)) =
+  (oldStatus, RefineAndSplitSketch cost)
+nodeViableTransition _ (Right (Success _ curTrack _ cost prog)) =
+  (NodeRefining curTrack cost prog, Refine True $ Just cost)
+nodeViableTransition oldStatus (Right (GotExample _ cost)) =
+  (oldStatus, Refine False cost)
 
-nodeFastTrackViableSlowTrackTransition ::
-  SymbolTable conProg ->
-  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher ->
-  (NodeStatus conProg, NodeAction)
-nodeFastTrackViableSlowTrackTransition _ (Left msg) =
-  (NodeTerminated True msg, CleanUpAndSplitSketch)
-nodeFastTrackViableSlowTrackTransition _ (Right (Failure _ failure)) =
-  (NodeFailed True failure, MarkFailure)
-nodeFastTrackViableSlowTrackTransition _ (Right FastTrackViable {}) =
-  error "Should not happen"
-nodeFastTrackViableSlowTrackTransition
-  _
-  (Right (FastTrackEasySynthFailure cost _)) =
-    (NodeFastTrackEasySynthFailure, Refine True cost)
-nodeFastTrackViableSlowTrackTransition
-  _
-  (Right (Success FastTrack _ cost prog)) =
-    (NodeFastTrackRefining cost prog, Refine True $ Just cost)
-nodeFastTrackViableSlowTrackTransition
-  _
-  (Right (Success SlowTrack _ cost prog)) =
-    (NodeSlowTrackRefining cost prog, Refine True $ Just cost)
-nodeFastTrackViableSlowTrackTransition
-  oldProg
-  (Right (GotExample _ bestKnownCost)) =
-    (NodeFastTrackViable SlowTrack oldProg, Refine True bestKnownCost)
-
-nodeFastTrackEasySynthFailureTransition ::
-  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher ->
-  (NodeStatus conProg, NodeAction)
-nodeFastTrackEasySynthFailureTransition (Left msg) =
-  (NodeTerminated True msg, CleanUpAndSplitSketch)
-nodeFastTrackEasySynthFailureTransition (Right (Failure _ failure)) =
-  (NodeFailed True failure, MarkFailure)
-nodeFastTrackEasySynthFailureTransition (Right (FastTrackViable {})) =
-  error "Should not happen"
-nodeFastTrackEasySynthFailureTransition
-  (Right (FastTrackEasySynthFailure _ _)) =
-    error "Should not happen"
-nodeFastTrackEasySynthFailureTransition (Right (Success FastTrack _ _ _)) =
-  error "Should not happen"
-nodeFastTrackEasySynthFailureTransition
-  (Right (Success SlowTrack _ cost prog)) =
-    (NodeSlowTrackRefining cost prog, Refine True $ Just cost)
-nodeFastTrackEasySynthFailureTransition (Right (GotExample _ bestKnownCost)) =
-  (NodeFastTrackEasySynthFailure, Refine True bestKnownCost)
-
-nodeFastTrackRefiningTransition ::
+nodeRefiningTransition ::
+  Int ->
   Int ->
   SymbolTable conProg ->
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher ->
   (NodeStatus conProg, NodeAction)
-nodeFastTrackRefiningTransition oldCost oldProg (Left msg) =
-  (NodeSucceeded (Just msg) FastTrack oldCost oldProg, CleanUpAndSplitSketch)
-nodeFastTrackRefiningTransition oldCost oldProg (Right (Failure _ Unsat)) =
-  (NodeSucceeded Nothing FastTrack oldCost oldProg, MarkFailure)
-nodeFastTrackRefiningTransition oldCost oldProg (Right (Failure _ failure)) =
+nodeRefiningTransition _ oldCost oldProg (Left msg) =
+  (NodeSucceeded (Just msg) oldCost oldProg, CleanUpAndSplitSketch)
+nodeRefiningTransition _ oldCost oldProg (Right (Failure _ Unsat)) =
+  (NodeSucceeded Nothing oldCost oldProg, MarkFailure)
+nodeRefiningTransition _ oldCost oldProg (Right (Failure _ failure)) =
   ( NodeSucceeded
       (Just $ "Solver finally failed with: " <> showAsText failure)
-      FastTrack
       oldCost
       oldProg,
     CleanUpAndSplitSketch
   )
-nodeFastTrackRefiningTransition
+nodeRefiningTransition
+  _
   oldCost
   oldProg
-  (Right (FastTrackViable FastTrack _ bestKnownCost _)) =
-    (NodeFastTrackRefining oldCost oldProg, Refine True bestKnownCost)
-nodeFastTrackRefiningTransition _ _ (Right (FastTrackViable SlowTrack _ _ _)) =
-  error "Should not happen"
-nodeFastTrackRefiningTransition
+  (Right (Viable newTrack _ bestKnownCost _)) =
+    (NodeRefining newTrack oldCost oldProg, Refine True bestKnownCost)
+nodeRefiningTransition
+  _
   oldCost
   oldProg
-  (Right (FastTrackEasySynthFailure bestKnownCost _)) =
-    (NodeSlowTrackRefining oldCost oldProg, Refine True bestKnownCost)
-nodeFastTrackRefiningTransition
+  (Right (EasySynthFailure newTrack bestKnownCost _)) =
+    (NodeRefining newTrack oldCost oldProg, Refine True bestKnownCost)
+nodeRefiningTransition
+  _
   oldCost
   _
-  (Right (Success FastTrack _ newCost newProg)) =
+  (Right (Success _ newTrack _ newCost newProg)) =
     _ensureNewCostIsSmaller
       newCost
       oldCost
-      (NodeFastTrackRefining newCost newProg, Refine True $ Just newCost)
-nodeFastTrackRefiningTransition _ _ (Right (Success SlowTrack _ _ _)) =
-  error "Should not happen"
-nodeFastTrackRefiningTransition
+      (NodeRefining newTrack newCost newProg, Refine True $ Just newCost)
+nodeRefiningTransition
+  oldTrack
   oldCost
   oldProg
   (Right (GotExample _ bestKnownCost)) =
-    (NodeFastTrackRefining oldCost oldProg, Refine True bestKnownCost)
-
-nodeSlowTrackRefiningTransition ::
-  Int ->
-  SymbolTable conProg ->
-  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher ->
-  (NodeStatus conProg, NodeAction)
-nodeSlowTrackRefiningTransition oldCost oldProg (Left msg) =
-  (NodeSucceeded (Just msg) SlowTrack oldCost oldProg, CleanUpAndSplitSketch)
-nodeSlowTrackRefiningTransition oldCost oldProg (Right (Failure _ Unsat)) =
-  (NodeSucceeded Nothing SlowTrack oldCost oldProg, MarkFailure)
-nodeSlowTrackRefiningTransition oldCost oldProg (Right (Failure _ failure)) =
-  ( NodeSucceeded
-      (Just $ "Solver finally failed with: " <> showAsText failure)
-      SlowTrack
-      oldCost
-      oldProg,
-    CleanUpAndSplitSketch
-  )
-nodeSlowTrackRefiningTransition _ _ (Right (FastTrackViable {})) =
-  error "Should not happen"
-nodeSlowTrackRefiningTransition _ _ (Right (FastTrackEasySynthFailure {})) =
-  error "Should not happen"
-nodeSlowTrackRefiningTransition _ _ (Right (Success FastTrack _ _ _)) =
-  error "Should not happen"
-nodeSlowTrackRefiningTransition
-  oldCost
-  _
-  (Right (Success SlowTrack _ newCost newProg)) =
-    _ensureNewCostIsSmaller
-      newCost
-      oldCost
-      (NodeSlowTrackRefining newCost newProg, Refine True $ Just newCost)
-nodeSlowTrackRefiningTransition
-  oldCost
-  oldProg
-  (Right (GotExample _ bestKnownCost)) =
-    (NodeSlowTrackRefining oldCost oldProg, Refine True bestKnownCost)
+    (NodeRefining oldTrack oldCost oldProg, Refine True bestKnownCost)

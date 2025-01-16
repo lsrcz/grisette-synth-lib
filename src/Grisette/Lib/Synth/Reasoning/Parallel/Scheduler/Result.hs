@@ -90,8 +90,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
     nodeStatusIsDetermined,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
-  ( processResponseIsFastTrackSuccess,
-    processResponseIsSlowTrackSuccess,
+  ( processResponseIsSuccess,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( Scheduler
@@ -296,8 +295,7 @@ getParallelSynthesisResult
                     head $
                       filter
                         ( \(_, r) ->
-                            processResponseIsFastTrackSuccess r
-                              || processResponseIsSlowTrackSuccess r
+                            processResponseIsSuccess r
                         )
                         nodeMajorResponseReverseLog
                 )

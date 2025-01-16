@@ -76,15 +76,13 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( NodeAction,
     NodeStatus
       ( NodeFailed,
-        NodeFastTrackEasySynthFailure,
-        NodeFastTrackRefining,
-        NodeFastTrackViable,
         NodeInferredFailure,
         NodeNotYetStarted,
-        NodeSlowTrackRefining,
+        NodeRefining,
         NodeStarted,
         NodeSucceeded,
-        NodeTerminated
+        NodeTerminated,
+        NodeViable
       ),
     nodeStatusIsNotYetStarted,
     nodeStatusIsRunning,
@@ -310,10 +308,8 @@ _setInferredFailure scheduler@Scheduler {..} nid = do
     NodeFailed {} -> return ()
     NodeSucceeded {} -> return ()
     NodeStarted {} -> _killInferredFailure scheduler nid
-    NodeFastTrackEasySynthFailure {} -> _killInferredFailure scheduler nid
-    NodeFastTrackRefining {} -> _killInferredFailure scheduler nid
-    NodeSlowTrackRefining {} -> _killInferredFailure scheduler nid
-    NodeFastTrackViable {} -> _killInferredFailure scheduler nid
+    NodeViable {} -> _killInferredFailure scheduler nid
+    NodeRefining {} -> _killInferredFailure scheduler nid
   return ()
 
 _startNode ::

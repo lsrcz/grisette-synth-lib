@@ -34,14 +34,13 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message
-      ( Failure,
-        FastTrackEasySynthFailure,
-        FastTrackViable,
+      ( EasySynthFailure,
+        Failure,
         GotExample,
-        Success
+        Success,
+        Viable
       ),
     ProcessResponse,
-    Track (FastTrack, SlowTrack),
   )
 
 type NodeMessageLog time conProg symSemObj symVal conSemObj conVal matcher =
@@ -194,10 +193,10 @@ nodeStateNumCollectedExamples NodeState {..} =
   sum $ map go $ snd <$> nodeMajorResponseReverseLog
   where
     go (Right (GotExample _ _)) = error "Not a major response"
-    go (Right (Success SlowTrack e _ _)) = length e
-    go (Right (Success FastTrack _ _ _)) = 0
-    go (Right (FastTrackViable _ e _ _)) = length e
-    go (Right (FastTrackEasySynthFailure _ _)) = 0
+    go (Right (Success False _ e _ _)) = length e
+    go (Right (Success True _ _ _ _)) = 0
+    go (Right (Viable _ e _ _)) = length e
+    go (Right EasySynthFailure {}) = 0
     go (Right (Failure e _)) = length e
     go (Left _) = 0
 

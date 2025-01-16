@@ -31,17 +31,14 @@ import Graphics.Rendering.Chart.Easy
   ( PointShape
       ( PointShapeCircle,
         PointShapeCross,
-        PointShapePlus,
         PointShapePolygon,
         PointShapeStar
       ),
     aqua,
     black,
-    blue,
     deeppink,
     dodgerblue,
     font_size,
-    goldenrod,
     gray,
     green,
     layout_title,
@@ -111,27 +108,20 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
     nodeStateNumInProgressExamples,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
-  ( nodeStatusIsFastSuccess,
-    nodeStatusIsFastTerminated,
-    nodeStatusIsFastTrackEasySynthFailure,
-    nodeStatusIsFastTrackRefining,
-    nodeStatusIsFastTrackViable,
-    nodeStatusIsFastUnknown,
-    nodeStatusIsFastUnsat,
-    nodeStatusIsInferredFailure,
+  ( nodeStatusIsInferredFailure,
     nodeStatusIsJustStarted,
     nodeStatusIsNotYetStarted,
-    nodeStatusIsSlowSuccess,
-    nodeStatusIsSlowTerminated,
-    nodeStatusIsSlowTrackRefining,
-    nodeStatusIsSlowUnknown,
-    nodeStatusIsSlowUnsat,
+    nodeStatusIsRefining,
+    nodeStatusIsSuccess,
+    nodeStatusIsTerminated,
+    nodeStatusIsUnknown,
+    nodeStatusIsUnsat,
+    nodeStatusIsViable,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
-  ( processResponseIsFastTrackEasySynthFailure,
-    processResponseIsFastTrackSuccess,
-    processResponseIsFastTrackViable,
-    processResponseIsSlowTrackSuccess,
+  ( processResponseIsEasySynthFailure,
+    processResponseIsSuccess,
+    processResponseIsViable,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( Scheduler
@@ -185,24 +175,17 @@ data SummaryStats = SummaryStats
 data Stats = Stats
   { allStartedNodeStats :: SummaryStats,
     numNotStarted :: Int,
-    fastTrackViableStats :: SummaryStats,
-    fastTrackRefiningStats :: SummaryStats,
-    fastTrackImmSynthFailureStats :: SummaryStats,
-    slowTrackRefiningStats :: SummaryStats,
-    fastSucceedStats :: SummaryStats,
-    slowSucceedStats :: SummaryStats,
-    fastUnsatStats :: SummaryStats,
-    slowUnsatStats :: SummaryStats,
-    fastUnknownStats :: SummaryStats,
-    slowUnknownStats :: SummaryStats,
-    fastTerminatedStats :: SummaryStats,
-    slowTerminatedStats :: SummaryStats,
+    viableStats :: SummaryStats,
+    refiningStats :: SummaryStats,
+    succeedStats :: SummaryStats,
+    unsatStats :: SummaryStats,
+    unknownStats :: SummaryStats,
+    terminatedStats :: SummaryStats,
     inferredFailureStats :: SummaryStats,
     justStartedStats :: SummaryStats,
-    fastTrackViableMessageStats :: [MessageStat],
-    fastTrackImmSynthFailureMessageStats :: [MessageStat],
-    fastTrackSuccessMessageStats :: [MessageStat],
-    slowTrackSuccessMessageStats :: [MessageStat]
+    viableMessageStats :: [MessageStat],
+    easySynthFailureMessageStats :: [MessageStat],
+    succeedMessageStats :: [MessageStat]
   }
 
 _collectStats ::
@@ -245,19 +228,12 @@ _collectStats curTime stats = do
                 (nodeStateNumInProgressExamples s)
           )
   let filt f = filter (f . nodeStatus . snd . snd)
-  let fastTrackViable = filt nodeStatusIsFastTrackViable startedWithLinspace
-  let fastTrackRefining = filt nodeStatusIsFastTrackRefining startedWithLinspace
-  let fastTrackImmSynthFailure =
-        filt nodeStatusIsFastTrackEasySynthFailure startedWithLinspace
-  let slowTrackRefining = filt nodeStatusIsSlowTrackRefining startedWithLinspace
-  let fastSucceed = filt nodeStatusIsFastSuccess startedWithLinspace
-  let slowSucceed = filt nodeStatusIsSlowSuccess startedWithLinspace
-  let fastUnsat = filt nodeStatusIsFastUnsat startedWithLinspace
-  let slowUnsat = filt nodeStatusIsSlowUnsat startedWithLinspace
-  let fastUnknown = filt nodeStatusIsFastUnknown startedWithLinspace
-  let slowUnknown = filt nodeStatusIsSlowUnknown startedWithLinspace
-  let fastTerminated = filt nodeStatusIsFastTerminated startedWithLinspace
-  let slowTerminated = filt nodeStatusIsSlowTerminated startedWithLinspace
+  let viable = filt nodeStatusIsViable startedWithLinspace
+  let refining = filt nodeStatusIsRefining startedWithLinspace
+  let succeed = filt nodeStatusIsSuccess startedWithLinspace
+  let unsat = filt nodeStatusIsUnsat startedWithLinspace
+  let unknown = filt nodeStatusIsUnknown startedWithLinspace
+  let terminated = filt nodeStatusIsTerminated startedWithLinspace
   let inferredFailure = filt nodeStatusIsInferredFailure startedWithLinspace
   let justStarted = filt nodeStatusIsJustStarted startedWithLinspace
   let averageTime :: [NodeStats] -> Double
@@ -293,18 +269,12 @@ _collectStats curTime stats = do
 
   when
     ( sum
-        [ length fastTrackViable,
-          length fastTrackRefining,
-          length fastTrackImmSynthFailure,
-          length slowTrackRefining,
-          length fastSucceed,
-          length slowSucceed,
-          length fastUnsat,
-          length slowUnsat,
-          length fastUnknown,
-          length slowUnknown,
-          length fastTerminated,
-          length slowTerminated,
+        [ length viable,
+          length refining,
+          length succeed,
+          length unsat,
+          length unknown,
+          length terminated,
           length inferredFailure,
           length justStarted
         ]
@@ -315,24 +285,17 @@ _collectStats curTime stats = do
     Stats
       (toSummaryStats startedWithLinspace)
       (length notStarted)
-      (toSummaryStats fastTrackViable)
-      (toSummaryStats fastTrackRefining)
-      (toSummaryStats fastTrackImmSynthFailure)
-      (toSummaryStats slowTrackRefining)
-      (toSummaryStats fastSucceed)
-      (toSummaryStats slowSucceed)
-      (toSummaryStats fastUnsat)
-      (toSummaryStats slowUnsat)
-      (toSummaryStats fastUnknown)
-      (toSummaryStats slowUnknown)
-      (toSummaryStats fastTerminated)
-      (toSummaryStats slowTerminated)
+      (toSummaryStats viable)
+      (toSummaryStats refining)
+      (toSummaryStats succeed)
+      (toSummaryStats unsat)
+      (toSummaryStats unknown)
+      (toSummaryStats terminated)
       (toSummaryStats inferredFailure)
       (toSummaryStats justStarted)
-      (msg processResponseIsFastTrackViable)
-      (msg processResponseIsFastTrackEasySynthFailure)
-      (msg processResponseIsFastTrackSuccess)
-      (msg processResponseIsSlowTrackSuccess)
+      (msg processResponseIsViable)
+      (msg processResponseIsEasySynthFailure)
+      (msg processResponseIsSuccess)
 
 _plotStatistics :: FilePath -> String -> Stats -> IO ()
 _plotStatistics path title stats = do
@@ -350,17 +313,14 @@ _plotStatistics path title stats = do
   let msgDatum =
         HM.filter (not . null) $
           HM.fromList
-            [ ( "fastViableMsg" :: String,
-                msgStatToPoint <$> fastTrackViableMessageStats stats
+            [ ( "viableMsg" :: String,
+                msgStatToPoint <$> viableMessageStats stats
               ),
-              ( "immSynthFailureMsg",
-                msgStatToPoint <$> fastTrackImmSynthFailureMessageStats stats
+              ( "easySynthFailureMsg",
+                msgStatToPoint <$> easySynthFailureMessageStats stats
               ),
-              ( "fastSuccessMsg",
-                msgStatToPoint <$> fastTrackSuccessMessageStats stats
-              ),
-              ( "slowSuccessMsg",
-                msgStatToPoint <$> slowTrackSuccessMessageStats stats
+              ( "succeedMsg",
+                msgStatToPoint <$> succeedMessageStats stats
               )
             ]
   let msgDatumKeys = HM.keys msgDatum
@@ -370,41 +330,23 @@ _plotStatistics path title stats = do
   let nodeDatum =
         HM.filter (not . null) $
           HM.fromList
-            [ ( "fastTrackViable" :: String,
-                summaryStatsToPoints $ fastTrackViableStats stats
+            [ ( "viable",
+                summaryStatsToPoints $ viableStats stats
               ),
-              ( "fastTrackRefining",
-                summaryStatsToPoints $ fastTrackRefiningStats stats
+              ( "refining",
+                summaryStatsToPoints $ refiningStats stats
               ),
-              ( "immSynthFailure",
-                summaryStatsToPoints $ fastTrackImmSynthFailureStats stats
+              ( "succeed",
+                summaryStatsToPoints $ succeedStats stats
               ),
-              ( "slowTrackRefining",
-                summaryStatsToPoints $ slowTrackRefiningStats stats
+              ( "unsat",
+                summaryStatsToPoints $ unsatStats stats
               ),
-              ( "fastSucceed",
-                summaryStatsToPoints $ fastSucceedStats stats
+              ( "unknown",
+                summaryStatsToPoints $ unknownStats stats
               ),
-              ( "slowSucceed",
-                summaryStatsToPoints $ slowSucceedStats stats
-              ),
-              ( "fastUnsat",
-                summaryStatsToPoints $ fastUnsatStats stats
-              ),
-              ( "slowUnsat",
-                summaryStatsToPoints $ slowUnsatStats stats
-              ),
-              ( "fastUnknown",
-                summaryStatsToPoints $ fastUnknownStats stats
-              ),
-              ( "slowUnknown",
-                summaryStatsToPoints $ slowUnknownStats stats
-              ),
-              ( "fastTerminated",
-                summaryStatsToPoints $ fastTerminatedStats stats
-              ),
-              ( "slowTerminated",
-                summaryStatsToPoints $ slowTerminatedStats stats
+              ( "terminated",
+                summaryStatsToPoints $ terminatedStats stats
               ),
               ( "inferredFailure",
                 summaryStatsToPoints $ inferredFailureStats stats
@@ -418,47 +360,33 @@ _plotStatistics path title stats = do
         HM.filterWithKey (\k _ -> k `HS.member` toAnnotate) nodeDatum
   let colors =
         HM.fromList
-          [ ("fastTrackViable" :: String, aqua),
-            ("fastTrackRefining", dodgerblue),
-            ("immSynthFailure", mediumpurple),
-            ("slowTrackRefining", blue),
-            ("fastSucceed", green),
-            ("slowSucceed", yellowgreen),
-            ("fastUnsat", red),
-            ("fastUnknown", deeppink),
-            ("fastTerminated", gray),
-            ("slowUnsat", red),
-            ("slowUnknown", deeppink),
-            ("slowTerminated", gray),
+          [ ("viable" :: String, aqua),
+            ("refining", dodgerblue),
+            ("succeed", green),
+            ("unsat", mediumpurple),
+            ("unknown", yellowgreen),
+            ("terminated", red),
             ("inferredFailure", orange),
             ("justStarted", black),
-            ("fastViableMsg", gray),
-            ("immSynthFailureMsg", deeppink),
-            ("fastSuccessMsg", green),
-            ("slowSuccessMsg", goldenrod)
+            ("viableMsg", gray),
+            ("easySynthFailureMsg", deeppink),
+            ("succeedMsg", green)
           ]
   let msgDatumColors = fmap (colors HM.!) msgDatumKeys
   let nodeDatumColors = fmap (colors HM.!) nodeDatumKeys
   let shapes =
         HM.fromList
-          [ ("fastTrackViable" :: String, PointShapeCircle),
-            ("fastTrackRefining", PointShapeCircle),
-            ("immSynthFailure", PointShapeCircle),
-            ("slowTrackRefining", PointShapeCircle),
-            ("fastSucceed", PointShapeStar),
-            ("slowSucceed", PointShapeStar),
-            ("fastUnsat", PointShapeCross),
-            ("fastUnknown", PointShapeCross),
-            ("fastTerminated", PointShapeCross),
-            ("slowUnsat", PointShapePlus),
-            ("slowUnknown", PointShapePlus),
-            ("slowTerminated", PointShapePlus),
+          [ ("viable" :: String, PointShapeCircle),
+            ("refining", PointShapeCircle),
+            ("succeed", PointShapeStar),
+            ("unsat", PointShapeCross),
+            ("unknown", PointShapeCross),
+            ("terminated", PointShapeCross),
             ("inferredFailure", PointShapeCross),
             ("justStarted", PointShapeCircle),
-            ("fastViableMsg", PointShapePolygon 4 True),
-            ("immSynthFailureMsg", PointShapePolygon 4 True),
-            ("fastSuccessMsg", PointShapePolygon 4 True),
-            ("slowSuccessMsg", PointShapePolygon 4 True)
+            ("viableMsg", PointShapePolygon 4 True),
+            ("easySynthFailureMsg", PointShapePolygon 4 True),
+            ("succeedMsg", PointShapePolygon 4 True)
           ]
   let msgDatumShapes = fmap (shapes HM.!) msgDatumKeys
   let nodeDatumShapes = fmap (shapes HM.!) nodeDatumKeys
@@ -535,20 +463,14 @@ _logStatistics
   stats
   Scheduler {config = SchedulerConfig {..}, ..} = do
     let statistics =
-          [ ("Fast viable" :: String, fastTrackViableStats stats),
-            ("Fast refining", fastTrackRefiningStats stats),
-            ("Imm synth failed", fastTrackImmSynthFailureStats stats),
-            ("Slow track refining", slowTrackRefiningStats stats),
-            ("Fast succeed", fastSucceedStats stats),
-            ("Slow succeed", slowSucceedStats stats),
-            ("Fast unsat", fastUnsatStats stats),
-            ("Fast unknown", fastUnknownStats stats),
-            ("Fast terminated", fastTerminatedStats stats),
-            ("Slow unsat", slowUnsatStats stats),
-            ("Slow unknown", slowUnknownStats stats),
-            ("Slow terminated", slowTerminatedStats stats),
-            ("Inferred failure", inferredFailureStats stats),
-            ("Just started", justStartedStats stats)
+          [ ("viable" :: String, viableStats stats),
+            ("refining", refiningStats stats),
+            ("succeed", succeedStats stats),
+            ("unsat", unsatStats stats),
+            ("unknown", unknownStats stats),
+            ("terminated", terminatedStats stats),
+            ("inferredFailure", inferredFailureStats stats),
+            ("justStarted", justStartedStats stats)
           ]
     let filteredStatistics = filter (\(_, s) -> num s > 0) statistics
     let maxNameLen = maximum $ fmap (length . fst) filteredStatistics

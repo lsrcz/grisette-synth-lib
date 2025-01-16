@@ -18,8 +18,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( ConProgConstraint,
     ProcessConstraint,
-    TwoTrackVerifiers,
   )
+import Grisette.Lib.Synth.Reasoning.Synthesis (SomeVerifier)
 import System.Log.Logger (Logger)
 
 data
@@ -56,7 +56,7 @@ data
       rootPriority :: Double,
       subNodePriorityMultiplier :: Double,
       subNodeRandomMultiplierRange :: (Double, Double),
-      verifiers :: Logger -> TwoTrackVerifiers sketch conProg,
+      verifiers :: Logger -> [[SomeVerifier sketch conProg]],
       countNumProgsEvidence ::
         Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)),
       logConfig :: LogConfig,

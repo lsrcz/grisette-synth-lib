@@ -14,7 +14,6 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler
     ProcessCostConstraint,
     ProcessConstraint,
     ConProgConstraint,
-    TwoTrackVerifiers (..),
     SchedulerConfig (..),
     ParallelSynthesisResult (..),
     ParallelSynthesisSolutionFoundResult (..),

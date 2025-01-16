@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -15,8 +16,6 @@
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( ProcessConfig (..),
     NewMinimalCostMessage (..),
-    TwoTrackVerifiers (..),
-    Track (..),
     Message (..),
     Process (..),
     ProcessResponse,
@@ -28,10 +27,10 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
     sendNewMinimalCost,
     processResponseNewCost,
     processResponseIsGotExample,
-    processResponseIsFastTrackSuccess,
-    processResponseIsSlowTrackSuccess,
-    processResponseIsFastTrackEasySynthFailure,
-    processResponseIsFastTrackViable,
+    processResponseIsViable,
+    processResponseIsEasySynthFailure,
+    processResponseIsSuccess,
+    processResponseIsFailure,
   )
 where
 
@@ -187,11 +186,6 @@ _createLogger logConfig@LogConfig {..} (NodeId nodeId) = do
     (setHandlers [h] . setLevel DEBUG . removeHandler)
   getLogger loggerName
 
-data TwoTrackVerifiers sketch conProg = TwoTrackVerifiers
-  { fastTrackVerifiers :: [SomeVerifier sketch conProg],
-    slowTrackVerifiers :: [SomeVerifier sketch conProg]
-  }
-
 type ProcessCostConstraint costObj cost conProg sketch =
   ( ProgCost costObj conProg Int ConcreteContext,
     ProgCost costObj sketch cost SymbolicContext,
@@ -279,7 +273,7 @@ data
       sketchSymbol :: T.Text,
       logConfig :: LogConfig,
       nodeId :: NodeId,
-      verifiers :: Logger -> TwoTrackVerifiers sketch conProg,
+      verifiers :: Logger -> [[SomeVerifier sketch conProg]],
       easySketchFromFastResult ::
         Maybe (SymbolTable conProg -> SymbolTable sketchSpec),
       transcriptSMT :: Bool,
@@ -308,46 +302,54 @@ newtype NewMinimalCostMessage = NewMinimalCostMessage
 
 deriveGADT [''NewMinimalCostMessage] allClasses0
 
-data ProcessState = ProcessState
+data ProcessState sketch conProg = ProcessState
   { knownMinimalCost :: Maybe Int,
+    verifiers :: [[SomeVerifier sketch conProg]],
     wrChild :: Fd,
     rdChild :: Fd,
     logger :: Logger
   }
 
-_readLogger :: IORef ProcessState -> IO Logger
+_readLogger :: IORef (ProcessState sketch conProg) -> IO Logger
 _readLogger stateRef = do
   ProcessState {..} <- readIORef stateRef
   return logger
 
-_readKnownMinimalCost :: IORef ProcessState -> IO (Maybe Int)
+_readKnownMinimalCost :: IORef (ProcessState sketch conProg) -> IO (Maybe Int)
 _readKnownMinimalCost stateRef = do
   ProcessState {..} <- readIORef stateRef
   return knownMinimalCost
 
-_readWrChild :: IORef ProcessState -> IO Fd
+_readWrChild :: IORef (ProcessState sketch conProg) -> IO Fd
 _readWrChild stateRef = do
   ProcessState {..} <- readIORef stateRef
   return wrChild
 
-_readRdChild :: IORef ProcessState -> IO Fd
+_readRdChild :: IORef (ProcessState sketch conProg) -> IO Fd
 _readRdChild stateRef = do
   ProcessState {..} <- readIORef stateRef
   return rdChild
 
-data Track = FastTrack | SlowTrack
+_readVerifiers :: IORef (ProcessState sketch conProg) -> IO [[SomeVerifier sketch conProg]]
+_readVerifiers stateRef = do
+  ProcessState {..} <- readIORef stateRef
+  return verifiers
 
-deriveGADT [''Track] allClasses0
+_readTrackBound :: IORef (ProcessState sketch conProg) -> IO Int
+_readTrackBound stateRef = do
+  verifiers <- _readVerifiers stateRef
+  return $ length verifiers - 1
 
 data Message conProg symSemObj symVal conSemObj conVal matcher
-  = FastTrackViable
-      { _nextTrack :: Track,
+  = Viable
+      { _curTrack :: Int,
         _examples :: [Example symSemObj symVal conSemObj conVal matcher],
         _knownCost :: Maybe Int,
         _prog :: SymbolTable conProg
       }
-  | FastTrackEasySynthFailure
-      { _knownCost :: Maybe Int,
+  | EasySynthFailure
+      { _curTrack :: Int,
+        _knownCost :: Maybe Int,
         _examples :: [Example symSemObj symVal conSemObj conVal matcher]
       }
   | GotExample
@@ -355,7 +357,8 @@ data Message conProg symSemObj symVal conSemObj conVal matcher
         _knownCost :: Maybe Int
       }
   | Success
-      { _track :: Track,
+      { _isEasySuccess :: Bool,
+        _curTrack :: Int,
         _examples :: [Example symSemObj symVal conSemObj conVal matcher],
         _cost :: Int,
         _prog :: SymbolTable conProg
@@ -369,26 +372,29 @@ data Message conProg symSemObj symVal conSemObj conVal matcher
 pformatMessageSummary ::
   Message conProg symSemObj symVal conSemObj conVal matcher ->
   Doc ann
-pformatMessageSummary (FastTrackViable nextTrack examples cost _) =
-  "FastTrackViable (with "
+pformatMessageSummary (Viable curTrack examples cost _) =
+  "Viable (with "
     <> pformat (length examples)
-    <> " examples, proceeding with "
-    <> pformat nextTrack
-    <> " track, best known cost: "
+    <> " examples, track "
+    <> pformat curTrack
+    <> ", best known cost: "
     <> pformat cost
     <> ")"
-pformatMessageSummary (FastTrackEasySynthFailure cost examples) =
-  "FastTrackEasySynthFailure (with "
+pformatMessageSummary (EasySynthFailure curTrack cost examples) =
+  "EasySynthFailure (with "
     <> pformat (length examples)
-    <> " examples, best known cost: "
+    <> " examples, track "
+    <> pformat curTrack
+    <> ", best known cost: "
     <> pformat cost
     <> ")"
-pformatMessageSummary (Success track examples cost _) =
-  "Success "
-    <> pformat track
+pformatMessageSummary (Success isEasySuccess curTrack examples cost _) =
+  (if isEasySuccess then "EasySuccess" else "Success")
     <> " (with "
     <> pformat (length examples)
-    <> " examples, cost "
+    <> " examples, track "
+    <> pformat curTrack
+    <> ", cost "
     <> pformat cost
     <> ")"
 pformatMessageSummary (GotExample _ cost) =
@@ -403,13 +409,13 @@ instance
   (ProgPPrint conProg, PPrint conVal) =>
   PPrint (Message conProg symSemObj symVal conSemObj conVal matcher)
   where
-  pformat message@(FastTrackViable _ _ _ prog) =
+  pformat message@(Viable _ _ _ prog) =
     nest 2 $
       vsep
         [ pformatMessageSummary message,
           pformat prog
         ]
-  pformat message@(FastTrackEasySynthFailure _ _) = pformatMessageSummary message
+  pformat message@EasySynthFailure {} = pformatMessageSummary message
   pformat message@(GotExample example currentCost) =
     nest 2 $
       vsep
@@ -417,7 +423,7 @@ instance
           pformat example,
           pformat currentCost
         ]
-  pformat message@(Success _ _ _ prog) =
+  pformat message@(Success _ _ _ _ prog) =
     nest 2 $ vsep [pformatMessageSummary message, pformat prog]
   pformat message@(Failure _ _) = pformatMessageSummary message
 
@@ -430,7 +436,7 @@ instance
   ) =>
   Serial (Message conProg symSemObj symVal conSemObj conVal matcher)
 
-_updateKnownMinimalCost :: IORef ProcessState -> Maybe Int -> IO ()
+_updateKnownMinimalCost :: IORef (ProcessState sketch conProg) -> Maybe Int -> IO ()
 _updateKnownMinimalCost stateRef newMinimalCost =
   modifyIORef' stateRef $ \s ->
     s
@@ -449,7 +455,7 @@ _sendAndWaitForNewMinimalCost ::
     Serial conVal,
     Serial matcher
   ) =>
-  IORef ProcessState ->
+  IORef (ProcessState sketch conProg) ->
   Message conProg symSemObj symVal conSemObj conVal matcher ->
   IO NewMinimalCostMessage
 _sendAndWaitForNewMinimalCost stateRef message = do
@@ -475,7 +481,8 @@ _solverRunSynthRequest ::
     matcher.
   (Solver handle) =>
   handle ->
-  Bool ->
+  Int ->
+  Int ->
   ProcessConfig
     sketchSpec
     sketch
@@ -488,7 +495,7 @@ _solverRunSynthRequest ::
     conVal
     matcher ->
   NewMinimalCostMessage ->
-  IORef ProcessState ->
+  IORef (ProcessState sketch conProg) ->
   IO
     ( Int,
       [Example symSemObj symVal conSemObj conVal matcher],
@@ -496,18 +503,27 @@ _solverRunSynthRequest ::
     )
 _solverRunSynthRequest
   handle
-  isFastTrack
+  startTrack
+  lastTrack
   ProcessConfig {..}
   NewMinimalCostMessage {..}
   stateRef = do
     logger <- _readLogger stateRef
     let sketch = genSymSimple sketchSpec "sketch" :: SymbolTable sketch
-    let TwoTrackVerifiers {..} = verifiers logger
+    allVerifiers <- _readVerifiers stateRef
+    logMultiLineDoc logger DEBUG $
+      nest 2 $
+        vsep
+          [ "Start synthesizing with start track: ",
+            pformat startTrack,
+            "and last track: ",
+            pformat lastTrack,
+            "and minimal cost: ",
+            pformat newMinimalCost
+          ]
     let task =
           SynthesisBoundCostTask
-            { synthesisVerifiers =
-                fastTrackVerifiers
-                  ++ (if isFastTrack then [] else slowTrackVerifiers),
+            { synthesisVerifiers = concat $ drop startTrack $ take (lastTrack + 1) allVerifiers,
               synthesisSymCostObj = costObj,
               synthesisSketchTable = sketch,
               synthesisSketchSymbol = sketchSymbol,
@@ -604,9 +620,8 @@ instance Hashable Process where
 
 data ProcessStep conProg
   = InitialStep
-  | FastTrackSynthStep
-  | FastTrackEasySynthStep (SymbolTable conProg)
-  | SlowTrackSynthStep
+  | SynthStep {_curTrack :: Int}
+  | EasySynthStep {_curTrack :: Int, _curProg :: SymbolTable conProg}
   | TerminationStep
 
 isTerminationStep :: ProcessStep conProg -> Bool
@@ -651,24 +666,24 @@ runRequestInSubProcess config processConfig@ProcessConfig {..} = do
     pgid <- createProcessGroupFor pid
     writeByteString wrChild $ word64ToByteString $ fromIntegral pgid
     logger <- _createLogger logConfig nodeId
+    let allVerifiers = verifiers logger
     stateRef <-
       newIORef $
         ProcessState
           { knownMinimalCost = initialCost,
             wrChild,
             rdChild,
-            logger
+            logger,
+            verifiers = allVerifiers
           }
     let loop :: (Solver handle) => handle -> ProcessStep conProg -> IO ()
         loop solver st = do
           nextStep <- case st of
             InitialStep -> initialStep processConfig stateRef
-            FastTrackSynthStep ->
-              fastTrackSynthStep solver processConfig stateRef
-            FastTrackEasySynthStep prog ->
-              fastTrackEasySynthStep config processConfig stateRef prog
-            SlowTrackSynthStep ->
-              slowTrackSynthStep solver processConfig stateRef
+            SynthStep nextTrack ->
+              synthStep solver nextTrack processConfig stateRef
+            EasySynthStep nextTrack prog ->
+              easySynthStep config nextTrack processConfig stateRef prog
             TerminationStep -> error "Should not happen"
           unless (isTerminationStep nextStep) $ loop solver nextStep
     let NodeId nid = nodeId
@@ -706,11 +721,10 @@ initialStep ::
     conSemObj
     conVal
     matcher ->
-  IORef ProcessState ->
+  IORef (ProcessState sketch conProg) ->
   IO (ProcessStep conProg)
 initialStep ProcessConfig {..} stateRef = do
   logger <- _readLogger stateRef
-  let TwoTrackVerifiers {..} = verifiers logger
 
   case countNumProgsEvidence of
     Nothing ->
@@ -737,18 +751,14 @@ initialStep ProcessConfig {..} stateRef = do
               "number of well-typed progs: ",
               pformat numOfProgs
             ]
+  return $ SynthStep 0
 
-  let haveTwoTracks = not $ null slowTrackVerifiers
-  if haveTwoTracks
-    then return FastTrackSynthStep
-    else return SlowTrackSynthStep
-
-_currentNewMinimalCostMessage :: IORef ProcessState -> IO NewMinimalCostMessage
+_currentNewMinimalCostMessage :: IORef (ProcessState sketch conProg) -> IO NewMinimalCostMessage
 _currentNewMinimalCostMessage stateRef = do
   ProcessState {..} <- readIORef stateRef
   return $ NewMinimalCostMessage knownMinimalCost
 
-fastTrackSynthStep ::
+synthStep ::
   forall
     handle
     sketchSpec
@@ -763,6 +773,7 @@ fastTrackSynthStep ::
     matcher.
   (Solver handle) =>
   handle ->
+  Int ->
   ProcessConfig
     sketchSpec
     sketch
@@ -774,35 +785,59 @@ fastTrackSynthStep ::
     conSemObj
     conVal
     matcher ->
-  IORef ProcessState ->
+  IORef (ProcessState sketch conProg) ->
   IO (ProcessStep conProg)
-fastTrackSynthStep handle processConfig@ProcessConfig {..} stateRef = do
+synthStep handle curTrack processConfig@ProcessConfig {..} stateRef = do
   logger <- _readLogger stateRef
-  wrChild <- _readWrChild stateRef
+  let allVerifiers = verifiers logger
   minimalCostMessage@NewMinimalCostMessage {..} <-
     _currentNewMinimalCostMessage stateRef
   logMultiLineDoc logger NOTICE $
-    nest 2 $
-      vsep ["Fast track synth with minimal cost: ", pformat newMinimalCost]
-  (_, examples, result) <-
-    _solverRunSynthRequest handle True processConfig minimalCostMessage stateRef
+    "Synth with minimal cost: "
+      <> pformat newMinimalCost
+      <> ", track: "
+      <> pformat curTrack
+  (synthedCost, examples, result) <-
+    _solverRunSynthRequest
+      handle
+      0
+      curTrack
+      processConfig
+      minimalCostMessage
+      stateRef
   case result of
     SynthesisSuccess prog -> do
       logMultiLineDoc logger NOTICE $
         nest 2 $
-          vsep ["Fast track synth success: ", pformat prog]
+          vsep
+            [ "Track "
+                <> pformat curTrack
+                <> " synth success: ",
+              pformat prog
+            ]
       cost <- _readKnownMinimalCost stateRef
-      let nextTrack =
-            if isJust easySketchFromFastResult then FastTrack else SlowTrack
-      _sendAndWaitForNewMinimalCost stateRef $
-        FastTrackViable nextTrack examples cost prog
-      if isJust easySketchFromFastResult
-        then return $ FastTrackEasySynthStep prog
-        else return SlowTrackSynthStep
+      let hasEasySynth = isJust easySketchFromFastResult
+      let hasNextTrack = length allVerifiers > curTrack + 1
+      if hasNextTrack
+        then do
+          _sendAndWaitForNewMinimalCost stateRef $
+            Viable curTrack examples cost prog
+          if hasEasySynth
+            then return $ EasySynthStep curTrack prog
+            else return $ SynthStep (curTrack + 1)
+        else do
+          _updateKnownMinimalCost stateRef (Just synthedCost)
+          _sendAndWaitForNewMinimalCost stateRef $
+            Success False curTrack examples synthedCost prog
+          return $ SynthStep curTrack
     SynthesisSolverFailure failure -> do
       logMultiLineDoc logger NOTICE $
         nest 2 $
-          vsep ["Fast track synth failure: ", pformat failure]
+          vsep
+            [ "Track " <> pformat curTrack <> " synth failure: ",
+              pformat failure
+            ]
+      wrChild <- _readWrChild stateRef
       writeObject
         wrChild
         ( Failure examples failure ::
@@ -814,7 +849,7 @@ fastTrackSynthStep handle processConfig@ProcessConfig {..} stateRef = do
         T.unpack $
           "Verification crashed, please check the code, reason: " <> err
 
-fastTrackEasySynthStep ::
+easySynthStep ::
   forall
     sketchSpec
     sketch
@@ -827,54 +862,39 @@ fastTrackEasySynthStep ::
     conVal
     matcher.
   GrisetteSMTConfig ->
+  Int ->
   ProcessConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher ->
-  IORef ProcessState ->
+  IORef (ProcessState sketch conProg) ->
   SymbolTable conProg ->
   IO (ProcessStep conProg)
-fastTrackEasySynthStep
+easySynthStep
   config
+  curTrack
   processConfig@ProcessConfig {..}
   stateRef
   conProg = do
     unless (isJust easySketchFromFastResult) $ error "Should not happen"
     let sketchSpec = fromJust easySketchFromFastResult conProg
-    let fastTrackEasySynthTask =
-          processConfig
-            { sketchSpec = sketchSpec,
-              verifiers = \logger ->
-                TwoTrackVerifiers
-                  (slowTrackVerifiers $ verifiers logger)
-                  []
-            } ::
-            ProcessConfig
-              sketchSpec
-              sketch
-              conProg
-              costObj
-              cost
-              symSemObj
-              symVal
-              conSemObj
-              conVal
-              matcher
     minimalCostMessage@NewMinimalCostMessage {..} <-
       _currentNewMinimalCostMessage stateRef
     logger <- _readLogger stateRef
     logMultiLineDoc logger NOTICE $
       nest 2 $
         vsep
-          [ "Fast track easy synth with minimal cost: ",
-            pformat newMinimalCost,
+          [ "Easy synth with minimal cost: " <> pformat newMinimalCost,
+            "track: " <> pformat curTrack,
             "sketch: " <> pformat sketchSpec,
             "sketch symbol: " <> pformat sketchSymbol
           ]
     r <- newEmptyMVar
+    trackBound <- _readTrackBound stateRef
     a <- async $ do
       res <- withSolver config $ \localHandle ->
         _solverRunSynthRequest
           localHandle
-          False
-          fastTrackEasySynthTask
+          trackBound
+          trackBound
+          processConfig
           minimalCostMessage
           stateRef
       putMVar r $ Just res
@@ -888,100 +908,45 @@ fastTrackEasySynthStep
         logMultiLineDoc logger NOTICE $
           nest 2 $
             vsep
-              [ "Fast track easy synth success: ",
+              [ "Easy synth success: ",
                 pformat r,
-                "cost: " <> pformat cost
+                "cost: " <> pformat cost,
+                "track: " <> pformat curTrack
               ]
         _updateKnownMinimalCost stateRef (Just cost)
         _sendAndWaitForNewMinimalCost stateRef $
-          Success FastTrack examples cost r
-        return FastTrackSynthStep
+          Success True curTrack examples cost r
+        return $ SynthStep curTrack
       Just (_, examples, _) -> do
         logMultiLineDoc
           logger
           NOTICE
-          "Fast track easy synth failed, switch to slow track."
+          ( "Easy synth failed, proceed to next track (track "
+              <> pformat (curTrack + 1)
+              <> ")."
+          )
         cost <- _readKnownMinimalCost stateRef
         _sendAndWaitForNewMinimalCost
           stateRef
-          ( FastTrackEasySynthFailure cost examples ::
+          ( EasySynthFailure curTrack cost examples ::
               Message conProg symSemObj symVal conSemObj conVal matcher
           )
-        return SlowTrackSynthStep
+        return $ SynthStep (curTrack + 1)
       _ -> do
         logMultiLineDoc
           logger
           NOTICE
-          "Fast track easy synth timed out or crashed, switch to slow track."
+          ( "Easy synth timed out or crashed, proceed to next track (track "
+              <> pformat (curTrack + 1)
+              <> ")."
+          )
         cost <- _readKnownMinimalCost stateRef
         _sendAndWaitForNewMinimalCost
           stateRef
-          ( FastTrackEasySynthFailure cost [] ::
+          ( EasySynthFailure curTrack cost [] ::
               Message conProg symSemObj symVal conSemObj conVal matcher
           )
-        return SlowTrackSynthStep
-
-slowTrackSynthStep ::
-  forall
-    handle
-    sketchSpec
-    sketch
-    conProg
-    costObj
-    cost
-    symSemObj
-    symVal
-    conSemObj
-    conVal
-    matcher.
-  (Solver handle) =>
-  handle ->
-  ProcessConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher ->
-  IORef ProcessState ->
-  IO (ProcessStep conProg)
-slowTrackSynthStep handle processConfig@ProcessConfig {..} stateRef = do
-  minimalCostMessage@NewMinimalCostMessage {..} <-
-    _currentNewMinimalCostMessage stateRef
-  logger <- _readLogger stateRef
-  logMultiLineDoc logger NOTICE $
-    nest 2 $
-      vsep
-        [ "Slow track synth with minimal cost: ",
-          pformat newMinimalCost
-        ]
-  (cost, examples, result) <-
-    _solverRunSynthRequest handle False processConfig minimalCostMessage stateRef
-  _updateKnownMinimalCost stateRef (Just cost)
-  case result of
-    SynthesisSuccess prog -> do
-      logMultiLineDoc logger NOTICE $
-        nest 2 $
-          vsep
-            [ "Slow track synth success: ",
-              pformat prog,
-              "cost: " <> pformat cost
-            ]
-      _sendAndWaitForNewMinimalCost stateRef $
-        Success SlowTrack examples cost prog
-      return SlowTrackSynthStep
-    SynthesisSolverFailure failure -> do
-      logMultiLineDoc logger NOTICE $
-        nest 2 $
-          vsep
-            [ "Slow track synth failure: ",
-              pformat failure
-            ]
-      wrChild <- _readWrChild stateRef
-      writeObject
-        wrChild
-        ( Failure examples failure ::
-            Message conProg symSemObj symVal conSemObj conVal matcher
-        )
-      return TerminationStep
-    SynthesisVerifierFailure err -> do
-      error $
-        T.unpack $
-          "Verification crashed, please check the code, reason: " <> err
+        return $ SynthStep (curTrack + 1)
 
 _closeProcessPipes :: Process -> IO ()
 _closeProcessPipes Process {..} = do
@@ -1019,7 +984,7 @@ type ProcessResponse conProg symSemObj symVal conSemObj conVal matcher =
 
 processResponseNewCost ::
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
-processResponseNewCost (Right (Success _ _ cost _)) = Just cost
+processResponseNewCost (Right (Success _ _ _ cost _)) = Just cost
 processResponseNewCost _ = Nothing
 
 processResponseIsGotExample ::
@@ -1027,26 +992,25 @@ processResponseIsGotExample ::
 processResponseIsGotExample (Right GotExample {}) = True
 processResponseIsGotExample _ = False
 
-processResponseIsFastTrackSuccess ::
+processResponseIsViable ::
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsFastTrackSuccess (Right (Success FastTrack _ _ _)) = True
-processResponseIsFastTrackSuccess _ = False
+processResponseIsViable (Right Viable {}) = True
+processResponseIsViable _ = False
 
-processResponseIsSlowTrackSuccess ::
+processResponseIsEasySynthFailure ::
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsSlowTrackSuccess (Right (Success SlowTrack _ _ _)) = True
-processResponseIsSlowTrackSuccess _ = False
+processResponseIsEasySynthFailure (Right EasySynthFailure {}) = True
+processResponseIsEasySynthFailure _ = False
 
-processResponseIsFastTrackEasySynthFailure ::
+processResponseIsSuccess ::
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsFastTrackEasySynthFailure
-  (Right FastTrackEasySynthFailure {}) = True
-processResponseIsFastTrackEasySynthFailure _ = False
+processResponseIsSuccess (Right Success {}) = True
+processResponseIsSuccess _ = False
 
-processResponseIsFastTrackViable ::
+processResponseIsFailure ::
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsFastTrackViable (Right FastTrackViable {}) = True
-processResponseIsFastTrackViable _ = False
+processResponseIsFailure (Right Failure {}) = True
+processResponseIsFailure _ = False
 
 getProcessResponse ::
   ( Serial conProg,
