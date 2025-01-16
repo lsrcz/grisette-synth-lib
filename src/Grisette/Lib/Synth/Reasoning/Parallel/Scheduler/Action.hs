@@ -161,6 +161,7 @@ import System.Posix
     sigKILL,
     signalProcessGroup,
   )
+import System.Random.Stateful (UniformRange (uniformRM))
 
 _getNodeResponse ::
   Scheduler
@@ -441,23 +442,42 @@ _startQueuedImpl scheduler@Scheduler {..} = do
   runningNum <- getNumRunningProcess scheduler
   when (Q.null nodeQueue') $ do
     runningNodes' <- HM.keys <$> readIORef nodeToProcess
-    nodeDepths <- traverse (getDepth scheduler) runningNodes'
-    let runningNodes = fmap fst $ sortOn snd $ zip runningNodes' nodeDepths
+    depth' <- traverse (getDepth scheduler) runningNodes'
+    nodePriorities <- traverse (getPriority scheduler) runningNodes'
+    let runningNodesWithPriority =
+          fmap fst $ sortOn snd $ zip runningNodes' nodePriorities
+    let runningNodesWithDepth = fmap fst $ sortOn snd $ zip runningNodes' depth'
     let go [] = return ()
         go (nid : rest) = do
           info <- getNodeInfo scheduler nid
           if nodeSplitted info
             then go rest
             else do
+              depth <- getDepth scheduler nid
+              priority <- getPriority scheduler nid
               logMultiLineDoc (logger config) NOTICE $
-                "Empty queue, splitting node " <> pformat nid <> "."
+                "Empty queue, splitting node "
+                  <> pformat nid
+                  <> ", depth: "
+                  <> pformat depth
+                  <> ", priority: "
+                  <> pformat priority
               void $ splitNode scheduler False nid
-    go runningNodes
+    rand <- uniformRM (0, 1) randGen
+    let pickBiased = rand < biasedDrawProbability config
+    if pickBiased
+      then go runningNodesWithPriority
+      else go runningNodesWithDepth
   when (runningNum < parallelism config && not (Q.null nodeQueue')) $ do
-    (nodeId, biased, nodeQueue') <- Q.popMin randGen nodeQueue'
+    (priority, nodeId, biased, nodeQueue') <- Q.popMin randGen nodeQueue'
     writeIORef nodeQueue $! nodeQueue'
     logMultiLineDoc (logger config) NOTICE $
-      "Drew node " <> pformat nodeId <> ", biased: " <> pformat biased
+      "Drew node "
+        <> pformat nodeId
+        <> ", biased: "
+        <> pformat biased
+        <> ", priority: "
+        <> pformat priority
 
     curDcTree <- readIORef dcTree
     if nodeFailed curDcTree nodeId

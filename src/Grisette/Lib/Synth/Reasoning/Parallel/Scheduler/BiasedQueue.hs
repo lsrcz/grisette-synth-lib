@@ -62,6 +62,11 @@ delete nid BiasedQueue {..} =
       biasProbability
     }
 
+getPriority :: NodeId -> BiasedQueue -> IO Priority
+getPriority nid BiasedQueue {..} = do
+  let Just (priority, _) = PSQ.lookup nid baseQueue
+  return priority
+
 setPriority :: NodeId -> Priority -> BiasedQueue -> BiasedQueue
 setPriority nid priority BiasedQueue {..} =
   BiasedQueue
@@ -88,11 +93,12 @@ size BiasedQueue {..} = PSQ.size baseQueue
 null :: BiasedQueue -> Bool
 null BiasedQueue {..} = PSQ.null baseQueue
 
-popMin :: AtomicGenM StdGen -> BiasedQueue -> IO (NodeId, Bool, BiasedQueue)
+popMin :: AtomicGenM StdGen -> BiasedQueue -> IO (Priority, NodeId, Bool, BiasedQueue)
 popMin randGen queue@BiasedQueue {..} = do
   let Just (_, _, nodeIdBiased) = PSQ.findMin baseQueue
       Just (_, _, nodeIdRandom) = PSQ.findMin simpleQueue
   randVar <- uniformRM (0, 1) randGen
   let pickBiased = randVar < biasProbability
   let nodeId = if pickBiased then nodeIdBiased else nodeIdRandom
-  return (nodeId, pickBiased, delete nodeId queue)
+  priority <- getPriority nodeId queue
+  return (priority, nodeId, pickBiased, delete nodeId queue)
