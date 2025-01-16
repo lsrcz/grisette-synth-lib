@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -38,6 +39,7 @@ data ChoiceMeta = NoSplit | Split {_seqNum :: Int, _onlyWhenSuccess :: Bool}
 deriveGADT [''ChoiceMeta] allClasses0
 
 data ChoiceTree op = Leaf [op] | Branch ChoiceMeta [ChoiceTree op]
+  deriving (Functor)
 
 deriveGADT [''ChoiceTree] (allClasses01 \\ pprintClasses)
 
@@ -98,4 +100,4 @@ instance
   where
   simpleFresh tree = do
     ops <- mapM simpleFresh $ flattenChoiceTree tree
-    chooseSimpleFresh ops
+    chooseUnionFresh ops
