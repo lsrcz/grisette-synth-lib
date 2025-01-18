@@ -8,6 +8,13 @@
 @package grisette-synth-lib
 @version 0.1.0.0
 
+module Grisette.Lib.Synth.Combinator.Embed
+class sub :<: sup
+inj :: (:<:) sub sup => sub -> sup
+prj :: (:<:) sub sup => sup -> Maybe sub
+instance (a Grisette.Lib.Synth.Combinator.Embed.:<: b, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable b) => a Grisette.Lib.Synth.Combinator.Embed.:<: Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union b
+instance a Grisette.Lib.Synth.Combinator.Embed.:<: a
+
 
 module Grisette.Lib.Synth.Context
 type MonadContext (ctx :: Type -> Type) = (MonadError Text ctx, TryMerge ctx)
@@ -190,97 +197,11 @@ setPriority :: NodeId -> Priority -> BiasedQueue -> BiasedQueue
 insert :: NodeId -> Priority -> BiasedQueue -> BiasedQueue
 size :: BiasedQueue -> Int
 null :: BiasedQueue -> Bool
-popMin :: AtomicGenM StdGen -> BiasedQueue -> IO (NodeId, Bool, BiasedQueue)
+popMin :: AtomicGenM StdGen -> BiasedQueue -> IO (Priority, NodeId, Bool, BiasedQueue)
 instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.Priority
 instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.Priority
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.Priority
 instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.Priority
-
-module Grisette.Lib.Synth.TypeSignature
-data TypeSignature ty
-TypeSignature :: [ty] -> [ty] -> TypeSignature ty
-[argTypes] :: TypeSignature ty -> [ty]
-[resTypes] :: TypeSignature ty -> [ty]
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms a => Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Data.Bytes.Serial.Serial a => Data.Binary.Class.Binary (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Data.Functor.Classes.Eq1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance GHC.Classes.Eq a => GHC.Classes.Eq (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Data.Hashable.Class.Hashable1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Data.Hashable.Class.Hashable a => Data.Hashable.Class.Hashable (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a => Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Control.DeepSeq.NFData1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Control.DeepSeq.NFData a => Control.DeepSeq.NFData (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Data.Functor.Classes.Ord1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance GHC.Classes.Ord a => GHC.Classes.Ord (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint a => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Data.Bytes.Serial.Serial1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Data.Bytes.Serial.Serial a => Data.Bytes.Serial.Serial (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Data.Bytes.Serial.Serial a => Data.Serialize.Serialize (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Data.Functor.Classes.Show1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance GHC.Internal.Show.Show a => GHC.Internal.Show.Show (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd1 Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon1 Grisette.Lib.Synth.TypeSignature.TypeSignature Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Lib.Synth.TypeSignature.TypeSignature a1) (Grisette.Lib.Synth.TypeSignature.TypeSignature a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.TypeSignature.TypeSignature a1)) (Grisette.Lib.Synth.TypeSignature.TypeSignature a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym1 Grisette.Lib.Synth.TypeSignature.TypeSignature Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a1) (Grisette.Lib.Synth.TypeSignature.TypeSignature a2)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a1, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a2 a1) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a2) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.TypeSignature.TypeSignature a1))
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq1 mode Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd1 mode Grisette.Lib.Synth.TypeSignature.TypeSignature
-instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
-
-module Grisette.Lib.Synth.Operator.OpTyping
-class MonadContext ctx => OpTyping op (ctx :: Type -> Type) where {
-    type OpTypeType op;
-}
-typeOp :: OpTyping op ctx => op -> ctx (TypeSignature (OpTypeType op))
-simpleTyping :: (MonadContext ctx, Mergeable ty) => (op -> TypeSignature ty) -> op -> ctx (TypeSignature ty)
-symOpMaximumArgNum :: OpTyping op SymbolicContext => op -> Int
-symOpMaximumResNum :: OpTyping op SymbolicContext => op -> Int
-data DefaultType
-DefaultType :: DefaultType
-unaryDefaultType :: TypeSignature DefaultType
-binaryDefaultType :: TypeSignature DefaultType
-ternaryDefaultType :: TypeSignature DefaultType
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Data.Binary.Class.Binary Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance GHC.Classes.Eq Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a, Grisette.Internal.Core.Data.Class.GenSym.GenSym () a) => Grisette.Internal.Core.Data.Class.GenSym.GenSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType a
-instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Operator.OpTyping.MaxAcrossBranches
-instance Control.DeepSeq.NFData Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance (Grisette.Internal.Core.Control.Monad.Class.Union.MonadUnion ctx, Grisette.Lib.Synth.Operator.OpTyping.OpTyping op ctx, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable op, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (Grisette.Lib.Synth.Operator.OpTyping.OpTypeType op)) => Grisette.Lib.Synth.Operator.OpTyping.OpTyping (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union op) ctx
-instance GHC.Classes.Ord Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Data.Bytes.Serial.Serial Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Data.Serialize.Serialize Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance GHC.Internal.Show.Show Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SimpleMergeable.SimpleMergeable Grisette.Lib.Synth.Operator.OpTyping.MaxAcrossBranches
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon Grisette.Lib.Synth.Operator.OpTyping.DefaultType Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Operator.OpTyping.DefaultType) Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Operator.OpTyping.DefaultType)
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Operator.OpTyping.DefaultType
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Operator.OpTyping.DefaultType
 
 module Grisette.Lib.Synth.Util.Exception
 data CancellingException
@@ -288,6 +209,65 @@ data CancellingException
 catchErrno :: IO a -> (IOError -> Errno -> IO a) -> IO a
 instance GHC.Internal.Exception.Type.Exception Grisette.Lib.Synth.Util.Exception.CancellingException
 instance GHC.Internal.Show.Show Grisette.Lib.Synth.Util.Exception.CancellingException
+
+module Grisette.Lib.Synth.Util.Parser
+type CharParser e s (m :: Type -> Type) = (MonadParsec e s m, Token s ~ Char, IsString Tokens s, Tokens s ~ s, MonadFail m)
+lexeme :: CharParser e s m => m a -> m a
+symbol :: CharParser e s m => s -> m s
+identifier :: CharParser e s m => m Text
+comma :: CharParser e s m => m s
+colon :: CharParser e s m => m s
+leftBracket :: CharParser e s m => m s
+rightBracket :: CharParser e s m => m s
+leftParen :: CharParser e s m => m s
+rightParen :: CharParser e s m => m s
+leftBrace :: CharParser e s m => m s
+rightBrace :: CharParser e s m => m s
+leftAngle :: CharParser e s m => m s
+rightAngle :: CharParser e s m => m s
+betweenBrackets :: CharParser e s m => m a -> m a
+betweenParens :: CharParser e s m => m a -> m a
+betweenBraces :: CharParser e s m => m a -> m a
+betweenAngles :: CharParser e s m => m a -> m a
+commaSep :: CharParser e s m => m a -> m [a]
+bracketCommaSep :: CharParser e s m => m a -> m [a]
+bracketCommaSepOrSingleton :: CharParser e s m => m a -> m [a]
+parenCommaSep :: CharParser e s m => m a -> m [a]
+parenCommaSepOrSingleton :: CharParser e s m => m a -> m [a]
+braceCommaSep :: CharParser e s m => m a -> m [a]
+braceCommaSepOrSingleton :: CharParser e s m => m a -> m [a]
+angleCommaSep :: CharParser e s m => m a -> m [a]
+angleCommaSepOrSingleton :: CharParser e s m => m a -> m [a]
+named :: CharParser e s m => s -> m a -> m a
+maybeNamed :: CharParser e s m => Maybe s -> m a -> m a
+commaSep2 :: CharParser e s m => m a -> m b -> m (a, b)
+commaSep3 :: CharParser e s m => m a -> m b -> m c -> m (a, b, c)
+commaSep4 :: CharParser e s m => m a -> m b -> m c -> m d -> m (a, b, c, d)
+commaSep5 :: CharParser err s m => m a -> m b -> m c -> m d -> m e -> m (a, b, c, d, e)
+bracketCommaSep2 :: CharParser e s m => m a -> m b -> m (a, b)
+bracketCommaSep3 :: CharParser e s m => m a -> m b -> m c -> m (a, b, c)
+bracketCommaSep4 :: CharParser e s m => m a -> m b -> m c -> m d -> m (a, b, c, d)
+bracketCommaSep5 :: CharParser err s m => m a -> m b -> m c -> m d -> m e -> m (a, b, c, d, e)
+parenCommaSep2 :: CharParser e s m => m a -> m b -> m (a, b)
+parenCommaSep3 :: CharParser e s m => m a -> m b -> m c -> m (a, b, c)
+parenCommaSep4 :: CharParser e s m => m a -> m b -> m c -> m d -> m (a, b, c, d)
+parenCommaSep5 :: CharParser err s m => m a -> m b -> m c -> m d -> m e -> m (a, b, c, d, e)
+braceCommaSep2 :: CharParser e s m => m a -> m b -> m (a, b)
+braceCommaSep3 :: CharParser e s m => m a -> m b -> m c -> m (a, b, c)
+braceCommaSep4 :: CharParser e s m => m a -> m b -> m c -> m d -> m (a, b, c, d)
+braceCommaSep5 :: CharParser err s m => m a -> m b -> m c -> m d -> m e -> m (a, b, c, d, e)
+angleCommaSep2 :: CharParser e s m => m a -> m b -> m (a, b)
+angleCommaSep3 :: CharParser e s m => m a -> m b -> m c -> m (a, b, c)
+angleCommaSep4 :: CharParser e s m => m a -> m b -> m c -> m d -> m (a, b, c, d)
+angleCommaSep5 :: CharParser err s m => m a -> m b -> m c -> m d -> m e -> m (a, b, c, d, e)
+
+module Grisette.Lib.Synth.Type.TypeParser
+class TypeParser op
+typeParser :: (TypeParser op, CharParser e s m) => m op
+
+module Grisette.Lib.Synth.Operator.OpParser
+class OpParser op
+opParser :: (OpParser op, CharParser e s m) => m op
 
 module Grisette.Lib.Synth.Util.Pretty
 encloseListIfNotSingle :: Doc ann -> Doc ann -> Doc ann -> [Doc ann] -> Doc ann
@@ -468,6 +448,93 @@ logMultiLineText :: Logger -> Priority -> Text -> IO ()
 logMultiLineDoc :: Logger -> Priority -> Doc ann -> IO ()
 logMultiLinePretty :: PPrint a => Logger -> Priority -> a -> IO ()
 
+module Grisette.Lib.Synth.TypeSignature
+data TypeSignature ty
+TypeSignature :: [ty] -> [ty] -> TypeSignature ty
+[argTypes] :: TypeSignature ty -> [ty]
+[resTypes] :: TypeSignature ty -> [ty]
+typeSignatureParser :: (CharParser e s m, TypeParser ty) => m (TypeSignature ty)
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms a => Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Data.Bytes.Serial.Serial a => Data.Binary.Class.Binary (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Data.Functor.Classes.Eq1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance GHC.Classes.Eq a => GHC.Classes.Eq (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Data.Hashable.Class.Hashable1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Data.Hashable.Class.Hashable a => Data.Hashable.Class.Hashable (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a => Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Control.DeepSeq.NFData1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Control.DeepSeq.NFData a => Control.DeepSeq.NFData (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Data.Functor.Classes.Ord1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance GHC.Classes.Ord a => GHC.Classes.Ord (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint ty => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.TypeSignature.TypeSignature ty)
+instance Data.Bytes.Serial.Serial1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Data.Bytes.Serial.Serial a => Data.Bytes.Serial.Serial (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Data.Bytes.Serial.Serial a => Data.Serialize.Serialize (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Data.Functor.Classes.Show1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance GHC.Internal.Show.Show a => GHC.Internal.Show.Show (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd1 Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon1 Grisette.Lib.Synth.TypeSignature.TypeSignature Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Lib.Synth.TypeSignature.TypeSignature a1) (Grisette.Lib.Synth.TypeSignature.TypeSignature a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.TypeSignature.TypeSignature a1)) (Grisette.Lib.Synth.TypeSignature.TypeSignature a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym1 Grisette.Lib.Synth.TypeSignature.TypeSignature Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a1) (Grisette.Lib.Synth.TypeSignature.TypeSignature a2)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a1, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a2 a1) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.TypeSignature.TypeSignature a2) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.TypeSignature.TypeSignature a1))
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq1 mode Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd1 mode Grisette.Lib.Synth.TypeSignature.TypeSignature
+instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode (Grisette.Lib.Synth.TypeSignature.TypeSignature a)
+
+module Grisette.Lib.Synth.Operator.OpTyping
+class MonadContext ctx => OpTyping op (ctx :: Type -> Type) where {
+    type OpTypeType op;
+}
+typeOp :: OpTyping op ctx => op -> ctx (TypeSignature (OpTypeType op))
+simpleTyping :: (MonadContext ctx, Mergeable ty) => (op -> TypeSignature ty) -> op -> ctx (TypeSignature ty)
+symOpMaximumArgNum :: OpTyping op SymbolicContext => op -> Int
+symOpMaximumResNum :: OpTyping op SymbolicContext => op -> Int
+data DefaultType
+DefaultType :: DefaultType
+unaryDefaultType :: TypeSignature DefaultType
+binaryDefaultType :: TypeSignature DefaultType
+ternaryDefaultType :: TypeSignature DefaultType
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Data.Binary.Class.Binary Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance GHC.Classes.Eq Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a, Grisette.Internal.Core.Data.Class.GenSym.GenSym () a) => Grisette.Internal.Core.Data.Class.GenSym.GenSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType a
+instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Operator.OpTyping.MaxAcrossBranches
+instance Control.DeepSeq.NFData Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance (Grisette.Internal.Core.Control.Monad.Class.Union.MonadUnion ctx, Grisette.Lib.Synth.Operator.OpTyping.OpTyping op ctx, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable op, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (Grisette.Lib.Synth.Operator.OpTyping.OpTypeType op)) => Grisette.Lib.Synth.Operator.OpTyping.OpTyping (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union op) ctx
+instance GHC.Classes.Ord Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Data.Bytes.Serial.Serial Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Data.Serialize.Serialize Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance GHC.Internal.Show.Show Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SimpleMergeable.SimpleMergeable Grisette.Lib.Synth.Operator.OpTyping.MaxAcrossBranches
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon Grisette.Lib.Synth.Operator.OpTyping.DefaultType Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Operator.OpTyping.DefaultType) Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Operator.OpTyping.DefaultType (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Operator.OpTyping.DefaultType)
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Operator.OpTyping.DefaultType
+
 module Grisette.Lib.Synth.Program.ProgPPrint
 class ProgPPrint prog
 pformatProg :: ProgPPrint prog => Text -> prog -> Either (Doc ann) (Doc ann)
@@ -620,6 +687,7 @@ instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a => Gr
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym1 Grisette.Lib.Synth.Program.Choice.ChoiceTree.ChoiceTree
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Program.Choice.ChoiceTree.ChoiceMeta
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym (Grisette.Lib.Synth.Program.Choice.ChoiceTree.ChoiceTree a)
+instance GHC.Internal.Base.Functor Grisette.Lib.Synth.Program.Choice.ChoiceTree.ChoiceTree
 instance Grisette.Internal.Core.Data.Class.GenSym.GenSym opSpec op => Grisette.Internal.Core.Data.Class.GenSym.GenSym (Grisette.Lib.Synth.Program.Choice.ChoiceTree.ChoiceTree opSpec) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union op)
 instance Grisette.Internal.Core.Data.Class.GenSym.GenSym opSpec op => Grisette.Internal.Core.Data.Class.GenSym.GenSym (Grisette.Lib.Synth.Program.Choice.ChoiceTree.ChoiceTree opSpec) op
 instance (Grisette.Internal.Core.Data.Class.GenSym.GenSym opSpec op, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable op) => Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple (Grisette.Lib.Synth.Program.Choice.ChoiceTree.ChoiceTree opSpec) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union op)
@@ -849,6 +917,11 @@ instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd1 mode Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate.Intermediates
 instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode (Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate.Intermediates a)
 
+module Grisette.Lib.Synth.Program.ProgParser
+class ProgParser prog
+progParser :: (ProgParser prog, CharParser e s m) => m (Text, prog)
+progTableParser :: (CharParser e s m, ProgParser prog) => m (SymbolTable prog)
+
 module Grisette.Lib.Synth.Program.ProgCost
 class MonadContext ctx => ProgCost costObj prog cost (ctx :: Type -> Type)
 progCost :: ProgCost costObj prog cost ctx => costObj -> SymbolCostTable cost ctx -> prog -> ctx cost
@@ -1054,6 +1127,7 @@ instance Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec op => Grisette.Li
 instance Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec op => Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec (Grisette.Lib.Synth.Program.Concrete.Program.Stmt op varId)
 instance (Grisette.Lib.Synth.Context.MonadContext ctx, Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.OpCost opCostObj op cost ctx, GHC.Internal.Num.Num cost) => Grisette.Lib.Synth.Program.ProgCost.ProgCost (Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.PerStmtCostObj opCostObj) (Grisette.Lib.Synth.Program.Concrete.Program.Prog op varId ty) cost ctx
 instance (Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint op, Grisette.Lib.Synth.VarId.ConcreteVarId varId, Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint ty, GHC.Internal.Show.Show op, GHC.Internal.Show.Show ty) => Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint (Grisette.Lib.Synth.Program.Concrete.Program.Prog op varId ty)
+instance (Grisette.Lib.Synth.Operator.OpParser.OpParser op, Grisette.Lib.Synth.Type.TypeParser.TypeParser ty, GHC.Internal.Num.Num varId) => Grisette.Lib.Synth.Program.ProgParser.ProgParser (Grisette.Lib.Synth.Program.Concrete.Program.Prog op varId ty)
 instance Grisette.Lib.Synth.Operator.OpReachableSymbols.OpReachableSymbols op => Grisette.Lib.Synth.Program.SymbolTable.ProgReachableSymbols (Grisette.Lib.Synth.Program.Concrete.Program.Prog op varId ty)
 instance (Grisette.Lib.Synth.Operator.OpSemantics.OpSemantics semObj op val ctx, Grisette.Lib.Synth.VarId.ConcreteVarId varId, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable val, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable ty, ty GHC.Types.~ Grisette.Lib.Synth.Operator.OpTyping.OpTypeType op) => Grisette.Lib.Synth.Program.ProgSemantics.ProgSemantics semObj (Grisette.Lib.Synth.Program.Concrete.Program.Prog op varId ty) val ctx
 instance (Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint op, Grisette.Lib.Synth.VarId.ConcreteVarId varId, Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint ty, GHC.Internal.Show.Show op, GHC.Internal.Show.Show ty) => Grisette.Lib.Synth.Program.ProgToDot.ProgToDot (Grisette.Lib.Synth.Program.Concrete.Program.Prog op varId ty)
@@ -1287,102 +1361,6 @@ data QuickCheckFuzzer symVal conVal symProg conProg
 defaultQuickCheckFuzzer :: forall symVal conVal symProg conProg semObj. (SymExampleConstraint semObj symProg symVal EqMatcher, ConExampleConstraint semObj conProg conVal EqMatcher, ToCon symProg conProg, ToSym conVal symVal, EvalSym symProg) => semObj -> Gen [conVal] -> ([conVal] -> ConcreteContext [conVal]) -> SomeVerifier symProg conProg
 defaultSemQuickCheckFuzzer :: forall symVal conVal symProg conProg. (ProgSemantics DefaultSem symProg symVal AngelicContext, SymExampleConstraint DefaultSem symProg symVal EqMatcher, ProgSemantics DefaultSem conProg conVal ConcreteContext, ConExampleConstraint DefaultSem conProg conVal EqMatcher, ToCon symProg conProg, ToSym conVal symVal, EvalSym symProg) => Gen [conVal] -> ([conVal] -> ConcreteContext [conVal]) -> SomeVerifier symProg conProg
 instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon symProg conProg, Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym symProg, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym conVal symVal) => Grisette.Lib.Synth.Reasoning.Synthesis.IsVerifier (Grisette.Lib.Synth.Reasoning.Fuzzing.QuickCheckFuzzer symVal conVal symProg conProg) symProg conProg
-
-module Grisette.Lib.Synth.Program.NullProg
-data NullProg ty
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Data.Binary.Class.Binary (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Data.Binary.Class.Binary (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Data.Functor.Classes.Eq1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Data.Functor.Classes.Eq1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance GHC.Classes.Eq (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance GHC.Classes.Eq (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple (Grisette.Lib.Synth.Program.NullProg.NullProg ty0) (Grisette.Lib.Synth.Program.NullProg.NullProg ty1)
-instance GHC.Internal.Generics.Generic (Grisette.Lib.Synth.Program.NullProg.NullProg ty)
-instance GHC.Internal.Generics.Generic (Grisette.Lib.Synth.Program.NullProg.NullStmt ty)
-instance Data.Hashable.Class.Hashable1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Data.Hashable.Class.Hashable1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Data.Hashable.Class.Hashable (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Data.Hashable.Class.Hashable (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Lib.Synth.Program.Choice.Split.LowestSeqNum (Grisette.Lib.Synth.Program.NullProg.NullProg ty)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Control.DeepSeq.NFData1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Control.DeepSeq.NFData1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Control.DeepSeq.NFData (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Control.DeepSeq.NFData (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Data.Functor.Classes.Ord1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Data.Functor.Classes.Ord1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance GHC.Classes.Ord (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance GHC.Classes.Ord (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec (Grisette.Lib.Synth.Program.NullProg.NullProg ty)
-instance Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint (Grisette.Lib.Synth.Program.NullProg.NullProg ty)
-instance Grisette.Lib.Synth.Context.MonadContext ctx => Grisette.Lib.Synth.Program.ProgSemantics.ProgSemantics semObj (Grisette.Lib.Synth.Program.NullProg.NullProg ty) val ctx
-instance Grisette.Lib.Synth.Program.ProgToDot.ProgToDot (Grisette.Lib.Synth.Program.NullProg.NullProg ty)
-instance Grisette.Lib.Synth.Program.ProgTyping.ProgTyping (Grisette.Lib.Synth.Program.NullProg.NullProg ty)
-instance Grisette.Lib.Synth.Program.ProgUtil.ProgUtilImpl (Grisette.Lib.Synth.Program.NullProg.NullProg ty) () (Grisette.Lib.Synth.Program.NullProg.NullStmt ty) ()
-instance Grisette.Lib.Synth.Program.ProgUtil.ProgUtil (Grisette.Lib.Synth.Program.NullProg.NullProg ty)
-instance Data.Bytes.Serial.Serial1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Data.Bytes.Serial.Serial1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Data.Bytes.Serial.Serial (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Data.Bytes.Serial.Serial (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Data.Serialize.Serialize (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Data.Serialize.Serialize (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Data.Functor.Classes.Show1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Data.Functor.Classes.Show1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance GHC.Internal.Show.Show (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance GHC.Internal.Show.Show (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Lib.Synth.Program.ProgUtil.StmtUtilImpl (Grisette.Lib.Synth.Program.NullProg.NullStmt ty) () ()
-instance Grisette.Lib.Synth.Program.ProgUtil.StmtUtil (Grisette.Lib.Synth.Program.NullProg.NullStmt ty)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd1 Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd1 Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon1 Grisette.Lib.Synth.Program.NullProg.NullProg Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon1 Grisette.Lib.Synth.Program.NullProg.NullStmt Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Lib.Synth.Program.NullProg.NullProg a1) (Grisette.Lib.Synth.Program.NullProg.NullProg a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Lib.Synth.Program.NullProg.NullStmt a1) (Grisette.Lib.Synth.Program.NullProg.NullStmt a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.Program.NullProg.NullProg a1)) (Grisette.Lib.Synth.Program.NullProg.NullProg a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.Program.NullProg.NullStmt a1)) (Grisette.Lib.Synth.Program.NullProg.NullStmt a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym1 Grisette.Lib.Synth.Program.NullProg.NullProg Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym1 Grisette.Lib.Synth.Program.NullProg.NullStmt Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.Program.NullProg.NullProg a1) (Grisette.Lib.Synth.Program.NullProg.NullProg a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.Program.NullProg.NullProg a1) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.Program.NullProg.NullProg a2))
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.Program.NullProg.NullStmt a1) (Grisette.Lib.Synth.Program.NullProg.NullStmt a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.Program.NullProg.NullStmt a1) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.Program.NullProg.NullStmt a2))
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq1 mode Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq1 mode Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd1 mode Grisette.Lib.Synth.Program.NullProg.NullProg
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd1 mode Grisette.Lib.Synth.Program.NullProg.NullStmt
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode (Grisette.Lib.Synth.Program.NullProg.NullProg a)
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode (Grisette.Lib.Synth.Program.NullProg.NullStmt a)
 
 module Grisette.Lib.Synth.Program.Concrete.ProgramMayMultiPath
 newtype ProgMayMultiPath op varId ty
@@ -2032,31 +2010,26 @@ instance Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs prog => Griset
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
 data ProcessConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
-[ProcessConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => costObj -> SymbolTable sketchSpec -> Text -> LogConfig -> NodeId -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Bool -> Bool -> Int -> Maybe Int -> Maybe Int -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> ProcessConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+[ProcessConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => costObj -> SymbolTable sketchSpec -> Text -> LogConfig -> NodeId -> (Logger -> [[SomeVerifier sketch conProg]]) -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Bool -> Bool -> Int -> Maybe Int -> Maybe Int -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> ProcessConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
 newtype NewMinimalCostMessage
 NewMinimalCostMessage :: Maybe Int -> NewMinimalCostMessage
 [newMinimalCost] :: NewMinimalCostMessage -> Maybe Int
-data TwoTrackVerifiers sketch conProg
-TwoTrackVerifiers :: [SomeVerifier sketch conProg] -> [SomeVerifier sketch conProg] -> TwoTrackVerifiers sketch conProg
-[fastTrackVerifiers] :: TwoTrackVerifiers sketch conProg -> [SomeVerifier sketch conProg]
-[slowTrackVerifiers] :: TwoTrackVerifiers sketch conProg -> [SomeVerifier sketch conProg]
-data Track
-FastTrack :: Track
-SlowTrack :: Track
 data Message conProg symSemObj symVal conSemObj conVal matcher
-FastTrackViable :: Track -> [Example symSemObj symVal conSemObj conVal matcher] -> Maybe Int -> SymbolTable conProg -> Message conProg symSemObj symVal conSemObj conVal matcher
-[_nextTrack] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Track
+Viable :: Int -> [Example symSemObj symVal conSemObj conVal matcher] -> Maybe Int -> SymbolTable conProg -> Message conProg symSemObj symVal conSemObj conVal matcher
+[_curTrack] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Int
 [_examples] :: Message conProg symSemObj symVal conSemObj conVal matcher -> [Example symSemObj symVal conSemObj conVal matcher]
 [_knownCost] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
 [_prog] :: Message conProg symSemObj symVal conSemObj conVal matcher -> SymbolTable conProg
-FastTrackEasySynthFailure :: Maybe Int -> [Example symSemObj symVal conSemObj conVal matcher] -> Message conProg symSemObj symVal conSemObj conVal matcher
+EasySynthFailure :: Int -> Maybe Int -> [Example symSemObj symVal conSemObj conVal matcher] -> Message conProg symSemObj symVal conSemObj conVal matcher
+[_curTrack] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Int
 [_knownCost] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
 [_examples] :: Message conProg symSemObj symVal conSemObj conVal matcher -> [Example symSemObj symVal conSemObj conVal matcher]
 GotExample :: Example symSemObj symVal conSemObj conVal matcher -> Maybe Int -> Message conProg symSemObj symVal conSemObj conVal matcher
 [_example] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Example symSemObj symVal conSemObj conVal matcher
 [_knownCost] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
-Success :: Track -> [Example symSemObj symVal conSemObj conVal matcher] -> Int -> SymbolTable conProg -> Message conProg symSemObj symVal conSemObj conVal matcher
-[_track] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Track
+Success :: Bool -> Int -> [Example symSemObj symVal conSemObj conVal matcher] -> Int -> SymbolTable conProg -> Message conProg symSemObj symVal conSemObj conVal matcher
+[_isEasySuccess] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Bool
+[_curTrack] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Int
 [_examples] :: Message conProg symSemObj symVal conSemObj conVal matcher -> [Example symSemObj symVal conSemObj conVal matcher]
 [_cost] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Int
 [_prog] :: Message conProg symSemObj symVal conSemObj conVal matcher -> SymbolTable conProg
@@ -2078,85 +2051,57 @@ getProcessResponse :: (Serial conProg, Serial symSemObj, Serial conSemObj, Seria
 sendNewMinimalCost :: Maybe Int -> Process -> IO ()
 processResponseNewCost :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
 processResponseIsGotExample :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsFastTrackSuccess :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsSlowTrackSuccess :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsFastTrackEasySynthFailure :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsFastTrackViable :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
+processResponseIsViable :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
+processResponseIsEasySynthFailure :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
+processResponseIsSuccess :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
+processResponseIsFailure :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
 instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Data.Binary.Class.Binary Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Data.Binary.Class.Binary Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
 instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Process
-instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance GHC.Internal.Generics.Generic (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
 instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
 instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Process
-instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Control.DeepSeq.NFData Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Control.DeepSeq.NFData Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance (Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint conProg, Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint conVal) => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Process
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance (Data.Bytes.Serial.Serial conProg, Data.Bytes.Serial.Serial symSemObj, Data.Bytes.Serial.Serial conSemObj, Data.Bytes.Serial.Serial conVal, Data.Bytes.Serial.Serial matcher) => Data.Bytes.Serial.Serial (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
 instance Data.Bytes.Serial.Serial Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Data.Bytes.Serial.Serial Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Data.Serialize.Serialize Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Data.Serialize.Serialize Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance (GHC.Internal.Show.Show conVal, GHC.Internal.Show.Show conProg) => GHC.Internal.Show.Show (Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Message conProg symSemObj symVal conSemObj conVal matcher)
 instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
 instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Process
-instance GHC.Internal.Show.Show Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage) Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track) Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
 instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track)
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.NewMinimalCostMessage
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.Track
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
 data NodeStatus conProg
-NodeFastTrackViable :: Track -> SymbolTable conProg -> NodeStatus conProg
-[_curTrack] :: NodeStatus conProg -> Track
+NodeViable :: Int -> SymbolTable conProg -> NodeStatus conProg
+[_curTrack] :: NodeStatus conProg -> Int
 [_viableProg] :: NodeStatus conProg -> SymbolTable conProg
-NodeFastTrackEasySynthFailure :: NodeStatus conProg
-NodeFastTrackRefining :: Int -> SymbolTable conProg -> NodeStatus conProg
+NodeRefining :: Int -> Int -> SymbolTable conProg -> NodeStatus conProg
+[_curTrack] :: NodeStatus conProg -> Int
 [_cost] :: NodeStatus conProg -> Int
 [_prog] :: NodeStatus conProg -> SymbolTable conProg
-NodeSlowTrackRefining :: Int -> SymbolTable conProg -> NodeStatus conProg
-[_cost] :: NodeStatus conProg -> Int
-[_prog] :: NodeStatus conProg -> SymbolTable conProg
-NodeSucceeded :: Maybe Text -> Track -> Int -> SymbolTable conProg -> NodeStatus conProg
+NodeSucceeded :: Maybe Text -> Int -> SymbolTable conProg -> NodeStatus conProg
 [_lastIterErrorMsg] :: NodeStatus conProg -> Maybe Text
-[_track] :: NodeStatus conProg -> Track
 [_cost] :: NodeStatus conProg -> Int
 [_prog] :: NodeStatus conProg -> SymbolTable conProg
-NodeFailed :: Bool -> SolvingFailure -> NodeStatus conProg
-[_fastTrackViable] :: NodeStatus conProg -> Bool
+NodeFailed :: SolvingFailure -> NodeStatus conProg
 [_failure] :: NodeStatus conProg -> SolvingFailure
-NodeTerminated :: Bool -> Text -> NodeStatus conProg
-[_fastTrackViable] :: NodeStatus conProg -> Bool
+NodeTerminated :: Text -> NodeStatus conProg
 [_errorMsg] :: NodeStatus conProg -> Text
 NodeInferredFailure :: NodeStatus conProg
 NodeStarted :: NodeStatus conProg
@@ -2172,18 +2117,12 @@ MarkFailure :: NodeAction
 nodeStatusIsRunning :: NodeStatus conProg -> Bool
 nodeStatusIsNotYetStarted :: NodeStatus conProg -> Bool
 nodeStatusBestProgWithCost :: NodeStatus conProg -> Maybe (Int, SymbolTable conProg)
-nodeStatusIsFastTrackViable :: NodeStatus conProg -> Bool
-nodeStatusIsFastTrackRefining :: NodeStatus conProg -> Bool
-nodeStatusIsFastTrackEasySynthFailure :: NodeStatus conProg -> Bool
-nodeStatusIsSlowTrackRefining :: NodeStatus conProg -> Bool
-nodeStatusIsFastSuccess :: NodeStatus conProg -> Bool
-nodeStatusIsSlowSuccess :: NodeStatus conProg -> Bool
-nodeStatusIsFastUnsat :: NodeStatus conProg -> Bool
-nodeStatusIsSlowUnsat :: NodeStatus conProg -> Bool
-nodeStatusIsFastUnknown :: NodeStatus conProg -> Bool
-nodeStatusIsSlowUnknown :: NodeStatus conProg -> Bool
-nodeStatusIsFastTerminated :: NodeStatus conProg -> Bool
-nodeStatusIsSlowTerminated :: NodeStatus conProg -> Bool
+nodeStatusIsViable :: NodeStatus conProg -> Bool
+nodeStatusIsRefining :: NodeStatus conProg -> Bool
+nodeStatusIsSuccess :: NodeStatus conProg -> Bool
+nodeStatusIsUnsat :: NodeStatus conProg -> Bool
+nodeStatusIsUnknown :: NodeStatus conProg -> Bool
+nodeStatusIsTerminated :: NodeStatus conProg -> Bool
 nodeStatusIsInferredFailure :: NodeStatus conProg -> Bool
 nodeStatusIsJustStarted :: NodeStatus conProg -> Bool
 nodeStatusInferFailureTransition :: NodeStatus conProg -> NodeStatus conProg
@@ -2221,7 +2160,7 @@ nodeStateNumInProgressExamples :: NodeState conProg symSemObj symVal conSemObj c
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
 data SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
-[SchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+[SchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> [[SomeVerifier sketch conProg]]) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
 data Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
@@ -2328,12 +2267,8 @@ getLogConfig :: FilePath -> String -> IO LogConfig
 type ProcessCostConstraint costObj cost conProg sketch = (ProgCost costObj conProg Int ConcreteContext, ProgCost costObj sketch cost SymbolicContext, ProgCost costObj sketch cost AngelicContext)
 type ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher = (GenSymSimple sketchSpec sketch, ProcessCostConstraint costObj cost conProg sketch, ProgPPrint sketchSpec, ProgPPrint conProg, EvalSym sketch, ToCon sketch conProg, ProgReachableSymbols conProg, SymOrd cost, Mergeable cost, Num cost, Serial conProg, Serial cost, Serial conVal, Serial symSemObj, Serial conSemObj, Serial matcher, Typeable sketch, Typeable symSemObj, Typeable conSemObj, Typeable conVal, Typeable matcher, Typeable symVal, PPrint conVal, Hashable sketchSpec, Eq sketchSpec, LowestSeqNum sketchSpec, PartitionSpec sketchSpec)
 type ConProgConstraint conProg conOp conVarId conType = (ConcreteVarId conVarId, conProg ~ Prog conOp conVarId conType, OpPPrint conOp, Show conOp, PPrint conType, Show conType)
-data TwoTrackVerifiers sketch conProg
-TwoTrackVerifiers :: [SomeVerifier sketch conProg] -> [SomeVerifier sketch conProg] -> TwoTrackVerifiers sketch conProg
-[fastTrackVerifiers] :: TwoTrackVerifiers sketch conProg -> [SomeVerifier sketch conProg]
-[slowTrackVerifiers] :: TwoTrackVerifiers sketch conProg -> [SomeVerifier sketch conProg]
 data SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
-[SchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> TwoTrackVerifiers sketch conProg) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
+[SchedulerConfig] :: forall sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher conOp conVarId conType. (ProcessConstraint sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher, ConProgConstraint conProg conOp conVarId conType) => Int -> Maybe Int -> Int -> GrisetteSMTConfig -> Double -> Double -> (Double, Double) -> (Logger -> [[SomeVerifier sketch conProg]]) -> Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)) -> LogConfig -> Logger -> costObj -> Int -> Maybe Int -> Int -> Maybe Int -> Int -> Int -> Maybe (SymbolTable conProg -> SymbolTable sketchSpec) -> Text -> Int -> Maybe String -> Bool -> Bool -> Int -> Double -> Double -> SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher
 data ParallelSynthesisResult conProg
 NoSolutionFound :: ParallelSynthesisNoSolutionResult -> ParallelSynthesisResult conProg
 SolutionFound :: ParallelSynthesisSolutionFoundResult conProg -> ParallelSynthesisResult conProg
@@ -2366,7 +2301,7 @@ ParallelSynthesisSolution :: NodeId -> UTCTime -> UTCTime -> UTCTime -> Bool -> 
 [_program] :: ParallelSynthesisSolution conProg -> SymbolTable conProg
 runWithScheduler :: SchedulerConfig sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> [SymbolTable sketchSpec] -> IO (ParallelSynthesisResult conProg)
 
-module Grisette.Lib.Synth.Program.Sum
+module Grisette.Lib.Synth.Combinator.Sum
 data l :| r
 InLeft :: l -> (:|) l r
 InRight :: r -> (:|) l r
@@ -2374,91 +2309,222 @@ infixr 5 :|
 class sub :<: sup
 inj :: (:<:) sub sup => sub -> sup
 prj :: (:<:) sub sup => sup -> Maybe sub
-instance (b Grisette.Lib.Synth.Program.Sum.:<: c) => b Grisette.Lib.Synth.Program.Sum.:<: (a Grisette.Lib.Synth.Program.Sum.:| c)
-instance a Grisette.Lib.Synth.Program.Sum.:<: (a Grisette.Lib.Synth.Program.Sum.:| b)
-instance a Grisette.Lib.Synth.Program.Sum.:<: a
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms a => Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms a1, Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms a2) => Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance (Data.Bytes.Serial.Serial a1, Data.Bytes.Serial.Serial a2) => Data.Binary.Class.Binary (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance (Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs l, Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs r) => Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance GHC.Classes.Eq a => Data.Functor.Classes.Eq1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Data.Functor.Classes.Eq2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (GHC.Classes.Eq a1, GHC.Classes.Eq a2) => GHC.Classes.Eq (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a1, Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a1, Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance (Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple l0 l1, Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple r0 r1) => Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple (l0 Grisette.Lib.Synth.Program.Sum.:| r0) (l1 Grisette.Lib.Synth.Program.Sum.:| r1)
-instance GHC.Internal.Generics.Generic (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance Data.Hashable.Class.Hashable a => Data.Hashable.Class.Hashable1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Data.Hashable.Class.Hashable2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Data.Hashable.Class.Hashable a1, Data.Hashable.Class.Hashable a2) => Data.Hashable.Class.Hashable (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance (Grisette.Lib.Synth.Program.Choice.Split.LowestSeqNum l, Grisette.Lib.Synth.Program.Choice.Split.LowestSeqNum r) => Grisette.Lib.Synth.Program.Choice.Split.LowestSeqNum (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a => Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a1, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance Control.DeepSeq.NFData a => Control.DeepSeq.NFData1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Control.DeepSeq.NFData2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Control.DeepSeq.NFData a1, Control.DeepSeq.NFData a2) => Control.DeepSeq.NFData (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance (Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.OpCost costObj l cost ctx, Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.OpCost costObj r cost ctx) => Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.OpCost costObj (l Grisette.Lib.Synth.Program.Sum.:| r) cost ctx
-instance (Grisette.Lib.Synth.Program.Concrete.Flatten.OpFlatten l fl, Grisette.Lib.Synth.Program.Concrete.Flatten.OpFlatten r fr) => Grisette.Lib.Synth.Program.Concrete.Flatten.OpFlatten (l Grisette.Lib.Synth.Program.Sum.:| r) (fl Grisette.Lib.Synth.Program.Sum.:| fr)
-instance (Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint l, Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint r) => Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Operator.OpReachableSymbols.OpReachableSymbols l, Grisette.Lib.Synth.Operator.OpReachableSymbols.OpReachableSymbols r) => Grisette.Lib.Synth.Operator.OpReachableSymbols.OpReachableSymbols (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Operator.OpSemantics.OpSemantics semObj l val ctx, Grisette.Lib.Synth.Operator.OpSemantics.OpSemantics semObj r val ctx, Grisette.Lib.Synth.Operator.OpTyping.OpTypeType l GHC.Types.~ Grisette.Lib.Synth.Operator.OpTyping.OpTypeType r) => Grisette.Lib.Synth.Operator.OpSemantics.OpSemantics semObj (l Grisette.Lib.Synth.Program.Sum.:| r) val ctx
-instance (Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction.OpSymmetryReduction l, Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction.OpSymmetryReduction r) => Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction.OpSymmetryReduction (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Operator.OpTyping.OpTyping l ctx, Grisette.Lib.Synth.Operator.OpTyping.OpTyping r ctx, Grisette.Lib.Synth.Operator.OpTyping.OpTypeType l GHC.Types.~ Grisette.Lib.Synth.Operator.OpTyping.OpTypeType r) => Grisette.Lib.Synth.Operator.OpTyping.OpTyping (l Grisette.Lib.Synth.Program.Sum.:| r) ctx
-instance GHC.Classes.Ord a => Data.Functor.Classes.Ord1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Data.Functor.Classes.Ord2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (GHC.Classes.Ord a1, GHC.Classes.Ord a2) => GHC.Classes.Ord (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint l => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint1 ((Grisette.Lib.Synth.Program.Sum.:|) l)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint l, Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint r) => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec l, Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec r) => Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.ProgCost.ProgCost costObj prog0 cost ctx, Grisette.Lib.Synth.Program.ProgCost.ProgCost costObj prog1 cost ctx) => Grisette.Lib.Synth.Program.ProgCost.ProgCost costObj (prog0 Grisette.Lib.Synth.Program.Sum.:| prog1) cost ctx
-instance (Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint l, Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint r) => Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.SymbolTable.ProgReachableSymbols l, Grisette.Lib.Synth.Program.SymbolTable.ProgReachableSymbols r) => Grisette.Lib.Synth.Program.SymbolTable.ProgReachableSymbols (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.ProgSemantics.ProgSemantics semObj l val ctx, Grisette.Lib.Synth.Program.ProgSemantics.ProgSemantics semObj r val ctx, Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType l GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType r) => Grisette.Lib.Synth.Program.ProgSemantics.ProgSemantics semObj (l Grisette.Lib.Synth.Program.Sum.:| r) val ctx
-instance (Grisette.Lib.Synth.Program.ProgToDot.ProgToDot l, Grisette.Lib.Synth.Program.ProgToDot.ProgToDot r) => Grisette.Lib.Synth.Program.ProgToDot.ProgToDot (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.ProgTyping.ProgTyping l, Grisette.Lib.Synth.Program.ProgTyping.ProgTyping r, Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType l GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType r) => Grisette.Lib.Synth.Program.ProgTyping.ProgTyping (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.ProgUtil.ProgUtil l, Grisette.Lib.Synth.Program.ProgUtil.ProgUtil r, Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType l GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType r) => Grisette.Lib.Synth.Program.ProgUtil.ProgUtil (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.ProgUtil.ProgUtil l, Grisette.Lib.Synth.Program.ProgUtil.ProgUtil r, lop GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgOpType l, rop GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgOpType r, lid GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgVarIdType l, rid GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgVarIdType r, lstmt GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgStmtType l, rstmt GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgStmtType r, Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType l GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType r) => Grisette.Lib.Synth.Program.ProgUtil.ProgUtilImpl (l Grisette.Lib.Synth.Program.Sum.:| r) (lop Grisette.Lib.Synth.Program.Sum.:| rop) (lstmt Grisette.Lib.Synth.Program.Sum.:| rstmt) (lid Grisette.Lib.Synth.Program.Sum.:| rid)
-instance Data.Bytes.Serial.Serial a => Data.Bytes.Serial.Serial1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Data.Bytes.Serial.Serial2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Data.Bytes.Serial.Serial a1, Data.Bytes.Serial.Serial a2) => Data.Bytes.Serial.Serial (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance (Data.Bytes.Serial.Serial a1, Data.Bytes.Serial.Serial a2) => Data.Serialize.Serialize (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance GHC.Internal.Show.Show l => Data.Functor.Classes.Show1 ((Grisette.Lib.Synth.Program.Sum.:|) l)
-instance Data.Functor.Classes.Show2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (GHC.Internal.Show.Show l, GHC.Internal.Show.Show r) => GHC.Internal.Show.Show (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice l, Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice r) => Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.ProgUtil.StmtUtil l, Grisette.Lib.Synth.Program.ProgUtil.StmtUtil r) => Grisette.Lib.Synth.Program.ProgUtil.StmtUtil (l Grisette.Lib.Synth.Program.Sum.:| r)
-instance (Grisette.Lib.Synth.Program.ProgUtil.StmtUtil l, Grisette.Lib.Synth.Program.ProgUtil.StmtUtil r, lop GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.StmtOpType l, rop GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.StmtOpType r, lid GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.StmtVarIdType l, rid GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.StmtVarIdType r) => Grisette.Lib.Synth.Program.ProgUtil.StmtUtilImpl (l Grisette.Lib.Synth.Program.Sum.:| r) (lop Grisette.Lib.Synth.Program.Sum.:| rop) (lid Grisette.Lib.Synth.Program.Sum.:| rid)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym a1, Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq a1, Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd1 ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd2 (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd a1, Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon1 ((Grisette.Lib.Synth.Program.Sum.:|) a1) ((Grisette.Lib.Synth.Program.Sum.:|) a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon2 (Grisette.Lib.Synth.Program.Sum.:|) (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2, Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a3 a4) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (a1 Grisette.Lib.Synth.Program.Sum.:| a3) (a2 Grisette.Lib.Synth.Program.Sum.:| a4)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon l c, Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon r c) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (l Grisette.Lib.Synth.Program.Sum.:| r) c
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2, Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a3 a4) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (a1 Grisette.Lib.Synth.Program.Sum.:| a3)) (a2 Grisette.Lib.Synth.Program.Sum.:| a4)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym1 ((Grisette.Lib.Synth.Program.Sum.:|) a1) ((Grisette.Lib.Synth.Program.Sum.:|) a2)
-instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym2 (Grisette.Lib.Synth.Program.Sum.:|) (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a1 a2, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a3 a4) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (a1 Grisette.Lib.Synth.Program.Sum.:| a3) (a2 Grisette.Lib.Synth.Program.Sum.:| a4)
-instance (Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a1, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a2, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a3 a1, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a4 a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (a3 Grisette.Lib.Synth.Program.Sum.:| a4) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (a1 Grisette.Lib.Synth.Program.Sum.:| a2))
-instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq1 mode ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq2 mode (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode a1, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode a2) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
-instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd1 mode ((Grisette.Lib.Synth.Program.Sum.:|) a)
-instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd2 mode (Grisette.Lib.Synth.Program.Sum.:|)
-instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a1, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a2) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode (a1 Grisette.Lib.Synth.Program.Sum.:| a2)
+instance (b Grisette.Lib.Synth.Combinator.Embed.:<: c) => b Grisette.Lib.Synth.Combinator.Embed.:<: (a Grisette.Lib.Synth.Combinator.Sum.:| c)
+instance a Grisette.Lib.Synth.Combinator.Embed.:<: (a Grisette.Lib.Synth.Combinator.Sum.:| b)
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms a => Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms a1, Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms a2) => Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance (Data.Bytes.Serial.Serial a1, Data.Bytes.Serial.Serial a2) => Data.Binary.Class.Binary (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance (Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs l, Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs r) => Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance GHC.Classes.Eq a => Data.Functor.Classes.Eq1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Data.Functor.Classes.Eq2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (GHC.Classes.Eq a1, GHC.Classes.Eq a2) => GHC.Classes.Eq (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a1, Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a1, Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance (Grisette.Internal.Core.Data.Class.GenSym.GenSym l0 l1, Grisette.Internal.Core.Data.Class.GenSym.GenSym r0 r1) => Grisette.Internal.Core.Data.Class.GenSym.GenSym (l0 Grisette.Lib.Synth.Combinator.Sum.:| r0) (l1 Grisette.Lib.Synth.Combinator.Sum.:| r1)
+instance (Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple l0 l1, Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple r0 r1) => Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple (l0 Grisette.Lib.Synth.Combinator.Sum.:| r0) (l1 Grisette.Lib.Synth.Combinator.Sum.:| r1)
+instance GHC.Internal.Generics.Generic (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance Data.Hashable.Class.Hashable a => Data.Hashable.Class.Hashable1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Data.Hashable.Class.Hashable2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Data.Hashable.Class.Hashable a1, Data.Hashable.Class.Hashable a2) => Data.Hashable.Class.Hashable (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance (Grisette.Lib.Synth.Program.Choice.Split.LowestSeqNum l, Grisette.Lib.Synth.Program.Choice.Split.LowestSeqNum r) => Grisette.Lib.Synth.Program.Choice.Split.LowestSeqNum (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a => Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a1, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance Control.DeepSeq.NFData a => Control.DeepSeq.NFData1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Control.DeepSeq.NFData2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Control.DeepSeq.NFData a1, Control.DeepSeq.NFData a2) => Control.DeepSeq.NFData (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance (Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.OpCost costObj l cost ctx, Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.OpCost costObj r cost ctx) => Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.OpCost costObj (l Grisette.Lib.Synth.Combinator.Sum.:| r) cost ctx
+instance (Grisette.Lib.Synth.Program.Concrete.Flatten.OpFlatten l fl, Grisette.Lib.Synth.Program.Concrete.Flatten.OpFlatten r fr) => Grisette.Lib.Synth.Program.Concrete.Flatten.OpFlatten (l Grisette.Lib.Synth.Combinator.Sum.:| r) (fl Grisette.Lib.Synth.Combinator.Sum.:| fr)
+instance (Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint l, Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint r) => Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Operator.OpParser.OpParser l, Grisette.Lib.Synth.Operator.OpParser.OpParser r) => Grisette.Lib.Synth.Operator.OpParser.OpParser (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Operator.OpReachableSymbols.OpReachableSymbols l, Grisette.Lib.Synth.Operator.OpReachableSymbols.OpReachableSymbols r) => Grisette.Lib.Synth.Operator.OpReachableSymbols.OpReachableSymbols (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Operator.OpSemantics.OpSemantics semObj l val ctx, Grisette.Lib.Synth.Operator.OpSemantics.OpSemantics semObj r val ctx, Grisette.Lib.Synth.Operator.OpTyping.OpTypeType l GHC.Types.~ Grisette.Lib.Synth.Operator.OpTyping.OpTypeType r) => Grisette.Lib.Synth.Operator.OpSemantics.OpSemantics semObj (l Grisette.Lib.Synth.Combinator.Sum.:| r) val ctx
+instance (Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction.OpSymmetryReduction l, Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction.OpSymmetryReduction r) => Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction.OpSymmetryReduction (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Operator.OpTyping.OpTyping l ctx, Grisette.Lib.Synth.Operator.OpTyping.OpTyping r ctx, Grisette.Lib.Synth.Operator.OpTyping.OpTypeType l GHC.Types.~ Grisette.Lib.Synth.Operator.OpTyping.OpTypeType r) => Grisette.Lib.Synth.Operator.OpTyping.OpTyping (l Grisette.Lib.Synth.Combinator.Sum.:| r) ctx
+instance GHC.Classes.Ord a => Data.Functor.Classes.Ord1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Data.Functor.Classes.Ord2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (GHC.Classes.Ord a1, GHC.Classes.Ord a2) => GHC.Classes.Ord (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint l => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint1 ((Grisette.Lib.Synth.Combinator.Sum.:|) l)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint l, Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint r) => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec l, Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec r) => Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.ProgCost.ProgCost costObj prog0 cost ctx, Grisette.Lib.Synth.Program.ProgCost.ProgCost costObj prog1 cost ctx) => Grisette.Lib.Synth.Program.ProgCost.ProgCost costObj (prog0 Grisette.Lib.Synth.Combinator.Sum.:| prog1) cost ctx
+instance (Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint l, Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint r) => Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.ProgParser.ProgParser l, Grisette.Lib.Synth.Program.ProgParser.ProgParser r) => Grisette.Lib.Synth.Program.ProgParser.ProgParser (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.SymbolTable.ProgReachableSymbols l, Grisette.Lib.Synth.Program.SymbolTable.ProgReachableSymbols r) => Grisette.Lib.Synth.Program.SymbolTable.ProgReachableSymbols (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.ProgSemantics.ProgSemantics semObj l val ctx, Grisette.Lib.Synth.Program.ProgSemantics.ProgSemantics semObj r val ctx, Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType l GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType r) => Grisette.Lib.Synth.Program.ProgSemantics.ProgSemantics semObj (l Grisette.Lib.Synth.Combinator.Sum.:| r) val ctx
+instance (Grisette.Lib.Synth.Program.ProgToDot.ProgToDot l, Grisette.Lib.Synth.Program.ProgToDot.ProgToDot r) => Grisette.Lib.Synth.Program.ProgToDot.ProgToDot (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.ProgTyping.ProgTyping l, Grisette.Lib.Synth.Program.ProgTyping.ProgTyping r, Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType l GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType r) => Grisette.Lib.Synth.Program.ProgTyping.ProgTyping (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.ProgUtil.ProgUtil l, Grisette.Lib.Synth.Program.ProgUtil.ProgUtil r, Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType l GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType r) => Grisette.Lib.Synth.Program.ProgUtil.ProgUtil (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.ProgUtil.ProgUtil l, Grisette.Lib.Synth.Program.ProgUtil.ProgUtil r, lop GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgOpType l, rop GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgOpType r, lid GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgVarIdType l, rid GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgVarIdType r, lstmt GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgStmtType l, rstmt GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgStmtType r, Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType l GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.ProgTypeType r) => Grisette.Lib.Synth.Program.ProgUtil.ProgUtilImpl (l Grisette.Lib.Synth.Combinator.Sum.:| r) (lop Grisette.Lib.Synth.Combinator.Sum.:| rop) (lstmt Grisette.Lib.Synth.Combinator.Sum.:| rstmt) (lid Grisette.Lib.Synth.Combinator.Sum.:| rid)
+instance Data.Bytes.Serial.Serial a => Data.Bytes.Serial.Serial1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Data.Bytes.Serial.Serial2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Data.Bytes.Serial.Serial a1, Data.Bytes.Serial.Serial a2) => Data.Bytes.Serial.Serial (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance (Data.Bytes.Serial.Serial a1, Data.Bytes.Serial.Serial a2) => Data.Serialize.Serialize (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance GHC.Internal.Show.Show l => Data.Functor.Classes.Show1 ((Grisette.Lib.Synth.Combinator.Sum.:|) l)
+instance Data.Functor.Classes.Show2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (GHC.Internal.Show.Show l, GHC.Internal.Show.Show r) => GHC.Internal.Show.Show (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice l, Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice r) => Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.ProgUtil.StmtUtil l, Grisette.Lib.Synth.Program.ProgUtil.StmtUtil r) => Grisette.Lib.Synth.Program.ProgUtil.StmtUtil (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Lib.Synth.Program.ProgUtil.StmtUtil l, Grisette.Lib.Synth.Program.ProgUtil.StmtUtil r, lop GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.StmtOpType l, rop GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.StmtOpType r, lid GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.StmtVarIdType l, rid GHC.Types.~ Grisette.Lib.Synth.Program.ProgUtil.StmtVarIdType r) => Grisette.Lib.Synth.Program.ProgUtil.StmtUtilImpl (l Grisette.Lib.Synth.Combinator.Sum.:| r) (lop Grisette.Lib.Synth.Combinator.Sum.:| rop) (lid Grisette.Lib.Synth.Combinator.Sum.:| rid)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym a1, Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq a1, Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd2 (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd a1, Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a1) ((Grisette.Lib.Synth.Combinator.Sum.:|) a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon2 (Grisette.Lib.Synth.Combinator.Sum.:|) (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2, Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a3 a4) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (a1 Grisette.Lib.Synth.Combinator.Sum.:| a3) (a2 Grisette.Lib.Synth.Combinator.Sum.:| a4)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon l c, Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon r c) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (l Grisette.Lib.Synth.Combinator.Sum.:| r) c
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2, Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a3 a4) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (a1 Grisette.Lib.Synth.Combinator.Sum.:| a3)) (a2 Grisette.Lib.Synth.Combinator.Sum.:| a4)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym1 ((Grisette.Lib.Synth.Combinator.Sum.:|) a1) ((Grisette.Lib.Synth.Combinator.Sum.:|) a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym2 (Grisette.Lib.Synth.Combinator.Sum.:|) (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a1 a2, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a3 a4) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (a1 Grisette.Lib.Synth.Combinator.Sum.:| a3) (a2 Grisette.Lib.Synth.Combinator.Sum.:| a4)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a1, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a2, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a3 a1, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a4 a2) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (a3 Grisette.Lib.Synth.Combinator.Sum.:| a4) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2))
+instance (Grisette.Lib.Synth.Type.TypeParser.TypeParser l, Grisette.Lib.Synth.Type.TypeParser.TypeParser r) => Grisette.Lib.Synth.Type.TypeParser.TypeParser (l Grisette.Lib.Synth.Combinator.Sum.:| r)
+instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq1 mode ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq2 mode (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode a1, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode a2) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd1 mode ((Grisette.Lib.Synth.Combinator.Sum.:|) a)
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd2 mode (Grisette.Lib.Synth.Combinator.Sum.:|)
+instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a1, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a2) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode (a1 Grisette.Lib.Synth.Combinator.Sum.:| a2)
+
+module Grisette.Lib.Synth.Combinator.Null
+data Null ty
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Data.Binary.Class.Binary (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Lib.Synth.Program.Choice.Counting.CountNumProgs (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Data.Functor.Classes.Eq1 Grisette.Lib.Synth.Combinator.Null.Null
+instance GHC.Classes.Eq (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a => Grisette.Internal.Core.Data.Class.GenSym.GenSym (Grisette.Lib.Synth.Combinator.Null.Null ty0) a
+instance Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple (Grisette.Lib.Synth.Combinator.Null.Null ty0) (Grisette.Lib.Synth.Combinator.Null.Null ty1)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a => Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple (Grisette.Lib.Synth.Combinator.Null.Null ty0) a
+instance GHC.Internal.Generics.Generic (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Data.Hashable.Class.Hashable1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Data.Hashable.Class.Hashable (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Lib.Synth.Program.Choice.Split.LowestSeqNum (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Control.DeepSeq.NFData1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Control.DeepSeq.NFData (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Lib.Synth.Context.MonadContext ctx => Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.OpCost costObj (Grisette.Lib.Synth.Combinator.Null.Null ty) cost ctx
+instance Grisette.Lib.Synth.Program.Concrete.Flatten.OpFlatten (Grisette.Lib.Synth.Combinator.Null.Null ty) (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Operator.OpParser.OpParser (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Operator.OpReachableSymbols.OpReachableSymbols (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Context.MonadContext ctx => Grisette.Lib.Synth.Operator.OpSemantics.OpSemantics semObj (Grisette.Lib.Synth.Combinator.Null.Null ty) val ctx
+instance Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction.OpSymmetryReduction (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Context.MonadContext ctx => Grisette.Lib.Synth.Operator.OpTyping.OpTyping (Grisette.Lib.Synth.Combinator.Null.Null ty) ctx
+instance Data.Functor.Classes.Ord1 Grisette.Lib.Synth.Combinator.Null.Null
+instance GHC.Classes.Ord (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Lib.Synth.Program.Choice.Split.PartitionSpec (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Program.ProgPPrint.ProgPPrint (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Program.ProgParser.ProgParser (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Program.SymbolTable.ProgReachableSymbols (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Context.MonadContext ctx => Grisette.Lib.Synth.Program.ProgSemantics.ProgSemantics semObj (Grisette.Lib.Synth.Combinator.Null.Null ty) val ctx
+instance Grisette.Lib.Synth.Program.ProgToDot.ProgToDot (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Program.ProgTyping.ProgTyping (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Program.ProgUtil.ProgUtilImpl (Grisette.Lib.Synth.Combinator.Null.Null ty) (Grisette.Lib.Synth.Combinator.Null.Null ty) (Grisette.Lib.Synth.Combinator.Null.Null ty) (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Program.ProgUtil.ProgUtil (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Data.Bytes.Serial.Serial1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Data.Bytes.Serial.Serial (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Data.Serialize.Serialize (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Data.Functor.Classes.Show1 Grisette.Lib.Synth.Combinator.Null.Null
+instance GHC.Internal.Show.Show (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Program.ProgUtil.StmtUtilImpl (Grisette.Lib.Synth.Combinator.Null.Null ty) (Grisette.Lib.Synth.Combinator.Null.Null ty) (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Lib.Synth.Program.ProgUtil.StmtUtil (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd1 Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon1 Grisette.Lib.Synth.Combinator.Null.Null Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Lib.Synth.Combinator.Null.Null a1) (Grisette.Lib.Synth.Combinator.Null.Null a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.Combinator.Null.Null a1)) (Grisette.Lib.Synth.Combinator.Null.Null a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym1 Grisette.Lib.Synth.Combinator.Null.Null Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.Combinator.Null.Null a1) (Grisette.Lib.Synth.Combinator.Null.Null a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.Combinator.Null.Null a1) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.Combinator.Null.Null a2))
+instance Grisette.Lib.Synth.Type.TypeParser.TypeParser (Grisette.Lib.Synth.Combinator.Null.Null ty)
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq1 mode Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode (Grisette.Lib.Synth.Combinator.Null.Null a)
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd1 mode Grisette.Lib.Synth.Combinator.Null.Null
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode (Grisette.Lib.Synth.Combinator.Null.Null a)
+
+module Grisette.Lib.Synth.Combinator.Invoke
+data Invoke ty
+Invoke :: TypeSignature ty -> Text -> Invoke ty
+[signature] :: Invoke ty -> TypeSignature ty
+[symbol] :: Invoke ty -> Text
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms a => Grisette.Internal.Internal.Decl.SymPrim.AllSyms.AllSyms (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Data.Bytes.Serial.Serial a => Data.Binary.Class.Binary (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Data.Functor.Classes.Eq1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance GHC.Classes.Eq a => GHC.Classes.Eq (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.EvalSym.EvalSym (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.ExtractSym.ExtractSym (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Internal.Core.Data.Class.GenSym.GenSym ty ty1 => Grisette.Internal.Core.Data.Class.GenSym.GenSym (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty) (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty1)
+instance Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple ty ty1 => Grisette.Internal.Core.Data.Class.GenSym.GenSymSimple (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty) (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty1)
+instance GHC.Internal.Generics.Generic (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty)
+instance Data.Hashable.Class.Hashable1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Data.Hashable.Class.Hashable a => Data.Hashable.Class.Hashable (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a => Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Control.DeepSeq.NFData1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Control.DeepSeq.NFData a => Control.DeepSeq.NFData (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance (Grisette.Lib.Synth.Context.MonadContext ctx, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable cost) => Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel.OpCost costObj (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty) cost ctx
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable op => Grisette.Lib.Synth.Program.Concrete.Flatten.OpFlatten (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty) op
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint ty, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable ty, Grisette.Lib.Synth.Program.Concrete.OpPPrint.PrefixByType ty) => Grisette.Lib.Synth.Program.Concrete.OpPPrint.OpPPrint (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty)
+instance Grisette.Lib.Synth.Type.TypeParser.TypeParser ty => Grisette.Lib.Synth.Operator.OpParser.OpParser (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty)
+instance Grisette.Lib.Synth.Operator.OpReachableSymbols.OpReachableSymbols (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty)
+instance (Grisette.Lib.Synth.Context.MonadContext ctx, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable ty, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable val) => Grisette.Lib.Synth.Operator.OpSemantics.OpSemantics semObj (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty) val ctx
+instance Grisette.Lib.Synth.Program.ComponentSketch.SymmetryReduction.OpSymmetryReduction (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty)
+instance (Grisette.Lib.Synth.Context.MonadContext ctx, Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable ty) => Grisette.Lib.Synth.Operator.OpTyping.OpTyping (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty) ctx
+instance Data.Functor.Classes.Ord1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance GHC.Classes.Ord a => GHC.Classes.Ord (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint ty => Grisette.Internal.Internal.Decl.Core.Data.Class.PPrint.PPrint (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty)
+instance Data.Bytes.Serial.Serial1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Data.Bytes.Serial.Serial a => Data.Bytes.Serial.Serial (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Data.Bytes.Serial.Serial a => Data.Serialize.Serialize (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Data.Functor.Classes.Show1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance GHC.Internal.Show.Show a => GHC.Internal.Show.Show (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Lib.Synth.Program.Choice.Counting.SplitChoice (Grisette.Lib.Synth.Combinator.Invoke.Invoke ty)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym a => Grisette.Internal.Internal.Decl.Core.Data.Class.SubstSym.SubstSym (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymEq.SymEq (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd1 Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd a => Grisette.Internal.Internal.Decl.Core.Data.Class.SymOrd.SymOrd (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon1 Grisette.Lib.Synth.Combinator.Invoke.Invoke Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Lib.Synth.Combinator.Invoke.Invoke a1) (Grisette.Lib.Synth.Combinator.Invoke.Invoke a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToCon.ToCon (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.Combinator.Invoke.Invoke a1)) (Grisette.Lib.Synth.Combinator.Invoke.Invoke a2)
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym1 Grisette.Lib.Synth.Combinator.Invoke.Invoke Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a1 a2 => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.Combinator.Invoke.Invoke a1) (Grisette.Lib.Synth.Combinator.Invoke.Invoke a2)
+instance (Grisette.Internal.Internal.Decl.Core.Data.Class.Mergeable.Mergeable a1, Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym a2 a1) => Grisette.Internal.Internal.Decl.Core.Data.Class.ToSym.ToSym (Grisette.Lib.Synth.Combinator.Invoke.Invoke a2) (Grisette.Internal.Internal.Decl.Core.Control.Monad.Union.Union (Grisette.Lib.Synth.Combinator.Invoke.Invoke a1))
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq1 mode Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymEq.UnifiedSymEq mode (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
+instance Grisette.Internal.Unified.Util.DecideEvalMode mode => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd1 mode Grisette.Lib.Synth.Combinator.Invoke.Invoke
+instance (Grisette.Internal.Unified.Util.DecideEvalMode mode, Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode a) => Grisette.Internal.Internal.Decl.Unified.Class.UnifiedSymOrd.UnifiedSymOrd mode (Grisette.Lib.Synth.Combinator.Invoke.Invoke a)
 
 module Grisette.Lib.Synth.Program.ByteCodeSketch.Program
 data Stmt op conVarId symVarId
