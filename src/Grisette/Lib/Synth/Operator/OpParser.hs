@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 
 module Grisette.Lib.Synth.Operator.OpParser (OpParser (..)) where
 
