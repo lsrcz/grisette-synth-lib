@@ -74,7 +74,7 @@ extra-deps:
   - graphviz-2999.20.0.4
   - dlist-0.8.0.8
   - git: https://github.com/lsrcz/grisette.git
-    commit: 4e9afe48e5a592aacdc54646379ec0d62b956e5f
+    commit: 25349f296099c8d34cc3092de197882a58780871
   - random-1.2.0
   - Chart-1.9.3
   - Chart-cairo-1.9.3
