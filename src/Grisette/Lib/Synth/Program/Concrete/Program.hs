@@ -91,8 +91,8 @@ import Grisette
     PPrint (pformat),
     ToSym (toSym),
     allClasses012,
-    deriveGADT,
-    deriveGADTWith,
+    derive,
+    deriveWith,
     pprintClasses,
     tryMerge,
   )
@@ -216,12 +216,12 @@ data Prog op varId ty = Prog
   }
   deriving (Generic)
 
-deriveGADTWith
+deriveWith
   mempty {useNoStrategy = True}
   [''Stmt, ''ProgRes, ''Prog, ''ProgArg]
   (allClasses012 \\ pprintClasses)
 
-deriveGADTWith
+deriveWith
   mempty {useNoStrategy = True}
   [''Prog]
   [''Mergeable3]
@@ -232,7 +232,7 @@ data ProgPPrintError varId op
   | ExtractSubProgError T.Text
   deriving (Generic)
 
-deriveGADT [''ProgPPrintError] (allClasses012 \\ pprintClasses)
+derive [''ProgPPrintError] (allClasses012 \\ pprintClasses)
 
 instance
   (OpPPrint op, Show op, ConcreteVarId varId) =>

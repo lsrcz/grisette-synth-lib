@@ -39,7 +39,7 @@ import Grisette
     SimpleMergeable (mrgIte),
     Union,
     allClasses0,
-    deriveGADT,
+    derive,
     liftUnion,
     mrgFmap,
     mrgReturn,
@@ -102,7 +102,7 @@ symOpMaximumResNum op =
 
 data DefaultType = DefaultType
 
-deriveGADT [''DefaultType] $ filter (/= ''PPrint) allClasses0
+derive [''DefaultType] $ filter (/= ''PPrint) allClasses0
 
 instance PPrint DefaultType where
   pformat _ = "default"

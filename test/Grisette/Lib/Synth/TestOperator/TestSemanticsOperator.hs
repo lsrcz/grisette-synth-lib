@@ -34,7 +34,7 @@ import Grisette
     SafeDiv (safeDivMod),
     SymInteger,
     allClasses0,
-    deriveGADT,
+    derive,
     liftToMonadUnion,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -72,7 +72,7 @@ import Text.Megaparsec (MonadParsec (try))
 
 data TestSemanticsOp = Add | DivMod | Inc | Double deriving (Generic)
 
-deriveGADT [''TestSemanticsOp] allClasses0
+derive [''TestSemanticsOp] allClasses0
 
 instance OpPPrint TestSemanticsOp where
   prefixResults _ = return []
@@ -112,7 +112,7 @@ instance NFData TestSemanticsObj where
 
 data TestSemanticsType = IntType deriving (Generic)
 
-deriveGADT [''TestSemanticsType] allClasses0
+derive [''TestSemanticsType] allClasses0
 
 instance TypeParser TestSemanticsType where
   typeParser = try (symbol "IntType") >> return IntType

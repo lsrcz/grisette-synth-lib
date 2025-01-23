@@ -14,7 +14,7 @@ module Operator.AddImm (AddImm (..), addImm) where
 
 import qualified Data.HashSet as HS
 import Data.List ((\\))
-import EvalMode (EvalMode, MonadEvalContext, deriveGADTWithEvalMode)
+import EvalMode (EvalMode, MonadEvalContext, deriveWithEvalMode)
 import Grisette
   ( LogicalOp (false),
     PPrint (pformat),
@@ -53,7 +53,7 @@ newtype AddImm mode = AddImm (GetInteger mode)
 addImm :: (AddImm mode :<: op) => GetInteger mode -> op
 addImm = inj . AddImm
 
-deriveGADTWithEvalMode [''AddImm] (allClasses0 \\ pprintClasses)
+deriveWithEvalMode [''AddImm] (allClasses0 \\ pprintClasses)
 
 instance (MonadEvalContext mode ctx) => OpTyping (AddImm mode) ctx where
   type OpTypeType (AddImm mode) = DefaultType

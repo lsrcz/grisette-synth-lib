@@ -25,7 +25,7 @@ import Grisette
     MonadUnion,
     Union,
     allClasses0,
-    deriveGADT,
+    derive,
     liftUnion,
     mrgReturn,
     tryMerge,
@@ -122,4 +122,4 @@ instance
 
 data DefaultSem = DefaultSem
 
-deriveGADT [''DefaultSem] allClasses0
+derive [''DefaultSem] allClasses0

@@ -23,7 +23,7 @@ import Grisette
     LogicalOp (false),
     Mergeable,
     PPrint (pformat),
-    deriveGADT,
+    derive,
     mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
@@ -60,7 +60,7 @@ data OpCode
   | Minus
   | UMinus
 
-deriveGADT [''OpCode] [''EvalSym, ''Show, ''Mergeable]
+derive [''OpCode] [''EvalSym, ''Show, ''Mergeable]
 
 -- * Semantics and typing.
 

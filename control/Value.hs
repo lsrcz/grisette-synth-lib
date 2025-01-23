@@ -24,7 +24,7 @@ import Grisette
     MonadUnion,
     Union,
     allClasses0,
-    deriveGADT,
+    derive,
     liftToMonadUnion,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
@@ -35,7 +35,7 @@ data Value intVal boolVal
   = IntValue intVal
   | BoolValue boolVal
 
-deriveGADT [''Value] allClasses0
+derive [''Value] allClasses0
 
 class (Mergeable val) => ValueBuilder val where
   type IntValType val

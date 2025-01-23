@@ -18,7 +18,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue
 where
 
 import qualified Data.HashPSQ as PSQ
-import Grisette (PPrint, deriveGADT)
+import Grisette (PPrint, derive)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree (NodeId)
 import System.Random.Stateful (AtomicGenM, StdGen, UniformRange (uniformRM))
 
@@ -30,7 +30,7 @@ data Priority = Priority
     ancestorSiblingKnownWorking :: Bool
   }
 
-deriveGADT [''Priority] [''Show, ''Eq, ''PPrint]
+derive [''Priority] [''Show, ''Eq, ''PPrint]
 
 numericPriority :: Priority -> Double
 numericPriority Priority {..} = basePriority * randomPriority

@@ -22,7 +22,7 @@ import GHC.Generics (Generic)
 import Grisette
   ( PPrint (pformat),
     allClasses0,
-    deriveGADT,
+    derive,
     pprintClasses,
   )
 import Grisette.Lib.Synth.Context (ConcreteContext)
@@ -52,9 +52,9 @@ data TestPrettyOp
 
 data TestPrettyType = PrettyType1 | PrettyType2 deriving (Generic)
 
-deriveGADT [''TestPrettyType] allClasses0
+derive [''TestPrettyType] allClasses0
 
-deriveGADT
+derive
   [''TestPrettyExtOp, ''TestPrettyOp]
   (allClasses0 \\ pprintClasses)
 

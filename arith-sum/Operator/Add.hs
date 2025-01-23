@@ -19,7 +19,7 @@ import Grisette
   ( LogicalOp (false),
     PPrint (pformat),
     allClasses0,
-    deriveGADT,
+    derive,
     mrgReturn,
     pprintClasses,
   )
@@ -50,7 +50,7 @@ data Add = Add
 add :: (Add :<: op) => op
 add = inj Add
 
-deriveGADT [''Add] (allClasses0 \\ pprintClasses)
+derive [''Add] (allClasses0 \\ pprintClasses)
 
 instance (MonadContext ctx) => OpTyping Add ctx where
   type OpTypeType Add = DefaultType

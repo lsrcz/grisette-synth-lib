@@ -23,7 +23,7 @@ import Grisette
   ( PPrint (pformatPrec),
     PPrint1 (liftPFormatPrec),
     allClasses01,
-    deriveGADT,
+    derive,
     pformatPrec1,
     pprintClasses,
     (<+>),
@@ -38,7 +38,7 @@ import Grisette.Lib.Synth.Util.Pretty (encloseListIfNotSingle)
 
 data TypeSignature ty = TypeSignature {argTypes :: [ty], resTypes :: [ty]}
 
-deriveGADT [''TypeSignature] (allClasses01 \\ pprintClasses)
+derive [''TypeSignature] (allClasses01 \\ pprintClasses)
 
 instance (PPrint ty) => PPrint (TypeSignature ty) where
   pformatPrec = pformatPrec1

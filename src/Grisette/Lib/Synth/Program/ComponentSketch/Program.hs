@@ -55,8 +55,8 @@ import Grisette
     Union,
     allClasses01,
     allClasses012,
-    deriveGADT,
-    deriveGADTWith,
+    derive,
+    deriveWith,
     mrgFmap,
     mrgIf,
     mrgSequence_,
@@ -162,17 +162,17 @@ data Prog op symVarId ty = Prog
   }
   deriving (Generic)
 
-deriveGADTWith
+deriveWith
   mempty {useNoStrategy = True}
   [''ProgArg]
   (allClasses01 \\ (ordClasses ++ unifiedSymOrdClasses))
 
-deriveGADTWith
+deriveWith
   mempty {useNoStrategy = True}
   [''Stmt, ''ProgRes, ''Prog]
   (allClasses012 \\ (ordClasses ++ unifiedSymOrdClasses))
 
-deriveGADTWith
+deriveWith
   mempty {useNoStrategy = True}
   [''Prog]
   [''Mergeable3]
@@ -288,7 +288,7 @@ data CollectedDefUse symVarId val = CollectedDefUse
     collectedUse :: [IdValPair symVarId val]
   }
 
-deriveGADT
+derive
   [''IdValPair, ''CollectedDefUse]
   [''Show, ''Eq, ''EvalSym, ''Mergeable]
 

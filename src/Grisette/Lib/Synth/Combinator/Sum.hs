@@ -28,7 +28,7 @@ import Grisette
     PPrint2 (liftPFormatPrec2),
     ToCon (toCon),
     allClasses012,
-    deriveGADT,
+    derive,
     mrgFmap,
     pformatPrec1,
     pprintClasses,
@@ -102,7 +102,7 @@ data (:|) l r = InLeft l | InRight r deriving (Generic)
 
 infixr 5 :|
 
-deriveGADT [''(:|)] (allClasses012 \\ (showClasses ++ pprintClasses))
+derive [''(:|)] (allClasses012 \\ (showClasses ++ pprintClasses))
 
 instance Show2 (:|) where
   liftShowsPrec2 sp1 _ _ _ n (InLeft l) = sp1 n l

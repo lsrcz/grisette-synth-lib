@@ -8,7 +8,7 @@
 module EvalMode
   ( EvalMode,
     MonadEvalMode,
-    deriveGADTWithEvalMode,
+    deriveWithEvalMode,
     MonadEvalContext,
   )
 where
@@ -16,7 +16,7 @@ where
 import Grisette
   ( DeriveConfig (evalModeConfig),
     EvalModeConfig (EvalModeConstraints),
-    deriveGADTWith,
+    deriveWith,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Unified
@@ -27,9 +27,9 @@ import Language.Haskell.TH (DecsQ, Name)
 
 genEvalMode "EvalMode" [UBool, UInteger]
 
-deriveGADTWithEvalMode :: [Name] -> [Name] -> DecsQ
-deriveGADTWithEvalMode =
-  deriveGADTWith
+deriveWithEvalMode :: [Name] -> [Name] -> DecsQ
+deriveWithEvalMode =
+  deriveWith
     ( mempty
         { evalModeConfig = [(0, EvalModeConstraints [''EvalMode])]
         }

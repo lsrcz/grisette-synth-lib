@@ -30,7 +30,7 @@ import Grisette
   ( GenSymSimple (simpleFresh),
     PPrint (pformat),
     allClasses01,
-    deriveGADT,
+    derive,
     hardline,
     pprintClasses,
   )
@@ -44,7 +44,7 @@ import Grisette.Lib.Synth.Program.ProgPPrint (ProgPPrint (pformatProg))
 
 newtype SymbolTable prog = SymbolTable [(T.Text, prog)]
 
-deriveGADT [''SymbolTable] (allClasses01 \\ pprintClasses)
+derive [''SymbolTable] (allClasses01 \\ pprintClasses)
 
 instance (ProgPPrint prog) => PPrint (SymbolTable prog) where
   pformat (SymbolTable lst) =

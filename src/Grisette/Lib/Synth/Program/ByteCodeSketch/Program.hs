@@ -39,7 +39,7 @@ import Grisette
     ToCon (toCon),
     ToSym (toSym),
     allClasses012,
-    deriveGADTWith,
+    deriveWith,
     mrgIf,
     symAssertWith,
   )
@@ -120,12 +120,12 @@ data Prog op conVarId symVarId ty = Prog
   }
   deriving (Generic)
 
-deriveGADTWith
+deriveWith
   mempty {useNoStrategy = True}
   [''Stmt, ''ProgArg, ''ProgRes, ''Prog]
   allClasses012
 
-deriveGADTWith
+deriveWith
   mempty {useNoStrategy = True}
   [''Prog]
   [''Mergeable3]

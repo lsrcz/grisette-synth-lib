@@ -22,7 +22,7 @@ import Grisette
     Mergeable,
     PPrint (pformat),
     allClasses0,
-    deriveGADT,
+    derive,
   )
 import Grisette.Lib.Control.Monad (mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
@@ -33,7 +33,7 @@ import Value (Value, ValueBuilder (mkBool, mkInt))
 
 data Type = IntType | BoolType
 
-deriveGADT [''Type] (filter (/= ''PPrint) allClasses0)
+derive [''Type] (filter (/= ''PPrint) allClasses0)
 
 instance PPrint Type where
   pformat IntType = "int"

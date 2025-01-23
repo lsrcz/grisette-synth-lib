@@ -11,7 +11,7 @@ module Grisette.Lib.Synth.TestOperator.TestCostOperator
   )
 where
 
-import Grisette (Mergeable, allClasses0, deriveGADT, mrgReturn)
+import Grisette (Mergeable, allClasses0, derive, mrgReturn)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Program.CostModel.PerStmtCostModel (OpCost (opCost))
 
@@ -19,7 +19,7 @@ data TestCost = TestCost
 
 newtype TestCostOperator = TestCostOperator Integer
 
-deriveGADT [''TestCost, ''TestCostOperator] allClasses0
+derive [''TestCost, ''TestCostOperator] allClasses0
 
 instance
   (Num cost, MonadContext ctx, Mergeable cost) =>

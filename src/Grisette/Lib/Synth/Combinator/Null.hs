@@ -17,7 +17,7 @@ import Grisette
     GenSymSimple (simpleFresh),
     Mergeable,
     allClasses01,
-    deriveGADT,
+    derive,
   )
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpParser (OpParser (opParser))
@@ -82,7 +82,7 @@ import Grisette.Lib.Synth.Type.TypeParser (TypeParser (typeParser))
 
 data Null ty deriving (Generic)
 
-deriveGADT [''Null] allClasses01
+derive [''Null] allClasses01
 
 instance (MonadContext ctx) => ProgSemantics semObj (Null ty) val ctx where
   runProg _ _ = error "Impossible"

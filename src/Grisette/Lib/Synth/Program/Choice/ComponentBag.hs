@@ -18,7 +18,7 @@ import Grisette
     PPrint (pformat),
     SimpleMergeable,
     allClasses012,
-    deriveGADT,
+    derive,
     hardline,
     liftFresh,
     nest,
@@ -51,7 +51,7 @@ data ComponentBag opSpec ty = ComponentBag
     resTypes :: [ty]
   }
 
-deriveGADT [''ComponentBag] (allClasses012 \\ pprintClasses)
+derive [''ComponentBag] (allClasses012 \\ pprintClasses)
 
 instance LowestSeqNum (ComponentBag opSpec ty) where
   lowestSeqNum succeeded (ComponentBag _ components _) =

@@ -19,7 +19,7 @@ import Grisette
   ( LogicalOp (false),
     PPrint (pformat),
     allClasses0,
-    deriveGADT,
+    derive,
     mrgReturn,
     pprintClasses,
   )
@@ -50,7 +50,7 @@ data Mul = Mul
 mul :: (Mul :<: op) => op
 mul = inj Mul
 
-deriveGADT [''Mul] (allClasses0 \\ pprintClasses)
+derive [''Mul] (allClasses0 \\ pprintClasses)
 
 instance (MonadContext ctx) => OpTyping Mul ctx where
   type OpTypeType Mul = DefaultType

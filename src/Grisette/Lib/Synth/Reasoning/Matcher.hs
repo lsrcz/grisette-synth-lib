@@ -13,7 +13,7 @@ module Grisette.Lib.Synth.Reasoning.Matcher
 where
 
 import GHC.Generics (Generic)
-import Grisette (SymBool, SymEq ((.==)), allClasses0, deriveGADT)
+import Grisette (SymBool, SymEq ((.==)), allClasses0, derive)
 
 class Matcher matcher bool a where
   match :: matcher -> [a] -> [a] -> bool
@@ -21,7 +21,7 @@ class Matcher matcher bool a where
 data EqMatcher = EqMatcher
   deriving (Generic)
 
-deriveGADT [''EqMatcher] allClasses0
+derive [''EqMatcher] allClasses0
 
 instance (SymEq a) => Matcher EqMatcher SymBool a where
   match _ = (.==)

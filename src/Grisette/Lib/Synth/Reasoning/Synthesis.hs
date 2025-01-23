@@ -68,8 +68,8 @@ import Grisette
     ToCon,
     ToSym (toSym),
     VerifierFun,
-    deriveGADT,
-    deriveGADTWith,
+    derive,
+    deriveWith,
     evalSymToCon,
     runFreshT,
     simpleMerge,
@@ -147,7 +147,7 @@ instance
     iop <- deserialize
     Example conSem symSem Proxy iop <$> deserialize
 
-deriveGADTWith
+deriveWith
   (mempty {unconstrainedPositions = [1]})
   [''Example]
   [ ''Cereal.Serialize,
@@ -214,7 +214,7 @@ data SomeExample symProg conProg where
     Example symSemObj symVal conSemObj conVal matcher ->
     SomeExample symProg conProg
 
-deriveGADTWith
+deriveWith
   (mempty {unconstrainedPositions = [0, 1]})
   [''SomeExample]
   [''Show, ''NFData]
@@ -339,7 +339,7 @@ data SynthesisResult conProg
   | SynthesisSolverFailure SolvingFailure
   deriving (Generic)
 
-deriveGADT
+derive
   [''SynthesisResult]
   [ ''Show,
     ''Show1,

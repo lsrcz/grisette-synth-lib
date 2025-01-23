@@ -22,7 +22,7 @@ import Grisette
   ( GenSym (fresh),
     Mergeable,
     allClasses01,
-    deriveGADT,
+    derive,
     liftUnion,
   )
 import Grisette.Lib.Data.Traversable (mrgTraverse)
@@ -48,7 +48,7 @@ data Intermediates val = Intermediates
   }
   deriving (Generic)
 
-deriveGADT [''Intermediates] allClasses01
+derive [''Intermediates] allClasses01
 
 genOpIntermediates ::
   forall semObj ty val ctx p.

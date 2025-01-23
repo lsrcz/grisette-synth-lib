@@ -26,7 +26,7 @@ import Grisette
     allClasses01,
     chooseSimpleFresh,
     chooseUnionFresh,
-    deriveGADT,
+    derive,
     pprintClasses,
   )
 import Grisette.Lib.Synth.Program.Concrete.OpPPrint
@@ -36,12 +36,12 @@ import Grisette.Lib.Synth.Util.Pretty (encloseList, encloseListIfNotSingle)
 
 data ChoiceMeta = NoSplit | Split {_seqNum :: Int, _onlyWhenSuccess :: Bool}
 
-deriveGADT [''ChoiceMeta] allClasses0
+derive [''ChoiceMeta] allClasses0
 
 data ChoiceTree op = Leaf [op] | Branch ChoiceMeta [ChoiceTree op]
   deriving (Functor)
 
-deriveGADT [''ChoiceTree] (allClasses01 \\ pprintClasses)
+derive [''ChoiceTree] (allClasses01 \\ pprintClasses)
 
 pformatChoiceTree :: (op -> Doc ann) -> ChoiceTree op -> Doc ann
 pformatChoiceTree pp (Leaf ops) =

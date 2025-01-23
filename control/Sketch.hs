@@ -23,7 +23,7 @@ import Grisette
     Mergeable,
     ToCon,
     allClasses01,
-    deriveGADT,
+    derive,
     mrgReturn,
   )
 import Grisette.Lib.Synth.Context (MonadAngelicContext, MonadContext)
@@ -58,7 +58,7 @@ data Op intVal
   | If (TypeSignature Type) T.Text T.Text
   deriving (Generic)
 
-deriveGADT [''Op] allClasses01
+derive [''Op] allClasses01
 
 deriving via
   (Default (Concrete.Op conIntVal))

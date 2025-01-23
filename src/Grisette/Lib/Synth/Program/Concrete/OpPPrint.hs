@@ -34,7 +34,7 @@ import GHC.Generics (Generic)
 import Grisette
   ( PPrint (pformat),
     allClasses012,
-    deriveGADT,
+    derive,
     pprintClasses,
   )
 import Grisette.Lib.Synth.Context (ConcreteContext)
@@ -59,7 +59,7 @@ data OpPPrintError varId op
   | PPrintTypingError op T.Text
   deriving (Generic, Functor)
 
-deriveGADT [''OpPPrintError] (allClasses012 \\ pprintClasses)
+derive [''OpPPrintError] (allClasses012 \\ pprintClasses)
 
 instance
   (OpPPrint op, ConcreteVarId varId) =>

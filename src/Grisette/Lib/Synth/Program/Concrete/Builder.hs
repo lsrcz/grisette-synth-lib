@@ -25,7 +25,7 @@ import Grisette
   ( DeriveConfig (useNoStrategy),
     allClasses01,
     allClasses012,
-    deriveGADTWith,
+    deriveWith,
   )
 import qualified Grisette.Lib.Synth.Program.Concrete.Program as Concrete
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
@@ -64,8 +64,8 @@ data Prog op ty = Prog
   }
   deriving (Generic)
 
-deriveGADTWith mempty {useNoStrategy = True} [''ProgArg] allClasses01
-deriveGADTWith
+deriveWith mempty {useNoStrategy = True} [''ProgArg] allClasses01
+deriveWith
   mempty {useNoStrategy = True}
   [''NodeRef, ''Node, ''ProgRes, ''Prog]
   allClasses012

@@ -71,7 +71,7 @@ import Grisette
     SymOrd ((.<)),
     ToCon,
     allClasses0,
-    deriveGADT,
+    derive,
     genSymSimple,
     nest,
     simpleMerge,
@@ -300,7 +300,7 @@ newtype NewMinimalCostMessage = NewMinimalCostMessage
   { newMinimalCost :: Maybe Int
   }
 
-deriveGADT [''NewMinimalCostMessage] allClasses0
+derive [''NewMinimalCostMessage] allClasses0
 
 data ProcessState sketch conProg = ProcessState
   { knownMinimalCost :: Maybe Int,

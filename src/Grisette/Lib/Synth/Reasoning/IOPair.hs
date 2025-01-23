@@ -10,8 +10,8 @@
 
 module Grisette.Lib.Synth.Reasoning.IOPair (IOPair (..)) where
 
-import Grisette (allClasses01, deriveGADT)
+import Grisette (allClasses01, derive)
 
 data IOPair val = IOPair {ioPairInputs :: [val], ioPairOutputs :: [val]}
 
-deriveGADT [''IOPair] allClasses01
+derive [''IOPair] allClasses01

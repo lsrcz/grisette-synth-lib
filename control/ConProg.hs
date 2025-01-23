@@ -20,7 +20,7 @@ import qualified Data.HashSet as HS
 import Data.List ((\\))
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette (PPrint (pformat), allClasses01, deriveGADT, mrgReturn, pprintClasses)
+import Grisette (PPrint (pformat), allClasses01, derive, mrgReturn, pprintClasses)
 import Grisette.Lib.Synth.Context (MonadContext)
 import Grisette.Lib.Synth.Operator.OpReachableSymbols
   ( OpReachableSymbols (opReachableSymbols),
@@ -58,7 +58,7 @@ data Op intVal
   | If (TypeSignature Type) T.Text T.Text
   deriving (Generic)
 
-deriveGADT [''Op] (allClasses01 \\ pprintClasses)
+derive [''Op] (allClasses01 \\ pprintClasses)
 
 type Prog varId intVal = Concrete.Prog (Op intVal) varId Type
 

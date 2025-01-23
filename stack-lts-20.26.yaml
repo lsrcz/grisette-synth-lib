@@ -41,7 +41,7 @@ packages:
 # extra-deps: []
 extra-deps:
   - git: https://github.com/lsrcz/grisette.git
-    commit: 25349f296099c8d34cc3092de197882a58780871
+    commit: a1b2a6f484953735a29bd54d1f28896318aa75a6
   - quickcheck-with-counterexamples-1.2
   - Chart-cairo-1.9.3
   - cairo-0.13.10.0

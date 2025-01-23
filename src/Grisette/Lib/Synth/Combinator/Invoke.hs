@@ -23,7 +23,7 @@ import Grisette
     PPrint (pformat, pformatPrec),
     PPrint1 (liftPFormatPrec),
     allClasses01,
-    deriveGADT,
+    derive,
     mrgReturn,
     mrgSequence,
     nest,
@@ -68,7 +68,7 @@ data Invoke ty = Invoke
   }
   deriving (Generic)
 
-deriveGADT [''Invoke] (allClasses01 \\ pprintClasses)
+derive [''Invoke] (allClasses01 \\ pprintClasses)
 
 instance (PPrint ty) => PPrint (Invoke ty) where
   pformatPrec = pformatPrec1
