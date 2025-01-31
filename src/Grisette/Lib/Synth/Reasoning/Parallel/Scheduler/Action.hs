@@ -15,12 +15,14 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
     markSuccess,
     markAllChildrenSuccess,
     markAllSiblingChildrenSuccess,
+    killIfDividedChildrenAllStarted,
   )
 where
 
 import Control.Exception (throwIO)
 import Control.Monad (unless, void, when)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import Data.IORef (modifyIORef', readIORef, writeIORef)
 import Data.List (sortOn)
 import Data.Maybe (fromJust, isNothing)
@@ -70,6 +72,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
     allChildrenNodes,
     allSiblingNodes,
     markNodeFailed,
+    nodeDividedChildren,
     nodeFailed,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
@@ -86,6 +89,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
       ),
     nodeStatusIsNotYetStarted,
     nodeStatusIsRunning,
+    nodeStatusIsRunningButNotRefining,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message (Failure),
@@ -251,8 +255,45 @@ killIfTimeout scheduler@Scheduler {..} nid = do
   elapsedTime <- getCurrentElapsedTime scheduler nid
   if nominalDiffTimeToSeconds elapsedTime > fromIntegral timeout
     then do
+      logMultiLineDoc (logger config) NOTICE $
+        "Node " <> pformat nid <> " timed out, killing it."
       response <- killNode scheduler nid
       Just <$> nodeTransition scheduler nid response
+    else return Nothing
+
+killIfDividedChildrenAllStarted ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  NodeId ->
+  IO (Maybe NodeAction)
+killIfDividedChildrenAllStarted scheduler@Scheduler {..} nid = do
+  status <- getStatus scheduler nid
+  if nodeStatusIsRunningButNotRefining status
+    then do
+      dcTree' <- readIORef dcTree
+      let children = nodeDividedChildren dcTree' nid
+      case children of
+        Just children | not (HS.null children) -> do
+          childrenStatuses <- traverse (getStatus scheduler) $ HS.toList children
+          if any nodeStatusIsNotYetStarted childrenStatuses
+            then return Nothing
+            else do
+              logMultiLineDoc (logger config) NOTICE $
+                "Node "
+                  <> pformat nid
+                  <> " has all its divided children started, killing it."
+              response <- killNode scheduler nid
+              Just <$> nodeTransition scheduler nid response
+        _ -> return Nothing
     else return Nothing
 
 _killInferredFailure ::

@@ -21,6 +21,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
     pformatNodeStatusSummary,
     nodeStatusIsEnded,
     nodeStatusIsDetermined,
+    nodeStatusIsRunningButNotRefining,
   )
 where
 
@@ -58,6 +59,16 @@ data NodeStatus conProg
   | NodeStarted
   | NodeNotYetStarted
   deriving (Eq, Show, Generic)
+
+nodeStatusIsRunningButNotRefining :: NodeStatus conProg -> Bool
+nodeStatusIsRunningButNotRefining NodeStarted {} = True
+nodeStatusIsRunningButNotRefining NodeViable {} = True
+nodeStatusIsRunningButNotRefining NodeSucceeded {} = False
+nodeStatusIsRunningButNotRefining NodeFailed {} = False
+nodeStatusIsRunningButNotRefining NodeTerminated {} = False
+nodeStatusIsRunningButNotRefining NodeInferredFailure = False
+nodeStatusIsRunningButNotRefining NodeNotYetStarted = False
+nodeStatusIsRunningButNotRefining NodeRefining {} = False
 
 pformatNodeStatusSummary :: NodeStatus conProg -> Doc ann
 pformatNodeStatusSummary NodeInferredFailure = "NodeInferredFailure"

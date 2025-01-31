@@ -23,6 +23,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler
   )
 where
 
+import Control.Applicative (Alternative ((<|>)))
 import Control.Concurrent (putMVar, takeMVar, threadDelay)
 import Control.Monad (unless, void, when)
 import Control.Monad.Extra (mapMaybeM, whileM)
@@ -109,7 +110,9 @@ step
       fmap HM.fromList
         $ mapMaybeM
           ( \(nid, _) -> do
-              fmap (nid,) <$> killIfTimeout scheduler nid
+              r <- killIfTimeout scheduler nid
+              r2 <- killIfDividedChildrenAllStarted scheduler nid
+              return $ fmap (nid,) $ r <|> r2
           )
         $ HM.toList curNodeToProcess
     otherNodes <-
