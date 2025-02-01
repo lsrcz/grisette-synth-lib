@@ -284,7 +284,8 @@ killIfDividedChildrenAllStarted scheduler@Scheduler {..} nid = do
       case children of
         Just children | not (HS.null children) -> do
           childrenStatuses <- traverse (getStatus scheduler) $ HS.toList children
-          if any nodeStatusIsNotYetStarted childrenStatuses
+          let numRunning = length $ filter nodeStatusIsRunning childrenStatuses
+          if any nodeStatusIsNotYetStarted childrenStatuses || numRunning >= 3
             then return Nothing
             else do
               logMultiLineDoc (logger config) NOTICE $
