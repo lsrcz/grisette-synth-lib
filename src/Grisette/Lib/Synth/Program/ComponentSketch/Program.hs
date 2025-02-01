@@ -34,7 +34,7 @@ import Control.Monad.State
 import Data.Bifunctor (Bifunctor (first))
 import Data.Data (Proxy (Proxy))
 import qualified Data.HashMap.Lazy as M
-import Data.List (sortOn, tails, (\\))
+import Data.List (sortOn, (\\))
 import Data.Maybe (fromMaybe, listToMaybe)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -48,7 +48,7 @@ import Grisette
     MonadUnion,
     Solvable (con),
     SymBool,
-    SymEq ((./=), (.==)),
+    SymEq (symDistinct, (.==)),
     SymOrd ((.<), (.<=), (.>)),
     ToCon (toCon),
     ToSym (toSym),
@@ -355,6 +355,45 @@ inBound bound val =
 symInBound :: (SymbolicVarId symVarId) => symVarId -> symVarId -> SymBool
 symInBound bound val = (0 .<= val) .&& (val .< bound)
 
+constrainStmtStructure ::
+  forall ctx op symVarId.
+  ( SymbolicVarId symVarId,
+    OpTyping op ctx,
+    Mergeable op,
+    MonadAngelicContext ctx
+  ) =>
+  Int ->
+  Stmt op symVarId ->
+  ctx ()
+constrainStmtStructure
+  idBound
+  (Stmt opUnion argIds argNum resIds resNum _ mustBeAfters) = do
+    symAssertWith "Out-of-bound statement results." $
+      symAll (inBound idBound) resIds
+
+    symAssertWith "result not canonical." $
+      symAll (\(i, isucc) -> isucc .== i + 1) $
+        zip resIds (tail resIds)
+
+    mrgTraverse_
+      ( \(res, mustBeAfter) ->
+          symAssertWith "Failed must be after constraint." $ res .> mustBeAfter
+      )
+      [(res, mustBeAfter) | res <- resIds, mustBeAfter <- mustBeAfters]
+
+    TypeSignature argTypes resTypes <- typeOp opUnion
+
+    let usedArgIds = take (length argTypes) argIds
+    let usedResIds = take (length resTypes) resIds
+
+    symAssertWith "Variable is undefined." $
+      symAll (\resId -> symAll (symInBound resId) usedArgIds) usedResIds
+
+    symAssertWith "Incorrect number of arguments." $
+      argNum .== fromIntegral (length argTypes)
+    symAssertWith "Incorrect number of results." $
+      resNum .== fromIntegral (length resTypes)
+
 constrainStmt ::
   forall sem ctx op symVarId val.
   ( SymbolicVarId symVarId,
@@ -367,21 +406,12 @@ constrainStmt ::
   ) =>
   sem ->
   EvaledSymbolTable val ctx ->
-  Int ->
   Stmt op symVarId ->
   StateT (CollectedDefUse symVarId val) ctx ()
 constrainStmt
   sem
   table
-  idBound
-  (Stmt opUnion argIds argNum resIds resNum disabled mustBeAfters) = do
-    symAssertWith "Out-of-bound statement results." $
-      symAll (inBound idBound) resIds
-
-    symAssertWith "result not canonical." $
-      symAll (\(i, isucc) -> isucc .== i + 1) $
-        zip resIds (tail resIds)
-
+  (Stmt opUnion argIds _ resIds _ disabled _) = do
     signature <- lift $ typeOp opUnion
     Intermediates argVals resVals <-
       lift $ genOpIntermediates (Proxy @(OpTypeType op)) sem signature
@@ -400,25 +430,8 @@ constrainStmt
         getIdValPairs disabled (i : is) (v : vs) =
           mrgFmap (IdValPair disabled i (mrgReturn . Just $ v) :) $
             getIdValPairs disabled is vs
-
-    symAssertWith "Incorrect number of arguments." $
-      argNum .== fromIntegral (length argVals)
     addUses =<< getIdValPairs disabled argIds argVals
-    symAssertWith "Incorrect number of results." $
-      resNum .== fromIntegral (length resVals)
     addDefs =<< getIdValPairs disabled resIds resVals
-
-    mrgTraverse_
-      ( \(res, mustBeAfter) ->
-          symAssertWith "Failed must be after constraint." $ res .> mustBeAfter
-      )
-      [(res, mustBeAfter) | res <- resIds, mustBeAfter <- mustBeAfters]
-
-    let usedArgIds = take (length argVals) argIds
-    let usedResIds = take (length resVals) resIds
-
-    symAssertWith "Variable is undefined." $
-      symAll (\resId -> symAll (symInBound resId) usedArgIds) usedResIds
 
 connected ::
   ( MonadUnion ctx,
@@ -440,21 +453,39 @@ connected = do
       IdValPair useDisabled useId useVal <- use
     ]
 
-defDistinct ::
-  ( MonadUnion ctx,
-    MonadContext ctx,
-    SymbolicVarId symVarId,
-    SymEq val,
-    Mergeable val
+progStructureConstraint ::
+  ( SymbolicVarId symVarId,
+    MonadAngelicContext ctx,
+    OpSymmetryReduction op,
+    Mergeable op,
+    OpTyping op ctx
   ) =>
-  StateT (CollectedDefUse symVarId val) ctx ()
-defDistinct = do
-  CollectedDefUse def _ <- get
-  let pairs l = [(x, y) | (x : ys) <- tails l, y <- ys]
-  mrgTraverse_ (symAssertWith "Variable is already defined." . uncurry (./=))
-    . pairs
-    . fmap (\(IdValPair _ defId _) -> defId)
-    $ def
+  Prog op symVarId ty ->
+  [val] ->
+  ctx ()
+progStructureConstraint prog@(Prog arg stmts ret) inputs = do
+  symAssertWith "non-canonical" $ canonicalOrderConstraint prog
+  symAssertWith "commutative reduction" $ progCommutativeConstraint prog
+
+  let bound = length inputs + sum (length . stmtResIds <$> stmts)
+  symAssertWith
+    ( "Expected "
+        <> showAsText (length arg)
+        <> " arguments, but got "
+        <> showAsText (length inputs)
+        <> " arguments."
+    )
+    $ length inputs .== length arg
+  symAssertWith "Variable is undefined." $
+    symAll (inBound bound) $
+      progResId <$> ret
+
+  mrgTraverse_ (constrainStmtStructure bound) stmts
+
+  let allDefIds =
+        take (length arg) (fromIntegral <$> [0 ..])
+          ++ concatMap stmtResIds stmts
+  symAssertWith "Variable is already defined." $ symDistinct allDefIds
 
 instance
   {-# OVERLAPPABLE #-}
@@ -471,28 +502,13 @@ instance
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx
   where
-  runProg sem table prog@(Prog arg stmts ret) inputs = do
-    symAssertWith "non-canonical" $ canonicalOrderConstraint prog
-    symAssertWith "commutative reduction" $ progCommutativeConstraint prog
+  runProg sem table prog@(Prog _ stmts ret) inputs = do
+    progStructureConstraint prog inputs
     flip mrgEvalStateT (CollectedDefUse [] []) $ do
-      symAssertWith
-        ( "Expected "
-            <> showAsText (length arg)
-            <> " arguments, but got "
-            <> showAsText (length inputs)
-            <> " arguments."
-        )
-        $ length inputs .== length arg
       addProgArgs inputs
-
-      let bound = length inputs + sum (length . stmtResIds <$> stmts)
-      mrgTraverse_ (constrainStmt sem table bound) stmts
+      mrgTraverse_ (constrainStmt sem table) stmts
       resVals <- genProgResVals sem ret
-      symAssertWith "Variable is undefined." $
-        symAll (inBound bound) $
-          progResId <$> ret
       connected
-      defDistinct
       mrgReturn resVals
 
 instance
