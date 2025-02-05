@@ -894,7 +894,19 @@ easySynthStep
           localHandle
           trackBound
           trackBound
-          processConfig
+          ( processConfig {sketchSpec = sketchSpec} ::
+              ProcessConfig
+                sketchSpec
+                sketch
+                conProg
+                costObj
+                cost
+                symSemObj
+                symVal
+                conSemObj
+                conVal
+                matcher
+          )
           minimalCostMessage
           stateRef
       putMVar r $ Just res
