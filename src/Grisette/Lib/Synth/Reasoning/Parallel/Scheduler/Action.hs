@@ -645,10 +645,19 @@ _markAncestorKnownWorking ::
     conVal
     matcher ->
   NodeId ->
+  NodeId ->
   IO ()
-_markAncestorKnownWorking scheduler@Scheduler {..} nid = do
+_markAncestorKnownWorking scheduler@Scheduler {..} ancestorId nid = do
+  ancestorDepth <- getDepth scheduler ancestorId
+  depth <- getDepth scheduler nid
   priority <- getPriority scheduler nid
-  let newPriority = priority {Q.ancestorKnownWorking = True}
+  let newPriority =
+        priority
+          { Q.knownWorkingAncestorDistance =
+              case Q.knownWorkingAncestorDistance priority of
+                Nothing -> Just $ depth - ancestorDepth
+                Just d -> Just $ min d (depth - ancestorDepth)
+          }
   when (newPriority /= priority) $
     logMultiLineDoc (logger config) NOTICE $
       "Marked node " <> pformat nid <> " as an ancestor succeeded"
@@ -693,8 +702,8 @@ markAllChildrenSuccess ::
 markAllChildrenSuccess scheduler@Scheduler {..} nid = do
   markSuccess scheduler nid
   dcTree <- readIORef dcTree
-  _markAncestorKnownWorking scheduler nid
-  mapM_ (_markAncestorKnownWorking scheduler) $ allChildrenNodes dcTree nid
+  _markAncestorKnownWorking scheduler nid nid
+  mapM_ (_markAncestorKnownWorking scheduler nid) $ allChildrenNodes dcTree nid
 
 markAllSiblingChildrenSuccess ::
   Scheduler

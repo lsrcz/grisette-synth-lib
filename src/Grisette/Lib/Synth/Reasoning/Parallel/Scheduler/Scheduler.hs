@@ -41,6 +41,7 @@ import Data.Time
     getCurrentTime,
   )
 import Foreign.C (eBADF)
+import GHC.Stack (HasCallStack)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
@@ -178,6 +179,7 @@ newScheduler config = do
   return $ Scheduler {..}
 
 getCPid ::
+  (HasCallStack) =>
   Scheduler
     sketchSpec
     sketch
@@ -212,6 +214,7 @@ getProcessByCPid Scheduler {..} cpid =
   readIORef processes >>= \m -> return $ m HM.! cpid
 
 getProcess ::
+  (HasCallStack) =>
   Scheduler
     sketchSpec
     sketch

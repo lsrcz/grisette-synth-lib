@@ -139,7 +139,7 @@ _addSubSketches
     parentBasePriority <-
       case parentId of
         Just parentId -> getPriority scheduler parentId
-        Nothing -> return $ Q.Priority rootPriority 1 False False False
+        Nothing -> return $ Q.Priority rootPriority 1 False Nothing False
     let childrenBasePriority =
           subNodePriorityMultiplier * Q.basePriority parentBasePriority
     writeIORef dcTree newDcTree
@@ -150,7 +150,9 @@ _addSubSketches
           parentBasePriority
             { Q.basePriority = childrenBasePriority,
               Q.randomPriority = nodeIdPriorities HM.! nid,
-              Q.knownWorking = False
+              Q.knownWorking = False,
+              Q.knownWorkingAncestorDistance =
+                (+ 1) <$> Q.knownWorkingAncestorDistance parentBasePriority
             }
     let taskNodeInfo nid =
           NodeInfo

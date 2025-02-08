@@ -26,7 +26,7 @@ data Priority = Priority
   { basePriority :: Double,
     randomPriority :: Double,
     knownWorking :: Bool,
-    ancestorKnownWorking :: Bool,
+    knownWorkingAncestorDistance :: Maybe Int,
     ancestorSiblingKnownWorking :: Bool
   }
 
@@ -41,7 +41,10 @@ instance Ord Priority where
       then
         if pk1 == pk2
           then (if ask1 == ask2 then p1 * r1 <= p2 * r2 else ask1)
-          else pk1
+          else case (pk1, pk2) of
+            (Nothing, _) -> False
+            (Just _, Nothing) -> True
+            (Just n1, Just n2) -> n1 <= n2
       else k1
 
 data BiasedQueue = BiasedQueue
