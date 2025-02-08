@@ -283,17 +283,34 @@ killIfDividedChildrenAllStarted scheduler@Scheduler {..} nid = do
       let children = nodeDividedChildren dcTree' nid
       case children of
         Just children | not (HS.null children) -> do
-          childrenStatuses <- traverse (getStatus scheduler) $ HS.toList children
+          let childrenList = HS.toList children
+          childrenStatuses <- traverse (getStatus scheduler) childrenList
           let numRunning = length $ filter nodeStatusIsRunning childrenStatuses
-          if any nodeStatusIsNotYetStarted childrenStatuses || numRunning >= 3
-            then return Nothing
-            else do
+          let notYetStartedNodes =
+                fmap fst $
+                  filter (nodeStatusIsNotYetStarted . snd) $
+                    zip childrenList childrenStatuses
+          case notYetStartedNodes of
+            [] | numRunning <= 2 -> do
               logMultiLineDoc (logger config) NOTICE $
                 "Node "
                   <> pformat nid
-                  <> " has all its divided children started, killing it."
+                  <> " has all its divided children started, and have no "
+                  <> "more than 2 running children, killing it."
               response <- killNode scheduler nid
               Just <$> nodeTransition scheduler nid response
+            [child] | numRunning <= 1 -> do
+              logMultiLineDoc (logger config) NOTICE $
+                "Node "
+                  <> pformat nid
+                  <> " has only one pending divided child, and have no "
+                  <> "more than 1 running children, killing it and start the "
+                  <> "child."
+              _startNode scheduler child
+              modifyIORef' nodeQueue $ Q.delete child
+              response <- killNode scheduler nid
+              Just <$> nodeTransition scheduler nid response
+            _ -> return Nothing
         _ -> return Nothing
     else return Nothing
 
