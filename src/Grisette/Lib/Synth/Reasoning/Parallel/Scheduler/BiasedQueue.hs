@@ -16,6 +16,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue
     popMin,
     recipBasePriority,
     recipPriority,
+    minQueuedDepth,
   )
 where
 
@@ -123,3 +124,8 @@ popMin randGen queue@BiasedQueue {..} = do
   let nodeId = if pickBiased then nodeIdBiased else nodeIdRandom
   priority <- getPriority nodeId queue
   return (priority, nodeId, pickBiased, delete nodeId queue)
+
+minQueuedDepth :: BiasedQueue -> IO Int
+minQueuedDepth BiasedQueue {..} = do
+  let Just (_, priority, _) = PSQ.findMin simpleQueue
+  return (depth priority)

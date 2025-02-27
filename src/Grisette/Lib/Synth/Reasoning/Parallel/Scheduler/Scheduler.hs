@@ -863,11 +863,15 @@ updateFirstNotFullySplitDepth ::
   IO ()
 updateFirstNotFullySplitDepth scheduler@Scheduler {..} = do
   currentDepth <- readIORef firstNotFullySplitDepth
-  isFullySplit <- isDepthFullySplit scheduler currentDepth
+  allNodesAtDepth <- getNodesByDepth scheduler currentDepth
+  if null allNodesAtDepth
+    then return ()
+    else do
+      isFullySplit <- isDepthFullySplit scheduler currentDepth
 
-  when isFullySplit $ do
-    -- Advance to the next depth
-    modifyIORef' firstNotFullySplitDepth (+ 1)
+      when isFullySplit $ do
+        -- Advance to the next depth
+        modifyIORef' firstNotFullySplitDepth (+ 1)
 
-    -- Recursively check the next depth too
-    updateFirstNotFullySplitDepth scheduler
+        -- Recursively check the next depth too
+        updateFirstNotFullySplitDepth scheduler

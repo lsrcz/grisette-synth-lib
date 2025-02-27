@@ -371,31 +371,27 @@ splitNode
                     )
               )
               splittedSketches
-        if null splittedSketches
-          then do
-            logMultiLineDoc logger NOTICE $
-              nest 2 $
-                vsep
-                  [ "Node " <> pformat nodeId <> " have no sub-sketches.",
-                    "Skipping."
-                  ]
-            setIsSplitted scheduler nodeId True
+        r <-
+          if null splittedSketches
+            then do
+              logMultiLineDoc logger NOTICE $
+                nest 2 $
+                  vsep
+                    [ "Node " <> pformat nodeId <> " have no sub-sketches.",
+                      "Skipping."
+                    ]
+              setIsSplitted scheduler nodeId True
+              return []
+            else do
+              splittedNodeIds <-
+                _addSubSketches
+                  scheduler
+                  (Just nodeId)
+                  splittedSketchesWithPriority
+              setIsSplitted scheduler nodeId True
+              return splittedNodeIds
+        -- Check if we need to update the first not fully split depth
+        when (nodeDepth == currentNotFullySplitDepth) $
+          updateFirstNotFullySplitDepth scheduler
 
-            -- Check if we need to update the first not fully split depth
-            when (nodeDepth == currentNotFullySplitDepth) $
-              updateFirstNotFullySplitDepth scheduler
-
-            return []
-          else do
-            splittedNodeIds <-
-              _addSubSketches
-                scheduler
-                (Just nodeId)
-                splittedSketchesWithPriority
-            setIsSplitted scheduler nodeId True
-
-            -- Check if we need to update the first not fully split depth
-            when (nodeDepth == currentNotFullySplitDepth) $
-              updateFirstNotFullySplitDepth scheduler
-
-            return splittedNodeIds
+        return r
