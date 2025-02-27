@@ -8,9 +8,8 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
   )
 where
 
-import Control.Monad (guard, unless)
+import Control.Monad (forM_, guard, unless, when)
 import Data.Bifunctor (second)
-import Data.Foldable (Foldable (toList))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Data.IORef (readIORef)
@@ -28,7 +27,8 @@ import Graphics.Rendering.Chart.Backend.Cairo
     toFile,
   )
 import Graphics.Rendering.Chart.Easy
-  ( PointShape
+  ( Colour,
+    PointShape
       ( PointShapeCircle,
         PointShapeCross,
         PointShapePolygon,
@@ -98,7 +98,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig (logRootDir)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
-  ( nodeStateCurrentElapsedTime,
+  ( NodeState,
+    nodeStateCurrentElapsedTime,
     nodeStateMajorRelativeTimeLog,
     nodeStateNumCollectedExamples,
     nodeStateNumInProgressExamples,
@@ -144,6 +145,7 @@ import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import Grisette.Lib.Synth.Util.Show (showFloat)
 import System.Log.Logger (Priority (NOTICE))
 
+-- | Statistical data for a single node in the scheduler
 data NodeStats = NodeStats
   { nodeId :: NodeId,
     sortedIdx :: Int,
@@ -152,12 +154,14 @@ data NodeStats = NodeStats
     inProgressExamples :: Int
   }
 
+-- | Statistics for a message
 data MessageStat = MessageStat
   { nodeIdOrigin :: NodeId,
     sortedIdx :: Int,
     msgTime :: Double
   }
 
+-- | Summary statistics for a group of nodes
 data SummaryStats = SummaryStats
   { num :: Int,
     percentAll :: Double,
@@ -171,6 +175,7 @@ data SummaryStats = SummaryStats
     avgInProgressExamples :: Double
   }
 
+-- | Statistics categorized by node status
 data Stats = Stats
   { allStartedNodeStats :: SummaryStats,
     numNotStarted :: Int,
@@ -187,7 +192,141 @@ data Stats = Stats
     succeedMessageStats :: [MessageStat]
   }
 
-_collectStats ::
+-- | Categories that should be considered for annotations
+annotationCategories :: [String]
+annotationCategories =
+  [ "viable",
+    "refining",
+    "succeed",
+    "viableMsg",
+    "easySynthFailureMsg",
+    "succeedMsg"
+  ]
+
+-- | Color mapping for different node and message types
+colorMap :: HM.HashMap String (Colour Double)
+colorMap =
+  HM.fromList
+    [ ("viable", aqua),
+      ("refining", dodgerblue),
+      ("succeed", green),
+      ("unsat", mediumpurple),
+      ("unknown", yellowgreen),
+      ("terminated", red),
+      ("inferredFailure", orange),
+      ("justStarted", black),
+      ("viableMsg", gray),
+      ("easySynthFailureMsg", deeppink),
+      ("succeedMsg", green)
+    ]
+
+-- | Shape mapping for different node and message types
+shapeMap :: HM.HashMap String PointShape
+shapeMap =
+  HM.fromList
+    [ ("viable", PointShapeCircle),
+      ("refining", PointShapeCircle),
+      ("succeed", PointShapeStar),
+      ("unsat", PointShapeCross),
+      ("unknown", PointShapeCross),
+      ("terminated", PointShapeCross),
+      ("inferredFailure", PointShapeCross),
+      ("justStarted", PointShapeCircle),
+      ("viableMsg", PointShapePolygon 4 True),
+      ("easySynthFailureMsg", PointShapePolygon 4 True),
+      ("succeedMsg", PointShapePolygon 4 True)
+    ]
+
+-- | Validates the node status assignments and logs any inconsistencies
+validateNodeStatus ::
+  HS.HashSet NodeId -> -- All nodes
+  [(StatusType, HS.HashSet NodeId)] -> -- Status type to node set mappings
+  (Doc ann -> IO ()) -> -- Logger function
+  IO ()
+validateNodeStatus allNodes statusTypeMappings logFunction = do
+  let allTrackedNodes = foldl HS.union HS.empty (map snd statusTypeMappings)
+      missingNodes = allNodes `HS.difference` allTrackedNodes
+
+      findDuplicates node =
+        filter
+          (\(_, nodes) -> node `HS.member` nodes)
+          statusTypeMappings
+
+      multiStatusNodes = HM.fromList $ do
+        node <- HS.toList allTrackedNodes
+        let statuses = findDuplicates node
+        [(node, map fst statuses) | length statuses > 1]
+
+  -- Log any issues
+  unless (HS.null missingNodes) $
+    logFunction $
+      "STATS ERROR: " <> pformat (HS.size missingNodes) <> " nodes without any status: " <> pformat (HS.toList missingNodes)
+
+  unless (HM.null multiStatusNodes) $
+    logFunction $
+      "STATS ERROR: Nodes with multiple statuses: " <> pformat multiStatusNodes
+
+-- | Calculates a percentile value from a list of values
+percentile :: (Ord a) => Double -> [a] -> a
+percentile _ [] = error "Cannot calculate percentile of an empty list"
+percentile cutoff l =
+  let sorted = sort l
+      len = length sorted
+      idx = min (len - 1) $ ceiling $ fromIntegral len * cutoff
+   in sorted !! idx
+
+-- | Converts node states to NodeStats objects
+nodeStateToNodeStats ::
+  UTCTime ->
+  (NodeId, NodeState conProg symSemObj symVal conSemObj conVal matcher) ->
+  HM.HashMap NodeId Int -> -- NodeId to sortedIdx mapping
+  NodeStats
+nodeStateToNodeStats curTime (nid, state) nodeIdToSortedIdx =
+  NodeStats
+    nid
+    (nodeIdToSortedIdx HM.! nid)
+    (realToFrac $ nodeStateCurrentElapsedTime curTime state)
+    (nodeStateNumCollectedExamples state)
+    (nodeStateNumInProgressExamples state)
+
+-- | Creates SummaryStats from a list of NodeStats
+createSummaryStats :: Int -> Int -> [NodeStats] -> SummaryStats
+createSummaryStats allNodeNum everStartedNum nodeStats =
+  let nodeCount = length nodeStats
+      times = map nodeTime nodeStats
+      collectedExamplesSum = sum (map collectedExamples nodeStats)
+      inProgressExamplesSum = sum (map inProgressExamples nodeStats)
+
+      avgTime = if null times then -1 else sum times / fromIntegral nodeCount
+      p75 = if null times then -1 else percentile 0.75 times
+      p90 = if null times then -1 else percentile 0.90 times
+      p95 = if null times then -1 else percentile 0.95 times
+
+      avgCollected =
+        if nodeCount == 0
+          then 0
+          else
+            fromIntegral collectedExamplesSum / fromIntegral nodeCount
+
+      avgInProgress =
+        if nodeCount == 0
+          then 0
+          else
+            fromIntegral inProgressExamplesSum / fromIntegral nodeCount
+   in SummaryStats
+        nodeCount
+        (realToFrac $ 100 * nodeCount % allNodeNum)
+        (realToFrac $ 100 * nodeCount % everStartedNum)
+        nodeStats
+        avgTime
+        p75
+        p90
+        p95
+        avgCollected
+        avgInProgress
+
+-- | Collects statistics about nodes in the scheduler
+collectStats ::
   UTCTime ->
   Scheduler
     sketchSpec
@@ -202,7 +341,7 @@ _collectStats ::
     matcher ->
   Maybe Int -> -- Optional depth filter
   IO Stats
-_collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} maybeDepth = do
+collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} maybeDepth = do
   -- Get node sets by status type
   let getNodeSet statusType = case maybeDepth of
         Nothing -> getNodesByStatus scheduler statusType
@@ -221,280 +360,231 @@ _collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} ma
   -- Read all node states
   nodeStatesMap <- readIORef nodeStates
 
-  -- Sanity check: ensure all nodes have a status and are counted exactly once
-  let allTrackedNodes =
-        viableNodes
-          `HS.union` refiningNodes
-          `HS.union` succeedNodes
-          `HS.union` unsatNodes
-          `HS.union` unknownNodes
-          `HS.union` terminatedNodes
-          `HS.union` inferredFailureNodes
-          `HS.union` justStartedNodes
-          `HS.union` notYetStartedNodes
-
+  -- Get all nodes for the current depth (or all depths)
   allNodes <- case maybeDepth of
     Just depth -> getNodesByDepth scheduler depth
     Nothing -> return $ HS.fromList $ HM.keys nodeStatesMap
-  let missingNodes = allNodes `HS.difference` allTrackedNodes
-  -- Check for nodes appearing in multiple status sets
-  let findDuplicates node =
-        filter
-          (\(_, nodes) -> node `HS.member` nodes)
-          [ (Viable, viableNodes),
-            (Refining, refiningNodes),
-            (Succeeded, succeedNodes),
-            (Unsat, unsatNodes),
-            (Unknown, unknownNodes),
-            (Terminated, terminatedNodes),
-            (InferredFailure, inferredFailureNodes),
-            (JustStarted, justStartedNodes),
-            (NotYetStarted, notYetStartedNodes)
-          ]
 
-      multiStatusNodes = HM.fromList $ do
-        node <- HS.toList allTrackedNodes
-        let statuses = findDuplicates node
-        [(node, map fst statuses) | length statuses > 1]
+  -- Validate node status assignments
+  let statusMappings =
+        [ (Viable, viableNodes),
+          (Refining, refiningNodes),
+          (Succeeded, succeedNodes),
+          (Unsat, unsatNodes),
+          (Unknown, unknownNodes),
+          (Terminated, terminatedNodes),
+          (InferredFailure, inferredFailureNodes),
+          (JustStarted, justStartedNodes),
+          (NotYetStarted, notYetStartedNodes)
+        ]
 
-  -- Log any issues
-  unless (HS.null missingNodes) $
-    logMultiLineDoc logger NOTICE $
-      "STATS ERROR: " <> pformat (HS.size missingNodes) <> " nodes without any status: " <> pformat (HS.toList missingNodes)
+  validateNodeStatus allNodes statusMappings (logMultiLineDoc logger NOTICE)
 
-  unless (HM.null multiStatusNodes) $
-    logMultiLineDoc logger NOTICE $
-      "STATS ERROR: Nodes with multiple statuses: " <> pformat multiStatusNodes
-
-  -- Continue with normal stats collection
-  -- Convert to list of (NodeId, NodeState)
-  let getNodeStats nid =
+  -- Helper function to safely get node state
+  let getNodeState nid =
         case HM.lookup nid nodeStatesMap of
           Just s -> (nid, s)
           Nothing -> error $ "Node " ++ show nid ++ " not found in nodeStates"
 
-  let mkNodeStatsFromSet nodeSet =
-        map getNodeStats (HS.toList nodeSet)
+  -- Convert each set of nodes to (NodeId, NodeState) pairs
+  let nodeSetToStatePairs nodeSet = map getNodeState (HS.toList nodeSet)
 
-  let viableStats = mkNodeStatsFromSet viableNodes
-      refiningStats = mkNodeStatsFromSet refiningNodes
-      succeedStats = mkNodeStatsFromSet succeedNodes
-      unsatStats = mkNodeStatsFromSet unsatNodes
-      unknownStats = mkNodeStatsFromSet unknownNodes
-      terminatedStats = mkNodeStatsFromSet terminatedNodes
-      inferredFailureStats = mkNodeStatsFromSet inferredFailureNodes
-      justStartedStats = mkNodeStatsFromSet justStartedNodes
+  let viableStatePairs = nodeSetToStatePairs viableNodes
+      refiningStatePairs = nodeSetToStatePairs refiningNodes
+      succeedStatePairs = nodeSetToStatePairs succeedNodes
+      unsatStatePairs = nodeSetToStatePairs unsatNodes
+      unknownStatePairs = nodeSetToStatePairs unknownNodes
+      terminatedStatePairs = nodeSetToStatePairs terminatedNodes
+      inferredFailureStatePairs = nodeSetToStatePairs inferredFailureNodes
+      justStartedStatePairs = nodeSetToStatePairs justStartedNodes
 
   -- All nodes that have ever started
-  let everStarted =
-        viableStats
-          ++ refiningStats
-          ++ succeedStats
-          ++ unsatStats
-          ++ unknownStats
-          ++ terminatedStats
-          ++ inferredFailureStats
-          ++ justStartedStats
+  let everStartedStatePairs =
+        viableStatePairs
+          ++ refiningStatePairs
+          ++ succeedStatePairs
+          ++ unsatStatePairs
+          ++ unknownStatePairs
+          ++ terminatedStatePairs
+          ++ inferredFailureStatePairs
+          ++ justStartedStatePairs
 
-  let allNodeNum = length everStarted + HS.size notYetStartedNodes
-  let everStartedNum = length everStarted
+  let allNodeNum = length everStartedStatePairs + HS.size notYetStartedNodes
+  let everStartedNum = length everStartedStatePairs
   let notStarted = HS.size notYetStartedNodes
 
-  let startedWithLinspace = zip [0 ..] $ sortOn (nodeStateCurrentElapsedTime curTime . snd) everStarted
+  -- Sort nodes by elapsed time and create index mapping
+  let startedWithLinspace =
+        zip [0 ..] $
+          sortOn (nodeStateCurrentElapsedTime curTime . snd) everStartedStatePairs
 
-  -- Create a mapping from NodeId to sortedIdx to preserve global ordering
-  let nodeIdToSortedIdx = HM.fromList [(nid, idx) | (idx, (nid, _)) <- startedWithLinspace]
+  -- Create a mapping from NodeId to sortedIdx
+  let nodeIdToSortedIdx =
+        HM.fromList [(nid, idx) | (idx, (nid, _)) <- startedWithLinspace]
 
+  -- Convert state pairs to NodeStats objects
+  let toNodeStats = map (\(nid, s) -> nodeStateToNodeStats curTime (nid, s) nodeIdToSortedIdx)
+
+  -- Create message statistics
   let logsWithLinspace =
-        fmap
+        map
           (second $ second nodeStateMajorRelativeTimeLog)
           startedWithLinspace
-  let msg filt = do
-        (idx, (nid, log)) <- logsWithLinspace
-        (diffTime, msg) <- log
-        guard $ filt msg
+
+  let createMessageStats filterFn = do
+        (idx, (nid, logs)) <- logsWithLinspace
+        (diffTime, msg) <- logs
+        guard $ filterFn msg
         return $ MessageStat nid idx (realToFrac diffTime :: Double)
-  let toStats =
-        fmap
-          ( \(nid, s) ->
-              let idx = nodeIdToSortedIdx HM.! nid
-               in NodeStats
-                    nid
-                    idx
-                    (realToFrac $ nodeStateCurrentElapsedTime curTime s)
-                    (nodeStateNumCollectedExamples s)
-                    (nodeStateNumInProgressExamples s)
-          )
 
-  let viable = toStats viableStats
-  let refining = toStats refiningStats
-  let succeed = toStats succeedStats
-  let unsat = toStats unsatStats
-  let unknown = toStats unknownStats
-  let terminated = toStats terminatedStats
-  let inferredFailure = toStats inferredFailureStats
-  let justStarted = toStats justStartedStats
+  let viableMsgs = createMessageStats processResponseIsViable
+      easySynthFailureMsgs = createMessageStats processResponseIsEasySynthFailure
+      succeedMsgs = createMessageStats processResponseIsSuccess
 
-  let averageTime :: [NodeStats] -> Double
-      averageTime [] = -1
-      averageTime r =
-        sum (fmap nodeTime r) / fromIntegral (length r) ::
-          Double
-  let percentile _ [] = -1
-      percentile cutoff l =
-        let times = sort l
-            len = length times
-            idx = min (len - 1) $ ceiling $ fromIntegral len * cutoff
-         in times !! idx
-  let toSummaryStats' nodeStats =
-        SummaryStats
-          (length nodeStats)
-          (realToFrac $ 100 * length nodeStats % allNodeNum)
-          (realToFrac $ 100 * length nodeStats % everStartedNum)
-          nodeStats
-          (averageTime nodeStats)
-          (percentile 0.75 $ fmap nodeTime nodeStats)
-          (percentile 0.90 $ fmap nodeTime nodeStats)
-          (percentile 0.95 $ fmap nodeTime nodeStats)
-          ( fromIntegral (sum (fmap collectedExamples nodeStats))
-              / fromIntegral (length nodeStats) ::
-              Double
-          )
-          ( fromIntegral (sum (fmap inProgressExamples nodeStats))
-              / fromIntegral (length nodeStats) ::
-              Double
-          )
+  -- Convert state pairs to NodeStats
+  let viableNodeStats = toNodeStats viableStatePairs
+      refiningNodeStats = toNodeStats refiningStatePairs
+      succeedNodeStats = toNodeStats succeedStatePairs
+      unsatNodeStats = toNodeStats unsatStatePairs
+      unknownNodeStats = toNodeStats unknownStatePairs
+      terminatedNodeStats = toNodeStats terminatedStatePairs
+      inferredFailureNodeStats = toNodeStats inferredFailureStatePairs
+      justStartedNodeStats = toNodeStats justStartedStatePairs
+      allStartedStats = toNodeStats (map snd startedWithLinspace)
+
+  -- Create SummaryStats for each category
+  let createSummary = createSummaryStats allNodeNum everStartedNum
 
   return $
     Stats
-      (toSummaryStats' $ toStats (map snd startedWithLinspace))
+      (createSummary allStartedStats)
       notStarted
-      (toSummaryStats' viable)
-      (toSummaryStats' refining)
-      (toSummaryStats' succeed)
-      (toSummaryStats' unsat)
-      (toSummaryStats' unknown)
-      (toSummaryStats' terminated)
-      (toSummaryStats' inferredFailure)
-      (toSummaryStats' justStarted)
-      (msg processResponseIsViable)
-      (msg processResponseIsEasySynthFailure)
-      (msg processResponseIsSuccess)
+      (createSummary viableNodeStats)
+      (createSummary refiningNodeStats)
+      (createSummary succeedNodeStats)
+      (createSummary unsatNodeStats)
+      (createSummary unknownNodeStats)
+      (createSummary terminatedNodeStats)
+      (createSummary inferredFailureNodeStats)
+      (createSummary justStartedNodeStats)
+      viableMsgs
+      easySynthFailureMsgs
+      succeedMsgs
 
-_plotStatistics :: FilePath -> String -> Stats -> IO ()
-_plotStatistics path title stats = do
-  let toAnnotate =
-        HS.fromList
-          [ "fastTrackViable",
-            "fastTrackRefining",
-            "immSynthFailure",
-            "slowTrackRefining",
-            "fastSucceed",
-            "slowSucceed"
-          ]
-  let msgStatToPoint MessageStat {nodeIdOrigin, sortedIdx, msgTime} =
-        (nodeIdOrigin, (fromIntegral sortedIdx :: Double, msgTime))
-  let msgDatum =
-        HM.filter (not . null) $
-          HM.fromList
-            [ ( "viableMsg" :: String,
-                msgStatToPoint <$> viableMessageStats stats
-              ),
-              ( "easySynthFailureMsg",
-                msgStatToPoint <$> easySynthFailureMessageStats stats
-              ),
-              ( "succeedMsg",
-                msgStatToPoint <$> succeedMessageStats stats
-              )
-            ]
-  let msgDatumKeys = HM.keys msgDatum
-  let nodeStatToPoint NodeStats {nodeId, sortedIdx, nodeTime} =
-        (nodeId, (fromIntegral sortedIdx :: Double, nodeTime))
-  let summaryStatsToPoints stats = nodeStatToPoint <$> nodeStats stats
-  let nodeDatum =
-        HM.filter (not . null) $
-          HM.fromList
-            [ ( "viable",
-                summaryStatsToPoints $ viableStats stats
-              ),
-              ( "refining",
-                summaryStatsToPoints $ refiningStats stats
-              ),
-              ( "succeed",
-                summaryStatsToPoints $ succeedStats stats
-              ),
-              ( "unsat",
-                summaryStatsToPoints $ unsatStats stats
-              ),
-              ( "unknown",
-                summaryStatsToPoints $ unknownStats stats
-              ),
-              ( "terminated",
-                summaryStatsToPoints $ terminatedStats stats
-              ),
-              ( "inferredFailure",
-                summaryStatsToPoints $ inferredFailureStats stats
-              ),
-              ( "justStarted",
-                summaryStatsToPoints $ justStartedStats stats
-              )
-            ]
-  let nodeDatumKeys = HM.keys nodeDatum
-  let toAnnotateDatum =
-        HM.filterWithKey (\k _ -> k `HS.member` toAnnotate) nodeDatum
-  let colors =
-        HM.fromList
-          [ ("viable" :: String, aqua),
-            ("refining", dodgerblue),
-            ("succeed", green),
-            ("unsat", mediumpurple),
-            ("unknown", yellowgreen),
-            ("terminated", red),
-            ("inferredFailure", orange),
-            ("justStarted", black),
-            ("viableMsg", gray),
-            ("easySynthFailureMsg", deeppink),
-            ("succeedMsg", green)
-          ]
-  let msgDatumColors = fmap (colors HM.!) msgDatumKeys
-  let nodeDatumColors = fmap (colors HM.!) nodeDatumKeys
-  let shapes =
-        HM.fromList
-          [ ("viable" :: String, PointShapeCircle),
-            ("refining", PointShapeCircle),
-            ("succeed", PointShapeStar),
-            ("unsat", PointShapeCross),
-            ("unknown", PointShapeCross),
-            ("terminated", PointShapeCross),
-            ("inferredFailure", PointShapeCross),
-            ("justStarted", PointShapeCircle),
-            ("viableMsg", PointShapePolygon 4 True),
-            ("easySynthFailureMsg", PointShapePolygon 4 True),
-            ("succeedMsg", PointShapePolygon 4 True)
-          ]
-  let msgDatumShapes = fmap (shapes HM.!) msgDatumKeys
-  let nodeDatumShapes = fmap (shapes HM.!) nodeDatumKeys
+-- | Plots statistics to an SVG file
+plotStatistics :: FilePath -> String -> Stats -> IO ()
+plotStatistics path title stats = do
+  -- Create point data
+  let pointsMap = createPointsMap stats
+      annotationPoints = getAnnotationPoints pointsMap
+      nonEmptyCategories = getNonEmptyCategories pointsMap
+      categoryColors = getCategoryColors nonEmptyCategories
+      categoryShapes = getCategoryShapes nonEmptyCategories
+
+  -- Generate the SVG file
   toFile (FileOptions (1600, 900) SVG) path $ do
+    -- Set the plot title
     layout_title .= title
-    plot $
-      line
-        "time"
-        [fmap snd $ summaryStatsToPoints $ allStartedNodeStats stats]
-    mapM_
-      ( \dt -> do
-          plot $ liftEC $ do
-            plot_annotation_values
-              .= fmap (\(nid, (x, y)) -> (x, y, show nid)) dt
-            plot_annotation_style . font_size .= 8
-      )
-      $ fmap (msgDatum HM.!) msgDatumKeys ++ toList toAnnotateDatum
-    setColors $ fmap opaque $ msgDatumColors ++ nodeDatumColors
-    setShapes $ msgDatumShapes ++ nodeDatumShapes
-    mapM_ (\name -> plot $ points name $ snd <$> msgDatum HM.! name) msgDatumKeys
-    mapM_ (\name -> plot $ points name $ snd <$> nodeDatum HM.! name) nodeDatumKeys
-  return ()
 
-_collectAllStats ::
+    -- Plot time line for all started nodes
+    plotTimeLine stats
+
+    -- Plot annotations if any exist
+    plotAnnotations annotationPoints
+
+    -- Set colors and shapes for all categories
+    setColors $ map opaque categoryColors
+    setShapes categoryShapes
+
+    -- Plot all categories
+    plotCategories nonEmptyCategories pointsMap
+  where
+    -- Plot the time line for all started nodes
+    plotTimeLine stats =
+      plot $ line "time" [map snd $ summaryStatsToPoints $ allStartedNodeStats stats]
+      where
+        summaryStatsToPoints = map nodeStatToPoint . nodeStats
+        nodeStatToPoint NodeStats {nodeId, sortedIdx, nodeTime} =
+          (nodeId, (fromIntegral sortedIdx :: Double, nodeTime))
+
+    -- Plot annotations if any exist
+    plotAnnotations annotationPoints =
+      unless (null annotationPoints) $
+        plot $
+          liftEC $ do
+            plot_annotation_values .= map (\(nid, (x, y)) -> (x, y, show nid)) annotationPoints
+            plot_annotation_style . font_size .= 8
+
+    -- Plot all categories with points
+    plotCategories categories pointsMap =
+      forM_ categories $ \category ->
+        plot $ points category $ map snd $ pointsMap HM.! category
+
+-- | Helper functions for plotStatistics
+
+-- | Create a mapping of point category to point data
+createPointsMap :: Stats -> HM.HashMap String [(NodeId, (Double, Double))]
+createPointsMap stats =
+  HM.fromList $ messagePointsData ++ nodePointsData
+  where
+    -- Message points data
+    messagePointsData =
+      [ ("viableMsg", convertMessageStats $ viableMessageStats stats),
+        ("easySynthFailureMsg", convertMessageStats $ easySynthFailureMessageStats stats),
+        ("succeedMsg", convertMessageStats $ succeedMessageStats stats)
+      ]
+
+    -- Node points data
+    nodePointsData =
+      [ ("viable", convertSummaryStats $ viableStats stats),
+        ("refining", convertSummaryStats $ refiningStats stats),
+        ("succeed", convertSummaryStats $ succeedStats stats),
+        ("unsat", convertSummaryStats $ unsatStats stats),
+        ("unknown", convertSummaryStats $ unknownStats stats),
+        ("terminated", convertSummaryStats $ terminatedStats stats),
+        ("inferredFailure", convertSummaryStats $ inferredFailureStats stats),
+        ("justStarted", convertSummaryStats $ justStartedStats stats)
+      ]
+
+    -- Convert message stats to points
+    convertMessageStats :: [MessageStat] -> [(NodeId, (Double, Double))]
+    convertMessageStats = map convertMessageStat
+
+    -- Convert a single message stat to a point
+    convertMessageStat :: MessageStat -> (NodeId, (Double, Double))
+    convertMessageStat MessageStat {nodeIdOrigin, sortedIdx, msgTime} =
+      (nodeIdOrigin, (fromIntegral sortedIdx :: Double, msgTime))
+
+    -- Convert summary stats to points
+    convertSummaryStats :: SummaryStats -> [(NodeId, (Double, Double))]
+    convertSummaryStats = map convertNodeStat . nodeStats
+
+    -- Convert a node stat to a point
+    convertNodeStat :: NodeStats -> (NodeId, (Double, Double))
+    convertNodeStat NodeStats {nodeId, sortedIdx, nodeTime} =
+      (nodeId, (fromIntegral sortedIdx :: Double, nodeTime))
+
+-- | Get points for special annotations
+getAnnotationPoints :: HM.HashMap String [(NodeId, (Double, Double))] -> [(NodeId, (Double, Double))]
+getAnnotationPoints pointsMap =
+  concatMap snd $
+    filter (\(key, _) -> key `elem` annotationCategories) $
+      HM.toList pointsMap
+
+-- | Get categories with non-empty point lists
+getNonEmptyCategories :: HM.HashMap String [(NodeId, (Double, Double))] -> [String]
+getNonEmptyCategories = HM.keys . HM.filter (not . null)
+
+-- | Get colors for categories
+getCategoryColors :: [String] -> [Colour Double]
+getCategoryColors categories = [colorMap HM.! cat | cat <- categories]
+
+-- | Get shapes for categories
+getCategoryShapes :: [String] -> [PointShape]
+getCategoryShapes categories = [shapeMap HM.! cat | cat <- categories]
+
+-- | Collects statistics for all depths in the scheduler
+collectAllStats ::
   Scheduler
     sketchSpec
     sketch
@@ -507,17 +597,17 @@ _collectAllStats ::
     conVal
     matcher ->
   IO (Stats, HM.HashMap Int Stats)
-_collectAllStats scheduler@Scheduler {..} = do
+collectAllStats scheduler@Scheduler {..} = do
   curTime <- getCurrentTime
 
   -- Collect overall stats (all depths)
-  allStats <- _collectStats curTime scheduler Nothing
+  allStats <- collectStats curTime scheduler Nothing
 
   -- Get max depth
-  dcTree <- readIORef dcTree
+  dcTreeRef <- readIORef dcTree
   nodeStatesMap <- readIORef nodeStates
   let nodeIds = HM.keys nodeStatesMap
-  let depths = map (nodeDepth dcTree) nodeIds
+  let depths = map (nodeDepth dcTreeRef) nodeIds
 
   if null depths
     then return (allStats, HM.empty)
@@ -525,17 +615,73 @@ _collectAllStats scheduler@Scheduler {..} = do
       let maxDepth = maximum depths
 
       -- Collect stats for each depth
-      let go depth
+      let collectDepthStats depth
             | depth > maxDepth = return HM.empty
             | otherwise = do
-                stats <- _collectStats curTime scheduler (Just depth)
-                r <- go (depth + 1)
-                return $ HM.insert depth stats r
+                stats <- collectStats curTime scheduler (Just depth)
+                remaining <- collectDepthStats (depth + 1)
+                return $ HM.insert depth stats remaining
 
-      stats <- go 0
-      return (allStats, stats)
+      depthStats <- collectDepthStats 0
+      return (allStats, depthStats)
 
-_logStatistics ::
+-- | Creates a formatted display string for a statistics category
+formatStatsCategory ::
+  Int -> -- Maximum name length
+  Int -> -- Maximum number length
+  Int -> -- Maximum percentAll length
+  Int -> -- Maximum percentEverStarted length
+  Int -> -- Maximum avgTime length
+  Int -> -- Maximum time75Percentile length
+  Int -> -- Maximum time90Percentile length
+  Int -> -- Maximum time95Percentile length
+  Int -> -- Maximum avgCollectedExamples length
+  Int -> -- Maximum avgInProgressExamples length
+  (String, SummaryStats) -> -- Name and stats pair
+  String
+formatStatsCategory
+  maxNameLen
+  maxNumLen
+  maxPercentAllLen
+  maxPercentEverStartedLen
+  maxAvgTimeLen
+  maxTime75PercentileLen
+  maxTime90PercentileLen
+  maxTime95PercentileLen
+  maxAvgCollectedExamplesLen
+  maxAvgInProgressExamplesLen
+  (name, SummaryStats {..}) =
+    name
+      <> ": "
+      <> replicate ((maxNameLen + maxNumLen) - (length name + length (show num))) ' '
+      <> show num
+      <> replicate (maxPercentEverStartedLen - length (showFloat percentEverStarted)) ' '
+      <> " ("
+      <> showFloat percentEverStarted
+      <> "%/"
+      <> replicate (maxPercentAllLen - length (showFloat percentAll)) ' '
+      <> showFloat percentAll
+      <> "%), time(avg/75%/90%/95%): "
+      <> replicate (maxAvgTimeLen - length (showFloat avgTime)) ' '
+      <> showFloat avgTime
+      <> "s/"
+      <> replicate (maxTime75PercentileLen - length (showFloat time75Percentile)) ' '
+      <> showFloat time75Percentile
+      <> "s/"
+      <> replicate (maxTime90PercentileLen - length (showFloat time90Percentile)) ' '
+      <> showFloat time90Percentile
+      <> "s/"
+      <> replicate (maxTime95PercentileLen - length (showFloat time95Percentile)) ' '
+      <> showFloat time95Percentile
+      <> "s, examples(collected/in progress): "
+      <> replicate (maxAvgCollectedExamplesLen - length (showFloat avgCollectedExamples)) ' '
+      <> showFloat avgCollectedExamples
+      <> "/"
+      <> replicate (maxAvgInProgressExamplesLen - length (showFloat avgInProgressExamples)) ' '
+      <> showFloat avgInProgressExamples
+
+-- | Logs statistics for a specific category
+logStatistics ::
   Doc ann ->
   Stats ->
   Scheduler
@@ -550,7 +696,7 @@ _logStatistics ::
     conVal
     matcher ->
   IO ()
-_logStatistics
+logStatistics
   firstLine
   stats
   Scheduler {config = SchedulerConfig {..}, ..} = do
@@ -565,56 +711,37 @@ _logStatistics
             ("justStarted", justStartedStats stats)
           ]
     let filteredStatistics = filter (\(_, s) -> num s > 0) statistics
-    let maxNameLen = maximum $ fmap (length . fst) filteredStatistics
-    let maxNumLen =
-          maximum $ fmap (length . show . num . snd) filteredStatistics
-    let maxPercentAllLen =
-          maximum $ fmap (length . showFloat . percentAll . snd) filteredStatistics
-    let maxPercentEverStartedLen =
-          maximum $ fmap (length . showFloat . percentEverStarted . snd) filteredStatistics
-    let maxAvgTimeLen =
-          maximum $ fmap (length . showFloat . avgTime . snd) filteredStatistics
-    let maxTime75PercentileLen =
-          maximum $ fmap (length . showFloat . time75Percentile . snd) filteredStatistics
-    let maxTime90PercentileLen =
-          maximum $ fmap (length . showFloat . time90Percentile . snd) filteredStatistics
-    let maxTime95PercentileLen =
-          maximum $ fmap (length . showFloat . time95Percentile . snd) filteredStatistics
-    let maxAvgCollectedExamplesLen =
-          maximum $ fmap (length . showFloat . avgCollectedExamples . snd) filteredStatistics
-    let maxAvgInProgressExamplesLen =
-          maximum $ fmap (length . showFloat . avgInProgressExamples . snd) filteredStatistics
-    let formatStats (name, SummaryStats {..}) =
-          name
-            <> ": "
-            <> replicate
-              ((maxNameLen + maxNumLen) - (length name + length (show num)))
-              ' '
-            <> show num
-            <> replicate (maxPercentEverStartedLen - length (showFloat percentEverStarted)) ' '
-            <> " ("
-            <> showFloat percentEverStarted
-            <> "%/"
-            <> replicate (maxPercentAllLen - length (showFloat percentAll)) ' '
-            <> showFloat percentAll
-            <> "%), time(avg/75%/90%/95%): "
-            <> replicate (maxAvgTimeLen - length (showFloat avgTime)) ' '
-            <> showFloat avgTime
-            <> "s/"
-            <> replicate (maxTime75PercentileLen - length (showFloat time75Percentile)) ' '
-            <> showFloat time75Percentile
-            <> "s/"
-            <> replicate (maxTime90PercentileLen - length (showFloat time90Percentile)) ' '
-            <> showFloat time90Percentile
-            <> "s/"
-            <> replicate (maxTime95PercentileLen - length (showFloat time95Percentile)) ' '
-            <> showFloat time95Percentile
-            <> "s, examples(collected/in progress): "
-            <> replicate (maxAvgCollectedExamplesLen - length (showFloat avgCollectedExamples)) ' '
-            <> showFloat avgCollectedExamples
-            <> "/"
-            <> replicate (maxAvgInProgressExamplesLen - length (showFloat avgInProgressExamples)) ' '
-            <> showFloat avgInProgressExamples
+
+    -- Calculate maximum field lengths for formatting
+    let maxNameLen = maximum $ map (length . fst) filteredStatistics
+    let maxNumLen = maximum $ map (length . show . num . snd) filteredStatistics
+    let maxPercentAllLen = maximum $ map (length . showFloat . percentAll . snd) filteredStatistics
+    let maxPercentEverStartedLen = maximum $ map (length . showFloat . percentEverStarted . snd) filteredStatistics
+    let maxAvgTimeLen = maximum $ map (length . showFloat . avgTime . snd) filteredStatistics
+    let maxTime75PercentileLen = maximum $ map (length . showFloat . time75Percentile . snd) filteredStatistics
+    let maxTime90PercentileLen = maximum $ map (length . showFloat . time90Percentile . snd) filteredStatistics
+    let maxTime95PercentileLen = maximum $ map (length . showFloat . time95Percentile . snd) filteredStatistics
+    let maxAvgCollectedExamplesLen = maximum $ map (length . showFloat . avgCollectedExamples . snd) filteredStatistics
+    let maxAvgInProgressExamplesLen = maximum $ map (length . showFloat . avgInProgressExamples . snd) filteredStatistics
+
+    -- Format each statistics category
+    let formattedStats =
+          map
+            ( formatStatsCategory
+                maxNameLen
+                maxNumLen
+                maxPercentAllLen
+                maxPercentEverStartedLen
+                maxAvgTimeLen
+                maxTime75PercentileLen
+                maxTime90PercentileLen
+                maxTime95PercentileLen
+                maxAvgCollectedExamplesLen
+                maxAvgInProgressExamplesLen
+            )
+            filteredStatistics
+
+    -- Log the formatted statistics
     logMultiLineDoc logger NOTICE $
       nest 2 $
         vsep $
@@ -625,9 +752,10 @@ _logStatistics
               <> pformat (numNotStarted stats)
               <> " in queue):"
           )
-            : (fromString . formatStats <$> filteredStatistics)
+            : (fromString <$> formattedStats)
 
-_layeredStatistics ::
+-- | Generates and logs statistics for each depth in the scheduler
+logLayeredStatistics ::
   HM.HashMap Int Stats ->
   Scheduler
     sketchSpec
@@ -641,25 +769,32 @@ _layeredStatistics ::
     conVal
     matcher ->
   IO ()
-_layeredStatistics
+logLayeredStatistics
   depthStats
   scheduler@Scheduler {config = SchedulerConfig {..}, ..} = do
     let maxDepth = maximum $ HM.keys depthStats
-    let go depth
+
+    let processDepth depth
           | depth > maxDepth = return ()
           | otherwise = do
               let title = case cmdline of
                     Just cmdline -> cmdline <> " (depth " <> show depth <> ")"
                     Nothing -> "Depth " <> show depth
               let stats = depthStats HM.! depth
-              _plotStatistics
+
+              -- Plot and log statistics for this depth
+              plotStatistics
                 (logRootDir logConfig <> "/stats." <> show depth <> ".svg")
                 title
                 stats
-              _logStatistics ("Depth " <> pformat depth) stats scheduler
-              go (depth + 1)
-    unless (HM.null depthStats) $ go 0
+              logStatistics ("Depth " <> pformat depth) stats scheduler
 
+              -- Process next depth
+              processDepth (depth + 1)
+
+    unless (HM.null depthStats) $ processDepth 0
+
+-- | Reports statistics for a scheduler
 reportStatistics ::
   Scheduler
     sketchSpec
@@ -678,8 +813,15 @@ reportStatistics
     { config = SchedulerConfig {..},
       ..
     } = do
-    (stats, layerStats) <- _collectAllStats scheduler
+    -- Collect statistics for all nodes and per-depth
+    (stats, layerStats) <- collectAllStats scheduler
+
+    -- Generate title for overall statistics
     let title = fromMaybe "Statistics" cmdline
-    _logStatistics "All started" stats scheduler
-    _plotStatistics (logRootDir logConfig <> "/stats.svg") title stats
-    _layeredStatistics layerStats scheduler
+
+    -- Log and plot overall statistics
+    logStatistics "All started" stats scheduler
+    plotStatistics (logRootDir logConfig <> "/stats.svg") title stats
+
+    -- Log and plot per-depth statistics
+    logLayeredStatistics layerStats scheduler
