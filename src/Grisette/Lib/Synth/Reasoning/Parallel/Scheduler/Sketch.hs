@@ -7,7 +7,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Sketch
   )
 where
 
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Data.Foldable (Foldable (toList))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
@@ -100,10 +100,14 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         schedulerStartTime,
         stopped
       ),
+    getDepth,
+    getFirstNotFullySplitDepth,
     getIsSplitted,
     getPriority,
     getSketchTable,
+    resetFirstNotFullySplitDepth,
     setIsSplitted,
+    updateFirstNotFullySplitDepth,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition
   ( nodeInferFailureTransition,
@@ -296,6 +300,10 @@ addRootSketch
     logMultiLineDoc logger NOTICE $
       nest 2 $
         vsep ["Adding root sketch: ", pformat sketch]
+
+    -- Reset the first not fully split depth counter to 0 when adding a root node
+    resetFirstNotFullySplitDepth scheduler
+
     void $ _addSubSketches scheduler Nothing (HM.fromList [(sketch, 1)])
 
 splitNode ::
@@ -328,6 +336,9 @@ splitNode
               ]
         return []
       else do
+        nodeDepth <- getDepth scheduler nodeId
+        currentNotFullySplitDepth <- getFirstNotFullySplitDepth scheduler
+
         parentBasePriority <- getPriority scheduler nodeId
         sketch <- getSketchTable scheduler nodeId
         let seqNum = lowestSeqNum success sketch
@@ -369,6 +380,11 @@ splitNode
                     "Skipping."
                   ]
             setIsSplitted scheduler nodeId True
+
+            -- Check if we need to update the first not fully split depth
+            when (nodeDepth == currentNotFullySplitDepth) $
+              updateFirstNotFullySplitDepth scheduler
+
             return []
           else do
             splittedNodeIds <-
@@ -377,4 +393,9 @@ splitNode
                 (Just nodeId)
                 splittedSketchesWithPriority
             setIsSplitted scheduler nodeId True
+
+            -- Check if we need to update the first not fully split depth
+            when (nodeDepth == currentNotFullySplitDepth) $
+              updateFirstNotFullySplitDepth scheduler
+
             return splittedNodeIds

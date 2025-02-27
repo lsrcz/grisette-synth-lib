@@ -17,6 +17,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
     nodeStatusInferFailureTransition,
     nodeStatusTransition,
     pformatNodeStatusSummary,
+    statusTypeDoNotNeedChild,
   )
 where
 
@@ -102,6 +103,12 @@ statusTypeIsDetermined status =
     || status == StatusUnsat
     || status == StatusUnknown
     || status == StatusInferredFailure
+
+statusTypeDoNotNeedChild :: StatusType -> Bool
+statusTypeDoNotNeedChild StatusSucceeded = True
+statusTypeDoNotNeedChild StatusUnsat = True
+statusTypeDoNotNeedChild StatusInferredFailure = True
+statusTypeDoNotNeedChild _ = False
 
 statusTypeIsNotYetStarted :: StatusType -> Bool
 statusTypeIsNotYetStarted StatusNotYetStarted = True

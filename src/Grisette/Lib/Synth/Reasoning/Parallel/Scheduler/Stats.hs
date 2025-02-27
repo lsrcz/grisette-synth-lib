@@ -131,6 +131,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         config,
         currentMinimalCost,
         dcTree,
+        firstNotFullySplitDepth,
         nodeInfo,
         nodeQueue,
         nodeStates,
@@ -143,6 +144,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         splitNodesByDepth,
         stopped
       ),
+    getFirstNotFullySplitDepth,
     getNodesByDepth,
     getNodesByStatus,
     getNodesByStatusAndDepth,
@@ -198,6 +200,8 @@ data Stats = Stats
   { allStartedNodeStats :: SummaryStats,
     numNotStarted :: Int,
     numSplitNodes :: Int,
+    numDoNotNeedChildNodes :: Int,
+    numNeedSplitNodes :: Int,
     viableStats :: SummaryStats,
     refiningStats :: SummaryStats,
     succeedStats :: SummaryStats,
@@ -384,6 +388,9 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
       splitNodesMap <- readIORef splitNodesByDepth
       return $ HS.unions $ HM.elems splitNodesMap
 
+  -- Compute nodes that don't need children
+  let doNotNeedChildNodes = HS.unions [succeedNodes, unsatNodes, inferredFailureNodes]
+
   -- Read all node states
   nodeStatesMap <- readIORef nodeStates
 
@@ -391,6 +398,9 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
   allNodes <- case maybeDepth of
     Just depth -> getNodesByDepth scheduler depth
     Nothing -> return $ HS.fromList $ HM.keys nodeStatesMap
+
+  -- Compute nodes that need to be split (not already split and don't fall into doNotNeedChild)
+  let needSplitNodes = allNodes `HS.difference` HS.union splitNodes doNotNeedChildNodes
 
   -- Validate node status assignments
   let statusMappings =
@@ -488,6 +498,8 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
       (createSummary allStartedStats)
       notStarted
       splitNodesCount
+      (HS.size doNotNeedChildNodes)
+      (HS.size needSplitNodes)
       (createSummary viableNodeStats)
       (createSummary refiningNodeStats)
       (createSummary succeedNodeStats)
@@ -712,7 +724,7 @@ formatStatsCategory
 
 -- | Logs statistics for a specific category
 logStatistics ::
-  Doc ann ->
+  Maybe Int ->
   Stats ->
   Scheduler
     sketchSpec
@@ -727,9 +739,9 @@ logStatistics ::
     matcher ->
   IO ()
 logStatistics
-  firstLine
+  depth
   stats
-  Scheduler {config = SchedulerConfig {..}, ..} = do
+  scheduler@Scheduler {config = SchedulerConfig {..}, ..} = do
     let statistics =
           [ (NodeCategory StatusViable, viableStats stats),
             (NodeCategory StatusRefining, refiningStats stats),
@@ -741,6 +753,9 @@ logStatistics
             (NodeCategory StatusJustStarted, justStartedStats stats)
           ]
     let filteredStatistics = filter (\(_, s) -> num s > 0) statistics
+
+    -- Get the first not fully split depth
+    currentNotFullySplitDepth <- getFirstNotFullySplitDepth scheduler
 
     -- Calculate maximum field lengths for formatting
     let maxNameLen = maximum $ map (length . show . fst) filteredStatistics
@@ -771,6 +786,10 @@ logStatistics
             )
             filteredStatistics
 
+    let firstLine = case depth of
+          Just depth -> "Depth " <> pformat depth
+          Nothing -> "All started (not fully split depth: " <> pformat currentNotFullySplitDepth <> ")"
+
     -- Log the formatted statistics
     logMultiLineDoc logger NOTICE $
       nest 2 $
@@ -782,7 +801,11 @@ logStatistics
               <> pformat (numNotStarted stats)
               <> " in queue, "
               <> pformat (numSplitNodes stats)
-              <> " splitted):"
+              <> " splitted, "
+              <> pformat (numDoNotNeedChildNodes stats)
+              <> " do not need child, "
+              <> pformat (numNeedSplitNodes stats)
+              <> " need split):"
           )
             : (fromString <$> formattedStats)
 
@@ -819,7 +842,7 @@ logLayeredStatistics
                 (logRootDir logConfig <> "/stats." <> show depth <> ".svg")
                 title
                 stats
-              logStatistics ("Depth " <> pformat depth) stats scheduler
+              logStatistics (Just depth) stats scheduler
 
               -- Process next depth
               processDepth (depth + 1)
@@ -852,7 +875,7 @@ reportStatistics
     let title = fromMaybe "Statistics" cmdline
 
     -- Log and plot overall statistics
-    logStatistics "All started" stats scheduler
+    logStatistics Nothing stats scheduler
     plotStatistics (logRootDir logConfig <> "/stats.svg") title stats
 
     -- Log and plot per-depth statistics

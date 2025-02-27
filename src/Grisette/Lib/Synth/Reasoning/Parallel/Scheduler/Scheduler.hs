@@ -34,6 +34,10 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
     getSplitNodesByDepth,
     addSplitNodeByDepth,
     isSplitAtDepth,
+    updateFirstNotFullySplitDepth,
+    getFirstNotFullySplitDepth,
+    resetFirstNotFullySplitDepth,
+    isDepthFullySplit,
   )
 where
 
@@ -42,7 +46,7 @@ import Control.Exception (throwIO)
 import Control.Monad (when)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
-import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.IORef (IORef, modifyIORef', newIORef, readIORef, writeIORef)
 import Data.Int (Int32)
 import Data.Time
   ( NominalDiffTime,
@@ -73,6 +77,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( NodeStatus,
     StatusType,
     statusType,
+    statusTypeDoNotNeedChild,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Process (pipeRd, pipeWr),
@@ -143,7 +148,9 @@ data
       -- Track all nodes at each depth
       depthToNodes :: IORef (HM.HashMap Int (HS.HashSet NodeId)),
       -- Track nodes that have been split at each depth
-      splitNodesByDepth :: IORef (HM.HashMap Int (HS.HashSet NodeId))
+      splitNodesByDepth :: IORef (HM.HashMap Int (HS.HashSet NodeId)),
+      -- Track the first depth that is not fully split
+      firstNotFullySplitDepth :: IORef Int
     } ->
     Scheduler
       sketchSpec
@@ -198,6 +205,7 @@ newScheduler config = do
   nodeStatusSets <- newIORef HM.empty
   depthToNodes <- newIORef HM.empty
   splitNodesByDepth <- newIORef HM.empty
+  firstNotFullySplitDepth <- newIORef 0 -- Initialize to 0
   return $ Scheduler {..}
 
 getCPid ::
@@ -471,6 +479,11 @@ setIsSplitted scheduler@Scheduler {..} nid isSplitted = do
       let existingSplitNodes = HM.lookupDefault HS.empty depth splitNodesMap
           updatedSplitNodes = HS.insert nid existingSplitNodes
        in HM.insert depth updatedSplitNodes splitNodesMap
+
+    -- Check if we need to update the first not fully split depth
+    currentNotFullySplitDepth <- readIORef firstNotFullySplitDepth
+    when (depth == currentNotFullySplitDepth) $
+      updateFirstNotFullySplitDepth scheduler
 
 setPriority ::
   Scheduler
@@ -753,3 +766,108 @@ addSplitNodeByDepth Scheduler {..} nid depth = do
 
   -- Also mark the node as split in nodeInfo, but use direct modification to avoid recursion
   modifyIORef' nodeInfo $ HM.adjust (\ni -> ni {nodeSplitted = True}) nid
+
+-- | Get the first depth that is not fully split
+getFirstNotFullySplitDepth ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  IO Int
+getFirstNotFullySplitDepth Scheduler {..} = readIORef firstNotFullySplitDepth
+
+-- | Reset the first not fully split depth to 0 (usually when adding a new root node)
+resetFirstNotFullySplitDepth ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  IO ()
+resetFirstNotFullySplitDepth Scheduler {..} = writeIORef firstNotFullySplitDepth 0
+
+-- | Check if a specific depth is fully split
+isDepthFullySplit ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  Int ->
+  IO Bool
+isDepthFullySplit scheduler@Scheduler {..} depth = do
+  -- Get all nodes at this depth
+  allNodesAtDepth <- getNodesByDepth scheduler depth
+
+  -- If the set is empty, consider it fully split (no nodes to split)
+  if HS.null allNodesAtDepth
+    then return True
+    else do
+      -- Get all split nodes at this depth
+      splitNodesAtDepth <- getSplitNodesByDepth scheduler depth
+
+      -- Get nodes at this depth by their status types
+      nodesByStatusType <- do
+        statusSets <- readIORef nodeStatusSets
+        case HM.lookup depth statusSets of
+          Nothing -> return HM.empty
+          Just statusMap -> return statusMap
+
+      -- Collect all nodes that don't need children
+      let doNotNeedChildNodes =
+            HS.unions
+              [ nodes
+              | (statusType, nodes) <- HM.toList nodesByStatusType,
+                statusTypeDoNotNeedChild statusType
+              ]
+
+      -- Union of nodes that are split and nodes that don't need children
+      let effectivelySplitNodes = HS.union splitNodesAtDepth doNotNeedChildNodes
+
+      -- The depth is fully split if all nodes are either split or don't need children
+      return $ allNodesAtDepth == effectivelySplitNodes
+
+-- | Update the first not fully split depth by checking if the current depth
+-- is fully split, and if so, advancing to the next depth
+updateFirstNotFullySplitDepth ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  IO ()
+updateFirstNotFullySplitDepth scheduler@Scheduler {..} = do
+  currentDepth <- readIORef firstNotFullySplitDepth
+  isFullySplit <- isDepthFullySplit scheduler currentDepth
+
+  when isFullySplit $ do
+    -- Advance to the next depth
+    modifyIORef' firstNotFullySplitDepth (+ 1)
+
+    -- Recursively check the next depth too
+    updateFirstNotFullySplitDepth scheduler
