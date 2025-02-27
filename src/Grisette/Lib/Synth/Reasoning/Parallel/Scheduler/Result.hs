@@ -84,7 +84,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( nodeStatusBestProgWithCost,
-    nodeStatusIsDetermined,
+    statusType,
+    statusTypeIsDetermined,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( processResponseIsSuccess,
@@ -221,7 +222,7 @@ getParallelSynthesisResult
       filterM
         ( \nid -> do
             s <- getStatus scheduler nid
-            return $ not $ nodeStatusIsDetermined s
+            return $ not $ statusTypeIsDetermined (statusType s)
         )
         $ HS.toList leaves
     let numOfUndeterminedLeaves = length undeterminedLeaves

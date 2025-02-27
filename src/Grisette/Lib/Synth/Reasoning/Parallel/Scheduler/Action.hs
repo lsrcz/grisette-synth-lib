@@ -85,9 +85,10 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
         NodeTerminated,
         NodeViable
       ),
-    nodeStatusIsNotYetStarted,
-    nodeStatusIsRunning,
-    nodeStatusIsRunningButNotRefining,
+    StatusType (StatusRefining),
+    statusType,
+    statusTypeIsNotYetStarted,
+    statusTypeIsRunning,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message (Failure),
@@ -275,7 +276,7 @@ killIfDividedChildrenAllStarted ::
   IO (Maybe NodeAction)
 killIfDividedChildrenAllStarted scheduler@Scheduler {..} nid = do
   status <- getStatus scheduler nid
-  if nodeStatusIsRunningButNotRefining status
+  if statusTypeIsRunning (statusType status) && statusType status /= StatusRefining
     then do
       dcTree' <- readIORef dcTree
       let children = nodeDividedChildren dcTree' nid
@@ -283,10 +284,10 @@ killIfDividedChildrenAllStarted scheduler@Scheduler {..} nid = do
         Just children | not (HS.null children) -> do
           let childrenList = HS.toList children
           childrenStatuses <- traverse (getStatus scheduler) childrenList
-          let numRunning = length $ filter nodeStatusIsRunning childrenStatuses
+          let numRunning = length $ filter (statusTypeIsRunning . statusType) childrenStatuses
           let notYetStartedNodes =
                 fmap fst $
-                  filter (nodeStatusIsNotYetStarted . snd) $
+                  filter (statusTypeIsNotYetStarted . statusType . snd) $
                     zip childrenList childrenStatuses
           case notYetStartedNodes of
             [] | numRunning <= 2 -> do
@@ -389,7 +390,7 @@ _startNode
   nid = do
     sketchSpec <- getSketchTable scheduler nid
     status <- getStatus scheduler nid
-    unless (nodeStatusIsNotYetStarted status) $ error "Should not happen"
+    unless (statusTypeIsNotYetStarted (statusType status)) $ error "Should not happen"
     knownMinimalCost <- readIORef currentMinimalCost
     originalProcesses <- readIORef processes
 
@@ -578,7 +579,7 @@ refineNode ::
   IO ()
 refineNode scheduler@Scheduler {..} nid bestCostKnowledge = do
   status <- getStatus scheduler nid
-  if not (nodeStatusIsRunning status)
+  if not (statusTypeIsRunning (statusType status))
     then
       logMultiLineDoc (logger config) NOTICE $
         "No need to refine node " <> pformat nid <> ", as it is not running now."

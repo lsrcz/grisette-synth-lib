@@ -1,33 +1,28 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( NodeStatus (..),
     NodeAction (..),
-    nodeStatusIsRunning,
-    nodeStatusIsNotYetStarted,
+    StatusType (..),
+    statusType,
+    statusTypeIsEnded,
+    statusTypeIsRunning,
+    statusTypeIsDetermined,
+    statusTypeIsNotYetStarted,
     nodeStatusBestProgWithCost,
-    nodeStatusIsViable,
-    nodeStatusIsRefining,
-    nodeStatusIsSuccess,
-    nodeStatusIsUnsat,
-    nodeStatusIsUnknown,
-    nodeStatusIsTerminated,
-    nodeStatusIsInferredFailure,
-    nodeStatusIsJustStarted,
     nodeStatusInferFailureTransition,
     nodeStatusTransition,
     pformatNodeStatusSummary,
-    nodeStatusIsEnded,
-    nodeStatusIsDetermined,
-    nodeStatusIsRunningButNotRefining,
   )
 where
 
+import Data.Hashable (Hashable)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
-import Grisette (Doc, PPrint (pformat), SolvingFailure (Unsat), nest, vsep)
+import Grisette (Doc, PPrint (pformat), SolvingFailure (Unsat), derive, nest, vsep)
 import Grisette.Lib.Synth.Program.Concrete (ProgPPrint)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
@@ -58,99 +53,59 @@ data NodeStatus conProg
   | NodeInferredFailure
   | NodeStarted
   | NodeNotYetStarted
-  deriving (Eq, Show, Generic)
 
-nodeStatusIsRunningButNotRefining :: NodeStatus conProg -> Bool
-nodeStatusIsRunningButNotRefining NodeStarted {} = True
-nodeStatusIsRunningButNotRefining NodeViable {} = True
-nodeStatusIsRunningButNotRefining NodeSucceeded {} = False
-nodeStatusIsRunningButNotRefining NodeFailed {} = False
-nodeStatusIsRunningButNotRefining NodeTerminated {} = False
-nodeStatusIsRunningButNotRefining NodeInferredFailure = False
-nodeStatusIsRunningButNotRefining NodeNotYetStarted = False
-nodeStatusIsRunningButNotRefining NodeRefining {} = False
+derive [''NodeStatus] [''Eq, ''Show]
 
-pformatNodeStatusSummary :: NodeStatus conProg -> Doc ann
-pformatNodeStatusSummary NodeInferredFailure = "NodeInferredFailure"
-pformatNodeStatusSummary (NodeTerminated _) =
-  "NodeTerminated"
-pformatNodeStatusSummary NodeNotYetStarted = "NodeNotYetStarted"
-pformatNodeStatusSummary (NodeRefining track cost _) =
-  "NodeRefining (track "
-    <> pformat track
-    <> ", cost "
-    <> pformat cost
-    <> ")"
-pformatNodeStatusSummary (NodeViable track _) =
-  "NodeViable (track: " <> pformat track <> ")"
-pformatNodeStatusSummary (NodeSucceeded maybeCrashMessage cost _) =
-  "NodeSucceeded (cost "
-    <> pformat cost
-    <> case maybeCrashMessage of
-      Nothing -> ")"
-      Just _ -> ", not finished)"
-pformatNodeStatusSummary (NodeFailed r) =
-  "NodeFailed "
-    <> pformat r
-pformatNodeStatusSummary NodeStarted =
-  "NodeStarted"
+data StatusType
+  = StatusViable
+  | StatusRefining
+  | StatusSucceeded
+  | StatusUnsat
+  | StatusUnknown
+  | StatusTerminated
+  | StatusInferredFailure
+  | StatusJustStarted
+  | StatusNotYetStarted
 
-instance (ProgPPrint conProg) => PPrint (NodeStatus conProg) where
-  pformat NodeInferredFailure = "NodeInferredFailure"
-  pformat (NodeTerminated t) =
-    "NodeTerminated "
-      <> pformat t
-  pformat NodeNotYetStarted = "NodeNotYetStarted"
-  pformat (NodeRefining track cost m) =
-    nest 2 $
-      vsep
-        [ "NodeRefining (track "
-            <> pformat track
-            <> ", cost "
-            <> pformat cost
-            <> ")",
-          pformat m
-        ]
-  pformat (NodeViable track m) =
-    nest 2 $
-      vsep
-        [ "NodeViable (track "
-            <> pformat track
-            <> ")",
-          pformat m
-        ]
-  pformat (NodeSucceeded maybeCrashMessage cost m) =
-    nest 2 $
-      vsep $
-        concat
-          [ [ "NodeSucceeded (cost "
-                <> pformat cost
-                <> ")"
-            ],
-            case maybeCrashMessage of
-              Nothing -> []
-              Just msg -> ["Not finished because " <> pformat msg],
-            [pformat m]
-          ]
-  pformat (NodeFailed r) = "NodeFailed " <> pformat r
-  pformat NodeStarted =
-    "NodeStarted"
+derive [''StatusType] [''Eq, ''Show, ''PPrint, ''Hashable, ''Ord]
 
-nodeStatusIsRunning :: NodeStatus conProg -> Bool
-nodeStatusIsRunning NodeStarted {} = True
-nodeStatusIsRunning NodeViable {} = True
-nodeStatusIsRunning NodeRefining {} = True
-nodeStatusIsRunning _ = False
+statusType :: NodeStatus conProg -> StatusType
+statusType status = case status of
+  NodeViable {} -> StatusViable
+  NodeRefining {} -> StatusRefining
+  NodeSucceeded {} -> StatusSucceeded
+  NodeFailed Unsat -> StatusUnsat
+  NodeFailed _ -> StatusUnknown
+  NodeTerminated {} -> StatusTerminated
+  NodeInferredFailure -> StatusInferredFailure
+  NodeStarted -> StatusJustStarted
+  NodeNotYetStarted -> StatusNotYetStarted
 
-nodeStatusIsDetermined :: NodeStatus conProg -> Bool
-nodeStatusIsDetermined NodeSucceeded {} = True
-nodeStatusIsDetermined NodeFailed {} = True
-nodeStatusIsDetermined NodeInferredFailure = True
-nodeStatusIsDetermined _ = False
+statusTypeIsEnded :: StatusType -> Bool
+statusTypeIsEnded status =
+  status == StatusSucceeded
+    || status == StatusUnsat
+    || status == StatusUnknown
+    || status == StatusTerminated
+    || status == StatusInferredFailure
 
-nodeStatusIsNotYetStarted :: NodeStatus conProg -> Bool
-nodeStatusIsNotYetStarted NodeNotYetStarted = True
-nodeStatusIsNotYetStarted _ = False
+statusTypeIsRunning :: StatusType -> Bool
+statusTypeIsRunning StatusNotYetStarted = False
+statusTypeIsRunning StatusJustStarted = True
+statusTypeIsRunning StatusViable = True
+statusTypeIsRunning StatusRefining = True
+statusTypeIsRunning _ = False
+
+statusTypeIsDetermined :: StatusType -> Bool
+statusTypeIsDetermined status =
+  status == StatusSucceeded
+    || status == StatusUnsat
+    || status == StatusUnknown
+    || status == StatusInferredFailure
+
+statusTypeIsNotYetStarted :: StatusType -> Bool
+statusTypeIsNotYetStarted StatusNotYetStarted = True
+statusTypeIsNotYetStarted _ = False
 
 nodeStatusBestProgWithCost ::
   NodeStatus conProg -> Maybe (Int, SymbolTable conProg)
@@ -162,49 +117,6 @@ nodeStatusBestProgWithCost (NodeTerminated _) = Nothing
 nodeStatusBestProgWithCost NodeInferredFailure = Nothing
 nodeStatusBestProgWithCost NodeStarted {} = Nothing
 nodeStatusBestProgWithCost NodeNotYetStarted = Nothing
-
-nodeStatusIsViable :: NodeStatus conProg -> Bool
-nodeStatusIsViable NodeViable {} = True
-nodeStatusIsViable _ = False
-
-nodeStatusIsRefining :: NodeStatus conProg -> Bool
-nodeStatusIsRefining NodeRefining {} = True
-nodeStatusIsRefining _ = False
-
-nodeStatusIsSuccess :: NodeStatus conProg -> Bool
-nodeStatusIsSuccess NodeSucceeded {} = True
-nodeStatusIsSuccess _ = False
-
-nodeStatusIsUnsat :: NodeStatus conProg -> Bool
-nodeStatusIsUnsat (NodeFailed Unsat) = True
-nodeStatusIsUnsat _ = False
-
-nodeStatusIsUnknown :: NodeStatus conProg -> Bool
-nodeStatusIsUnknown (NodeFailed Unsat) = False
-nodeStatusIsUnknown (NodeFailed _) = True
-nodeStatusIsUnknown _ = False
-
-nodeStatusIsTerminated :: NodeStatus conProg -> Bool
-nodeStatusIsTerminated (NodeTerminated _) = True
-nodeStatusIsTerminated _ = False
-
-nodeStatusIsInferredFailure :: NodeStatus conProg -> Bool
-nodeStatusIsInferredFailure NodeInferredFailure = True
-nodeStatusIsInferredFailure _ = False
-
-nodeStatusIsJustStarted :: NodeStatus conProg -> Bool
-nodeStatusIsJustStarted NodeStarted {} = True
-nodeStatusIsJustStarted _ = False
-
-nodeStatusIsEnded :: NodeStatus conProg -> Bool
-nodeStatusIsEnded NodeSucceeded {} = True
-nodeStatusIsEnded NodeFailed {} = True
-nodeStatusIsEnded NodeTerminated {} = True
-nodeStatusIsEnded NodeInferredFailure = True
-nodeStatusIsEnded NodeViable {} = False
-nodeStatusIsEnded NodeRefining {} = False
-nodeStatusIsEnded NodeStarted = False
-nodeStatusIsEnded NodeNotYetStarted = False
 
 data NodeAction
   = Refine {_succeed :: Bool, _nodeBestCostKnowledge :: Maybe Int}
@@ -322,3 +234,69 @@ nodeRefiningTransition
   oldProg
   (Right (GotExample _ bestKnownCost)) =
     (NodeRefining oldTrack oldCost oldProg, Refine True bestKnownCost)
+
+pformatNodeStatusSummary :: NodeStatus conProg -> Doc ann
+pformatNodeStatusSummary NodeInferredFailure = "NodeInferredFailure"
+pformatNodeStatusSummary (NodeTerminated _) =
+  "NodeTerminated"
+pformatNodeStatusSummary NodeNotYetStarted = "NodeNotYetStarted"
+pformatNodeStatusSummary (NodeRefining track cost _) =
+  "NodeRefining (track "
+    <> pformat track
+    <> ", cost "
+    <> pformat cost
+    <> ")"
+pformatNodeStatusSummary (NodeViable track _) =
+  "NodeViable (track: " <> pformat track <> ")"
+pformatNodeStatusSummary (NodeSucceeded maybeCrashMessage cost _) =
+  "NodeSucceeded (cost "
+    <> pformat cost
+    <> case maybeCrashMessage of
+      Nothing -> ")"
+      Just _ -> ", not finished)"
+pformatNodeStatusSummary (NodeFailed r) =
+  "NodeFailed "
+    <> pformat r
+pformatNodeStatusSummary NodeStarted =
+  "NodeStarted"
+
+instance (ProgPPrint conProg) => PPrint (NodeStatus conProg) where
+  pformat NodeInferredFailure = "NodeInferredFailure"
+  pformat (NodeTerminated t) =
+    "NodeTerminated "
+      <> pformat t
+  pformat NodeNotYetStarted = "NodeNotYetStarted"
+  pformat (NodeRefining track cost m) =
+    nest 2 $
+      vsep
+        [ "NodeRefining (track "
+            <> pformat track
+            <> ", cost "
+            <> pformat cost
+            <> ")",
+          pformat m
+        ]
+  pformat (NodeViable track m) =
+    nest 2 $
+      vsep
+        [ "NodeViable (track "
+            <> pformat track
+            <> ")",
+          pformat m
+        ]
+  pformat (NodeSucceeded maybeCrashMessage cost m) =
+    nest 2 $
+      vsep $
+        concat
+          [ [ "NodeSucceeded (cost "
+                <> pformat cost
+                <> ")"
+            ],
+            case maybeCrashMessage of
+              Nothing -> []
+              Just msg -> ["Not finished because " <> pformat msg],
+            [pformat m]
+          ]
+  pformat (NodeFailed r) = "NodeFailed " <> pformat r
+  pformat NodeStarted =
+    "NodeStarted"

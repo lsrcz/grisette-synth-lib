@@ -60,7 +60,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
   ( pformatNodeStateSummaryWithElapsedTime,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
-  ( nodeStatusIsDetermined,
+  ( statusType,
+    statusTypeIsDetermined,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( Scheduler
@@ -126,7 +127,7 @@ logTreeStats
                           nodeDividedChildren dcTree nid
               if
                 | null children -> return $ result <+> "{}"
-                | onlyUndetermined && nodeStatusIsDetermined status ->
+                | onlyUndetermined && statusTypeIsDetermined (statusType status) ->
                     return $ result <+> "{...}"
                 | otherwise -> do
                     childrenDocs <- mapM walkNode children

@@ -76,6 +76,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( NodeStatus
       ( NodeNotYetStarted
       ),
+    StatusType (StatusNotYetStarted),
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( NodeInfo
@@ -99,7 +100,6 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         schedulerStartTime,
         stopped
       ),
-    StatusType (NotYetStarted),
     getIsSplitted,
     getPriority,
     getSketchTable,
@@ -135,9 +135,9 @@ _initializeNodeStatus Scheduler {..} nid = do
   modifyIORef' nodeStatusSets $ \depthMap ->
     let finalDepthMap = case HM.lookup depth depthMap of
           Nothing ->
-            HM.insert depth (HM.singleton NotYetStarted (HS.singleton nid)) depthMap
+            HM.insert depth (HM.singleton StatusNotYetStarted (HS.singleton nid)) depthMap
           Just statusMap ->
-            let newStatusMap = HM.insertWith HS.union NotYetStarted (HS.singleton nid) statusMap
+            let newStatusMap = HM.insertWith HS.union StatusNotYetStarted (HS.singleton nid) statusMap
              in HM.insert depth newStatusMap depthMap
      in finalDepthMap
 

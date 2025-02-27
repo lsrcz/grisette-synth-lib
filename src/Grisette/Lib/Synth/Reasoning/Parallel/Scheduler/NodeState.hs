@@ -26,11 +26,12 @@ import Grisette (Doc, viaShow, (<+>))
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( NodeAction,
     NodeStatus (NodeNotYetStarted, NodeStarted),
+    StatusType (StatusNotYetStarted),
     nodeStatusInferFailureTransition,
-    nodeStatusIsEnded,
-    nodeStatusIsNotYetStarted,
     nodeStatusTransition,
     pformatNodeStatusSummary,
+    statusType,
+    statusTypeIsEnded,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message
@@ -119,7 +120,7 @@ nodeStateStartTransition ::
   NodeState conProg symSemObj symVal conSemObj conVal matcher ->
   IO (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 nodeStateStartTransition NodeState {..} = do
-  unless (nodeStatusIsNotYetStarted nodeStatus) $
+  unless (statusType nodeStatus == StatusNotYetStarted) $
     error "Can only start a node that is not yet started"
   curTime <- getCurrentTime
   return
@@ -148,10 +149,10 @@ nodeStateTransition curTime NodeState {..} response = do
           (curTime, response) : nodeGotExampleResponseLogSinceLastMajorResponse
         _ -> []
   let newEndTime =
-        if nodeStatusIsEnded newStatus
+        if statusTypeIsEnded (statusType newStatus)
           then Just curTime
           else nodeEndTime
-  when (not (nodeStatusIsEnded newStatus) && isJust nodeEndTime) $
+  when (not (statusTypeIsEnded (statusType newStatus)) && isJust nodeEndTime) $
     error "A running node should not have an end time"
   return
     ( NodeState

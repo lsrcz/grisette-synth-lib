@@ -8,7 +8,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
   )
 where
 
-import Control.Monad (forM_, guard, unless, when)
+import Control.Monad (forM_, guard, unless)
 import Data.Bifunctor (second)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
@@ -104,6 +104,19 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
     nodeStateNumCollectedExamples,
     nodeStateNumInProgressExamples,
   )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
+  ( StatusType
+      ( StatusInferredFailure,
+        StatusJustStarted,
+        StatusNotYetStarted,
+        StatusRefining,
+        StatusSucceeded,
+        StatusTerminated,
+        StatusUnknown,
+        StatusUnsat,
+        StatusViable
+      ),
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( processResponseIsEasySynthFailure,
     processResponseIsSuccess,
@@ -125,17 +138,6 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         randGen,
         schedulerStartTime,
         stopped
-      ),
-    StatusType
-      ( InferredFailure,
-        JustStarted,
-        NotYetStarted,
-        Refining,
-        Succeeded,
-        Terminated,
-        Unknown,
-        Unsat,
-        Viable
       ),
     getNodesByDepth,
     getNodesByStatus,
@@ -347,15 +349,15 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
         Nothing -> getNodesByStatus scheduler statusType
         Just depth -> getNodesByStatusAndDepth scheduler statusType depth
 
-  viableNodes <- getNodeSet Viable
-  refiningNodes <- getNodeSet Refining
-  succeedNodes <- getNodeSet Succeeded
-  unsatNodes <- getNodeSet Unsat
-  unknownNodes <- getNodeSet Unknown
-  terminatedNodes <- getNodeSet Terminated
-  inferredFailureNodes <- getNodeSet InferredFailure
-  justStartedNodes <- getNodeSet JustStarted
-  notYetStartedNodes <- getNodeSet NotYetStarted
+  viableNodes <- getNodeSet StatusViable
+  refiningNodes <- getNodeSet StatusRefining
+  succeedNodes <- getNodeSet StatusSucceeded
+  unsatNodes <- getNodeSet StatusUnsat
+  unknownNodes <- getNodeSet StatusUnknown
+  terminatedNodes <- getNodeSet StatusTerminated
+  inferredFailureNodes <- getNodeSet StatusInferredFailure
+  justStartedNodes <- getNodeSet StatusJustStarted
+  notYetStartedNodes <- getNodeSet StatusNotYetStarted
 
   -- Read all node states
   nodeStatesMap <- readIORef nodeStates
@@ -367,15 +369,15 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
 
   -- Validate node status assignments
   let statusMappings =
-        [ (Viable, viableNodes),
-          (Refining, refiningNodes),
-          (Succeeded, succeedNodes),
-          (Unsat, unsatNodes),
-          (Unknown, unknownNodes),
-          (Terminated, terminatedNodes),
-          (InferredFailure, inferredFailureNodes),
-          (JustStarted, justStartedNodes),
-          (NotYetStarted, notYetStartedNodes)
+        [ (StatusViable, viableNodes),
+          (StatusRefining, refiningNodes),
+          (StatusSucceeded, succeedNodes),
+          (StatusUnsat, unsatNodes),
+          (StatusUnknown, unknownNodes),
+          (StatusTerminated, terminatedNodes),
+          (StatusInferredFailure, inferredFailureNodes),
+          (StatusJustStarted, justStartedNodes),
+          (StatusNotYetStarted, notYetStartedNodes)
         ]
 
   validateNodeStatus allNodes statusMappings (logMultiLineDoc logger NOTICE)

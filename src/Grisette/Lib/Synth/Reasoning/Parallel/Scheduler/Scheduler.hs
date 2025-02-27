@@ -1,14 +1,11 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( Scheduler (..),
     NodeInfo (..),
-    StatusType (..),
     newScheduler,
     getCPid,
     getProcessByCPid,
@@ -42,7 +39,6 @@ import Control.Exception (throwIO)
 import Control.Monad (when)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
-import Data.Hashable (Hashable)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.Int (Int32)
 import Data.Time
@@ -52,7 +48,6 @@ import Data.Time
   )
 import Foreign.C (eBADF)
 import GHC.Stack (HasCallStack)
-import Grisette (PPrint, derive)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
@@ -73,15 +68,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   ( NodeStatus,
-    nodeStatusIsInferredFailure,
-    nodeStatusIsJustStarted,
-    nodeStatusIsNotYetStarted,
-    nodeStatusIsRefining,
-    nodeStatusIsSuccess,
-    nodeStatusIsTerminated,
-    nodeStatusIsUnknown,
-    nodeStatusIsUnsat,
-    nodeStatusIsViable,
+    StatusType,
+    statusType,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Process (pipeRd, pipeWr),
@@ -96,24 +84,6 @@ import System.Random.Stateful
     mkStdGen,
     newAtomicGenM,
   )
-
--- Data types for tracking node statuses
-data StatusType = Viable | Refining | Succeeded | Unsat | Unknown | Terminated | InferredFailure | JustStarted | NotYetStarted
-
-derive [''StatusType] [''Show, ''Eq, ''Ord, ''PPrint, ''Hashable]
-
-statusTypeFromNodeStatus :: NodeStatus conProg -> StatusType
-statusTypeFromNodeStatus status
-  | nodeStatusIsViable status = Viable
-  | nodeStatusIsRefining status = Refining
-  | nodeStatusIsSuccess status = Succeeded
-  | nodeStatusIsUnsat status = Unsat
-  | nodeStatusIsUnknown status = Unknown
-  | nodeStatusIsTerminated status = Terminated
-  | nodeStatusIsInferredFailure status = InferredFailure
-  | nodeStatusIsJustStarted status = JustStarted
-  | nodeStatusIsNotYetStarted status = NotYetStarted
-  | otherwise = error "Unknown node status"
 
 data NodeInfo sketchSpec = NodeInfo
   { nodeSplitted :: Bool,
@@ -685,8 +655,8 @@ updateNodeState Scheduler {..} nid newState = do
   let depth = nodeDepth tree nid
 
   -- Only update sets if the status type changed
-  let oldStatusType = statusTypeFromNodeStatus oldStatus
-  let newStatusType = statusTypeFromNodeStatus (nodeStatus newState)
+  let oldStatusType = statusType oldStatus
+  let newStatusType = statusType (nodeStatus newState)
 
   when (oldStatusType /= newStatusType) $ do
     modifyIORef' nodeStatusSets $ \depthMap ->
