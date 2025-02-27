@@ -29,6 +29,7 @@ import Control.Monad (unless, void, when)
 import Control.Monad.Extra (mapMaybeM, whileM)
 import Data.Dynamic (toDyn)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import Data.IORef (modifyIORef', newIORef, readIORef, writeIORef)
 import Data.Maybe (isNothing)
 import Data.Time
@@ -36,6 +37,7 @@ import Data.Time
     getCurrentTime,
   )
 import GHC.Conc.Signal (setHandler)
+import Grisette (PPrint (pformat), nest, vsep)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
@@ -134,6 +136,56 @@ step
       (\nid -> when (nodeFailed curDcTree nid) $ error "Should not happen")
       . HM.keys
       =<< readIORef nodeToProcess
+
+    -- Check if we need to split nodes at the first not fully split depth
+    curQueue <- readIORef nodeQueue
+    notFullySplitDepth <- getFirstNotFullySplitDepth scheduler
+
+    -- Split at the first not fully split depth - do this regardless of queue status
+    -- Only check minDepth condition if queue is not empty
+    shouldSplit <-
+      if Q.null curQueue
+        then return True -- If queue is empty, always split
+        else do
+          minDepth <- Q.minQueuedDepth curQueue
+          return (minDepth >= notFullySplitDepth)
+
+    when shouldSplit $ do
+      -- Get all nodes at the not fully split depth
+      allNodesAtDepth <- getNodesByDepth scheduler notFullySplitDepth
+      unless (null allNodesAtDepth) $ do
+        -- Get split nodes at this depth
+        splitNodesAtDepth <- getSplitNodesByDepth scheduler notFullySplitDepth
+        -- Get nodes that don't need children
+        nodesByStatusType <- do
+          statusSets <- readIORef nodeStatusSets
+          case HM.lookup notFullySplitDepth statusSets of
+            Nothing -> return HM.empty
+            Just statusMap -> return statusMap
+
+        let doNotNeedChildNodes =
+              HS.unions
+                [ nodes
+                | (statusType, nodes) <- HM.toList nodesByStatusType,
+                  statusTypeDoNotNeedChild statusType
+                ]
+
+        -- Find nodes that need to be split (not already split and need children)
+        let needSplitNodes =
+              HS.difference
+                (HS.difference allNodesAtDepth splitNodesAtDepth)
+                doNotNeedChildNodes
+
+        logMultiLineDoc logger NOTICE $
+          nest 2 $
+            vsep
+              [ "Splitting all nodes at depth " <> pformat notFullySplitDepth <> ":",
+                pformat needSplitNodes
+              ]
+
+        -- Split all nodes that need splitting at this depth
+        mapM_ (splitNode scheduler False) (HS.toList needSplitNodes)
+
     -- restart just started
     cost <- getCurrentMinimalCost scheduler
     case cost of
