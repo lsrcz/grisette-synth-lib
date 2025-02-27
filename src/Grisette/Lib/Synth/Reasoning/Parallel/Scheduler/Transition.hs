@@ -11,12 +11,13 @@ where
 
 import Control.Monad (unless)
 import qualified Data.HashMap.Strict as HM
-import Data.IORef (modifyIORef', readIORef)
+import Data.IORef (readIORef)
 import Data.String (IsString (fromString))
 import Data.Time
   ( diffUTCTime,
     getCurrentTime,
   )
+import GHC.Stack (HasCallStack)
 import Grisette
   ( PPrint (pformat),
     nest,
@@ -91,12 +92,14 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         stopped
       ),
     updateCurrentMinimalCost,
+    updateNodeState,
   )
 import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import Grisette.Lib.Synth.Util.Show (showDiffTime)
 import System.Log.Logger (Priority (NOTICE))
 
 nodeTransition ::
+  (HasCallStack) =>
   Scheduler
     sketchSpec
     sketch
@@ -168,7 +171,7 @@ nodeTransition
                       pformatNodeStateSummaryWithElapsedTime curTime newState
                     ]
               ]
-        modifyIORef' nodeStates $ HM.insert nid newState
+        updateNodeState scheduler nid newState
         return nextStep
       _ -> error "Should not happen: node not found"
 
@@ -186,14 +189,14 @@ nodeInferFailureTransition ::
     matcher ->
   NodeId ->
   IO ()
-nodeInferFailureTransition Scheduler {..} nid = do
+nodeInferFailureTransition scheduler@Scheduler {..} nid = do
   logMultiLineDoc (logger config) NOTICE $
     "Node " <> pformat nid <> " inferred failure"
   nodeStates' <- readIORef nodeStates
   case HM.lookup nid nodeStates' of
     Just state -> do
       newState <- nodeStateInferFailureTransition state
-      modifyIORef' nodeStates $ HM.insert nid newState
+      updateNodeState scheduler nid newState
     Nothing -> error "Should not happen"
 
 nodeStartTransition ::
@@ -210,14 +213,14 @@ nodeStartTransition ::
     matcher ->
   NodeId ->
   IO ()
-nodeStartTransition Scheduler {..} nid = do
+nodeStartTransition scheduler@Scheduler {..} nid = do
   logMultiLineDoc (logger config) NOTICE $
     "Node " <> pformat nid <> " started"
   nodeStates' <- readIORef nodeStates
   case HM.lookup nid nodeStates' of
     Just state -> do
       newState <- nodeStateStartTransition state
-      modifyIORef' nodeStates $ HM.insert nid newState
+      updateNodeState scheduler nid newState
     Nothing -> error "Should not happen"
 
 nodeResetTransition ::
@@ -234,12 +237,12 @@ nodeResetTransition ::
     matcher ->
   NodeId ->
   IO ()
-nodeResetTransition Scheduler {..} nid = do
+nodeResetTransition scheduler@Scheduler {..} nid = do
   logMultiLineDoc (logger config) NOTICE $
     "Node " <> pformat nid <> " reset"
   nodeStates' <- readIORef nodeStates
   case HM.lookup nid nodeStates' of
     Just state -> do
       newState <- nodeStateResetTransition state
-      modifyIORef' nodeStates $ HM.insert nid newState
+      updateNodeState scheduler nid newState
     Nothing -> error "Should not happen"

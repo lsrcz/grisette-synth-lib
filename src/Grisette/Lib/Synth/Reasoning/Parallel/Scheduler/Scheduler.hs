@@ -1,11 +1,14 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( Scheduler (..),
     NodeInfo (..),
+    StatusType (..),
     newScheduler,
     getCPid,
     getProcessByCPid,
@@ -27,12 +30,19 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
     removeProcessByCPid,
     removeProcess,
     updateCurrentMinimalCost,
+    getNodesByStatus,
+    getNodesByStatusAndDepth,
+    getNodesByDepth,
+    updateNodeState,
   )
 where
 
 import Control.Concurrent (MVar, newMVar)
 import Control.Exception (throwIO)
+import Control.Monad (when)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
+import Data.Hashable (Hashable)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.Int (Int32)
 import Data.Time
@@ -42,6 +52,7 @@ import Data.Time
   )
 import Foreign.C (eBADF)
 import GHC.Stack (HasCallStack)
+import Grisette (PPrint, derive)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
@@ -60,7 +71,18 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
   ( NodeState (nodeStatus),
     nodeStateCurrentElapsedTime,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus (NodeStatus)
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
+  ( NodeStatus,
+    nodeStatusIsInferredFailure,
+    nodeStatusIsJustStarted,
+    nodeStatusIsNotYetStarted,
+    nodeStatusIsRefining,
+    nodeStatusIsSuccess,
+    nodeStatusIsTerminated,
+    nodeStatusIsUnknown,
+    nodeStatusIsUnsat,
+    nodeStatusIsViable,
+  )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Process (pipeRd, pipeWr),
   )
@@ -74,6 +96,24 @@ import System.Random.Stateful
     mkStdGen,
     newAtomicGenM,
   )
+
+-- Data types for tracking node statuses
+data StatusType = Viable | Refining | Succeeded | Unsat | Unknown | Terminated | InferredFailure | JustStarted | NotYetStarted
+
+derive [''StatusType] [''Show, ''Eq, ''Ord, ''PPrint, ''Hashable]
+
+statusTypeFromNodeStatus :: NodeStatus conProg -> StatusType
+statusTypeFromNodeStatus status
+  | nodeStatusIsViable status = Viable
+  | nodeStatusIsRefining status = Refining
+  | nodeStatusIsSuccess status = Succeeded
+  | nodeStatusIsUnsat status = Unsat
+  | nodeStatusIsUnknown status = Unknown
+  | nodeStatusIsTerminated status = Terminated
+  | nodeStatusIsInferredFailure status = InferredFailure
+  | nodeStatusIsJustStarted status = JustStarted
+  | nodeStatusIsNotYetStarted status = NotYetStarted
+  | otherwise = error "Unknown node status"
 
 data NodeInfo sketchSpec = NodeInfo
   { nodeSplitted :: Bool,
@@ -124,7 +164,11 @@ data
       currentMinimalCost :: IORef (Maybe Int),
       queueLock :: MVar (),
       stopped :: IORef Bool,
-      schedulerStartTime :: UTCTime
+      schedulerStartTime :: UTCTime,
+      -- Track nodes by depth and status type
+      nodeStatusSets :: IORef (HM.HashMap Int (HM.HashMap StatusType (HS.HashSet NodeId))),
+      -- Track all nodes at each depth
+      depthToNodes :: IORef (HM.HashMap Int (HS.HashSet NodeId))
     } ->
     Scheduler
       sketchSpec
@@ -176,6 +220,8 @@ newScheduler config = do
   queueLock <- newMVar ()
   stopped <- newIORef False
   schedulerStartTime <- getCurrentTime
+  nodeStatusSets <- newIORef HM.empty
+  depthToNodes <- newIORef HM.empty
   return $ Scheduler {..}
 
 getCPid ::
@@ -544,3 +590,118 @@ updateCurrentMinimalCost Scheduler {..} newCost = do
     Just oldCost -> case newCost of
       Nothing -> return oldCost
       Just newCost -> Just $ min oldCost newCost
+
+-- Get node IDs by status type
+getNodesByStatus ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  StatusType ->
+  IO (HS.HashSet NodeId)
+getNodesByStatus Scheduler {..} statusType = do
+  statusSets <- readIORef nodeStatusSets
+  return $
+    HS.unions $
+      map
+        (HM.lookupDefault HS.empty statusType)
+        (HM.elems statusSets)
+
+-- Get node IDs by status type and depth
+getNodesByStatusAndDepth ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  StatusType ->
+  Int ->
+  IO (HS.HashSet NodeId)
+getNodesByStatusAndDepth Scheduler {..} statusType depth = do
+  statusSets <- readIORef nodeStatusSets
+  case HM.lookup depth statusSets of
+    Nothing -> return HS.empty
+    Just depthMap -> return $ HM.lookupDefault HS.empty statusType depthMap
+
+-- Get all node IDs at a specific depth
+getNodesByDepth ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  Int ->
+  IO (HS.HashSet NodeId)
+getNodesByDepth Scheduler {..} depth = do
+  depthMap <- readIORef depthToNodes
+  return $ HM.lookupDefault HS.empty depth depthMap
+
+-- Update node status and update the status sets
+updateNodeState ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  NodeId ->
+  NodeState conProg symSemObj symVal conSemObj conVal matcher ->
+  IO ()
+updateNodeState Scheduler {..} nid newState = do
+  -- Update the node state
+  oldStateMap <- readIORef nodeStates
+  let oldState = oldStateMap HM.! nid
+  let oldStatus = nodeStatus oldState
+
+  -- Update nodeStates with new status
+  modifyIORef' nodeStates $ HM.insert nid newState
+
+  -- Get depth
+  tree <- readIORef dcTree
+  let depth = nodeDepth tree nid
+
+  -- Only update sets if the status type changed
+  let oldStatusType = statusTypeFromNodeStatus oldStatus
+  let newStatusType = statusTypeFromNodeStatus (nodeStatus newState)
+
+  when (oldStatusType /= newStatusType) $ do
+    modifyIORef' nodeStatusSets $ \depthMap ->
+      let -- Remove from old status set
+          updatedDepthMap = case HM.lookup depth depthMap of
+            Nothing -> depthMap
+            Just statusMap ->
+              let updatedStatusMap = HM.adjust (HS.delete nid) oldStatusType statusMap
+               in HM.insert depth updatedStatusMap depthMap
+
+          -- Add to new status set
+          finalDepthMap = case HM.lookup depth updatedDepthMap of
+            Nothing ->
+              HM.insert depth (HM.singleton newStatusType (HS.singleton nid)) updatedDepthMap
+            Just statusMap ->
+              let newStatusMap = HM.insertWith HS.union newStatusType (HS.singleton nid) statusMap
+               in HM.insert depth newStatusMap updatedDepthMap
+       in finalDepthMap

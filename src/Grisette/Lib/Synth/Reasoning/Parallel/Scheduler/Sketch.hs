@@ -10,6 +10,7 @@ where
 import Control.Monad (void)
 import Data.Foldable (Foldable (toList))
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import Data.IORef (modifyIORef', readIORef, writeIORef)
 import Grisette
   ( PPrint (pformat),
@@ -85,9 +86,11 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         config,
         currentMinimalCost,
         dcTree,
+        depthToNodes,
         nodeInfo,
         nodeQueue,
         nodeStates,
+        nodeStatusSets,
         nodeToProcess,
         processToNode,
         processes,
@@ -96,15 +99,51 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         schedulerStartTime,
         stopped
       ),
+    StatusType (NotYetStarted),
     getIsSplitted,
     getPriority,
     getSketchTable,
     setIsSplitted,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition (nodeInferFailureTransition)
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition
+  ( nodeInferFailureTransition,
+  )
 import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import System.Log.Logger (Priority (DEBUG, NOTICE))
 import System.Random.Stateful (UniformRange (uniformRM))
+
+_initializeNodeStatus ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  NodeId ->
+  IO ()
+_initializeNodeStatus Scheduler {..} nid = do
+  -- Get node depth
+  tree <- readIORef dcTree
+  let depth = nodeDepth tree nid
+
+  -- Add to status sets
+  modifyIORef' nodeStatusSets $ \depthMap ->
+    let finalDepthMap = case HM.lookup depth depthMap of
+          Nothing ->
+            HM.insert depth (HM.singleton NotYetStarted (HS.singleton nid)) depthMap
+          Just statusMap ->
+            let newStatusMap = HM.insertWith HS.union NotYetStarted (HS.singleton nid) statusMap
+             in HM.insert depth newStatusMap depthMap
+     in finalDepthMap
+
+  -- Add to depthToNodes map
+  modifyIORef' depthToNodes $ \depthMap ->
+    HM.insertWith HS.union depth (HS.singleton nid) depthMap
 
 _addSubSketches ::
   Scheduler
@@ -177,6 +216,9 @@ _addSubSketches
           HM.fromList $
             (\nid -> (nid, taskPriority nid))
               <$> HM.keys nodeIdToSketches
+
+    -- Initialize status tracking for each new node
+    mapM_ (_initializeNodeStatus scheduler) (HM.keys nodeIdToSketches)
 
     finalNodeInfo <- readIORef nodeInfo
     inferredFailures <-

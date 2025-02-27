@@ -8,7 +8,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
   )
 where
 
-import Control.Monad (guard, unless, when)
+import Control.Monad (guard, unless)
 import Data.Bifunctor (second)
 import Data.Foldable (Foldable (toList))
 import qualified Data.HashMap.Strict as HM
@@ -98,22 +98,10 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.LogConfig (logRootDir)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
-  ( NodeState (nodeStatus),
-    nodeStateCurrentElapsedTime,
+  ( nodeStateCurrentElapsedTime,
     nodeStateMajorRelativeTimeLog,
     nodeStateNumCollectedExamples,
     nodeStateNumInProgressExamples,
-  )
-import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
-  ( nodeStatusIsInferredFailure,
-    nodeStatusIsJustStarted,
-    nodeStatusIsNotYetStarted,
-    nodeStatusIsRefining,
-    nodeStatusIsSuccess,
-    nodeStatusIsTerminated,
-    nodeStatusIsUnknown,
-    nodeStatusIsUnsat,
-    nodeStatusIsViable,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( processResponseIsEasySynthFailure,
@@ -137,6 +125,20 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         schedulerStartTime,
         stopped
       ),
+    StatusType
+      ( InferredFailure,
+        JustStarted,
+        NotYetStarted,
+        Refining,
+        Succeeded,
+        Terminated,
+        Unknown,
+        Unsat,
+        Viable
+      ),
+    getNodesByDepth,
+    getNodesByStatus,
+    getNodesByStatusAndDepth,
   )
 import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import Grisette.Lib.Synth.Util.Show (showFloat)
@@ -187,24 +189,122 @@ data Stats = Stats
 
 _collectStats ::
   UTCTime ->
-  [ ( NodeId,
-      NodeState
-        conProg
-        symSemObj
-        symVal
-        conSemObj
-        conVal
-        matcher
-    )
-  ] ->
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  Maybe Int -> -- Optional depth filter
   IO Stats
-_collectStats curTime stats = do
-  let allNodeNum = length stats
+_collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} maybeDepth = do
+  -- Get node sets by status type
+  let getNodeSet statusType = case maybeDepth of
+        Nothing -> getNodesByStatus scheduler statusType
+        Just depth -> getNodesByStatusAndDepth scheduler statusType depth
+
+  viableNodes <- getNodeSet Viable
+  refiningNodes <- getNodeSet Refining
+  succeedNodes <- getNodeSet Succeeded
+  unsatNodes <- getNodeSet Unsat
+  unknownNodes <- getNodeSet Unknown
+  terminatedNodes <- getNodeSet Terminated
+  inferredFailureNodes <- getNodeSet InferredFailure
+  justStartedNodes <- getNodeSet JustStarted
+  notYetStartedNodes <- getNodeSet NotYetStarted
+
+  -- Read all node states
+  nodeStatesMap <- readIORef nodeStates
+
+  -- Sanity check: ensure all nodes have a status and are counted exactly once
+  let allTrackedNodes =
+        viableNodes
+          `HS.union` refiningNodes
+          `HS.union` succeedNodes
+          `HS.union` unsatNodes
+          `HS.union` unknownNodes
+          `HS.union` terminatedNodes
+          `HS.union` inferredFailureNodes
+          `HS.union` justStartedNodes
+          `HS.union` notYetStartedNodes
+
+  allNodes <- case maybeDepth of
+    Just depth -> getNodesByDepth scheduler depth
+    Nothing -> return $ HS.fromList $ HM.keys nodeStatesMap
+  let missingNodes = allNodes `HS.difference` allTrackedNodes
+  -- Check for nodes appearing in multiple status sets
+  let findDuplicates node =
+        filter
+          (\(_, nodes) -> node `HS.member` nodes)
+          [ (Viable, viableNodes),
+            (Refining, refiningNodes),
+            (Succeeded, succeedNodes),
+            (Unsat, unsatNodes),
+            (Unknown, unknownNodes),
+            (Terminated, terminatedNodes),
+            (InferredFailure, inferredFailureNodes),
+            (JustStarted, justStartedNodes),
+            (NotYetStarted, notYetStartedNodes)
+          ]
+
+      multiStatusNodes = HM.fromList $ do
+        node <- HS.toList allTrackedNodes
+        let statuses = findDuplicates node
+        [(node, map fst statuses) | length statuses > 1]
+
+  -- Log any issues
+  unless (HS.null missingNodes) $
+    logMultiLineDoc logger NOTICE $
+      "STATS ERROR: " <> pformat (HS.size missingNodes) <> " nodes without any status: " <> pformat (HS.toList missingNodes)
+
+  unless (HM.null multiStatusNodes) $
+    logMultiLineDoc logger NOTICE $
+      "STATS ERROR: Nodes with multiple statuses: " <> pformat multiStatusNodes
+
+  -- Continue with normal stats collection
+  -- Convert to list of (NodeId, NodeState)
+  let getNodeStats nid =
+        case HM.lookup nid nodeStatesMap of
+          Just s -> (nid, s)
+          Nothing -> error $ "Node " ++ show nid ++ " not found in nodeStates"
+
+  let mkNodeStatsFromSet nodeSet =
+        map getNodeStats (HS.toList nodeSet)
+
+  let viableStats = mkNodeStatsFromSet viableNodes
+      refiningStats = mkNodeStatsFromSet refiningNodes
+      succeedStats = mkNodeStatsFromSet succeedNodes
+      unsatStats = mkNodeStatsFromSet unsatNodes
+      unknownStats = mkNodeStatsFromSet unknownNodes
+      terminatedStats = mkNodeStatsFromSet terminatedNodes
+      inferredFailureStats = mkNodeStatsFromSet inferredFailureNodes
+      justStartedStats = mkNodeStatsFromSet justStartedNodes
+
+  -- All nodes that have ever started
   let everStarted =
-        filter (not . nodeStatusIsNotYetStarted . nodeStatus . snd) stats
+        viableStats
+          ++ refiningStats
+          ++ succeedStats
+          ++ unsatStats
+          ++ unknownStats
+          ++ terminatedStats
+          ++ inferredFailureStats
+          ++ justStartedStats
+
+  let allNodeNum = length everStarted + HS.size notYetStartedNodes
   let everStartedNum = length everStarted
-  let notStarted = filter (nodeStatusIsNotYetStarted . nodeStatus . snd) stats
+  let notStarted = HS.size notYetStartedNodes
+
   let startedWithLinspace = zip [0 ..] $ sortOn (nodeStateCurrentElapsedTime curTime . snd) everStarted
+
+  -- Create a mapping from NodeId to sortedIdx to preserve global ordering
+  let nodeIdToSortedIdx = HM.fromList [(nid, idx) | (idx, (nid, _)) <- startedWithLinspace]
+
   let logsWithLinspace =
         fmap
           (second $ second nodeStateMajorRelativeTimeLog)
@@ -216,23 +316,25 @@ _collectStats curTime stats = do
         return $ MessageStat nid idx (realToFrac diffTime :: Double)
   let toStats =
         fmap
-          ( \(idx, (nid, s)) ->
-              NodeStats
-                nid
-                idx
-                (realToFrac $ nodeStateCurrentElapsedTime curTime s)
-                (nodeStateNumCollectedExamples s)
-                (nodeStateNumInProgressExamples s)
+          ( \(nid, s) ->
+              let idx = nodeIdToSortedIdx HM.! nid
+               in NodeStats
+                    nid
+                    idx
+                    (realToFrac $ nodeStateCurrentElapsedTime curTime s)
+                    (nodeStateNumCollectedExamples s)
+                    (nodeStateNumInProgressExamples s)
           )
-  let filt f = filter (f . nodeStatus . snd . snd)
-  let viable = filt nodeStatusIsViable startedWithLinspace
-  let refining = filt nodeStatusIsRefining startedWithLinspace
-  let succeed = filt nodeStatusIsSuccess startedWithLinspace
-  let unsat = filt nodeStatusIsUnsat startedWithLinspace
-  let unknown = filt nodeStatusIsUnknown startedWithLinspace
-  let terminated = filt nodeStatusIsTerminated startedWithLinspace
-  let inferredFailure = filt nodeStatusIsInferredFailure startedWithLinspace
-  let justStarted = filt nodeStatusIsJustStarted startedWithLinspace
+
+  let viable = toStats viableStats
+  let refining = toStats refiningStats
+  let succeed = toStats succeedStats
+  let unsat = toStats unsatStats
+  let unknown = toStats unknownStats
+  let terminated = toStats terminatedStats
+  let inferredFailure = toStats inferredFailureStats
+  let justStarted = toStats justStartedStats
+
   let averageTime :: [NodeStats] -> Double
       averageTime [] = -1
       averageTime r =
@@ -262,34 +364,19 @@ _collectStats curTime stats = do
               / fromIntegral (length nodeStats) ::
               Double
           )
-  let toSummaryStats = toSummaryStats' . toStats
 
-  when
-    ( sum
-        [ length viable,
-          length refining,
-          length succeed,
-          length unsat,
-          length unknown,
-          length terminated,
-          length inferredFailure,
-          length justStarted
-        ]
-        /= length everStarted
-    )
-    $ error "BUG: Not covering all possiblities"
   return $
     Stats
-      (toSummaryStats startedWithLinspace)
-      (length notStarted)
-      (toSummaryStats viable)
-      (toSummaryStats refining)
-      (toSummaryStats succeed)
-      (toSummaryStats unsat)
-      (toSummaryStats unknown)
-      (toSummaryStats terminated)
-      (toSummaryStats inferredFailure)
-      (toSummaryStats justStarted)
+      (toSummaryStats' $ toStats (map snd startedWithLinspace))
+      notStarted
+      (toSummaryStats' viable)
+      (toSummaryStats' refining)
+      (toSummaryStats' succeed)
+      (toSummaryStats' unsat)
+      (toSummaryStats' unknown)
+      (toSummaryStats' terminated)
+      (toSummaryStats' inferredFailure)
+      (toSummaryStats' justStarted)
       (msg processResponseIsViable)
       (msg processResponseIsEasySynthFailure)
       (msg processResponseIsSuccess)
@@ -420,25 +507,33 @@ _collectAllStats ::
     conVal
     matcher ->
   IO (Stats, HM.HashMap Int Stats)
-_collectAllStats Scheduler {..} = do
+_collectAllStats scheduler@Scheduler {..} = do
   curTime <- getCurrentTime
-  results <- HM.toList <$> readIORef nodeStates
-  allStats <- _collectStats curTime results
+
+  -- Collect overall stats (all depths)
+  allStats <- _collectStats curTime scheduler Nothing
+
+  -- Get max depth
   dcTree <- readIORef dcTree
-  let resultsWithDepth =
-        fmap (\(nid, r) -> (nid, r, nodeDepth dcTree nid)) results
-  let maxDepth = maximum $ fmap (\(_, _, d) -> d) resultsWithDepth
-  let go depth
-        | depth > maxDepth = return HM.empty
-        | otherwise = do
-            let resultsAtDepthWithNid =
-                  (\(nid, r, _) -> (nid, r))
-                    <$> filter (\(_, _, d) -> d == depth) resultsWithDepth
-            stats <- _collectStats curTime resultsAtDepthWithNid
-            r <- go (depth + 1)
-            return $ HM.insert depth stats r
-  stats <- if null resultsWithDepth then return HM.empty else go 0
-  return (allStats, stats)
+  nodeStatesMap <- readIORef nodeStates
+  let nodeIds = HM.keys nodeStatesMap
+  let depths = map (nodeDepth dcTree) nodeIds
+
+  if null depths
+    then return (allStats, HM.empty)
+    else do
+      let maxDepth = maximum depths
+
+      -- Collect stats for each depth
+      let go depth
+            | depth > maxDepth = return HM.empty
+            | otherwise = do
+                stats <- _collectStats curTime scheduler (Just depth)
+                r <- go (depth + 1)
+                return $ HM.insert depth stats r
+
+      stats <- go 0
+      return (allStats, stats)
 
 _logStatistics ::
   Doc ann ->
