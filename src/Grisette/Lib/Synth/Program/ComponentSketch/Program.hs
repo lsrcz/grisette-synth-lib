@@ -48,8 +48,8 @@ import Grisette
     MonadUnion,
     Solvable (con),
     SymBool,
-    SymEq (symDistinct, (.==)),
-    SymOrd ((.<), (.<=), (.>)),
+    SymEq (symDistinct, (./=), (.==)),
+    SymOrd ((.<), (.<=), (.>), (.>=)),
     ToCon (toCon),
     ToSym (toSym),
     Union,
@@ -458,7 +458,8 @@ progStructureConstraint ::
     MonadAngelicContext ctx,
     OpSymmetryReduction op,
     Mergeable op,
-    OpTyping op ctx
+    OpTyping op ctx,
+    SymEq op
   ) =>
   Prog op symVarId ty ->
   [val] ->
@@ -466,6 +467,7 @@ progStructureConstraint ::
 progStructureConstraint prog@(Prog arg stmts ret) inputs = do
   symAssertWith "non-canonical" $ canonicalOrderConstraint prog
   symAssertWith "commutative reduction" $ progCommutativeConstraint prog
+  symAssertWith "no same op with same arg" $ noSameOpWithSameArg prog
 
   let bound = length inputs + sum (length . stmtResIds <$> stmts)
   symAssertWith
@@ -498,7 +500,8 @@ instance
     MonadAngelicContext ctx,
     Mergeable ty,
     OpTypeType op ~ ty,
-    OpSymmetryReduction op
+    OpSymmetryReduction op,
+    SymEq op
   ) =>
   ProgSemantics sem (Prog op symVarId ty) val ctx
   where
@@ -650,3 +653,32 @@ progCommutativeConstraint ::
   SymBool
 progCommutativeConstraint prog =
   symAnd $ statementCommutativeConstraint <$> progStmtList prog
+
+noSameOpWithSameArg ::
+  (OpSymmetryReduction op, SymEq op, SymbolicVarId symVarId) =>
+  Prog op symVarId ty ->
+  SymBool
+noSameOpWithSameArg prog = do
+  let stmts = progStmtList prog
+  let pairs =
+        [ (stmts !! a, stmts !! b)
+        | a <- [0 .. length stmts - 1],
+          b <- [0 .. a - 1]
+        ]
+  let constraintSingle stmt1 stmt2 = do
+        let argIds1 = stmtArgIds stmt1
+        let argIds2 = stmtArgIds stmt2
+        let argNum1 = stmtArgNum stmt1
+        let argNum2 = stmtArgNum stmt2
+        let eqNum = argNum1 .== argNum2
+        let idxes = fromIntegral <$> [0 ..]
+        let eqId =
+              symAnd $
+                zipWith3 (\i a b -> a .== b .|| i .>= argNum1) idxes argIds1 argIds2
+        ( eqNum
+            .&& eqId
+            .&& symNot (stmtDisabled stmt1)
+            .&& symNot (stmtDisabled stmt2)
+          )
+          `symImplies` (stmtOp stmt1 ./= stmtOp stmt2)
+  symAnd (uncurry constraintSingle <$> pairs)

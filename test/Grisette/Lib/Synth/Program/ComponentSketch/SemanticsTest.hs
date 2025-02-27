@@ -414,7 +414,7 @@ semanticsTest = testGroup "Semantics" $ do
                   [ProgArg "x" IntType, ProgArg "y" IntType]
                   [ Stmt
                       (mrgReturn DivMod)
-                      [0, 1]
+                      [0, 1, 3]
                       2
                       [res00, res01]
                       2
@@ -422,14 +422,14 @@ semanticsTest = testGroup "Semantics" $ do
                       [],
                     Stmt
                       (mrgReturn DivMod)
-                      [0, 1]
+                      [1, 0, 4]
                       2
                       [res10, res11]
                       2
                       (con False)
                       []
                   ]
-                  [ProgRes 4 IntType, ProgRes 5 IntType],
+                  [ProgRes 2 IntType, ProgRes 5 IntType],
               semanticsTestCaseArgs = [20, 13],
               semanticsTestCaseExpected =
                 Result
@@ -439,16 +439,16 @@ semanticsTest = testGroup "Semantics" $ do
                       .&& symImplies (res00 .== 2) (res10 .== 4)
                       .&& (arg00Val .== 20)
                       .&& (arg01Val .== 13)
-                      .&& (arg10Val .== 20)
-                      .&& (arg11Val .== 13)
+                      .&& (arg10Val .== 13)
+                      .&& (arg11Val .== 20)
                       .&& (res00Val .== 1)
                       .&& (res01Val .== 7)
-                      .&& (res10Val .== 1)
-                      .&& (res11Val .== 7)
+                      .&& (res10Val .== 0)
+                      .&& (res11Val .== 13)
                       .&& (progRes0Val .== 1)
-                      .&& (progRes1Val .== 7)
+                      .&& (progRes1Val .== 13)
                   )
-                  [1, 7],
+                  [1, 13],
               semanticsTestCaseIdentifier = "x"
             },
       SemanticsTestCase
@@ -517,7 +517,38 @@ semanticsTest = testGroup "Semantics" $ do
             let progRes0Val = isym "x" 6 :: SymInteger
              in Result (progRes0Val .== 1) [1],
           semanticsTestCaseIdentifier = "x"
-        }
+        },
+      let res00 = "res00"
+          res01 = "res01"
+          res10 = "res10"
+          res11 = "res11"
+       in SemanticsTestCase
+            { semanticsTestCaseName = "same op with same arg",
+              semanticsTestCaseProg =
+                Prog
+                  [ProgArg "x" IntType, ProgArg "y" IntType]
+                  [ Stmt
+                      (mrgReturn DivMod)
+                      [0, 1, 3]
+                      2
+                      [res00, res01]
+                      2
+                      (con False)
+                      [],
+                    Stmt
+                      (mrgReturn DivMod)
+                      [0, 1, 4]
+                      2
+                      [res10, res11]
+                      2
+                      (con False)
+                      []
+                  ]
+                  [ProgRes 2 IntType, ProgRes 5 IntType],
+              semanticsTestCaseArgs = [20, 13],
+              semanticsTestCaseExpected = ErrorResult,
+              semanticsTestCaseIdentifier = "x"
+            }
     ]
   return $ testCase name $ do
     let actual =
