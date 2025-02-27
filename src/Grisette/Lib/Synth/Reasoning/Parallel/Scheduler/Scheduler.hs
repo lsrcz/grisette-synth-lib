@@ -31,6 +31,9 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
     getNodesByStatusAndDepth,
     getNodesByDepth,
     updateNodeState,
+    getSplitNodesByDepth,
+    addSplitNodeByDepth,
+    isSplitAtDepth,
   )
 where
 
@@ -138,7 +141,9 @@ data
       -- Track nodes by depth and status type
       nodeStatusSets :: IORef (HM.HashMap Int (HM.HashMap StatusType (HS.HashSet NodeId))),
       -- Track all nodes at each depth
-      depthToNodes :: IORef (HM.HashMap Int (HS.HashSet NodeId))
+      depthToNodes :: IORef (HM.HashMap Int (HS.HashSet NodeId)),
+      -- Track nodes that have been split at each depth
+      splitNodesByDepth :: IORef (HM.HashMap Int (HS.HashSet NodeId))
     } ->
     Scheduler
       sketchSpec
@@ -192,6 +197,7 @@ newScheduler config = do
   schedulerStartTime <- getCurrentTime
   nodeStatusSets <- newIORef HM.empty
   depthToNodes <- newIORef HM.empty
+  splitNodesByDepth <- newIORef HM.empty
   return $ Scheduler {..}
 
 getCPid ::
@@ -455,8 +461,16 @@ setIsSplitted ::
   NodeId ->
   Bool ->
   IO ()
-setIsSplitted Scheduler {..} nid isSplitted = do
+setIsSplitted scheduler@Scheduler {..} nid isSplitted = do
   modifyIORef' nodeInfo $ HM.adjust (\ni -> ni {nodeSplitted = isSplitted}) nid
+
+  -- If we're marking a node as split, also update the splitNodesByDepth field
+  when isSplitted $ do
+    depth <- getDepth scheduler nid
+    modifyIORef' splitNodesByDepth $ \splitNodesMap ->
+      let existingSplitNodes = HM.lookupDefault HS.empty depth splitNodesMap
+          updatedSplitNodes = HS.insert nid existingSplitNodes
+       in HM.insert depth updatedSplitNodes splitNodesMap
 
 setPriority ::
   Scheduler
@@ -675,3 +689,67 @@ updateNodeState Scheduler {..} nid newState = do
               let newStatusMap = HM.insertWith HS.union newStatusType (HS.singleton nid) statusMap
                in HM.insert depth newStatusMap updatedDepthMap
        in finalDepthMap
+
+-- | Get all nodes that have been split at a specific depth
+getSplitNodesByDepth ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  Int ->
+  IO (HS.HashSet NodeId)
+getSplitNodesByDepth Scheduler {..} depth = do
+  splitNodesMap <- readIORef splitNodesByDepth
+  return $ HM.lookupDefault HS.empty depth splitNodesMap
+
+-- | Check if a node has been split at a specific depth
+isSplitAtDepth ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  NodeId ->
+  Int ->
+  IO Bool
+isSplitAtDepth scheduler nid depth = do
+  splitNodes <- getSplitNodesByDepth scheduler depth
+  return $ nid `HS.member` splitNodes
+
+-- | Add a node to the set of split nodes at a specific depth
+addSplitNodeByDepth ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  NodeId ->
+  Int ->
+  IO ()
+addSplitNodeByDepth Scheduler {..} nid depth = do
+  modifyIORef' splitNodesByDepth $ \splitNodesMap ->
+    let existingSplitNodes = HM.lookupDefault HS.empty depth splitNodesMap
+        updatedSplitNodes = HS.insert nid existingSplitNodes
+     in HM.insert depth updatedSplitNodes splitNodesMap
+
+  -- Also mark the node as split in nodeInfo, but use direct modification to avoid recursion
+  modifyIORef' nodeInfo $ HM.adjust (\ni -> ni {nodeSplitted = True}) nid

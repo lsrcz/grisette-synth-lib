@@ -140,11 +140,13 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         queueLock,
         randGen,
         schedulerStartTime,
+        splitNodesByDepth,
         stopped
       ),
     getNodesByDepth,
     getNodesByStatus,
     getNodesByStatusAndDepth,
+    getSplitNodesByDepth,
   )
 import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import Grisette.Lib.Synth.Util.Show (showFloat)
@@ -195,6 +197,7 @@ data SummaryStats = SummaryStats
 data Stats = Stats
   { allStartedNodeStats :: SummaryStats,
     numNotStarted :: Int,
+    numSplitNodes :: Int,
     viableStats :: SummaryStats,
     refiningStats :: SummaryStats,
     succeedStats :: SummaryStats,
@@ -373,6 +376,14 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
   justStartedNodes <- getNodeSet StatusJustStarted
   notYetStartedNodes <- getNodeSet StatusNotYetStarted
 
+  -- Get split nodes for this depth (or all depths)
+  splitNodes <- case maybeDepth of
+    Just depth -> getSplitNodesByDepth scheduler depth
+    Nothing -> do
+      -- Collect split nodes from all depths
+      splitNodesMap <- readIORef splitNodesByDepth
+      return $ HS.unions $ HM.elems splitNodesMap
+
   -- Read all node states
   nodeStatesMap <- readIORef nodeStates
 
@@ -428,6 +439,7 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
   let allNodeNum = length everStartedStatePairs + HS.size notYetStartedNodes
   let everStartedNum = length everStartedStatePairs
   let notStarted = HS.size notYetStartedNodes
+  let splitNodesCount = HS.size splitNodes
 
   -- Sort nodes by elapsed time and create index mapping
   let startedWithLinspace =
@@ -475,6 +487,7 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
     Stats
       (createSummary allStartedStats)
       notStarted
+      splitNodesCount
       (createSummary viableNodeStats)
       (createSummary refiningNodeStats)
       (createSummary succeedNodeStats)
@@ -767,7 +780,9 @@ logStatistics
               <> pformat (num $ allStartedNodeStats stats)
               <> " nodes + "
               <> pformat (numNotStarted stats)
-              <> " in queue):"
+              <> " in queue, "
+              <> pformat (numSplitNodes stats)
+              <> " splitted):"
           )
             : (fromString <$> formattedStats)
 
