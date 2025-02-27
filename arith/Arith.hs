@@ -23,6 +23,7 @@ import Grisette
     LogicalOp (false),
     Mergeable,
     PPrint (pformat),
+    SymEq,
     derive,
     mrgReturn,
   )
@@ -60,7 +61,7 @@ data OpCode
   | Minus
   | UMinus
 
-derive [''OpCode] [''EvalSym, ''Show, ''Mergeable]
+derive [''OpCode] [''EvalSym, ''Show, ''Mergeable, ''SymEq]
 
 -- * Semantics and typing.
 
