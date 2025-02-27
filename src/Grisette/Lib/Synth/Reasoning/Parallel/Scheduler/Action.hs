@@ -34,6 +34,7 @@ import Grisette
   ( PPrint (pformat),
     viaShow,
   )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue (recipPriority)
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
   ( SchedulerConfig
@@ -54,12 +55,9 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         parallelism,
         pollIntervalSeconds,
         restartRunningTimeThresholdSeconds,
-        rootPriority,
         schedulerRandomSeed,
         schedulerTimeoutSeconds,
         solverConfig,
-        subNodePriorityMultiplier,
-        subNodeRandomMultiplierRange,
         successNodeNewTimeoutSeconds,
         synthesisSketchSymbol,
         targetCost,
@@ -497,11 +495,13 @@ _startQueuedImpl scheduler@Scheduler {..} = do
   runningNum <- getNumRunningProcess scheduler
   when (Q.null nodeQueue') $ do
     runningNodes' <- HM.keys <$> readIORef nodeToProcess
-    depth' <- traverse (getDepth scheduler) runningNodes'
-    nodePriorities <- traverse (getPriority scheduler) runningNodes'
+    nodeRecipPriorities <-
+      traverse (fmap recipPriority . getPriority scheduler) runningNodes'
+    let nodeRecipBasePriorities = fmap Q.basePriority nodeRecipPriorities
+    let runningNodesWithBasePriority =
+          fmap fst $ sortOn snd $ zip runningNodes' nodeRecipBasePriorities
     let runningNodesWithPriority =
-          fmap fst $ sortOn snd $ zip runningNodes' nodePriorities
-    let runningNodesWithDepth = fmap fst $ sortOn snd $ zip runningNodes' depth'
+          fmap fst $ sortOn snd $ zip runningNodes' nodeRecipPriorities
     let go [] = return ()
         go (nid : rest) = do
           info <- getNodeInfo scheduler nid
@@ -522,7 +522,7 @@ _startQueuedImpl scheduler@Scheduler {..} = do
     let pickBiased = rand < biasedDrawProbability config
     if pickBiased
       then go runningNodesWithPriority
-      else go runningNodesWithDepth
+      else go runningNodesWithBasePriority
   when (runningNum < parallelism config && not (Q.null nodeQueue')) $ do
     (priority, nodeId, biased, nodeQueue') <- Q.popMin randGen nodeQueue'
     writeIORef nodeQueue $! nodeQueue'

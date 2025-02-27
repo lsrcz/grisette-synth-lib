@@ -53,9 +53,6 @@ data
       schedulerTimeoutSeconds :: Maybe Int,
       initialSplitRatio :: Int,
       solverConfig :: GrisetteSMTConfig,
-      rootPriority :: Double,
-      subNodePriorityMultiplier :: Double,
-      subNodeRandomMultiplierRange :: (Double, Double),
       verifiers :: Logger -> [[SomeVerifier sketch conProg]],
       countNumProgsEvidence ::
         Maybe (CountNumProgsEvidence (SymbolTable sketchSpec)),

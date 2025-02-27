@@ -4,8 +4,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue
-  ( Priority (..),
-    numericPriority,
+  ( BasePriority (..),
+    Priority (..),
     BiasedQueue,
     empty,
     delete,
@@ -14,6 +14,8 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue
     size,
     Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue.null,
     popMin,
+    recipBasePriority,
+    recipPriority,
   )
 where
 
@@ -22,25 +24,41 @@ import Grisette (PPrint, derive)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree (NodeId)
 import System.Random.Stateful (AtomicGenM, StdGen, UniformRange (uniformRM))
 
+data BasePriority = BasePriority {depth :: Int, randomPriority :: Double}
+
+recipBasePriority :: BasePriority -> BasePriority
+recipBasePriority BasePriority {depth, randomPriority} =
+  BasePriority depth (recip randomPriority)
+
+derive [''BasePriority] [''Show, ''Eq, ''PPrint]
+
+instance Ord BasePriority where
+  BasePriority d1 r1 <= BasePriority d2 r2 =
+    if d1 == d2 then r1 <= r2 else d1 <= d2
+
 data Priority = Priority
-  { basePriority :: Double,
-    randomPriority :: Double,
+  { basePriority :: BasePriority,
     knownWorking :: Bool,
     knownWorkingAncestorDistance :: Maybe Int,
     ancestorSiblingKnownWorking :: Bool
   }
 
+recipPriority :: Priority -> Priority
+recipPriority Priority {..} =
+  Priority
+    (recipBasePriority basePriority)
+    knownWorking
+    knownWorkingAncestorDistance
+    ancestorSiblingKnownWorking
+
 derive [''Priority] [''Show, ''Eq, ''PPrint]
 
-numericPriority :: Priority -> Double
-numericPriority Priority {..} = basePriority * randomPriority
-
 instance Ord Priority where
-  Priority p1 r1 k1 pk1 ask1 <= Priority p2 r2 k2 pk2 ask2 =
+  Priority p1 k1 pk1 ask1 <= Priority p2 k2 pk2 ask2 =
     if k1 == k2
       then
         if pk1 == pk2
-          then (if ask1 == ask2 then p1 * r1 <= p2 * r2 else ask1)
+          then (if ask1 == ask2 then p1 <= p2 else ask1)
           else case (pk1, pk2) of
             (Nothing, _) -> False
             (Just _, Nothing) -> True
@@ -49,7 +67,7 @@ instance Ord Priority where
 
 data BiasedQueue = BiasedQueue
   { baseQueue :: PSQ.HashPSQ NodeId Priority NodeId,
-    simpleQueue :: PSQ.HashPSQ NodeId Double NodeId,
+    simpleQueue :: PSQ.HashPSQ NodeId BasePriority NodeId,
     biasProbability :: Double
   }
 
@@ -78,7 +96,7 @@ setPriority nid priority BiasedQueue {..} =
         Just (_, v) -> PSQ.insert nid priority v baseQueue,
       simpleQueue = case PSQ.lookup nid simpleQueue of
         Nothing -> simpleQueue
-        Just (_, v) -> PSQ.insert nid (numericPriority priority) v simpleQueue,
+        Just (_, v) -> PSQ.insert nid (basePriority priority) v simpleQueue,
       biasProbability
     }
 
@@ -86,7 +104,7 @@ insert :: NodeId -> Priority -> BiasedQueue -> BiasedQueue
 insert nid priority BiasedQueue {..} =
   BiasedQueue
     { baseQueue = PSQ.insert nid priority nid baseQueue,
-      simpleQueue = PSQ.insert nid (numericPriority priority) nid simpleQueue,
+      simpleQueue = PSQ.insert nid (basePriority priority) nid simpleQueue,
       biasProbability
     }
 

@@ -25,6 +25,10 @@ import Grisette.Lib.Synth.Program.Choice.Split
     PartitionSpec (partitionSpec),
   )
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue
+  ( BasePriority (BasePriority, randomPriority),
+    Priority (basePriority),
+  )
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
   ( SchedulerConfig
@@ -45,12 +49,9 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         parallelism,
         pollIntervalSeconds,
         restartRunningTimeThresholdSeconds,
-        rootPriority,
         schedulerRandomSeed,
         schedulerTimeoutSeconds,
         solverConfig,
-        subNodePriorityMultiplier,
-        subNodeRandomMultiplierRange,
         successNodeNewTimeoutSeconds,
         synthesisSketchSymbol,
         targetCost,
@@ -62,6 +63,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
   ( NodeId,
     insertRootSketches,
     insertSplittedSketches,
+    nodeDepth,
     nodeFailed,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
@@ -136,20 +138,24 @@ _addSubSketches
     let nodeIdPriorities =
           HM.map (sketchPriorities HM.!) nodeIdToSketches
 
+    newDepth <-
+      case parentId of
+        Just parentId -> return $ nodeDepth oldDcTree parentId + 1
+        Nothing -> return 0
+
     parentBasePriority <-
       case parentId of
         Just parentId -> getPriority scheduler parentId
-        Nothing -> return $ Q.Priority rootPriority 1 False Nothing False
-    let childrenBasePriority =
-          subNodePriorityMultiplier * Q.basePriority parentBasePriority
+        Nothing ->
+          return $
+            Q.Priority (error "Should not be used") False Nothing False
     writeIORef dcTree newDcTree
     let initialState = NodeState NodeNotYetStarted Nothing Nothing [] [] []
     modifyIORef' nodeStates $ \nodeStates' ->
       foldr (`HM.insert` initialState) nodeStates' sketchesToNodeId
     let taskPriority nid =
           parentBasePriority
-            { Q.basePriority = childrenBasePriority,
-              Q.randomPriority = nodeIdPriorities HM.! nid,
+            { Q.basePriority = BasePriority newDepth (nodeIdPriorities HM.! nid),
               Q.knownWorking = False,
               Q.knownWorkingAncestorDistance =
                 (+ 1) <$> Q.knownWorkingAncestorDistance parentBasePriority
@@ -280,6 +286,7 @@ splitNode
               ]
         return []
       else do
+        parentBasePriority <- getPriority scheduler nodeId
         sketch <- getSketchTable scheduler nodeId
         let seqNum = lowestSeqNum success sketch
         let splittedSketches =
@@ -303,11 +310,12 @@ splitNode
           HM.fromList
             <$> traverse
               ( \s -> do
-                  randomMultiplier <-
-                    uniformRM
-                      subNodeRandomMultiplierRange
-                      (randGen scheduler)
-                  return (s, randomMultiplier)
+                  randomMultiplier <- uniformRM (0.9, 1.1) (randGen scheduler)
+                  return
+                    ( s,
+                      randomMultiplier
+                        / randomPriority (basePriority parentBasePriority)
+                    )
               )
               splittedSketches
         if null splittedSketches
