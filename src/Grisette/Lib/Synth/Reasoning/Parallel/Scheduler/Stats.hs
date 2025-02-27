@@ -2,6 +2,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
   ( reportStatistics,
@@ -12,6 +14,7 @@ import Control.Monad (forM_, guard, unless)
 import Data.Bifunctor (second)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
+import Data.Hashable (Hashable)
 import Data.IORef (readIORef)
 import Data.List (sort, sortOn)
 import Data.Maybe (fromMaybe)
@@ -60,6 +63,7 @@ import Graphics.Rendering.Chart.Easy
 import Grisette
   ( Doc,
     PPrint (pformat),
+    derive,
     nest,
     vsep,
   )
@@ -146,6 +150,17 @@ import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import Grisette.Lib.Synth.Util.Show (showFloat)
 import System.Log.Logger (Priority (NOTICE))
 
+-- | Sum type for categorizing stats
+data StatCategory
+  = NodeCategory StatusType
+  | MessageCategory MessageType
+
+derive [''StatCategory] [''Eq, ''Ord, ''Hashable]
+
+instance Show StatCategory where
+  show (NodeCategory s) = show s
+  show (MessageCategory m) = show m
+
 -- | Statistical data for a single node in the scheduler
 data NodeStats = NodeStats
   { nodeId :: NodeId,
@@ -194,48 +209,48 @@ data Stats = Stats
   }
 
 -- | Categories that should be considered for annotations
-annotationCategories :: [String]
+annotationCategories :: [StatCategory]
 annotationCategories =
-  [ "viable",
-    "refining",
-    "succeed",
-    "viableMsg",
-    "easySynthFailureMsg",
-    "succeedMsg"
+  [ NodeCategory StatusViable,
+    NodeCategory StatusRefining,
+    NodeCategory StatusSucceeded,
+    MessageCategory MessageViable,
+    MessageCategory MessageEasySynthFailure,
+    MessageCategory MessageSuccess
   ]
 
 -- | Color mapping for different node and message types
-colorMap :: HM.HashMap String (Colour Double)
+colorMap :: HM.HashMap StatCategory (Colour Double)
 colorMap =
   HM.fromList
-    [ ("viable", aqua),
-      ("refining", dodgerblue),
-      ("succeed", green),
-      ("unsat", mediumpurple),
-      ("unknown", yellowgreen),
-      ("terminated", red),
-      ("inferredFailure", orange),
-      ("justStarted", black),
-      ("viableMsg", gray),
-      ("easySynthFailureMsg", deeppink),
-      ("succeedMsg", green)
+    [ (NodeCategory StatusViable, aqua),
+      (NodeCategory StatusRefining, dodgerblue),
+      (NodeCategory StatusSucceeded, green),
+      (NodeCategory StatusUnsat, mediumpurple),
+      (NodeCategory StatusUnknown, yellowgreen),
+      (NodeCategory StatusTerminated, red),
+      (NodeCategory StatusInferredFailure, orange),
+      (NodeCategory StatusJustStarted, black),
+      (MessageCategory MessageViable, gray),
+      (MessageCategory MessageEasySynthFailure, deeppink),
+      (MessageCategory MessageSuccess, green)
     ]
 
 -- | Shape mapping for different node and message types
-shapeMap :: HM.HashMap String PointShape
+shapeMap :: HM.HashMap StatCategory PointShape
 shapeMap =
   HM.fromList
-    [ ("viable", PointShapeCircle),
-      ("refining", PointShapeCircle),
-      ("succeed", PointShapeStar),
-      ("unsat", PointShapeCross),
-      ("unknown", PointShapeCross),
-      ("terminated", PointShapeCross),
-      ("inferredFailure", PointShapeCross),
-      ("justStarted", PointShapeCircle),
-      ("viableMsg", PointShapePolygon 4 True),
-      ("easySynthFailureMsg", PointShapePolygon 4 True),
-      ("succeedMsg", PointShapePolygon 4 True)
+    [ (NodeCategory StatusViable, PointShapeCircle),
+      (NodeCategory StatusRefining, PointShapeCircle),
+      (NodeCategory StatusSucceeded, PointShapeStar),
+      (NodeCategory StatusUnsat, PointShapeCross),
+      (NodeCategory StatusUnknown, PointShapeCross),
+      (NodeCategory StatusTerminated, PointShapeCross),
+      (NodeCategory StatusInferredFailure, PointShapeCross),
+      (NodeCategory StatusJustStarted, PointShapeCircle),
+      (MessageCategory MessageViable, PointShapePolygon 4 True),
+      (MessageCategory MessageEasySynthFailure, PointShapePolygon 4 True),
+      (MessageCategory MessageSuccess, PointShapePolygon 4 True)
     ]
 
 -- | Validates the node status assignments and logs any inconsistencies
@@ -519,32 +534,32 @@ plotStatistics path title stats = do
     -- Plot all categories with points
     plotCategories categories pointsMap =
       forM_ categories $ \category ->
-        plot $ points category $ map snd $ pointsMap HM.! category
+        plot $ points (show category) $ map snd $ pointsMap HM.! category
 
 -- | Helper functions for plotStatistics
 
 -- | Create a mapping of point category to point data
-createPointsMap :: Stats -> HM.HashMap String [(NodeId, (Double, Double))]
+createPointsMap :: Stats -> HM.HashMap StatCategory [(NodeId, (Double, Double))]
 createPointsMap stats =
   HM.fromList $ messagePointsData ++ nodePointsData
   where
     -- Message points data
     messagePointsData =
-      [ ("viableMsg", convertMessageStats $ viableMessageStats stats),
-        ("easySynthFailureMsg", convertMessageStats $ easySynthFailureMessageStats stats),
-        ("succeedMsg", convertMessageStats $ succeedMessageStats stats)
+      [ (MessageCategory MessageViable, convertMessageStats $ viableMessageStats stats),
+        (MessageCategory MessageEasySynthFailure, convertMessageStats $ easySynthFailureMessageStats stats),
+        (MessageCategory MessageSuccess, convertMessageStats $ succeedMessageStats stats)
       ]
 
     -- Node points data
     nodePointsData =
-      [ ("viable", convertSummaryStats $ viableStats stats),
-        ("refining", convertSummaryStats $ refiningStats stats),
-        ("succeed", convertSummaryStats $ succeedStats stats),
-        ("unsat", convertSummaryStats $ unsatStats stats),
-        ("unknown", convertSummaryStats $ unknownStats stats),
-        ("terminated", convertSummaryStats $ terminatedStats stats),
-        ("inferredFailure", convertSummaryStats $ inferredFailureStats stats),
-        ("justStarted", convertSummaryStats $ justStartedStats stats)
+      [ (NodeCategory StatusViable, convertSummaryStats $ viableStats stats),
+        (NodeCategory StatusRefining, convertSummaryStats $ refiningStats stats),
+        (NodeCategory StatusSucceeded, convertSummaryStats $ succeedStats stats),
+        (NodeCategory StatusUnsat, convertSummaryStats $ unsatStats stats),
+        (NodeCategory StatusUnknown, convertSummaryStats $ unknownStats stats),
+        (NodeCategory StatusTerminated, convertSummaryStats $ terminatedStats stats),
+        (NodeCategory StatusInferredFailure, convertSummaryStats $ inferredFailureStats stats),
+        (NodeCategory StatusJustStarted, convertSummaryStats $ justStartedStats stats)
       ]
 
     -- Convert message stats to points
@@ -566,22 +581,22 @@ createPointsMap stats =
       (nodeId, (fromIntegral sortedIdx :: Double, nodeTime))
 
 -- | Get points for special annotations
-getAnnotationPoints :: HM.HashMap String [(NodeId, (Double, Double))] -> [(NodeId, (Double, Double))]
+getAnnotationPoints :: HM.HashMap StatCategory [(NodeId, (Double, Double))] -> [(NodeId, (Double, Double))]
 getAnnotationPoints pointsMap =
   concatMap snd $
     filter (\(key, _) -> key `elem` annotationCategories) $
       HM.toList pointsMap
 
 -- | Get categories with non-empty point lists
-getNonEmptyCategories :: HM.HashMap String [(NodeId, (Double, Double))] -> [String]
+getNonEmptyCategories :: HM.HashMap StatCategory [(NodeId, (Double, Double))] -> [StatCategory]
 getNonEmptyCategories = HM.keys . HM.filter (not . null)
 
 -- | Get colors for categories
-getCategoryColors :: [String] -> [Colour Double]
+getCategoryColors :: [StatCategory] -> [Colour Double]
 getCategoryColors categories = [colorMap HM.! cat | cat <- categories]
 
 -- | Get shapes for categories
-getCategoryShapes :: [String] -> [PointShape]
+getCategoryShapes :: [StatCategory] -> [PointShape]
 getCategoryShapes categories = [shapeMap HM.! cat | cat <- categories]
 
 -- | Collects statistics for all depths in the scheduler
@@ -638,7 +653,7 @@ formatStatsCategory ::
   Int -> -- Maximum time95Percentile length
   Int -> -- Maximum avgCollectedExamples length
   Int -> -- Maximum avgInProgressExamples length
-  (String, SummaryStats) -> -- Name and stats pair
+  (StatCategory, SummaryStats) -> -- Name and stats pair
   String
 formatStatsCategory
   maxNameLen
@@ -651,35 +666,36 @@ formatStatsCategory
   maxTime95PercentileLen
   maxAvgCollectedExamplesLen
   maxAvgInProgressExamplesLen
-  (name, SummaryStats {..}) =
-    name
-      <> ": "
-      <> replicate ((maxNameLen + maxNumLen) - (length name + length (show num))) ' '
-      <> show num
-      <> replicate (maxPercentEverStartedLen - length (showFloat percentEverStarted)) ' '
-      <> " ("
-      <> showFloat percentEverStarted
-      <> "%/"
-      <> replicate (maxPercentAllLen - length (showFloat percentAll)) ' '
-      <> showFloat percentAll
-      <> "%), time(avg/75%/90%/95%): "
-      <> replicate (maxAvgTimeLen - length (showFloat avgTime)) ' '
-      <> showFloat avgTime
-      <> "s/"
-      <> replicate (maxTime75PercentileLen - length (showFloat time75Percentile)) ' '
-      <> showFloat time75Percentile
-      <> "s/"
-      <> replicate (maxTime90PercentileLen - length (showFloat time90Percentile)) ' '
-      <> showFloat time90Percentile
-      <> "s/"
-      <> replicate (maxTime95PercentileLen - length (showFloat time95Percentile)) ' '
-      <> showFloat time95Percentile
-      <> "s, examples(collected/in progress): "
-      <> replicate (maxAvgCollectedExamplesLen - length (showFloat avgCollectedExamples)) ' '
-      <> showFloat avgCollectedExamples
-      <> "/"
-      <> replicate (maxAvgInProgressExamplesLen - length (showFloat avgInProgressExamples)) ' '
-      <> showFloat avgInProgressExamples
+  (category, SummaryStats {..}) =
+    let name = show category
+     in name
+          <> ": "
+          <> replicate ((maxNameLen + maxNumLen) - (length name + length (show num))) ' '
+          <> show num
+          <> replicate (maxPercentEverStartedLen - length (showFloat percentEverStarted)) ' '
+          <> " ("
+          <> showFloat percentEverStarted
+          <> "%/"
+          <> replicate (maxPercentAllLen - length (showFloat percentAll)) ' '
+          <> showFloat percentAll
+          <> "%), time(avg/75%/90%/95%): "
+          <> replicate (maxAvgTimeLen - length (showFloat avgTime)) ' '
+          <> showFloat avgTime
+          <> "s/"
+          <> replicate (maxTime75PercentileLen - length (showFloat time75Percentile)) ' '
+          <> showFloat time75Percentile
+          <> "s/"
+          <> replicate (maxTime90PercentileLen - length (showFloat time90Percentile)) ' '
+          <> showFloat time90Percentile
+          <> "s/"
+          <> replicate (maxTime95PercentileLen - length (showFloat time95Percentile)) ' '
+          <> showFloat time95Percentile
+          <> "s, examples(collected/in progress): "
+          <> replicate (maxAvgCollectedExamplesLen - length (showFloat avgCollectedExamples)) ' '
+          <> showFloat avgCollectedExamples
+          <> "/"
+          <> replicate (maxAvgInProgressExamplesLen - length (showFloat avgInProgressExamples)) ' '
+          <> showFloat avgInProgressExamples
 
 -- | Logs statistics for a specific category
 logStatistics ::
@@ -702,19 +718,19 @@ logStatistics
   stats
   Scheduler {config = SchedulerConfig {..}, ..} = do
     let statistics =
-          [ ("viable" :: String, viableStats stats),
-            ("refining", refiningStats stats),
-            ("succeed", succeedStats stats),
-            ("unsat", unsatStats stats),
-            ("unknown", unknownStats stats),
-            ("terminated", terminatedStats stats),
-            ("inferredFailure", inferredFailureStats stats),
-            ("justStarted", justStartedStats stats)
+          [ (NodeCategory StatusViable, viableStats stats),
+            (NodeCategory StatusRefining, refiningStats stats),
+            (NodeCategory StatusSucceeded, succeedStats stats),
+            (NodeCategory StatusUnsat, unsatStats stats),
+            (NodeCategory StatusUnknown, unknownStats stats),
+            (NodeCategory StatusTerminated, terminatedStats stats),
+            (NodeCategory StatusInferredFailure, inferredFailureStats stats),
+            (NodeCategory StatusJustStarted, justStartedStats stats)
           ]
     let filteredStatistics = filter (\(_, s) -> num s > 0) statistics
 
     -- Calculate maximum field lengths for formatting
-    let maxNameLen = maximum $ map (length . fst) filteredStatistics
+    let maxNameLen = maximum $ map (length . show . fst) filteredStatistics
     let maxNumLen = maximum $ map (length . show . num . snd) filteredStatistics
     let maxPercentAllLen = maximum $ map (length . showFloat . percentAll . snd) filteredStatistics
     let maxPercentEverStartedLen = maximum $ map (length . showFloat . percentEverStarted . snd) filteredStatistics
