@@ -70,9 +70,10 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus (NodeAction)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
-  ( ProcessResponse,
-    processResponseIsGotExample,
+  ( MessageType (MessageGotExample),
+    ProcessResponse,
     processResponseNewCost,
+    responseType,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( Scheduler
@@ -129,7 +130,7 @@ nodeTransition
         let elapsedTime = diffUTCTime curTime startTime
 
         (newState, nextStep) <- nodeStateTransition curTime state response
-        unless (processResponseIsGotExample response) $ do
+        unless (responseType response == Right MessageGotExample) $ do
           case nodeResponseReverseLog state of
             [] ->
               logMultiLineDoc logger NOTICE $

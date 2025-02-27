@@ -1,5 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -26,11 +28,9 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
     getProcessResponse,
     sendNewMinimalCost,
     processResponseNewCost,
-    processResponseIsGotExample,
-    processResponseIsViable,
-    processResponseIsEasySynthFailure,
-    processResponseIsSuccess,
-    processResponseIsFailure,
+    MessageType (..),
+    messageType,
+    responseType,
   )
 where
 
@@ -368,6 +368,22 @@ data Message conProg symSemObj symVal conSemObj conVal matcher
         _failure :: SolvingFailure
       }
   deriving (Show, Generic)
+
+data MessageType
+  = MessageViable
+  | MessageEasySynthFailure
+  | MessageGotExample
+  | MessageSuccess
+  | MessageFailure
+
+derive [''MessageType] [''Eq, ''Show, ''Hashable, ''Ord, ''PPrint]
+
+messageType :: Message conProg symSemObj symVal conSemObj conVal matcher -> MessageType
+messageType Viable {} = MessageViable
+messageType EasySynthFailure {} = MessageEasySynthFailure
+messageType GotExample {} = MessageGotExample
+messageType Success {} = MessageSuccess
+messageType Failure {} = MessageFailure
 
 pformatMessageSummary ::
   Message conProg symSemObj symVal conSemObj conVal matcher ->
@@ -994,35 +1010,13 @@ _readProcessResponse _ (Stopped {}) = error "Should not happen"
 type ProcessResponse conProg symSemObj symVal conSemObj conVal matcher =
   Either T.Text (Message conProg symSemObj symVal conSemObj conVal matcher)
 
+responseType :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Either T.Text MessageType
+responseType = fmap messageType
+
 processResponseNewCost ::
   ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
 processResponseNewCost (Right (Success _ _ _ cost _)) = Just cost
 processResponseNewCost _ = Nothing
-
-processResponseIsGotExample ::
-  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsGotExample (Right GotExample {}) = True
-processResponseIsGotExample _ = False
-
-processResponseIsViable ::
-  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsViable (Right Viable {}) = True
-processResponseIsViable _ = False
-
-processResponseIsEasySynthFailure ::
-  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsEasySynthFailure (Right EasySynthFailure {}) = True
-processResponseIsEasySynthFailure _ = False
-
-processResponseIsSuccess ::
-  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsSuccess (Right Success {}) = True
-processResponseIsSuccess _ = False
-
-processResponseIsFailure ::
-  ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Bool
-processResponseIsFailure (Right Failure {}) = True
-processResponseIsFailure _ = False
 
 getProcessResponse ::
   ( Serial conProg,

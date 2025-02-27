@@ -118,9 +118,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
       ),
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
-  ( processResponseIsEasySynthFailure,
-    processResponseIsSuccess,
-    processResponseIsViable,
+  ( MessageType (MessageEasySynthFailure, MessageSuccess, MessageViable),
+    responseType,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( Scheduler
@@ -433,15 +432,15 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
           (second $ second nodeStateMajorRelativeTimeLog)
           startedWithLinspace
 
-  let createMessageStats filterFn = do
+  let createMessageStats messageTypeToCheck = do
         (idx, (nid, logs)) <- logsWithLinspace
         (diffTime, msg) <- logs
-        guard $ filterFn msg
+        guard $ responseType msg == Right messageTypeToCheck
         return $ MessageStat nid idx (realToFrac diffTime :: Double)
 
-  let viableMsgs = createMessageStats processResponseIsViable
-      easySynthFailureMsgs = createMessageStats processResponseIsEasySynthFailure
-      succeedMsgs = createMessageStats processResponseIsSuccess
+  let viableMsgs = createMessageStats MessageViable
+      easySynthFailureMsgs = createMessageStats MessageEasySynthFailure
+      succeedMsgs = createMessageStats MessageSuccess
 
   -- Convert state pairs to NodeStats
   let viableNodeStats = toNodeStats viableStatePairs

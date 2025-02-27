@@ -88,7 +88,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
     statusTypeIsDetermined,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
-  ( processResponseIsSuccess,
+  ( MessageType (MessageSuccess),
+    responseType,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
   ( Scheduler
@@ -292,9 +293,7 @@ getParallelSynthesisResult
                 ( fst $
                     head $
                       filter
-                        ( \(_, r) ->
-                            processResponseIsSuccess r
-                        )
+                        (\(_, r) -> responseType r == Right MessageSuccess)
                         nodeMajorResponseReverseLog
                 )
                 ( case nodeEndTime of
