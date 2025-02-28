@@ -17,6 +17,11 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue
     recipBasePriority,
     recipPriority,
     minQueuedDepth,
+    minSimplePriority,
+    minBiasedPriority,
+    queuedNodes,
+    popSimpleMin,
+    popBiasedMin,
   )
 where
 
@@ -72,6 +77,9 @@ data BiasedQueue = BiasedQueue
     biasProbability :: Double
   }
 
+queuedNodes :: BiasedQueue -> [NodeId]
+queuedNodes BiasedQueue {..} = PSQ.keys baseQueue
+
 empty :: Double -> BiasedQueue
 empty biasProbability =
   BiasedQueue {baseQueue = PSQ.empty, simpleQueue = PSQ.empty, biasProbability}
@@ -115,6 +123,16 @@ size BiasedQueue {..} = PSQ.size baseQueue
 null :: BiasedQueue -> Bool
 null BiasedQueue {..} = PSQ.null baseQueue
 
+popSimpleMin :: BiasedQueue -> IO (BasePriority, NodeId, BiasedQueue)
+popSimpleMin BiasedQueue {..} = do
+  let Just (_, priority, nodeId) = PSQ.findMin simpleQueue
+  return (priority, nodeId, delete nodeId BiasedQueue {..})
+
+popBiasedMin :: BiasedQueue -> IO (Priority, NodeId, BiasedQueue)
+popBiasedMin BiasedQueue {..} = do
+  let Just (_, priority, nodeId) = PSQ.findMin baseQueue
+  return (priority, nodeId, delete nodeId BiasedQueue {..})
+
 popMin :: AtomicGenM StdGen -> BiasedQueue -> IO (Priority, NodeId, Bool, BiasedQueue)
 popMin randGen queue@BiasedQueue {..} = do
   let Just (_, _, nodeIdBiased) = PSQ.findMin baseQueue
@@ -125,7 +143,20 @@ popMin randGen queue@BiasedQueue {..} = do
   priority <- getPriority nodeId queue
   return (priority, nodeId, pickBiased, delete nodeId queue)
 
-minQueuedDepth :: BiasedQueue -> IO Int
+minQueuedDepth :: BiasedQueue -> Maybe Int
 minQueuedDepth BiasedQueue {..} = do
-  let Just (_, priority, _) = PSQ.findMin simpleQueue
-  return (depth priority)
+  case PSQ.findMin simpleQueue of
+    Nothing -> Nothing
+    Just (_, priority, _) -> Just (depth priority)
+
+minSimplePriority :: BiasedQueue -> Maybe BasePriority
+minSimplePriority BiasedQueue {..} = do
+  case PSQ.findMin simpleQueue of
+    Nothing -> Nothing
+    Just (_, priority, _) -> Just priority
+
+minBiasedPriority :: BiasedQueue -> Maybe Priority
+minBiasedPriority BiasedQueue {..} = do
+  case PSQ.findMin baseQueue of
+    Nothing -> Nothing
+    Just (_, priority, _) -> Just priority

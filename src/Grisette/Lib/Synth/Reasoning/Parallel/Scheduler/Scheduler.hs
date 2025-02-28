@@ -135,6 +135,7 @@ data
               (NodeState conProg symSemObj symVal conSemObj conVal matcher)
           ),
       nodeQueue :: IORef Q.BiasedQueue,
+      nodeSplitQueue :: IORef Q.BiasedQueue,
       processes :: IORef (HM.HashMap Int32 Process),
       processToNode :: IORef (HM.HashMap Int32 NodeId),
       nodeToProcess :: IORef (HM.HashMap NodeId Int32),
@@ -194,6 +195,7 @@ newScheduler config = do
   nodeInfo <- newIORef HM.empty
   nodeStates <- newIORef HM.empty
   nodeQueue <- newIORef $ Q.empty (biasedDrawProbability config)
+  nodeSplitQueue <- newIORef $ Q.empty (biasedDrawProbability config)
   processes <- newIORef HM.empty
   processToNode <- newIORef HM.empty
   nodeToProcess <- newIORef HM.empty
@@ -503,6 +505,17 @@ setPriority ::
 setPriority Scheduler {..} nid priority = do
   modifyIORef' nodeInfo $ HM.adjust (\ni -> ni {nodePriority = priority}) nid
   modifyIORef' nodeQueue $ Q.setPriority nid priority
+
+  -- Update the split queue with the reciprocal priority
+  let reciprocalPriority =
+        priority
+          { Q.basePriority = Q.recipBasePriority (Q.basePriority priority),
+            -- Keep the same status flags but invert the base priority
+            Q.knownWorking = Q.knownWorking priority,
+            Q.knownWorkingAncestorDistance = Q.knownWorkingAncestorDistance priority,
+            Q.ancestorSiblingKnownWorking = Q.ancestorSiblingKnownWorking priority
+          }
+  modifyIORef' nodeSplitQueue $ Q.setPriority nid reciprocalPriority
 
 setTimeout ::
   Scheduler

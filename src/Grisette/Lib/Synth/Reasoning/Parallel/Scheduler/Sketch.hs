@@ -90,6 +90,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         depthToNodes,
         nodeInfo,
         nodeQueue,
+        nodeSplitQueue,
         nodeStates,
         nodeStatusSets,
         nodeToProcess,
@@ -216,6 +217,11 @@ _addSubSketches
     modifyIORef' nodeQueue $ \q ->
       foldr (\nid -> Q.insert nid (taskPriority nid)) q $
         HM.keysSet nodeIdToSketches
+
+    modifyIORef' nodeSplitQueue $ \q ->
+      foldr (\nid -> Q.insert nid (Q.recipPriority $ taskPriority nid)) q $
+        HM.keysSet nodeIdToSketches
+
     let nodeIdToTaskPriority =
           HM.fromList $
             (\nid -> (nid, taskPriority nid))
@@ -381,6 +387,7 @@ splitNode
                       "Skipping."
                     ]
               setIsSplitted scheduler nodeId True
+              modifyIORef' (nodeSplitQueue scheduler) $ Q.delete nodeId
               return []
             else do
               splittedNodeIds <-
@@ -389,6 +396,7 @@ splitNode
                   (Just nodeId)
                   splittedSketchesWithPriority
               setIsSplitted scheduler nodeId True
+              modifyIORef' (nodeSplitQueue scheduler) $ Q.delete nodeId
               return splittedNodeIds
         -- Check if we need to update the first not fully split depth
         when (nodeDepth == currentNotFullySplitDepth) $

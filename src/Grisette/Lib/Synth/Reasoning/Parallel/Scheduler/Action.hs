@@ -24,7 +24,6 @@ import Control.Monad (unless, void, when)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Data.IORef (modifyIORef', readIORef, writeIORef)
-import Data.List (sortOn)
 import Data.Maybe (fromJust, isNothing)
 import Data.Time
   ( nominalDiffTimeToSeconds,
@@ -34,7 +33,6 @@ import Grisette
   ( PPrint (pformat),
     viaShow,
   )
-import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue (recipPriority)
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
   ( SchedulerConfig
@@ -123,6 +121,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         dcTree,
         nodeInfo,
         nodeQueue,
+        nodeSplitQueue,
         nodeStates,
         nodeToProcess,
         processToNode,
@@ -136,6 +135,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
     getCurrentMinimalCost,
     getCurrentTimeout,
     getDepth,
+    getFirstNotFullySplitDepth,
     getNodeInfo,
     getNumRunningProcess,
     getPriority,
@@ -493,37 +493,60 @@ _startQueuedImpl ::
   IO ()
 _startQueuedImpl scheduler@Scheduler {..} = do
   nodeQueue' <- readIORef nodeQueue
+  nodeSplitQueue' <- readIORef nodeSplitQueue
   runningNum <- getNumRunningProcess scheduler
-  when (Q.null nodeQueue') $ do
-    runningNodes' <- HM.keys <$> readIORef nodeToProcess
-    nodeRecipPriorities <-
-      traverse (fmap recipPriority . getPriority scheduler) runningNodes'
-    let nodeRecipBasePriorities = fmap Q.basePriority nodeRecipPriorities
-    let runningNodesWithBasePriority =
-          fmap fst $ sortOn snd $ zip runningNodes' nodeRecipBasePriorities
-    let runningNodesWithPriority =
-          fmap fst $ sortOn snd $ zip runningNodes' nodeRecipPriorities
-    let go [] = return ()
-        go (nid : rest) = do
-          info <- getNodeInfo scheduler nid
-          if nodeSplitted info
-            then go rest
-            else do
-              depth <- getDepth scheduler nid
-              priority <- getPriority scheduler nid
-              logMultiLineDoc (logger config) NOTICE $
-                "Empty queue, splitting node "
-                  <> pformat nid
-                  <> ", depth: "
-                  <> pformat depth
-                  <> ", priority: "
-                  <> pformat priority
-              void $ splitNode scheduler False nid
-    rand <- uniformRM (0, 1) randGen
-    let pickBiased = rand < biasedDrawProbability config
-    if pickBiased
-      then go runningNodesWithPriority
-      else go runningNodesWithBasePriority
+  let minQueuedDepth = Q.minQueuedDepth nodeQueue'
+  (needSplit, pickBiased) <- case minQueuedDepth of
+    Nothing -> do
+      rand <- uniformRM (0, 1) randGen
+      unless (Q.null nodeSplitQueue') $
+        logMultiLineDoc (logger config) NOTICE "Empty queue, split a node"
+      return (True, rand < biasedDrawProbability config)
+    Just minQueuedDepth -> do
+      firstNotFullySplitDepth' <- getFirstNotFullySplitDepth scheduler
+      if minQueuedDepth > firstNotFullySplitDepth' + 1
+        then do
+          unless (Q.null nodeSplitQueue') $
+            logMultiLineDoc (logger config) NOTICE $
+              "Queue is not empty, but the minimum queued depth ("
+                <> pformat minQueuedDepth
+                <> ") is greater than the first not fully split depth plus 1 ("
+                <> pformat (firstNotFullySplitDepth' + 1)
+                <> "), split a node at depth "
+                <> pformat firstNotFullySplitDepth'
+          return (True, False)
+        else return (False, False)
+
+  -- Handle empty queue or need for splitting
+  when needSplit $ do
+    -- First try to use the split queue if it's not empty
+    (splitNodeId, newSplitQueue) <-
+      if pickBiased
+        then do
+          (_, splitNodeId, newSplitQueue) <- Q.popBiasedMin nodeSplitQueue'
+          return (splitNodeId, newSplitQueue)
+        else do
+          (_, splitNodeId, newSplitQueue) <- Q.popSimpleMin nodeSplitQueue'
+          return (splitNodeId, newSplitQueue)
+    writeIORef nodeSplitQueue $! newSplitQueue
+    info <- getNodeInfo scheduler splitNodeId
+    if nodeSplitted info
+      then error "Should not happen"
+      else do
+        depth <- getDepth scheduler splitNodeId
+        priority <- getPriority scheduler splitNodeId
+        logMultiLineDoc (logger config) NOTICE $
+          "Splitting node "
+            <> pformat splitNodeId
+            <> ", depth: "
+            <> pformat depth
+            <> ", split priority: "
+            <> pformat priority
+            <> ", pickBiased: "
+            <> pformat pickBiased
+        void $ splitNode scheduler False splitNodeId
+
+  -- Start nodes if we have capacity
   when (runningNum < parallelism config && not (Q.null nodeQueue')) $ do
     (priority, nodeId, biased, nodeQueue') <- Q.popMin randGen nodeQueue'
     writeIORef nodeQueue $! nodeQueue'
