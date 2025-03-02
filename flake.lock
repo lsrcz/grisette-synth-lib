@@ -200,11 +200,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1740924710,
-        "narHash": "sha256-3eAiqWIFW8NGsoQ+67OT4v6cueqdfErkyV2R/FXGm7M=",
+        "lastModified": 1740925102,
+        "narHash": "sha256-tzlaVLYIMLRnGko5Nw2ZgXxpFfQFtcnVwy6qBP4g2fs=",
         "owner": "lsrcz",
         "repo": "grisette-nix-build-env",
-        "rev": "a57295f040891ff67179383a748612a60d2c121f",
+        "rev": "b7f089e9f2a7d19e766b7a478d7b89005f44b56c",
         "type": "github"
       },
       "original": {
