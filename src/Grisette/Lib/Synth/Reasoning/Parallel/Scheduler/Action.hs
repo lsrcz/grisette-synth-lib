@@ -499,9 +499,11 @@ _startQueuedImpl scheduler@Scheduler {..} = do
   (needSplit, pickBiased) <- case minQueuedDepth of
     Nothing -> do
       rand <- uniformRM (0, 1) randGen
-      unless (Q.null nodeSplitQueue') $
-        logMultiLineDoc (logger config) NOTICE "Empty queue, split a node"
-      return (True, rand < biasedDrawProbability config)
+      if Q.null nodeSplitQueue'
+        then return (False, False)
+        else do
+          logMultiLineDoc (logger config) NOTICE "Empty queue, split a node"
+          return (True, rand < biasedDrawProbability config)
     Just minQueuedDepth -> do
       firstNotFullySplitDepth' <- getFirstNotFullySplitDepth scheduler
       if minQueuedDepth > firstNotFullySplitDepth' + 1

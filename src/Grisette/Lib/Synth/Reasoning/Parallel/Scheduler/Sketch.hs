@@ -383,8 +383,9 @@ splitNode
               logMultiLineDoc logger NOTICE $
                 nest 2 $
                   vsep
-                    [ "Node " <> pformat nodeId <> " have no sub-sketches.",
-                      "Skipping."
+                    [ "Skipping node "
+                        <> pformat nodeId
+                        <> " because it has no sub-sketches."
                     ]
               setIsSplitted scheduler nodeId True
               modifyIORef' (nodeSplitQueue scheduler) $ Q.delete nodeId
