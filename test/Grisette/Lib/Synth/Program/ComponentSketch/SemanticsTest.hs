@@ -435,8 +435,6 @@ semanticsTest = testGroup "Semantics" $ do
                 Result
                   ( (res01 .== res00 + 1)
                       .&& (res11 .== res10 + 1)
-                      .&& (res00 .== 2)
-                      .&& symImplies (res00 .== 2) (res10 .== 4)
                       .&& (arg00Val .== 20)
                       .&& (arg01Val .== 13)
                       .&& (arg10Val .== 13)
@@ -445,10 +443,23 @@ semanticsTest = testGroup "Semantics" $ do
                       .&& (res01Val .== 7)
                       .&& (res10Val .== 0)
                       .&& (res11Val .== 13)
-                      .&& (progRes0Val .== 1)
-                      .&& (progRes1Val .== 13)
+                      .&& (res00 .== 2 .|| res00 .== 4)
+                      .&& symImplies
+                        (res00 .== 2)
+                        ( res10
+                            .== 4
+                            .&& (progRes0Val .== 1)
+                            .&& (progRes1Val .== 13)
+                        )
+                      .&& symImplies
+                        (res00 .== 4)
+                        ( res10
+                            .== 2
+                            .&& (progRes0Val .== 0)
+                            .&& (progRes1Val .== 7)
+                        )
                   )
-                  [1, 13],
+                  [symIte (res00 .== 2) 1 0, symIte (res00 .== 2) 13 7],
               semanticsTestCaseIdentifier = "x"
             },
       SemanticsTestCase
