@@ -78,7 +78,7 @@ import Grisette.Lib.Synth.Operator.OpReachableSymbols
   ( OpReachableSymbols (opReachableSymbols),
   )
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
-import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
+import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeAndSplitOp, typeOp))
 import Grisette.Lib.Synth.Program.ComponentSketch.GenIntermediate
   ( GenIntermediate,
     Intermediates (Intermediates),
@@ -401,6 +401,7 @@ constrainStmt ::
     OpSemantics sem op val ctx,
     OpTyping op ctx,
     Mergeable op,
+    Mergeable (OpTypeType op),
     SymEq val,
     MonadAngelicContext ctx
   ) =>
@@ -412,11 +413,11 @@ constrainStmt
   sem
   table
   (Stmt opUnion argIds _ resIds _ disabled _) = do
-    signature <- lift $ typeOp opUnion
+    (op, signature) <- lift $ typeAndSplitOp opUnion
     Intermediates argVals resVals <-
       lift $ genOpIntermediates (Proxy @(OpTypeType op)) sem signature
     mrgIf disabled (return ()) $ do
-      computedResVals <- lift $ applyOp sem table opUnion argVals
+      computedResVals <- lift $ applyOp sem table op argVals
       symAssertWith "Incorrect results." $ resVals .== computedResVals
 
     let getIdValPairs _ [] [] = mrgReturn []

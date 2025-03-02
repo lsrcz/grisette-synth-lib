@@ -61,6 +61,12 @@ simpleTyping f = mrgReturn . f
 class (MonadContext ctx) => OpTyping op ctx where
   type OpTypeType op
   typeOp :: op -> ctx (TypeSignature (OpTypeType op))
+  typeAndSplitOp ::
+    (Mergeable op, Mergeable (OpTypeType op)) =>
+    op -> ctx (op, TypeSignature (OpTypeType op))
+  typeAndSplitOp op = do
+    ty <- typeOp op
+    mrgReturn (op, ty)
 
 instance
   (MonadUnion ctx, OpTyping op ctx, Mergeable op, Mergeable (OpTypeType op)) =>
@@ -68,6 +74,10 @@ instance
   where
   type OpTypeType (Union op) = OpTypeType op
   typeOp op = tryMerge $ liftUnion op >>= typeOp
+  typeAndSplitOp op = tryMerge $ do
+    op' <- liftUnion op
+    ty <- typeOp op'
+    mrgReturn (mrgReturn op', ty)
 
 newtype MaxAcrossBranches = MaxAcrossBranches {unMaxAcrossBranches :: Int}
 
