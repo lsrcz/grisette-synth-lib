@@ -19,6 +19,7 @@ module Grisette.Lib.Synth.Program.Choice.Counting
     countNumProgsWithEvidence,
     countNumChoicesWithEvidence,
     avgNumComponentChoicesWithEvidence,
+    countNumInstsWithEvidence,
   )
 where
 
@@ -103,7 +104,7 @@ choiceTreeSplitIntoTypesMap choiceTree =
   HM.fromListWith (+) $ map (,1) $ choiceTreeSplitIntoTypes choiceTree
 
 data ComponentChoicesNumResult = ComponentChoicesNumResult
-  { numComponents :: Int,
+  { numComponents :: Integer,
     numTotalChoices :: Integer
   }
 
@@ -118,12 +119,14 @@ class CountNumProgs sketchSpec where
   countNumChoices :: sketchSpec -> Integer
   countNumProgs :: sketchSpec -> Integer
   avgNumComponentChoices :: sketchSpec -> ComponentChoicesNumResult
+  countNumInsts :: sketchSpec -> Integer
 
 instance (CountNumProgs prog) => CountNumProgs (SymbolTable prog) where
   countNumChoices (SymbolTable tbl) = product $ countNumChoices . snd <$> tbl
   countNumProgs (SymbolTable tbl) = product $ countNumProgs . snd <$> tbl
   avgNumComponentChoices (SymbolTable tbl) =
     mconcat $ avgNumComponentChoices . snd <$> tbl
+  countNumInsts (SymbolTable tbl) = sum $ countNumInsts . snd <$> tbl
 
 instance
   (SplitChoice sketchSpec) =>
@@ -137,6 +140,7 @@ instance
         stmts
   countNumProgs = countNumChoices
   avgNumComponentChoices _ = mempty
+  countNumInsts (Concrete.Prog _ stmts _) = fromIntegral $ length stmts
 
 data CountNumProgsEvidence sketchSpec where
   CountNumProgsEvidence ::
@@ -162,6 +166,12 @@ avgNumComponentChoicesWithEvidence ::
 avgNumComponentChoicesWithEvidence CountNumProgsEvidence =
   avgNumComponentChoices
 
+countNumInstsWithEvidence ::
+  CountNumProgsEvidence sketchSpec ->
+  sketchSpec ->
+  Integer
+countNumInstsWithEvidence CountNumProgsEvidence = countNumInsts
+
 instance
   ( SplitChoice sketchSpec,
     OpTyping sketchSpec AngelicContext,
@@ -174,7 +184,7 @@ instance
   CountNumProgs (ComponentBag sketchSpec ty0)
   where
   avgNumComponentChoices (ComponentBag _ components _) =
-    let numComponents = sum $ snd <$> components
+    let numComponents = fromIntegral $ sum $ snd <$> components
         numTotalChoices =
           fromIntegral $
             sum $
@@ -275,3 +285,5 @@ instance
         rst <- readSTRef st
         let result = sum $ (`allArgChoices` resTypes) <$> toList rst
         return result
+  countNumInsts (ComponentBag _ components _) =
+    fromIntegral $ sum $ map snd components

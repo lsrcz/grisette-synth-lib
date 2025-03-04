@@ -34,9 +34,10 @@ import Grisette
   )
 import Grisette.Lib.Synth.Program.Choice.Counting
   ( ComponentChoicesNumResult (numComponents, numTotalChoices),
-    CountNumProgs (countNumProgs),
+    CountNumProgs (countNumInsts, countNumProgs),
     CountNumProgsEvidence (CountNumProgsEvidence),
     avgNumComponentChoicesWithEvidence,
+    countNumInstsWithEvidence,
   )
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
@@ -147,7 +148,8 @@ data ParallelSynthesisSolutionFoundResult conProg = ParallelSynthesisSolutionFou
     numOfRootPrograms :: Integer,
     numOfUndeterminedPrograms :: Integer,
     undeterminedRatio :: Double,
-    avgComponentChoices :: Double
+    avgComponentChoices :: Double,
+    minNumInsts :: Integer
   }
 
 data ParallelSynthesisResult conProg
@@ -203,6 +205,10 @@ resultAvgComponentChoices (NoSolutionFound ParallelSynthesisNoSolutionResult {..
   avgComponentChoices
 resultAvgComponentChoices (SolutionFound ParallelSynthesisSolutionFoundResult {..}) =
   avgComponentChoices
+
+resultMinNumInsts :: ParallelSynthesisResult conProg -> Maybe Integer
+resultMinNumInsts (NoSolutionFound _) = Nothing
+resultMinNumInsts (SolutionFound ParallelSynthesisSolutionFoundResult {..}) = Just minNumInsts
 
 getParallelSynthesisResult ::
   Scheduler
@@ -287,7 +293,23 @@ getParallelSynthesisResult
                   totalNumOfUndeterminedPrograms
                   undeterminedRatio
                   avgCompChoices
-          else
+          else do
+            -- Calculate minimum number of instructions across all solutions
+            minInsts <- case countNumProgsEvidence of
+              Just CountNumProgsEvidence ->
+                -- We'll need to use easySketchFromFastResult to convert conProg to sketchSpec
+                case easySketchFromFastResult of
+                  Just converter -> do
+                    let progInsts =
+                          map
+                            ( \ParallelSynthesisSolution {_program = prog} ->
+                                countNumInsts (converter prog)
+                            )
+                            lst
+                    return $ minimum progInsts
+                  Nothing -> return 0 -- No converter available
+              Nothing -> return 0
+
             return $
               SolutionFound $
                 ParallelSynthesisSolutionFoundResult
@@ -301,6 +323,7 @@ getParallelSynthesisResult
                   totalNumOfUndeterminedPrograms
                   undeterminedRatio
                   avgCompChoices
+                  minInsts
     where
       go _ [] = return []
       go cost ((nid, NodeState {..}) : rest) = do
@@ -365,6 +388,7 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
               "Num of root programs: " <> pformat numOfRootPrograms,
               "Undetermined ratio: " <> pformat undeterminedRatio,
               "Avg component choices: " <> pformat avgCompChoices,
+              "Min number of instructions: " <> pformat minNumInsts,
               "Best solution found with cost "
                 <> pformat bestCost
                 <> " in "
@@ -426,7 +450,8 @@ writeResultsCSV path result scheduler = do
           "num_root_programs",
           "num_undertermined_programs",
           "undetermined_ratio",
-          "avg_component_choices"
+          "avg_component_choices",
+          "min_num_instructions"
         ]
   let initialCost = case result of
         SolutionFound
@@ -441,6 +466,7 @@ writeResultsCSV path result scheduler = do
   let numOfUndeterminedPrograms = resultNumOfUndeterminedPrograms result
   let undeterminedRatio = resultUndeterminedRatio result
   let avgComponentChoices = resultAvgComponentChoices result
+  let minNumInstructions = maybe "inf" show $ resultMinNumInsts result
   let schedulerElapsedTime =
         realToFrac $
           diffUTCTime
@@ -473,6 +499,7 @@ writeResultsCSV path result scheduler = do
           show numOfRootPrograms,
           show numOfUndeterminedPrograms,
           show undeterminedRatio,
-          show avgComponentChoices
+          show avgComponentChoices,
+          minNumInstructions
         ]
   writeFile path $ intercalate "," columns ++ "\n" ++ intercalate "," values
