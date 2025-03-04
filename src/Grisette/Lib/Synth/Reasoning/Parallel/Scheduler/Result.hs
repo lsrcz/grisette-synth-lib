@@ -33,8 +33,10 @@ import Grisette
     vsep,
   )
 import Grisette.Lib.Synth.Program.Choice.Counting
-  ( CountNumProgs (countNumProgs),
+  ( ComponentChoicesNumResult (numComponents, numTotalChoices),
+    CountNumProgs (countNumProgs),
     CountNumProgsEvidence (CountNumProgsEvidence),
+    avgNumComponentChoicesWithEvidence,
   )
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
@@ -131,7 +133,8 @@ data ParallelSynthesisNoSolutionResult = ParallelSynthesisNoSolutionResult
     numOfUndeterminedLeaves :: Int,
     numOfRootPrograms :: Integer,
     numOfUndeterminedPrograms :: Integer,
-    undeterminedRatio :: Double
+    undeterminedRatio :: Double,
+    avgComponentChoices :: Double
   }
 
 data ParallelSynthesisSolutionFoundResult conProg = ParallelSynthesisSolutionFoundResult
@@ -143,7 +146,8 @@ data ParallelSynthesisSolutionFoundResult conProg = ParallelSynthesisSolutionFou
     numOfUndeterminedLeaves :: Int,
     numOfRootPrograms :: Integer,
     numOfUndeterminedPrograms :: Integer,
-    undeterminedRatio :: Double
+    undeterminedRatio :: Double,
+    avgComponentChoices :: Double
   }
 
 data ParallelSynthesisResult conProg
@@ -194,6 +198,12 @@ resultAggregatedTime (NoSolutionFound ParallelSynthesisNoSolutionResult {..}) =
 resultAggregatedTime (SolutionFound ParallelSynthesisSolutionFoundResult {..}) =
   aggregatedTime
 
+resultAvgComponentChoices :: ParallelSynthesisResult conProg -> Double
+resultAvgComponentChoices (NoSolutionFound ParallelSynthesisNoSolutionResult {..}) =
+  avgComponentChoices
+resultAvgComponentChoices (SolutionFound ParallelSynthesisSolutionFoundResult {..}) =
+  avgComponentChoices
+
 getParallelSynthesisResult ::
   Scheduler
     sketchSpec
@@ -242,6 +252,15 @@ getParallelSynthesisResult
           return (numOfRootPrograms, totalNumOfUndeterminedPrograms, undeterminedRatio)
         Nothing -> return (-1, -1, 0 / 0)
 
+    avgCompChoices <-
+      case countNumProgsEvidence of
+        Just countNumProgsEvidence -> do
+          rootSketches <- traverse (getSketchTable scheduler) $ HS.toList roots
+          let compChoicesResult =
+                mconcat $ map (avgNumComponentChoicesWithEvidence countNumProgsEvidence) rootSketches
+          return $ fromIntegral (numTotalChoices compChoicesResult) / fromIntegral (numComponents compChoicesResult)
+        Nothing -> return (0 / 0)
+
     case cost of
       Nothing ->
         return $
@@ -253,6 +272,7 @@ getParallelSynthesisResult
               numOfRootPrograms
               totalNumOfUndeterminedPrograms
               undeterminedRatio
+              avgCompChoices
       Just cost -> do
         lst <- go cost $ HM.toList nodeStates
         if null lst
@@ -266,6 +286,7 @@ getParallelSynthesisResult
                   numOfRootPrograms
                   totalNumOfUndeterminedPrograms
                   undeterminedRatio
+                  avgCompChoices
           else
             return $
               SolutionFound $
@@ -279,6 +300,7 @@ getParallelSynthesisResult
                   numOfRootPrograms
                   totalNumOfUndeterminedPrograms
                   undeterminedRatio
+                  avgCompChoices
     where
       go _ [] = return []
       go cost ((nid, NodeState {..}) : rest) = do
@@ -315,6 +337,7 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
   let numOfUndeterminedPrograms = resultNumOfUndeterminedPrograms result
   let numOfRootPrograms = resultNumOfRootPrograms result
   let undeterminedRatio = resultUndeterminedRatio result
+  let avgCompChoices = resultAvgComponentChoices result
   case result of
     NoSolutionFound {} ->
       logMultiLineDoc logger WARNING $
@@ -325,7 +348,8 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
               "Num of undetermined leaves: " <> pformat numOfUndeterminedLeaves,
               "Num of undetermined programs: " <> pformat numOfUndeterminedPrograms,
               "Num of root programs: " <> pformat numOfRootPrograms,
-              "Undetermined ratio: " <> pformat undeterminedRatio
+              "Undetermined ratio: " <> pformat undeterminedRatio,
+              "Avg component choices: " <> pformat avgCompChoices
             ]
     SolutionFound ParallelSynthesisSolutionFoundResult {..} -> do
       let elapsedTime =
@@ -340,6 +364,7 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
               "Num of undetermined programs: " <> pformat numOfUndeterminedPrograms,
               "Num of root programs: " <> pformat numOfRootPrograms,
               "Undetermined ratio: " <> pformat undeterminedRatio,
+              "Avg component choices: " <> pformat avgCompChoices,
               "Best solution found with cost "
                 <> pformat bestCost
                 <> " in "
@@ -400,7 +425,8 @@ writeResultsCSV path result scheduler = do
           "num_undertermined_leaves",
           "num_root_programs",
           "num_undertermined_programs",
-          "undetermined_ratio"
+          "undetermined_ratio",
+          "avg_component_choices"
         ]
   let initialCost = case result of
         SolutionFound
@@ -414,6 +440,7 @@ writeResultsCSV path result scheduler = do
   let numOfRootPrograms = resultNumOfRootPrograms result
   let numOfUndeterminedPrograms = resultNumOfUndeterminedPrograms result
   let undeterminedRatio = resultUndeterminedRatio result
+  let avgComponentChoices = resultAvgComponentChoices result
   let schedulerElapsedTime =
         realToFrac $
           diffUTCTime
@@ -445,6 +472,7 @@ writeResultsCSV path result scheduler = do
           show numOfUndeterminedLeaves,
           show numOfRootPrograms,
           show numOfUndeterminedPrograms,
-          show undeterminedRatio
+          show undeterminedRatio,
+          show avgComponentChoices
         ]
   writeFile path $ intercalate "," columns ++ "\n" ++ intercalate "," values

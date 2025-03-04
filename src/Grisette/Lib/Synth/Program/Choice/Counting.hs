@@ -15,8 +15,10 @@ module Grisette.Lib.Synth.Program.Choice.Counting
     ValidArgument (..),
     CountNumProgs (..),
     CountNumProgsEvidence (..),
+    ComponentChoicesNumResult (..),
     countNumProgsWithEvidence,
     countNumChoicesWithEvidence,
+    avgNumComponentChoicesWithEvidence,
   )
 where
 
@@ -100,13 +102,28 @@ choiceTreeSplitIntoTypesMap ::
 choiceTreeSplitIntoTypesMap choiceTree =
   HM.fromListWith (+) $ map (,1) $ choiceTreeSplitIntoTypes choiceTree
 
+data ComponentChoicesNumResult = ComponentChoicesNumResult
+  { numComponents :: Int,
+    numTotalChoices :: Integer
+  }
+
+instance Semigroup ComponentChoicesNumResult where
+  ComponentChoicesNumResult n1 c1 <> ComponentChoicesNumResult n2 c2 =
+    ComponentChoicesNumResult (n1 + n2) (c1 + c2)
+
+instance Monoid ComponentChoicesNumResult where
+  mempty = ComponentChoicesNumResult 0 0
+
 class CountNumProgs sketchSpec where
   countNumChoices :: sketchSpec -> Integer
   countNumProgs :: sketchSpec -> Integer
+  avgNumComponentChoices :: sketchSpec -> ComponentChoicesNumResult
 
 instance (CountNumProgs prog) => CountNumProgs (SymbolTable prog) where
   countNumChoices (SymbolTable tbl) = product $ countNumChoices . snd <$> tbl
   countNumProgs (SymbolTable tbl) = product $ countNumProgs . snd <$> tbl
+  avgNumComponentChoices (SymbolTable tbl) =
+    mconcat $ avgNumComponentChoices . snd <$> tbl
 
 instance
   (SplitChoice sketchSpec) =>
@@ -119,6 +136,7 @@ instance
         (fromIntegral . length . choiceTreeSplitAsSingleChoices . Concrete.stmtOp)
         stmts
   countNumProgs = countNumChoices
+  avgNumComponentChoices _ = mempty
 
 data CountNumProgsEvidence sketchSpec where
   CountNumProgsEvidence ::
@@ -137,6 +155,13 @@ countNumChoicesWithEvidence ::
   Integer
 countNumChoicesWithEvidence CountNumProgsEvidence = countNumChoices
 
+avgNumComponentChoicesWithEvidence ::
+  CountNumProgsEvidence sketchSpec ->
+  sketchSpec ->
+  ComponentChoicesNumResult
+avgNumComponentChoicesWithEvidence CountNumProgsEvidence =
+  avgNumComponentChoices
+
 instance
   ( SplitChoice sketchSpec,
     OpTyping sketchSpec AngelicContext,
@@ -148,6 +173,16 @@ instance
   ) =>
   CountNumProgs (ComponentBag sketchSpec ty0)
   where
+  avgNumComponentChoices (ComponentBag _ components _) =
+    let numComponents = sum $ snd <$> components
+        numTotalChoices =
+          fromIntegral $
+            sum $
+              ( \(tree, num) ->
+                  num * length (choiceTreeSplitAsSingleChoices tree)
+              )
+                <$> components
+     in ComponentChoicesNumResult numComponents numTotalChoices
   countNumChoices (ComponentBag _ components _) =
     product $
       map

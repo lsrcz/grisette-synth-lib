@@ -18,7 +18,9 @@ import Grisette
     vsep,
   )
 import Grisette.Lib.Synth.Program.Choice.Counting
-  ( countNumChoicesWithEvidence,
+  ( ComponentChoicesNumResult (ComponentChoicesNumResult),
+    avgNumComponentChoicesWithEvidence,
+    countNumChoicesWithEvidence,
     countNumProgsWithEvidence,
   )
 import Grisette.Lib.Synth.Program.Choice.Split
@@ -262,11 +264,23 @@ _addSubSketches
                     (nid, countNumProgsWithEvidence countNumProgsEvidence sketch)
                 )
                   <$> HM.toList sketchesToNodeId
+        let nodeIdToAvgCompChoices =
+              HM.fromList $
+                ( \(sketch, nid) ->
+                    ( nid,
+                      case avgNumComponentChoicesWithEvidence countNumProgsEvidence sketch of
+                        ComponentChoicesNumResult numComponents numTotalChoices ->
+                          fromIntegral numTotalChoices / fromIntegral numComponents :: Double
+                    )
+                )
+                  <$> HM.toList sketchesToNodeId
         return
           [ "Num of choices in sketches: ",
             pformat nodeIdToNumChoices,
             "Num of well typed programs in sketches: ",
-            pformat nodeIdToNumWellTyped
+            pformat nodeIdToNumWellTyped,
+            "Avg component choices in sketches: ",
+            pformat nodeIdToAvgCompChoices
           ]
       Nothing -> return []
 
