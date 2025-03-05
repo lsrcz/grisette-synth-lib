@@ -492,13 +492,11 @@ _startQueuedImpl ::
     matcher ->
   IO ()
 _startQueuedImpl scheduler@Scheduler {..} = do
-  nodeQueue' <- readIORef nodeQueue
-  nodeSplitQueue' <- readIORef nodeSplitQueue
-  runningNum <- getNumRunningProcess scheduler
-  let minQueuedDepth = Q.minQueuedDepth nodeQueue'
+  minQueuedDepth <- Q.minQueuedDepth <$> readIORef nodeQueue
   (needSplit, pickBiased) <- case minQueuedDepth of
     Nothing -> do
       rand <- uniformRM (0, 1) randGen
+      nodeSplitQueue' <- readIORef nodeSplitQueue
       if Q.null nodeSplitQueue'
         then return (False, False)
         else do
@@ -508,6 +506,7 @@ _startQueuedImpl scheduler@Scheduler {..} = do
       firstNotFullySplitDepth' <- getFirstNotFullySplitDepth scheduler
       if minQueuedDepth > firstNotFullySplitDepth' + 1
         then do
+          nodeSplitQueue' <- readIORef nodeSplitQueue
           unless (Q.null nodeSplitQueue') $
             logMultiLineDoc (logger config) NOTICE $
               "Queue is not empty, but the minimum queued depth ("
@@ -519,36 +518,43 @@ _startQueuedImpl scheduler@Scheduler {..} = do
           return (True, False)
         else return (False, False)
 
+  let doSplit = do
+        splitQueue <- readIORef nodeSplitQueue
+        unless (Q.null splitQueue) $ do
+          (splitNodeId, newSplitQueue) <-
+            if pickBiased
+              then do
+                (_, splitNodeId, newSplitQueue) <- Q.popBiasedMin splitQueue
+                return (splitNodeId, newSplitQueue)
+              else do
+                (_, splitNodeId, newSplitQueue) <- Q.popSimpleMin splitQueue
+                return (splitNodeId, newSplitQueue)
+          writeIORef nodeSplitQueue $! newSplitQueue
+          info <- getNodeInfo scheduler splitNodeId
+          if nodeSplitted info
+            then error "Should not happen"
+            else do
+              depth <- getDepth scheduler splitNodeId
+              priority <- getPriority scheduler splitNodeId
+              logMultiLineDoc (logger config) NOTICE $
+                "Splitting node "
+                  <> pformat splitNodeId
+                  <> ", depth: "
+                  <> pformat depth
+                  <> ", split priority: "
+                  <> pformat priority
+                  <> ", pickBiased: "
+                  <> pformat pickBiased
+              void $ splitNode scheduler False splitNodeId
+              size <- Q.size <$> readIORef nodeQueue
+              when (size == 0) doSplit
+
   -- Handle empty queue or need for splitting
-  when needSplit $ do
-    -- First try to use the split queue if it's not empty
-    (splitNodeId, newSplitQueue) <-
-      if pickBiased
-        then do
-          (_, splitNodeId, newSplitQueue) <- Q.popBiasedMin nodeSplitQueue'
-          return (splitNodeId, newSplitQueue)
-        else do
-          (_, splitNodeId, newSplitQueue) <- Q.popSimpleMin nodeSplitQueue'
-          return (splitNodeId, newSplitQueue)
-    writeIORef nodeSplitQueue $! newSplitQueue
-    info <- getNodeInfo scheduler splitNodeId
-    if nodeSplitted info
-      then error "Should not happen"
-      else do
-        depth <- getDepth scheduler splitNodeId
-        priority <- getPriority scheduler splitNodeId
-        logMultiLineDoc (logger config) NOTICE $
-          "Splitting node "
-            <> pformat splitNodeId
-            <> ", depth: "
-            <> pformat depth
-            <> ", split priority: "
-            <> pformat priority
-            <> ", pickBiased: "
-            <> pformat pickBiased
-        void $ splitNode scheduler False splitNodeId
+  when needSplit doSplit
 
   -- Start nodes if we have capacity
+  runningNum <- getNumRunningProcess scheduler
+  nodeQueue' <- readIORef nodeQueue
   when (runningNum < parallelism config && not (Q.null nodeQueue')) $ do
     (priority, nodeId, biased, nodeQueue') <- Q.popMin randGen nodeQueue'
     writeIORef nodeQueue $! nodeQueue'
