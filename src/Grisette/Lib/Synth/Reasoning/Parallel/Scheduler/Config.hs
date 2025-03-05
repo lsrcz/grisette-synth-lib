@@ -74,7 +74,8 @@ data
       doDeadCodeElimination :: Bool,
       schedulerRandomSeed :: Int,
       pollIntervalSeconds :: Double,
-      biasedDrawProbability :: Double
+      biasedDrawProbability :: Double,
+      referenceNumInsts :: Maybe Int
     } ->
     SchedulerConfig
       sketchSpec

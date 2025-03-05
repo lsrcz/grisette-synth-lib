@@ -57,6 +57,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         logger,
         parallelism,
         pollIntervalSeconds,
+        referenceNumInsts,
         restartRunningTimeThresholdSeconds,
         schedulerRandomSeed,
         schedulerTimeoutSeconds,
@@ -387,7 +388,8 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
               "Num of root programs: " <> pformat numOfRootPrograms,
               "Num of components: " <> pformat numOfComponents,
               "Undetermined ratio: " <> pformat undeterminedRatio,
-              "Avg component choices: " <> pformat avgCompChoices
+              "Avg component choices: " <> pformat avgCompChoices,
+              "Number of instructions in reference: " <> maybe "inf" pformat referenceNumInsts
             ]
     SolutionFound ParallelSynthesisSolutionFoundResult {..} -> do
       let elapsedTime =
@@ -405,6 +407,7 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
               "Undetermined ratio: " <> pformat undeterminedRatio,
               "Avg component choices: " <> pformat avgCompChoices,
               "Min number of instructions: " <> pformat minNumInsts,
+              "Number of instructions in reference: " <> maybe "inf" pformat referenceNumInsts,
               "Best solution found with cost "
                 <> pformat bestCost
                 <> " in "
@@ -463,6 +466,7 @@ writeResultsCSV path result scheduler = do
           "time_to_best_since_scheduler_start",
           "time_to_best",
           "min_num_instructions",
+          "num_ref_instructions",
           "initial_cost",
           "cost",
           "num_lattice_nodes",
@@ -514,6 +518,7 @@ writeResultsCSV path result scheduler = do
           maybe "inf" show timeToBestSinceSchedulerStart,
           maybe "inf" show timeToBest,
           minNumInstructions,
+          maybe "inf" show (referenceNumInsts (config scheduler)),
           show initialCost,
           show cost,
           show numOfNodesInLattice,
