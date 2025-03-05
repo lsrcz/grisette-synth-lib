@@ -531,9 +531,16 @@ _startQueuedImpl scheduler@Scheduler {..} = do
                 return (splitNodeId, newSplitQueue)
           writeIORef nodeSplitQueue $! newSplitQueue
           info <- getNodeInfo scheduler splitNodeId
-          if nodeSplitted info
-            then error "Should not happen"
-            else do
+          curDcTree <- readIORef dcTree
+          case (nodeSplitted info, nodeFailed curDcTree splitNodeId) of
+            (True, _) -> error "Should not happen"
+            (_, True) -> do
+              logMultiLineDoc (logger config) NOTICE $
+                "Node "
+                  <> pformat splitNodeId
+                  <> " is already inferred to fail, remove from the split queue."
+              doSplit
+            _ -> do
               depth <- getDepth scheduler splitNodeId
               priority <- getPriority scheduler splitNodeId
               logMultiLineDoc (logger config) NOTICE $
