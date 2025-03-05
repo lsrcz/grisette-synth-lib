@@ -27,7 +27,7 @@ import Grisette.Lib.Synth.Operator.OpReachableSymbols
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
 import Grisette.Lib.Synth.Program.Choice.Counting
-  ( CountNumProgs (avgNumComponentChoices, countNumChoices, countNumInsts, countNumProgs),
+  ( CountNumProgs (countNumChoices, countNumComponentChoices, countNumInsts, countNumProgs),
     SplitChoice (splitChoice),
   )
 import Grisette.Lib.Synth.Program.Choice.Split
@@ -161,7 +161,7 @@ instance (MonadContext ctx) => OpCost costObj (Null ty) cost ctx where
 instance CountNumProgs (Null ty) where
   countNumProgs _ = error "Impossible"
   countNumChoices _ = error "Impossible"
-  avgNumComponentChoices _ = error "Impossible"
+  countNumComponentChoices _ = error "Impossible"
   countNumInsts _ = error "Impossible"
 
 instance SplitChoice (Null ty) where

@@ -19,8 +19,8 @@ import Grisette
   )
 import Grisette.Lib.Synth.Program.Choice.Counting
   ( ComponentChoicesNumResult (ComponentChoicesNumResult),
-    avgNumComponentChoicesWithEvidence,
     countNumChoicesWithEvidence,
+    countNumComponentChoicesWithEvidence,
     countNumProgsWithEvidence,
   )
 import Grisette.Lib.Synth.Program.Choice.Split
@@ -268,7 +268,7 @@ _addSubSketches
               HM.fromList $
                 ( \(sketch, nid) ->
                     ( nid,
-                      case avgNumComponentChoicesWithEvidence countNumProgsEvidence sketch of
+                      case countNumComponentChoicesWithEvidence countNumProgsEvidence sketch of
                         ComponentChoicesNumResult numComponents numTotalChoices ->
                           fromIntegral numTotalChoices / fromIntegral numComponents :: Double
                     )

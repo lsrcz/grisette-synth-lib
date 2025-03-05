@@ -18,8 +18,8 @@ module Grisette.Lib.Synth.Program.Choice.Counting
     ComponentChoicesNumResult (..),
     countNumProgsWithEvidence,
     countNumChoicesWithEvidence,
-    avgNumComponentChoicesWithEvidence,
     countNumInstsWithEvidence,
+    countNumComponentChoicesWithEvidence,
   )
 where
 
@@ -118,14 +118,14 @@ instance Monoid ComponentChoicesNumResult where
 class CountNumProgs sketchSpec where
   countNumChoices :: sketchSpec -> Integer
   countNumProgs :: sketchSpec -> Integer
-  avgNumComponentChoices :: sketchSpec -> ComponentChoicesNumResult
+  countNumComponentChoices :: sketchSpec -> ComponentChoicesNumResult
   countNumInsts :: sketchSpec -> Integer
 
 instance (CountNumProgs prog) => CountNumProgs (SymbolTable prog) where
   countNumChoices (SymbolTable tbl) = product $ countNumChoices . snd <$> tbl
   countNumProgs (SymbolTable tbl) = product $ countNumProgs . snd <$> tbl
-  avgNumComponentChoices (SymbolTable tbl) =
-    mconcat $ avgNumComponentChoices . snd <$> tbl
+  countNumComponentChoices (SymbolTable tbl) =
+    mconcat $ countNumComponentChoices . snd <$> tbl
   countNumInsts (SymbolTable tbl) = sum $ countNumInsts . snd <$> tbl
 
 instance
@@ -139,7 +139,7 @@ instance
         (fromIntegral . length . choiceTreeSplitAsSingleChoices . Concrete.stmtOp)
         stmts
   countNumProgs = countNumChoices
-  avgNumComponentChoices _ = mempty
+  countNumComponentChoices _ = mempty
   countNumInsts (Concrete.Prog _ stmts _) = fromIntegral $ length stmts
 
 data CountNumProgsEvidence sketchSpec where
@@ -159,12 +159,12 @@ countNumChoicesWithEvidence ::
   Integer
 countNumChoicesWithEvidence CountNumProgsEvidence = countNumChoices
 
-avgNumComponentChoicesWithEvidence ::
+countNumComponentChoicesWithEvidence ::
   CountNumProgsEvidence sketchSpec ->
   sketchSpec ->
   ComponentChoicesNumResult
-avgNumComponentChoicesWithEvidence CountNumProgsEvidence =
-  avgNumComponentChoices
+countNumComponentChoicesWithEvidence CountNumProgsEvidence =
+  countNumComponentChoices
 
 countNumInstsWithEvidence ::
   CountNumProgsEvidence sketchSpec ->
@@ -183,7 +183,7 @@ instance
   ) =>
   CountNumProgs (ComponentBag sketchSpec ty0)
   where
-  avgNumComponentChoices (ComponentBag _ components _) =
+  countNumComponentChoices (ComponentBag _ components _) =
     let numComponents = fromIntegral $ sum $ snd <$> components
         numTotalChoices =
           fromIntegral $

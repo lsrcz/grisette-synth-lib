@@ -42,7 +42,7 @@ import Grisette.Lib.Synth.Operator.OpReachableSymbols
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
 import Grisette.Lib.Synth.Program.Choice.Counting
-  ( CountNumProgs (avgNumComponentChoices, countNumChoices, countNumInsts, countNumProgs),
+  ( CountNumProgs (countNumChoices, countNumComponentChoices, countNumInsts, countNumProgs),
     SplitChoice (splitChoice),
   )
 import Grisette.Lib.Synth.Program.Choice.Split
@@ -336,8 +336,8 @@ instance (CountNumProgs l, CountNumProgs r) => CountNumProgs ((:|) l r) where
   countNumChoices (InRight r) = countNumChoices r
   countNumProgs (InLeft l) = countNumProgs l
   countNumProgs (InRight r) = countNumProgs r
-  avgNumComponentChoices (InLeft l) = avgNumComponentChoices l
-  avgNumComponentChoices (InRight r) = avgNumComponentChoices r
+  countNumComponentChoices (InLeft l) = countNumComponentChoices l
+  countNumComponentChoices (InRight r) = countNumComponentChoices r
   countNumInsts (InLeft l) = countNumInsts l
   countNumInsts (InRight r) = countNumInsts r
 
