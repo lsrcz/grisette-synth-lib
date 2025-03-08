@@ -32,7 +32,6 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
     getNodesByDepth,
     updateNodeState,
     getSplitNodesByDepth,
-    addSplitNodeByDepth,
     isSplitAtDepth,
     updateFirstNotFullySplitDepth,
     getFirstNotFullySplitDepth,
@@ -716,6 +715,14 @@ updateNodeState Scheduler {..} nid newState = do
                in HM.insert depth newStatusMap updatedDepthMap
        in finalDepthMap
 
+    -- If the node transitioned to a status that doesn't need children,
+    -- check if we need to update the first not fully split depth
+    when (statusTypeDoNotNeedChild newStatusType) $ do
+      currentNotFullySplitDepth <- readIORef firstNotFullySplitDepth
+      -- Only need to update if this node is at the current firstNotFullySplitDepth
+      when (depth == currentNotFullySplitDepth) $
+        updateFirstNotFullySplitDepth (Scheduler {..})
+
 -- | Get all nodes that have been split at a specific depth
 getSplitNodesByDepth ::
   Scheduler
@@ -754,31 +761,6 @@ isSplitAtDepth ::
 isSplitAtDepth scheduler nid depth = do
   splitNodes <- getSplitNodesByDepth scheduler depth
   return $ nid `HS.member` splitNodes
-
--- | Add a node to the set of split nodes at a specific depth
-addSplitNodeByDepth ::
-  Scheduler
-    sketchSpec
-    sketch
-    conProg
-    costObj
-    cost
-    symSemObj
-    symVal
-    conSemObj
-    conVal
-    matcher ->
-  NodeId ->
-  Int ->
-  IO ()
-addSplitNodeByDepth Scheduler {..} nid depth = do
-  modifyIORef' splitNodesByDepth $ \splitNodesMap ->
-    let existingSplitNodes = HM.lookupDefault HS.empty depth splitNodesMap
-        updatedSplitNodes = HS.insert nid existingSplitNodes
-     in HM.insert depth updatedSplitNodes splitNodesMap
-
-  -- Also mark the node as split in nodeInfo, but use direct modification to avoid recursion
-  modifyIORef' nodeInfo $ HM.adjust (\ni -> ni {nodeSplitted = True}) nid
 
 -- | Get the first depth that is not fully split
 getFirstNotFullySplitDepth ::
