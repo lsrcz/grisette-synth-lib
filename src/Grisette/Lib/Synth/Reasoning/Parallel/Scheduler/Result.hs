@@ -130,6 +130,7 @@ data ParallelSynthesisSolution conProg = ParallelSynthesisSolution
 
 data ParallelSynthesisNoSolutionResult = ParallelSynthesisNoSolutionResult
   { aggregatedTime :: UTCTime,
+    initialCost :: Maybe Int,
     numOfNodesInLattice :: Int,
     numOfUndeterminedLeaves :: Int,
     numOfRootPrograms :: Integer,
@@ -284,6 +285,7 @@ getParallelSynthesisResult
           NoSolutionFound $
             ParallelSynthesisNoSolutionResult
               curTime
+              initialMinimalCost
               numOfNodesInLattice
               numOfUndeterminedLeaves
               numOfRootPrograms
@@ -299,6 +301,7 @@ getParallelSynthesisResult
               NoSolutionFound $
                 ParallelSynthesisNoSolutionResult
                   curTime
+                  initialMinimalCost
                   numOfNodesInLattice
                   numOfUndeterminedLeaves
                   numOfRootPrograms
