@@ -37,6 +37,8 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
     getFirstNotFullySplitDepth,
     resetFirstNotFullySplitDepth,
     isDepthFullySplit,
+    getEverStartedNodes,
+    getEverStartedNodesByDepth,
   )
 where
 
@@ -150,7 +152,9 @@ data
       -- Track nodes that have been split at each depth
       splitNodesByDepth :: IORef (HM.HashMap Int (HS.HashSet NodeId)),
       -- Track the first depth that is not fully split
-      firstNotFullySplitDepth :: IORef Int
+      firstNotFullySplitDepth :: IORef Int,
+      -- Track all nodes that have ever been started by depth
+      everStartedNodesByDepth :: IORef (HM.HashMap Int (HS.HashSet NodeId))
     } ->
     Scheduler
       sketchSpec
@@ -207,6 +211,7 @@ newScheduler config = do
   depthToNodes <- newIORef HM.empty
   splitNodesByDepth <- newIORef HM.empty
   firstNotFullySplitDepth <- newIORef 0 -- Initialize to 0
+  everStartedNodesByDepth <- newIORef HM.empty -- Initialize to empty map
   return $ Scheduler {..}
 
 getCPid ::
@@ -870,3 +875,40 @@ updateFirstNotFullySplitDepth scheduler@Scheduler {..} = do
 
         -- Recursively check the next depth too
         updateFirstNotFullySplitDepth scheduler
+
+-- | Get all nodes that have ever been started across all depths
+getEverStartedNodes ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  IO (HS.HashSet NodeId)
+getEverStartedNodes Scheduler {..} = do
+  everStartedMap <- readIORef everStartedNodesByDepth
+  return $ HS.unions $ HM.elems everStartedMap
+
+-- | Get all nodes that have ever been started at a specific depth
+getEverStartedNodesByDepth ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  Int ->
+  IO (HS.HashSet NodeId)
+getEverStartedNodesByDepth Scheduler {..} depth = do
+  everStartedMap <- readIORef everStartedNodesByDepth
+  return $ HM.lookupDefault HS.empty depth everStartedMap
