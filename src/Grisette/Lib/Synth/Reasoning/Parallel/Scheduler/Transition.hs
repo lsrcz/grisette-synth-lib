@@ -11,7 +11,8 @@ where
 
 import Control.Monad (unless)
 import qualified Data.HashMap.Strict as HM
-import Data.IORef (readIORef)
+import qualified Data.HashSet as HS
+import Data.IORef (modifyIORef', readIORef)
 import Data.String (IsString (fromString))
 import Data.Time
   ( diffUTCTime,
@@ -54,6 +55,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree
   ( NodeId,
+    nodeDepth,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState
   ( NodeState
@@ -81,6 +83,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         config,
         currentMinimalCost,
         dcTree,
+        everStartedNodesByDepth,
         nodeInfo,
         nodeQueue,
         nodeStates,
@@ -222,6 +225,16 @@ nodeStartTransition scheduler@Scheduler {..} nid = do
     Just state -> do
       newState <- nodeStateStartTransition state
       updateNodeState scheduler nid newState
+
+      -- Get the depth of the node
+      tree <- readIORef dcTree
+      let depth = nodeDepth tree nid
+
+      -- Add the node to the everStartedNodesByDepth for its depth
+      modifyIORef' everStartedNodesByDepth $ \m ->
+        let existingNodes = HM.lookupDefault HS.empty depth m
+            updatedNodes = HS.insert nid existingNodes
+         in HM.insert depth updatedNodes m
     Nothing -> error "Should not happen"
 
 nodeResetTransition ::

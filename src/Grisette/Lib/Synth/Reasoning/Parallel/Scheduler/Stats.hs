@@ -144,6 +144,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
         splitNodesByDepth,
         stopped
       ),
+    getEverStartedNodes,
+    getEverStartedNodesByDepth,
     getFirstNotFullySplitDepth,
     getNodesByDepth,
     getNodesByStatus,
@@ -202,6 +204,7 @@ data Stats = Stats
     numSplitNodes :: Int,
     numDoNotNeedChildNodes :: Int,
     numNeedSplitNodes :: Int,
+    numEverStartedNodes :: Int,
     viableStats :: SummaryStats,
     refiningStats :: SummaryStats,
     succeedStats :: SummaryStats,
@@ -380,6 +383,12 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
   justStartedNodes <- getNodeSet StatusJustStarted
   notYetStartedNodes <- getNodeSet StatusNotYetStarted
 
+  -- Get all nodes that have ever been started (for the specific depth if provided)
+  everStartedNodeSet <- case maybeDepth of
+    Nothing -> getEverStartedNodes scheduler
+    Just depth -> getEverStartedNodesByDepth scheduler depth
+  let everStartedNodeCount = HS.size everStartedNodeSet
+
   -- Get split nodes for this depth (or all depths)
   splitNodes <- case maybeDepth of
     Just depth -> getSplitNodesByDepth scheduler depth
@@ -500,6 +509,7 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
       splitNodesCount
       (HS.size doNotNeedChildNodes)
       (HS.size needSplitNodes)
+      everStartedNodeCount
       (createSummary viableNodeStats)
       (createSummary refiningNodeStats)
       (createSummary succeedNodeStats)
@@ -805,7 +815,9 @@ logStatistics
               <> pformat (numDoNotNeedChildNodes stats)
               <> " do not need child, "
               <> pformat (numNeedSplitNodes stats)
-              <> " need split):"
+              <> " need split, "
+              <> pformat (numEverStartedNodes stats)
+              <> " ever started):"
           )
             : (fromString <$> formattedStats)
 
