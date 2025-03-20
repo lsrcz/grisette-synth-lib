@@ -132,7 +132,6 @@ nodeTransition
         curTime <- getCurrentTime
         let elapsedTime = diffUTCTime curTime startTime
 
-        (newState, nextStep) <- nodeStateTransition curTime state response
         unless (responseType response == Right MessageGotExample) $ do
           case nodeResponseReverseLog state of
             [] ->
@@ -162,6 +161,8 @@ nodeTransition
                         <> "): ",
                       pformat response
                     ]
+        (newState, nextStep) <- nodeStateTransition curTime state response
+        unless (responseType response == Right MessageGotExample) $ do
           logMultiLineDoc logger NOTICE $
             vsep
               [ nest 2 $

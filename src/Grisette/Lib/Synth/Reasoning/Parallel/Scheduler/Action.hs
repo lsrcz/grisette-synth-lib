@@ -156,7 +156,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition
   )
 import Grisette.Lib.Synth.Util.Exception (catchErrno)
 import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
-import System.Log.Logger (Priority (NOTICE))
+import System.Log.Logger (Priority (DEBUG, NOTICE))
 import System.Posix
   ( CPid (CPid),
     sigKILL,
@@ -209,10 +209,16 @@ killNode ::
   NodeId ->
   IO (ProcessResponse conProg symSemObj symVal conSemObj conVal matcher)
 killNode scheduler nid = do
+  logMultiLineDoc (logger $ config scheduler) DEBUG $
+    "Start killing node " <> pformat nid
   process <- getProcess scheduler nid
   signalProcessGroup sigKILL (pgid process) `catchErrno` \err errno ->
     if errno == eSRCH then return () else throwIO err
+  logMultiLineDoc (logger $ config scheduler) DEBUG $
+    "Sent signal to group " <> viaShow (pgid process)
   Just response <- _getNodeResponse scheduler True nid
+  logMultiLineDoc (logger $ config scheduler) DEBUG $
+    "Got response from node " <> pformat nid
   return response
 
 checkResponse ::
