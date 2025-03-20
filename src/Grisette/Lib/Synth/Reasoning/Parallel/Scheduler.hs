@@ -35,6 +35,7 @@ import Data.Time
     getCurrentTime,
   )
 import GHC.Conc.Signal (setHandler)
+import Grisette (PPrint (pformat))
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
 import qualified Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.BiasedQueue as Q
@@ -103,6 +104,7 @@ step ::
   IO ()
 step
   scheduler@Scheduler {config = SchedulerConfig {..}, ..} = do
+    logMultiLineDoc logger DEBUG "Step"
     startCost <- getCurrentMinimalCost scheduler
     curNodeToProcess <- readIORef nodeToProcess
     cancelledNodes <-
@@ -114,19 +116,24 @@ step
               return $ fmap (nid,) r
           )
         $ HM.toList curNodeToProcess
+    logMultiLineDoc logger DEBUG "Computed cancelled nodes"
     otherNodes <-
       fmap HM.fromList
         $ mapMaybeM
-          ( \(nid, _) ->
+          ( \(nid, _) -> do
+              logMultiLineDoc logger DEBUG $ "Checking node " <> pformat nid
               case HM.lookup nid cancelledNodes of
                 Just _ -> return Nothing
                 Nothing -> fmap (nid,) <$> checkResponse scheduler nid
           )
         $ HM.toList curNodeToProcess
+    logMultiLineDoc logger DEBUG "Computed other nodes"
 
     let allNodes = HM.union cancelledNodes otherNodes
     -- do the next step
+    logMultiLineDoc logger DEBUG "Running actions"
     HM.traverseWithKey (runAction scheduler) allNodes
+    logMultiLineDoc logger DEBUG "Ran actions"
     -- remove failure
     curDcTree <- readIORef dcTree
     mapM_
@@ -143,7 +150,9 @@ step
               mapM_ (resetIfJustStarted scheduler) $
                 HM.keys allNodes
       _ -> return ()
+    logMultiLineDoc logger DEBUG "Restarted"
     startQueued scheduler
+    logMultiLineDoc logger DEBUG "Started queued"
 
 shutdownScheduler ::
   Bool ->
