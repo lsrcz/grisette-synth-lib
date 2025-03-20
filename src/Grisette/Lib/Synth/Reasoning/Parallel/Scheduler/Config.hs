@@ -75,7 +75,9 @@ data
       schedulerRandomSeed :: Int,
       pollIntervalSeconds :: Double,
       biasedDrawProbability :: Double,
-      referenceNumInsts :: Maybe Int
+      referenceNumInsts :: Maybe Int,
+      enablePlotting :: Bool,
+      enableTreeStats :: Bool
     } ->
     SchedulerConfig
       sketchSpec

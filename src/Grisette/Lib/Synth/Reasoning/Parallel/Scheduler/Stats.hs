@@ -10,7 +10,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
   )
 where
 
-import Control.Monad (forM_, guard, unless)
+import Control.Monad (forM_, guard, unless, when)
 import Data.Bifunctor (second)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
@@ -76,6 +76,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         countNumProgsEvidence,
         doDeadCodeElimination,
         easySketchFromFastResult,
+        enablePlotting,
         exactCost,
         fastTrackTimeoutSeconds,
         initialMinimalCost,
@@ -850,10 +851,11 @@ logLayeredStatistics
               let stats = depthStats HM.! depth
 
               -- Plot and log statistics for this depth
-              plotStatistics
-                (logRootDir logConfig <> "/stats." <> show depth <> ".svg")
-                title
-                stats
+              when enablePlotting $
+                plotStatistics
+                  (logRootDir logConfig <> "/stats." <> show depth <> ".svg")
+                  title
+                  stats
               logStatistics (Just depth) stats scheduler
 
               -- Process next depth
@@ -888,7 +890,8 @@ reportStatistics
 
     -- Log and plot overall statistics
     logStatistics Nothing stats scheduler
-    plotStatistics (logRootDir logConfig <> "/stats.svg") title stats
+    when enablePlotting $
+      plotStatistics (logRootDir logConfig <> "/stats.svg") title stats
 
     -- Log and plot per-depth statistics
     logLayeredStatistics layerStats scheduler

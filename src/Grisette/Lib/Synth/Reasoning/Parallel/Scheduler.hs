@@ -205,8 +205,9 @@ installSchedulerSignalHandler logConfig scheduler@Scheduler {..} = do
           scheduler
         shutdownScheduler printInfo scheduler
         reportStatistics scheduler
-        logTreeStats DEBUG False scheduler
-        logTreeStats NOTICE True scheduler
+        when (enableTreeStats config) $ do
+          logTreeStats DEBUG False scheduler
+          logTreeStats NOTICE True scheduler
         exitImmediately ExitSuccess
   setHandler sigINT $ Just (const $ handler True, toDyn ())
   setHandler sigTERM $ Just (const $ handler True, toDyn ())
@@ -281,9 +282,9 @@ runWithScheduler
       curIter <- readIORef iter
       when (curIter `mod` 20 == 0) $
         reportStatistics scheduler
-      when (curIter `mod` 100 == 0) $
+      when (curIter `mod` 100 == 0 && enableTreeStats) $
         logTreeStats DEBUG False scheduler
-      when (curIter `mod` 20 == 0) $
+      when (curIter `mod` 20 == 0 && enableTreeStats) $
         logTreeStats NOTICE True scheduler
       putMVar (queueLock scheduler) ()
       curTime <- getCurrentTime
@@ -298,6 +299,7 @@ runWithScheduler
     writeResultsCSV (logRootDir logConfig <> "/results.csv") results scheduler
     shutdownScheduler True scheduler
     reportStatistics scheduler
-    logTreeStats DEBUG False scheduler
-    logTreeStats NOTICE True scheduler
+    when enableTreeStats $ do
+      logTreeStats DEBUG False scheduler
+      logTreeStats NOTICE True scheduler
     return results
