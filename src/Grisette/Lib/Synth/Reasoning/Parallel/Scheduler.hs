@@ -174,7 +174,7 @@ shutdownScheduler printInfo scheduler@Scheduler {..} = do
   when printInfo $
     logMultiLineDoc (logger config) NOTICE "Shutting down scheduler."
   nodeToProcess' <- readIORef nodeToProcess
-  mapM_ (killNode scheduler) $ HM.keys nodeToProcess'
+  mapM_ (flip (killNode scheduler) "Killed") $ HM.keys nodeToProcess'
   when printInfo $
     logMultiLineDoc (logger config) NOTICE "All processes cancelled."
   when printInfo $

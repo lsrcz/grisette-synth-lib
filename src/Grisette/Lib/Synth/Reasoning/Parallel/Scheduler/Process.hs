@@ -31,6 +31,7 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
     MessageType (..),
     messageType,
     responseType,
+    closeProcessPipes,
   )
 where
 
@@ -976,8 +977,8 @@ easySynthStep
           )
         return $ SynthStep (curTrack + 1)
 
-_closeProcessPipes :: Process -> IO ()
-_closeProcessPipes Process {..} = do
+closeProcessPipes :: Process -> IO ()
+closeProcessPipes Process {..} = do
   closeFd pipeRd
   closeFd pipeWr
 
@@ -993,13 +994,13 @@ _readProcessResponse ::
   IO (Either T.Text (Message conProg symSemObj symVal conSemObj conVal matcher))
 _readProcessResponse process@Process {..} (Exited ExitSuccess) = do
   msg <- readObject pipeRd
-  _closeProcessPipes process
+  closeProcessPipes process
   return $ Right msg
 _readProcessResponse process@Process {..} (Exited (ExitFailure e)) = do
-  _closeProcessPipes process
+  closeProcessPipes process
   return $ Left $ "Process exited with error code " <> T.pack (show e)
 _readProcessResponse process@Process {..} (Terminated signal dumped) = do
-  _closeProcessPipes process
+  closeProcessPipes process
   return $
     Left $
       "Process terminated by signal "
@@ -1041,7 +1042,7 @@ getProcessResponse blk process@Process {..} = do
         Nothing -> return Nothing
         Just msg@(Failure _ _) -> do
           _ <- getProcessStatus True False pid
-          _closeProcessPipes process
+          closeProcessPipes process
           return $ Just $ Right msg
         Just msg -> return $ Just $ Right msg
     Just status -> Just <$> _readProcessResponse process status

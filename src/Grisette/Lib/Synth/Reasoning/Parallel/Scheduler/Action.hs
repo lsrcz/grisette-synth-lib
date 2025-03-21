@@ -19,12 +19,14 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Action
   )
 where
 
+import Control.Concurrent.Async (async)
 import Control.Exception (throwIO)
 import Control.Monad (unless, void, when)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Data.IORef (modifyIORef', readIORef, writeIORef)
 import Data.Maybe (fromJust, isNothing)
+import qualified Data.Text as T
 import Data.Time
   ( nominalDiffTimeToSeconds,
   )
@@ -108,6 +110,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
         verifiers
       ),
     ProcessResponse,
+    closeProcessPipes,
     getProcessResponse,
     runRequestInSubProcess,
     sendNewMinimalCost,
@@ -159,6 +162,7 @@ import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import System.Log.Logger (Priority (DEBUG, NOTICE))
 import System.Posix
   ( CPid (CPid),
+    getProcessStatus,
     sigKILL,
     signalProcessGroup,
   )
@@ -194,6 +198,30 @@ _getNodeResponse
       _ -> return ()
     return response
 
+_asyncWaitDeadProcess ::
+  Scheduler
+    sketchSpec
+    sketch
+    conProg
+    costObj
+    cost
+    symSemObj
+    symVal
+    conSemObj
+    conVal
+    matcher ->
+  NodeId ->
+  IO ()
+_asyncWaitDeadProcess
+  scheduler@Scheduler {config = SchedulerConfig {..}}
+  nid = do
+    process <- getProcess scheduler nid
+    async $ getProcessStatus True False (pid process)
+    logMultiLineDoc logger DEBUG $
+      "(async) Node " <> pformat nid <> " terminated"
+    closeProcessPipes process
+    removeProcess scheduler nid
+
 killNode ::
   Scheduler
     sketchSpec
@@ -207,8 +235,9 @@ killNode ::
     conVal
     matcher ->
   NodeId ->
+  T.Text ->
   IO (ProcessResponse conProg symSemObj symVal conSemObj conVal matcher)
-killNode scheduler nid = do
+killNode scheduler nid message = do
   logMultiLineDoc (logger $ config scheduler) DEBUG $
     "Start killing node " <> pformat nid
   process <- getProcess scheduler nid
@@ -216,10 +245,8 @@ killNode scheduler nid = do
     if errno == eSRCH then return () else throwIO err
   logMultiLineDoc (logger $ config scheduler) DEBUG $
     "Sent signal to group " <> viaShow (pgid process)
-  Just response <- _getNodeResponse scheduler True nid
-  logMultiLineDoc (logger $ config scheduler) DEBUG $
-    "Got response from node " <> pformat nid
-  return response
+  _asyncWaitDeadProcess scheduler nid
+  return $ Left $ "Killed: " <> message
 
 checkResponse ::
   Scheduler
@@ -262,7 +289,7 @@ killIfTimeout scheduler@Scheduler {..} nid = do
     then do
       logMultiLineDoc (logger config) NOTICE $
         "Node " <> pformat nid <> " timed out, killing it."
-      response <- killNode scheduler nid
+      response <- killNode scheduler nid "Timed out"
       Just <$> nodeTransition scheduler nid response
     else return Nothing
 
@@ -302,7 +329,7 @@ killIfDividedChildrenAllStarted scheduler@Scheduler {..} nid = do
                   <> pformat nid
                   <> " has all its divided children started, and have no "
                   <> "more than 2 running children, killing it."
-              response <- killNode scheduler nid
+              response <- killNode scheduler nid "All divided children started"
               Just <$> nodeTransition scheduler nid response
             [child] | numRunning <= 1 -> do
               logMultiLineDoc (logger config) NOTICE $
@@ -313,7 +340,7 @@ killIfDividedChildrenAllStarted scheduler@Scheduler {..} nid = do
                   <> "child."
               _startNode scheduler child
               modifyIORef' nodeQueue $ Q.delete child
-              response <- killNode scheduler nid
+              response <- killNode scheduler child "All divided children started"
               Just <$> nodeTransition scheduler nid response
             _ -> return Nothing
         _ -> return Nothing
@@ -342,7 +369,7 @@ _killInferredFailure scheduler@Scheduler {..} nid = do
       signalProcessGroup sigKILL (pgid process) `catchErrno` \err errno ->
         if errno == eSRCH then return () else throwIO err
       nodeInferFailureTransition scheduler nid
-      _ <- _getNodeResponse scheduler True nid
+      _asyncWaitDeadProcess scheduler nid
       return ()
 
 _setInferredFailure ::
@@ -479,7 +506,7 @@ resetIfJustStarted scheduler@Scheduler {..} nid = do
               <> ", which have run for "
               <> viaShow elapsedTime
               <> " with new cost."
-          _ <- killNode scheduler nid
+          _ <- killNode scheduler nid "Reset"
           nodeResetTransition scheduler nid
           _startNode scheduler nid
     _ -> return ()
