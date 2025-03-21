@@ -87,7 +87,7 @@ getDefaultLogger logConfig@LogConfig {..} enableDebugLogging = do
   hstderr <- streamHandler stderr NOTICE >>= setDefaultFormatter
   let logger' =
         setHandlers ([h, hstderr] ++ [hdebug | enableDebugLogging])
-          . setLevel DEBUG
+          . setLevel (if enableDebugLogging then DEBUG else NOTICE)
           . removeHandler
           $ logger
   saveGlobalLogger logger'

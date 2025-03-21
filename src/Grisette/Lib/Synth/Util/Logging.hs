@@ -6,6 +6,8 @@ module Grisette.Lib.Synth.Util.Logging
   )
 where
 
+import Control.Monad (when)
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Grisette (Doc, PPrint (pformat))
 import Grisette.Lib.Synth.Util.Pretty (renderDoc)
@@ -19,6 +21,7 @@ import System.Console.ANSI
 import System.Log.Logger
   ( Logger,
     Priority (ALERT, CRITICAL, DEBUG, EMERGENCY, ERROR, INFO, NOTICE, WARNING),
+    getLevel,
     logL,
   )
 
@@ -42,19 +45,21 @@ logLWithColoredMarker logger prio marker msg =
 
 logMultiLine :: Logger -> Priority -> String -> IO ()
 logMultiLine logger prio msg = do
-  let allLines = lines msg
-  case length allLines of
-    0 -> logLWithColoredMarker logger prio "> " "<empty message>"
-    1 -> logLWithColoredMarker logger prio "> " (head allLines)
-    _ -> do
-      let goRemaining [] = return ()
-          goRemaining [lastLine] =
-            logLWithColoredMarker logger prio "└ " lastLine
-          goRemaining (l : ls) = do
-            logLWithColoredMarker logger prio "│ " l
-            goRemaining ls
-      logLWithColoredMarker logger prio "┌ " (head allLines)
-      goRemaining (tail allLines)
+  let level = fromMaybe DEBUG (getLevel logger)
+  when (prio >= level) $ do
+    let allLines = lines msg
+    case length allLines of
+      0 -> logLWithColoredMarker logger prio "> " "<empty message>"
+      1 -> logLWithColoredMarker logger prio "> " (head allLines)
+      _ -> do
+        let goRemaining [] = return ()
+            goRemaining [lastLine] =
+              logLWithColoredMarker logger prio "└ " lastLine
+            goRemaining (l : ls) = do
+              logLWithColoredMarker logger prio "│ " l
+              goRemaining ls
+        logLWithColoredMarker logger prio "┌ " (head allLines)
+        goRemaining (tail allLines)
 
 logMultiLineText :: Logger -> Priority -> T.Text -> IO ()
 logMultiLineText logger prio = logMultiLine logger prio . T.unpack
