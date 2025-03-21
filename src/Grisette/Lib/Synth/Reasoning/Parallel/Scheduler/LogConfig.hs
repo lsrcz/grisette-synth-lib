@@ -82,11 +82,16 @@ getDefaultLogger logConfig@LogConfig {..} enableDebugLogging = do
   defaultFormatter <- defaultFormatter "[$time : $loggername : $prio] $msg"
   let setDefaultFormatter lh = return $ setFormatter lh defaultFormatter
   let rootDir = logRootDir logConfig
-  hdebug <- fileHandler (rootDir <> "/debug.log") DEBUG >>= setDefaultFormatter
   h <- fileHandler (rootDir <> "/notice.log") NOTICE >>= setDefaultFormatter
   hstderr <- streamHandler stderr NOTICE >>= setDefaultFormatter
+  handlers <-
+    if enableDebugLogging
+      then do
+        hdebug <- fileHandler (rootDir <> "/debug.log") DEBUG >>= setDefaultFormatter
+        return [h, hstderr, hdebug]
+      else return [h, hstderr]
   let logger' =
-        setHandlers ([h, hstderr] ++ [hdebug | enableDebugLogging])
+        setHandlers handlers
           . setLevel (if enableDebugLogging then DEBUG else NOTICE)
           . removeHandler
           $ logger
