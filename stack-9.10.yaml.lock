@@ -5,15 +5,15 @@
 
 packages:
 - completed:
-    commit: a1b2a6f484953735a29bd54d1f28896318aa75a6
+    commit: 450ce8a7f3e2341b9a0af71413c6be22bbe0bcc6
     git: https://github.com/lsrcz/grisette.git
     name: grisette
     pantry-tree:
-      sha256: 1aa2dafa4d72669f6525be193332985ec03c8b8d2e13205072afd5f34ca02b56
-      size: 31631
-    version: 0.11.0.0
+      sha256: 58e30f0084cfac64fa07d8aca0d5ea182e8994a8068d3400bfc4050a918d57f2
+      size: 31721
+    version: 0.12.0.0
   original:
-    commit: a1b2a6f484953735a29bd54d1f28896318aa75a6
+    commit: 450ce8a7f3e2341b9a0af71413c6be22bbe0bcc6
     git: https://github.com/lsrcz/grisette.git
 - completed:
     hackage: quickcheck-with-counterexamples-1.2@sha256:d322d79008602df26f5eb4e1379e5b58bf1a92604df8601e71e200cfc3e847a3,1688
@@ -24,7 +24,7 @@ packages:
     hackage: quickcheck-with-counterexamples-1.2
 snapshots:
 - completed:
-    sha256: 08bd13ce621b41a8f5e51456b38d5b46d7783ce114a50ab604d6bbab0d002146
-    size: 720271
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/43.yaml
-  original: lts-22.43
+    sha256: 9cc7614137f25ecbb5235ed92e8572328350916614ae50d8068b439115224457
+    size: 712033
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2025/6/12.yaml
+  original: nightly-2025-06-12

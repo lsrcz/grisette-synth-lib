@@ -44,6 +44,7 @@ import Grisette.Lib.Synth.Util.Pretty (renderDoc)
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 componentBagTest :: Test
 componentBagTest =
@@ -224,5 +225,5 @@ componentBagTest =
                       }
                   )
                 ]
-        genSymSimple bagTable "prog" @?= componentProg
+        genSymSimple bagTable "prog" .@?= componentProg
     ]

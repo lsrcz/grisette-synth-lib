@@ -15,6 +15,7 @@ module Grisette.Lib.Synth.Program.Concrete.MayMultiPathTest
   )
 where
 
+import Control.Monad.Except (runExceptT)
 import Data.List ((\\))
 import GHC.Generics (Generic)
 import Grisette
@@ -30,6 +31,7 @@ import Grisette
     ordClasses,
     unifiedSymOrdClasses,
   )
+import Grisette.Internal.Core.Control.Monad.Union (isMerged)
 import Grisette.Lib.Synth.Context (MonadContext, SymbolicContext)
 import Grisette.Lib.Synth.Operator.OpSemantics (OpSemantics (applyOp))
 import Grisette.Lib.Synth.Operator.OpTyping (OpTyping (OpTypeType, typeOp))
@@ -45,7 +47,7 @@ import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Grisette.Lib.Synth.Util.Show (showAsText)
 import Test.Framework (Test, TestOptions' (topt_timeout), plusTestOptions)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit ((@?=))
+import Test.HUnit (assertBool)
 
 newtype MayAddOneOp = MayAddOneOp SymBool deriving (Generic)
 
@@ -77,8 +79,8 @@ instance
   applyOp _ _ _ _ =
     error "Incorrect number of arguments for MayAddOne, expected 1 argument."
 
-prog :: Prog MayAddOneOp Int IntType
-prog =
+prog :: Int -> Prog MayAddOneOp Int IntType
+prog n =
   Prog
     [ProgArg "x" 0 IntType]
     ( fmap
@@ -88,14 +90,14 @@ prog =
               [i]
               [i + 1]
         )
-        [0 .. 99]
+        [0 .. n]
     )
-    [ProgRes 100 IntType]
+    [ProgRes n IntType]
 
 mayMultiPathTest :: Test
 mayMultiPathTest =
   plusTestOptions (mempty {topt_timeout = Just $ Just 5000000}) $
     testCase "ProgMayMultiPath should not have path explosion" $ do
       let actual =
-            runProg Sem mempty (ProgMayMultiPath prog) [0] :: SymbolicContext [Int]
-      actual @?= actual
+            runProg Sem mempty (ProgMayMultiPath $ prog 100) [0] :: SymbolicContext [Int]
+      assertBool "isMerged" $ isMerged $ runExceptT actual

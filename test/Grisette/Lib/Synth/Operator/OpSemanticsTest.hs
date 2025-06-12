@@ -13,7 +13,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 opSemanticsTest :: Test
 opSemanticsTest =
@@ -32,7 +32,7 @@ opSemanticsTest =
         let expected1 =
               mrgIf ("a" .|| "b") (throwError "Err") $
                 mrgIf "c" (mrgReturn [3]) (mrgReturn [4])
-        actual1 @?= expected1
+        actual1 .@?= expected1
         let actual2 =
               mrgModifyError (const "Err") $
                 applyOp TestSemanticsObj mempty op [5, 3] ::
@@ -41,5 +41,5 @@ opSemanticsTest =
               mrgIf "a" (return [8]) $
                 mrgIf "b" (return [1, 2]) $
                   throwError "Err"
-        actual2 @?= expected2
+        actual2 .@?= expected2
     ]

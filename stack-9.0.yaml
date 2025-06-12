@@ -3,7 +3,6 @@
 # Some commonly used options have been documented as comments in this file.
 # For advanced use and comprehensive documentation of the format, please see:
 # https://docs.haskellstack.org/en/stable/yaml_configuration/
-
 # Resolver to choose a 'specific' stackage snapshot or a compiler version.
 # A snapshot resolver dictates the compiler version and the set of packages
 # to be used for project dependencies. For example:
@@ -17,8 +16,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver:
-  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml
+resolver: lts-19.33
 # User packages to be built.
 # Various formats can be used as shown in the example below.
 #
@@ -42,12 +40,8 @@ packages:
 # extra-deps: []
 extra-deps:
   - git: https://github.com/lsrcz/grisette.git
-    commit: a1b2a6f484953735a29bd54d1f28896318aa75a6
-  - doctest-0.18.2
+    commit: 450ce8a7f3e2341b9a0af71413c6be22bbe0bcc6
   - quickcheck-with-counterexamples-1.2
-  - unordered-containers-0.2.17.0
-  - ordered-containers-0.2.3
-  - sbv-8.17
   - Chart-1.9.3
   - Chart-cairo-1.9.3
   - cairo-0.13.10.0

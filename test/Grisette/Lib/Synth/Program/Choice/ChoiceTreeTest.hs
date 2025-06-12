@@ -27,6 +27,7 @@ import Grisette.Lib.Synth.Util.Pretty (renderDoc)
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 choiceTreeTest :: Test
 choiceTreeTest =
@@ -264,11 +265,11 @@ choiceTreeTest =
                     (mrgIf (isym "a" 2) (return Inc) (return Double))
                 )
         let value = genSym tree "a" :: Union TestSemanticsOp
-        value @?= expected
+        value .@?= expected
         let value = genSym tree "a" :: Union (Union TestSemanticsOp)
-        value @?= mrgSingle expected
+        value .@?= mrgSingle expected
         let value = genSymSimple tree "a" :: Union TestSemanticsOp
-        value @?= expected
+        value .@?= expected
         let value = genSymSimple tree "a" :: Union (Union TestSemanticsOp)
-        value @?= mrgSingle expected
+        value .@?= mrgSingle expected
     ]

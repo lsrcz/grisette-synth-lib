@@ -19,7 +19,7 @@ import Grisette.Lib.Synth.Program.ProgUtil
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 prog :: Prog T.Text Integer SymInteger T.Text
 prog =
@@ -39,19 +39,19 @@ progUtilTest =
     "ProgUtil"
     [ testGroup
         "ProgUtil"
-        [ testCase "getProgArgIds" $ getProgArgIds prog @?= [0, 1],
-          testCase "getProgResIds" $ getProgResIds prog @?= [2, 3],
-          testCase "getProgNumStmts" $ getProgNumStmts prog @?= 2,
+        [ testCase "getProgArgIds" $ getProgArgIds prog .@?= [0, 1],
+          testCase "getProgResIds" $ getProgResIds prog .@?= [2, 3],
+          testCase "getProgNumStmts" $ getProgNumStmts prog .@?= 2,
           testCase "getProgStmtAtIdx" $
-            getProgStmtAtIdx prog 0 @?= Right (Stmt "s1" [0] 1 [2] 1),
+            getProgStmtAtIdx prog 0 .@?= Right (Stmt "s1" [0] 1 [2] 1),
           testCase "getProgStmtAtIdx" $
-            getProgStmtAtIdx prog 1 @?= Right (Stmt "s2" [1] 1 [3] 1)
+            getProgStmtAtIdx prog 1 .@?= Right (Stmt "s2" [1] 1 [3] 1)
         ],
       testGroup
         "StmtUtil"
-        [ testCase "getStmtArgIds" $ getStmtArgIds stmt @?= [0],
-          testCase "getStmtResIds" $ getStmtResIds stmt @?= [2],
-          testCase "getStmtOp" $ getStmtOp stmt @?= "s1",
-          testCase "getStmtDisabled" $ getStmtDisabled stmt @?= con False
+        [ testCase "getStmtArgIds" $ getStmtArgIds stmt .@?= [0],
+          testCase "getStmtResIds" $ getStmtResIds stmt .@?= [2],
+          testCase "getStmtOp" $ getStmtOp stmt .@?= "s1",
+          testCase "getStmtDisabled" $ getStmtDisabled stmt .@?= con False
         ]
     ]

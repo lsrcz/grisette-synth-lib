@@ -17,6 +17,7 @@ import Grisette.Lib.Synth.TypeSignature (TypeSignature (TypeSignature))
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 opTypingTest :: Test
 opTypingTest =
@@ -40,7 +41,7 @@ opTypingTest =
                 ( mrgReturn $
                     TypeSignature [IntType, IntType] [IntType, IntType]
                 )
-        actual @?= expected,
+        actual .@?= expected,
       testCase "Default SymOpLimits" $ do
         symOpMaximumArgNum Add @?= 2
         symOpMaximumResNum Add @?= 1,

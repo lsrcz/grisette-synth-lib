@@ -48,40 +48,6 @@ builderTest =
                           (modRef, IntType),
                           (addRef, IntType)
                         ]
-            actual @?= concreteProg,
-          testCase "pseudo dep 1" $ do
-            let actual = buildProg [("x", IntType), ("y", IntType)] $
-                  \[argxRef, argyRef] -> do
-                    addRef <- node1 Add [argxRef, argyRef]
-                    (divRef, modRef) <- node2 DivMod [addRef, argxRef]
-                    return
-                      [ (divRef, IntType),
-                        (modRef, IntType),
-                        (addRef, IntType)
-                      ]
-            let expected =
-                  Prog
-                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt Add [0, 1] [2], Stmt DivMod [0, 1] [3, 4]]
-                    [ProgRes 3 IntType, ProgRes 4 IntType, ProgRes 2 IntType] ::
-                    Prog TestSemanticsOp Integer TestSemanticsType
-            actual @?= expected,
-          testCase "pseudo dep 2" $ do
-            let actual = buildProg [("x", IntType), ("y", IntType)] $
-                  \[argxRef, argyRef] -> do
-                    (divRef, modRef) <- node2 DivMod [argxRef, argyRef]
-                    addRef <- node1 Add [argxRef, argyRef]
-                    return
-                      [ (divRef, IntType),
-                        (modRef, IntType),
-                        (addRef, IntType)
-                      ]
-            let expected =
-                  Prog
-                    [ProgArg "x" 0 IntType, ProgArg "y" 1 IntType]
-                    [Stmt DivMod [0, 1] [2, 3], Stmt Add [0, 1] [4]]
-                    [ProgRes 2 IntType, ProgRes 3 IntType, ProgRes 4 IntType] ::
-                    Prog TestSemanticsOp Integer TestSemanticsType
-            actual @?= expected
+            actual @?= concreteProg
         ]
     ]

@@ -26,7 +26,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 genIntermediateTest :: Test
 genIntermediateTest =
@@ -38,7 +38,7 @@ genIntermediateTest =
                 genIntermediates TestSemanticsObj [IntType, IntType] ::
                 SymbolicContext [SymInteger]
         let expected = mrgReturn [isym "x" 0, isym "x" 1]
-        actual @?= expected,
+        actual .@?= expected,
       testCase "genOpIntermediates" $ do
         let actual =
               flip runFreshT "x" $
@@ -50,5 +50,5 @@ genIntermediateTest =
         let expected =
               mrgReturn $
                 Intermediates [isym "x" 0, isym "x" 1] [isym "x" 2, isym "x" 3]
-        actual @?= expected
+        actual .@?= expected
     ]

@@ -17,6 +17,7 @@ import Grisette.Lib.Synth.Program.ProgUtil
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 prog :: Prog T.Text Int T.Text
 prog =
@@ -49,6 +50,6 @@ progUtilTest =
         [ testCase "getStmtArgIds" $ getStmtArgIds stmt @?= [1],
           testCase "getStmtResIds" $ getStmtResIds stmt @?= [3],
           testCase "getStmtOp" $ getStmtOp stmt @?= "s1",
-          testCase "getStmtDisabled" $ getStmtDisabled stmt @?= con False
+          testCase "getStmtDisabled" $ getStmtDisabled stmt .@?= con False
         ]
     ]

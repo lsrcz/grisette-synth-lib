@@ -14,7 +14,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   )
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 prog ::
   ChoiceTree TestSemanticsOp ->
@@ -36,4 +36,4 @@ genSymSimpleTest =
           r1 <- node1 (mrgIf (isym "prog" 0) (return Add) (return DivMod)) [x, y]
           r2 <- node1 (mrgIf (isym "prog" 1) (return Inc) (return Double)) [x, y]
           return [(r1, IntType), (r2, IntType)]
-    p' @?= expected
+    p' .@?= expected

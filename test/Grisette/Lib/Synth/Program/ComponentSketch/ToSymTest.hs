@@ -17,7 +17,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 toSymTest :: Test
 toSymTest =
@@ -42,5 +42,5 @@ toSymTest =
                 ]
                 [ProgRes 3 IntType, ProgRes 4 IntType] ::
                 Prog (Union TestSemanticsOp) (SymWordN 8) TestSemanticsType
-        toSym prog @?= expected
+        toSym prog .@?= expected
     ]

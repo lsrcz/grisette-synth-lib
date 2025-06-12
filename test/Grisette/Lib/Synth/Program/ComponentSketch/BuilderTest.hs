@@ -50,7 +50,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   )
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 builderTest :: Test
 builderTest =
@@ -69,7 +69,7 @@ builderTest =
                   stmtDisabled = isym "x" 5,
                   stmtMustBeAfter = []
                 }
-        runFresh actual "x" @?= [expected],
+        runFresh actual "x" .@?= [expected],
       testCase "simpleFreshStmt'" $ do
         let actual = do
               precursor <-
@@ -93,7 +93,7 @@ builderTest =
                   stmtMustBeAfter =
                     [isym "x" 3, isym "x" 4, isym "x" 10, isym "x" 11]
                 }
-        runFresh actual "x" @?= [expected],
+        runFresh actual "x" .@?= [expected],
       testCase "freshStmt" $ do
         let actual =
               freshStmt (chooseFresh [Add, DivMod]) ::
@@ -108,7 +108,7 @@ builderTest =
                   stmtDisabled = isym "x" 7,
                   stmtMustBeAfter = []
                 }
-        runFresh actual "x" @?= [expected],
+        runFresh actual "x" .@?= [expected],
       testCase "freshStmt'" $ do
         let actual = do
               precursor <-
@@ -132,7 +132,7 @@ builderTest =
                   stmtMustBeAfter =
                     [isym "x" 3, isym "x" 4, isym "x" 10, isym "x" 11]
                 }
-        runFresh actual "x" @?= [expected],
+        runFresh actual "x" .@?= [expected],
       testCase "freshStmts'" $ do
         let actual = do
               precursor <-
@@ -193,7 +193,7 @@ builderTest =
                       ]
                   }
               ]
-        runFresh actual "x" @?= expected,
+        runFresh actual "x" .@?= expected,
       testGroup
         "MkProg"
         [ testCase "Non-fresh" $ do
@@ -212,7 +212,7 @@ builderTest =
                       Stmt DivMod ["g", "h"] "i" ["j", "k"] "l" "m" []
                     ]
                     [ProgRes "n" IntType, ProgRes "o" IntType]
-            actual @?= expected,
+            actual .@?= expected,
           testCase "fresh" $ do
             let actual =
                   flip runFresh "x" $
@@ -245,7 +245,7 @@ builderTest =
                     [ ProgRes (isym "x" 13) IntType,
                       ProgRes (isym "x" 14) IntType
                     ]
-            actual @?= expected
+            actual .@?= expected
         ],
       testCase "MkFreshProg" $ do
         let actual =
@@ -278,7 +278,7 @@ builderTest =
                 [ ProgRes (isym "x" 13) IntType,
                   ProgRes (isym "x" 14) IntType
                 ]
-        actual @?= expected,
+        actual .@?= expected,
       testCase "fromConcrete" $ do
         let conProg =
               Concrete.Prog
@@ -317,5 +317,5 @@ builderTest =
                   ProgRes (isym "x" 14) IntType,
                   ProgRes (isym "x" 15) IntType
                 ]
-        runFresh actual "x" @?= expected
+        runFresh actual "x" .@?= expected
     ]

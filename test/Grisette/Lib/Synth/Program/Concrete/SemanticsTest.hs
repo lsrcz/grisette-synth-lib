@@ -22,6 +22,7 @@ import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
+import Test.SymbolicAssertion ((.@?=))
 
 data SemanticsTestCase = SemanticsTestCase
   { semanticsTestCaseName :: String,
@@ -123,5 +124,5 @@ semanticsTest =
                 (ProgMayMultiPath prog)
                 (toSym args) ::
                 SymbolicContext [SymInteger]
-        actual @?= toSym (liftEither expected :: SymbolicContext [Integer])
+        actual .@?= toSym (liftEither expected :: SymbolicContext [Integer])
       ]
