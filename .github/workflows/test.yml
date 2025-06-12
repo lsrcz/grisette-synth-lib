@@ -14,10 +14,10 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         plan:
-          - {build: nix, arg: "", ismain: false, continue-on-error: false, ghc: "8107", cachekey: "nix-8107"}
-          - {build: stack, arg: "--stack-yaml stack-lts-18.28-lowerbound.yaml", ismain: false, continue-on-error: false, ghc: "8107", cachekey: "stack-8107-lowerbound"}
-          - {build: nix, arg: "", ismain: false, continue-on-error: true, ghc: "902", cachekey: "nix-902"}
-          - {build: nix, arg: "", ismain: false, continue-on-error: false, ghc: "928", cachekey: "nix-928"}
+          - {build: stack, arg: "--stack-yaml stack-8.10-lowerbound.yaml", ismain: false, continue-on-error: false, ghc: "8107", cachekey: "stack-8107-lowerbound"}
+          - {build: stack, arg: "--stack-yaml stack-8.10.yaml", ismain: false, continue-on-error: false, ghc: "8107", cachekey: "stack-8107"}
+          - {build: stack, arg: "--stack-yaml stack-9.0.yaml", ismain: false, continue-on-error: false, ghc: "902", cachekey: "stack-902"}
+          - {build: stack, arg: "--stack-yaml stack-9.2.yaml", ismain: false, continue-on-error: false, ghc: "928", cachekey: "stack-928"}
           - {build: nix, arg: "", ismain: false, continue-on-error: false, ghc: "948", cachekey: "nix-948"}
           - {build: nix, arg: "", ismain: false, continue-on-error: false, ghc: "966", cachekey: "nix-966"}
           - {build: nix, arg: "", ismain: false, continue-on-error: false, ghc: "984", cachekey: "nix-984"}
