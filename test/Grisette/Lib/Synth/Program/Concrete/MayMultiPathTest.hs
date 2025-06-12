@@ -22,7 +22,7 @@ import Grisette
     Solvable (ssym),
     SymBool,
     Union,
-    allClasses0,
+    basicClasses0,
     derive,
     identifier,
     liftToMonadUnion,
@@ -49,13 +49,13 @@ import Test.HUnit ((@?=))
 
 newtype MayAddOneOp = MayAddOneOp SymBool deriving (Generic)
 
-derive [''MayAddOneOp] (allClasses0 \\ (ordClasses ++ unifiedSymOrdClasses))
+derive [''MayAddOneOp] (basicClasses0 \\ (ordClasses ++ unifiedSymOrdClasses))
 
 data Sem = Sem
 
 data IntType = IntType deriving (Generic)
 
-derive [''IntType] allClasses0
+derive [''IntType] basicClasses0
 
 mayAddOne :: SymBool -> Int -> Union Int
 mayAddOne s x = mrgIf s (return x) (return $ x + 1)

@@ -83,30 +83,29 @@ conProg =
   SymbolTable
     [ ( "trueBranch",
         Concrete.buildProg [("a", IntType), ("b", IntType)] $
-          \[a, b] ->
-            let [plus] = Concrete.node C.Plus 1 [a, b]
-             in [(plus, IntType)]
+          \[a, b] -> do
+            plus <- Concrete.node1 C.Plus [a, b]
+            return [(plus, IntType)]
       ),
       ( "falseBranch",
         Concrete.buildProg [("a", IntType), ("b", IntType)] $
-          \[a, b] ->
-            let [minus] = Concrete.node C.Minus 1 [a, b]
-             in [(minus, IntType)]
+          \[a, b] -> do
+            minus <- Concrete.node1 C.Minus [a, b]
+            return [(minus, IntType)]
       ),
       ( "prog",
         Concrete.buildProg [("a", IntType), ("b", IntType)] $
-          \[a, b] ->
-            let [equals] = Concrete.node C.Equals 1 [a, b]
-                [res] =
-                  Concrete.node
-                    ( C.If
-                        (TypeSignature [IntType, IntType] [IntType])
-                        "trueBranch"
-                        "falseBranch"
-                    )
-                    1
-                    [equals, a, b]
-             in [(res, IntType)]
+          \[a, b] -> do
+            equals <- Concrete.node1 C.Equals [a, b]
+            res <-
+              Concrete.node1
+                ( C.If
+                    (TypeSignature [IntType, IntType] [IntType])
+                    "trueBranch"
+                    "falseBranch"
+                )
+                [equals, a, b]
+            return [(res, IntType)]
       )
     ]
 

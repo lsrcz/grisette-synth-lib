@@ -5,7 +5,7 @@ where
 
 import qualified Data.HashSet as HS
 import qualified Data.Text as T
-import Grisette (Mergeable, PlainUnion (overestimateUnionValues), Union)
+import Grisette (Mergeable, Union, UnionView (overestimateUnionValues))
 
 class OpReachableSymbols op where
   opReachableSymbols :: op -> HS.HashSet T.Text

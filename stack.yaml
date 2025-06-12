@@ -3,7 +3,6 @@
 # Some commonly used options have been documented as comments in this file.
 # For advanced use and comprehensive documentation of the format, please see:
 # https://docs.haskellstack.org/en/stable/yaml_configuration/
-
 # Resolver to choose a 'specific' stackage snapshot or a compiler version.
 # A snapshot resolver dictates the compiler version and the set of packages
 # to be used for project dependencies. For example:
@@ -40,7 +39,7 @@ packages:
 #
 extra-deps:
   - git: https://github.com/lsrcz/grisette.git
-    commit: a1b2a6f484953735a29bd54d1f28896318aa75a6
+    commit: d1157b231529e33be7e399a82bc9ddb2b21b646e
   - quickcheck-with-counterexamples-1.2
 # Override default flag values for local packages and extra-deps
 # flags: {}

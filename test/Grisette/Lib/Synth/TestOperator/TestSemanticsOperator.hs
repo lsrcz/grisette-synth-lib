@@ -33,6 +33,7 @@ import Grisette
     MonadUnion,
     SafeDiv (safeDivMod),
     SymInteger,
+    Union,
     allClasses0,
     derive,
     liftToMonadUnion,
@@ -164,7 +165,7 @@ instance
         <> showAsText (length l)
         <> " arguments."
   applyOp _ _ DivMod [x, y] = do
-    r <- liftToMonadUnion $ runExceptT $ safeDivMod x y
+    r <- liftToMonadUnion (runExceptT @ArithException @Union $ safeDivMod x y)
     case r of
       Left (e :: ArithException) -> mrgThrowError $ "ArithException: " <> showAsText e
       Right (d, m) -> mrgReturn [d, m]

@@ -53,8 +53,8 @@ import Grisette
     ToCon (toCon),
     ToSym (toSym),
     Union,
-    allClasses01,
-    allClasses012,
+    basicClasses01,
+    basicClasses012,
     derive,
     deriveWith,
     mrgFmap,
@@ -165,12 +165,12 @@ data Prog op symVarId ty = Prog
 deriveWith
   mempty {useNoStrategy = True}
   [''ProgArg]
-  (allClasses01 \\ (ordClasses ++ unifiedSymOrdClasses))
+  (basicClasses01 \\ (ordClasses ++ unifiedSymOrdClasses))
 
 deriveWith
   mempty {useNoStrategy = True}
   [''Stmt, ''ProgRes, ''Prog]
-  (allClasses012 \\ (ordClasses ++ unifiedSymOrdClasses))
+  (basicClasses012 \\ (ordClasses ++ unifiedSymOrdClasses))
 
 deriveWith
   mempty {useNoStrategy = True}

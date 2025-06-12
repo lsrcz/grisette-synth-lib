@@ -10,7 +10,7 @@ import Grisette.Lib.Synth.Program.Choice.Split
   ( LowestSeqNum (lowestSeqNum),
     PartitionSpec (partitionSpec),
   )
-import Grisette.Lib.Synth.Program.Concrete (Prog, buildProg, node)
+import Grisette.Lib.Synth.Program.Concrete (Prog, buildProg, node1)
 import Grisette.Lib.Synth.TestOperator.TestSemanticsOperator
   ( TestSemanticsOp (Add, DivMod, Double, Inc),
     TestSemanticsType (IntType),
@@ -23,10 +23,10 @@ prog ::
   ChoiceTree TestSemanticsOp ->
   ChoiceTree TestSemanticsOp ->
   Prog (ChoiceTree TestSemanticsOp) Integer TestSemanticsType
-prog op1 op2 = buildProg [("x", IntType), ("y", IntType)] $ \[x, y] ->
-  let [r1] = node op1 1 [x, y]
-      [r2] = node op2 1 [x, y]
-   in [(r1, IntType), (r2, IntType)]
+prog op1 op2 = buildProg [("x", IntType), ("y", IntType)] $ \[x, y] -> do
+  r1 <- node1 op1 [x, y]
+  r2 <- node1 op2 [x, y]
+  return [(r1, IntType), (r2, IntType)]
 
 unsplit1 :: ChoiceTree TestSemanticsOp
 unsplit1 = Branch (Split 1 True) [Leaf [Add, DivMod], Leaf [Inc, Double]]

@@ -1,178 +1,188 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Grisette.Lib.Synth.Program.Concrete.Builder
   ( buildProg,
-    node,
-    node',
+    noden,
+    node1,
+    node2,
+    node3,
+    node4,
+    node5,
+    node6,
   )
 where
 
-import Control.Monad.State (MonadState (get, put), State, execState, gets)
-import qualified Data.HashMap.Lazy as M
-import Data.Hashable (Hashable)
-import Data.List (sortOn)
+import Control.Applicative (Alternative (empty, (<|>)))
+import Control.Monad (MonadPlus (mplus, mzero))
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Grisette
-  ( DeriveConfig (useNoStrategy),
-    allClasses01,
-    allClasses012,
-    deriveWith,
-  )
 import qualified Grisette.Lib.Synth.Program.Concrete.Program as Concrete
 import Grisette.Lib.Synth.VarId (ConcreteVarId)
 
-data NodeRef op ty = NodeRef
-  { nodeRef :: Node op ty,
-    nodeRetId :: Int
+newtype NodeRef = NodeRef
+  { nodeVarId :: Int
+  }
+  deriving (Generic, Show, Eq)
+
+data SimpleStmt op = SimpleStmt
+  { simpleStmtOp :: op,
+    simpleStmtArgIds :: [Int],
+    simpleStmtResIds :: [Int]
   }
   deriving (Generic)
 
-data ProgArg ty = ProgArg
-  { progArgName :: T.Text,
-    progArgTy :: ty
+data BuilderState op = BuilderState
+  { nextVarId :: Int,
+    stmtList :: [SimpleStmt op]
   }
   deriving (Generic)
 
-data Node op ty
-  = ArgNode (ProgArg ty)
-  | InteriorNode
-      { _op :: op,
-        _num :: Int,
-        _args :: [NodeRef op ty],
-        _pseudoDeps :: [NodeRef op ty]
-      }
-  deriving (Generic)
-
-data ProgRes op ty = ProgRes
-  { progResNode :: NodeRef op ty,
-    progResTy :: ty
+newtype Builder op a = Builder
+  { runBuilder :: BuilderState op -> Either String (a, BuilderState op)
   }
-  deriving (Generic)
 
-data Prog op ty = Prog
-  { progArgList :: [ProgArg ty],
-    progResList :: [ProgRes op ty]
-  }
-  deriving (Generic)
+instance Functor (Builder op) where
+  fmap f (Builder m) = Builder $ \s -> case m s of
+    Left err -> Left err
+    Right (a, s') -> Right (f a, s')
 
-deriveWith mempty {useNoStrategy = True} [''ProgArg] allClasses01
-deriveWith
-  mempty {useNoStrategy = True}
-  [''NodeRef, ''Node, ''ProgRes, ''Prog]
-  allClasses012
+instance Applicative (Builder op) where
+  pure a = Builder $ \s -> Right (a, s)
+  Builder f <*> Builder m = Builder $ \s -> case f s of
+    Left err -> Left err
+    Right (fab, s') -> case m s' of
+      Left err -> Left err
+      Right (a, s'') -> Right (fab a, s'')
 
-isInteriorNode :: Node op ty -> Bool
-isInteriorNode InteriorNode {} = True
-isInteriorNode _ = False
+instance Monad (Builder op) where
+  Builder m >>= f = Builder $ \s -> case m s of
+    Left err -> Left err
+    Right (a, s') -> runBuilder (f a) s'
 
-toConcreteProg ::
-  forall varId op ty.
-  (Hashable op, Eq op, Hashable ty, Eq ty, ConcreteVarId varId) =>
-  Prog op ty ->
-  Concrete.Prog op varId ty
-toConcreteProg (Prog argList resList) =
-  Concrete.Prog
-    ( fmap
-        ( \a@(ProgArg name ty) ->
-            Concrete.ProgArg
-              { Concrete.progArgName = name,
-                Concrete.progArgId = nodeRefToVarId $ NodeRef (ArgNode a) 0,
-                Concrete.progArgType = ty
-              }
-        )
-        argList
-    )
-    ( fmap
-        ( \(node, varIds) ->
-            case node of
-              ArgNode {} -> error "Impossible"
-              InteriorNode nodeOp _ refs _ ->
-                Concrete.Stmt
-                  { Concrete.stmtOp = nodeOp,
-                    Concrete.stmtArgIds = nodeRefToVarId <$> refs,
-                    Concrete.stmtResIds = varIds
-                  }
-        )
-        allInteriorNodesList
-    )
-    ( fmap
-        ( \(ProgRes node ty) ->
-            Concrete.ProgRes
-              { Concrete.progResId = nodeRefToVarId node,
-                Concrete.progResType = ty
-              }
-        )
-        resList
-    )
-  where
-    accessArgs :: State (M.HashMap (Node op ty) [varId]) ()
-    accessArgs = mapM_ (accessNode . ArgNode) argList
-    accessNode :: Node op ty -> State (M.HashMap (Node op ty) [varId]) [varId]
-    accessNode node = do
-      map <- get
-      case M.lookup node map of
-        Just varId -> return varId
-        Nothing ->
-          case node of
-            ArgNode {} -> do
-              put $ M.insert node [fromIntegral $ M.size map] map
-              return [fromIntegral $ M.size map]
-            InteriorNode _ num _ _ -> do
-              let varIds =
-                    fromIntegral . (sum (length <$> M.elems map) +)
-                      <$> [0 .. num - 1]
-              put $ M.insert node varIds map
-              return varIds
-    walkNodes :: Node op ty -> State (M.HashMap (Node op ty) [varId]) [varId]
-    walkNodes a@ArgNode {} = accessNode a
-    walkNodes i@(InteriorNode _ _ nodeRefs pseudoDeps) = do
-      currVarIds <- gets (M.lookup i)
-      case currVarIds of
-        Just varIds -> return varIds
-        Nothing -> do
-          mapM_ (walkNodes . nodeRef) nodeRefs
-          mapM_ (walkNodes . nodeRef) pseudoDeps
-          accessNode i
-    allNodes :: M.HashMap (Node op ty) [varId]
-    allNodes = flip execState M.empty $ do
-      accessArgs
-      mapM_ (walkNodes . nodeRef . progResNode) resList
+instance MonadFail (Builder op) where
+  fail msg = Builder $ \_ -> Left msg
 
-    nodeToVarIds :: Node op ty -> [varId]
-    nodeToVarIds = (allNodes M.!)
+instance Alternative (Builder op) where
+  empty = Builder $ \_ -> Left "empty"
+  Builder m1 <|> Builder m2 = Builder $ \s -> case m1 s of
+    Left _ -> m2 s
+    Right r -> Right r
 
-    nodeRefToVarId :: NodeRef op ty -> varId
-    nodeRefToVarId (NodeRef ref retId) = nodeToVarIds ref !! retId
+instance MonadPlus (Builder op) where
+  mzero = empty
+  mplus = (<|>)
 
-    allInteriorNodesList :: [(Node op ty, [varId])]
-    allInteriorNodesList =
-      filter (isInteriorNode . fst) $
-        sortOn (head . snd) $
-          M.toList allNodes
+-- Get the current state
+get :: Builder op (BuilderState op)
+get = Builder $ \s -> Right (s, s)
 
+-- Put a new state
+put :: BuilderState op -> Builder op ()
+put s = Builder $ \_ -> Right ((), s)
+
+-- | Build a program using the monadic builder interface
 buildProg ::
-  (Hashable op, Eq op, Hashable ty, Eq ty, ConcreteVarId varId) =>
+  forall varId op ty.
+  (ConcreteVarId varId) =>
   [(T.Text, ty)] ->
-  ([NodeRef op ty] -> [(NodeRef op ty, ty)]) ->
+  ([NodeRef] -> Builder op [(NodeRef, ty)]) ->
   Concrete.Prog op varId ty
-buildProg argPairs f =
-  toConcreteProg $ Prog args (uncurry ProgRes <$> f argRefs)
+buildProg argPairs builderAction =
+  case runBuilder (builderAction argRefs) initialState of
+    Left err -> error $ "Builder failed: " ++ err
+    Right (resultNodes, finalState) ->
+      Concrete.Prog
+        ( fmap
+            ( \(i, (name, ty)) ->
+                Concrete.ProgArg
+                  { Concrete.progArgName = name,
+                    Concrete.progArgId = fromIntegral i,
+                    Concrete.progArgType = ty
+                  }
+            )
+            (zip [0 ..] argPairs)
+        )
+        ( fmap
+            ( \simpleStmt ->
+                Concrete.Stmt
+                  { Concrete.stmtOp = simpleStmtOp simpleStmt,
+                    Concrete.stmtArgIds = fromIntegral <$> simpleStmtArgIds simpleStmt,
+                    Concrete.stmtResIds = fromIntegral <$> simpleStmtResIds simpleStmt
+                  }
+            )
+            (stmtList finalState)
+        )
+        ( fmap
+            ( \(NodeRef varId, ty) ->
+                Concrete.ProgRes
+                  { Concrete.progResId = fromIntegral varId,
+                    Concrete.progResType = ty
+                  }
+            )
+            resultNodes
+        )
   where
-    args = uncurry ProgArg <$> argPairs
-    argRefs = fmap (flip NodeRef 0 . ArgNode) args
+    argRefs =
+      [ NodeRef i
+      | i <- [0 .. length argPairs - 1]
+      ]
 
-node :: op -> Int -> [NodeRef op ty] -> [NodeRef op ty]
-node op num refs = node' op num refs []
+    initialState =
+      BuilderState
+        { nextVarId = length argPairs,
+          stmtList = []
+        }
 
-node' :: op -> Int -> [NodeRef op ty] -> [NodeRef op ty] -> [NodeRef op ty]
-node' op num refs pseudoDeps =
-  [NodeRef (InteriorNode op num refs pseudoDeps) i | i <- [0 .. num - 1]]
+-- | Create a node with the given operator, arguments.
+noden :: op -> Int -> [NodeRef] -> Builder op [NodeRef]
+noden op numResults argRefs = do
+  state <- get
+  let startVarId = nextVarId state
+  let resultVarIds = [startVarId .. startVarId + numResults - 1]
+  let stmt =
+        SimpleStmt
+          { simpleStmtOp = op,
+            simpleStmtArgIds = nodeVarId <$> argRefs,
+            simpleStmtResIds = resultVarIds
+          }
+  put $
+    BuilderState
+      { nextVarId = startVarId + numResults,
+        stmtList = stmtList state ++ [stmt]
+      }
+  return [NodeRef varId | varId <- resultVarIds]
+
+node1 :: op -> [NodeRef] -> Builder op NodeRef
+node1 op argRefs = do
+  [r] <- noden op 1 argRefs
+  return r
+
+node2 :: op -> [NodeRef] -> Builder op (NodeRef, NodeRef)
+node2 op argRefs = do
+  [r1, r2] <- noden op 2 argRefs
+  return (r1, r2)
+
+node3 :: op -> [NodeRef] -> Builder op (NodeRef, NodeRef, NodeRef)
+node3 op argRefs = do
+  [r1, r2, r3] <- noden op 3 argRefs
+  return (r1, r2, r3)
+
+node4 :: op -> [NodeRef] -> Builder op (NodeRef, NodeRef, NodeRef, NodeRef)
+node4 op argRefs = do
+  [r1, r2, r3, r4] <- noden op 4 argRefs
+  return (r1, r2, r3, r4)
+
+node5 :: op -> [NodeRef] -> Builder op (NodeRef, NodeRef, NodeRef, NodeRef, NodeRef)
+node5 op argRefs = do
+  [r1, r2, r3, r4, r5] <- noden op 5 argRefs
+  return (r1, r2, r3, r4, r5)
+
+node6 :: op -> [NodeRef] -> Builder op (NodeRef, NodeRef, NodeRef, NodeRef, NodeRef, NodeRef)
+node6 op argRefs = do
+  [r1, r2, r3, r4, r5, r6] <- noden op 6 argRefs
+  return (r1, r2, r3, r4, r5, r6)
