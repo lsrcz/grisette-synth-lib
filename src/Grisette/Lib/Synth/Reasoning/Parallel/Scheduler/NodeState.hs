@@ -35,8 +35,8 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message
-      ( EasySynthFailure,
-        Failure,
+      ( Failure,
+        GeneralizationFailure,
         GotExample,
         Success,
         Viable
@@ -197,7 +197,7 @@ nodeStateNumCollectedExamples NodeState {..} =
     go (Right (Success False _ e _ _)) = length e
     go (Right (Success True _ _ _ _)) = 0
     go (Right (Viable _ e _ _)) = length e
-    go (Right EasySynthFailure {}) = 0
+    go (Right GeneralizationFailure {}) = 0
     go (Right (Failure e _)) = length e
     go (Left _) = 0
 

@@ -75,10 +75,10 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         costObj,
         countNumProgsEvidence,
         doDeadCodeElimination,
-        easySketchFromFastResult,
         enablePlotting,
         exactCost,
         fastTrackTimeoutSeconds,
+        generalizationSketchFromFastResult,
         initialMinimalCost,
         initialSplitRatio,
         initialTimeoutSeconds,
@@ -123,7 +123,7 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus
       ),
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
-  ( MessageType (MessageEasySynthFailure, MessageSuccess, MessageViable),
+  ( MessageType (MessageGeneralizationFailure, MessageSuccess, MessageViable),
     responseType,
   )
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
@@ -215,7 +215,7 @@ data Stats = Stats
     inferredFailureStats :: SummaryStats,
     justStartedStats :: SummaryStats,
     viableMessageStats :: [MessageStat],
-    easySynthFailureMessageStats :: [MessageStat],
+    generalizationFailureMessageStats :: [MessageStat],
     succeedMessageStats :: [MessageStat]
   }
 
@@ -226,7 +226,7 @@ annotationCategories =
     NodeCategory StatusRefining,
     NodeCategory StatusSucceeded,
     MessageCategory MessageViable,
-    MessageCategory MessageEasySynthFailure,
+    MessageCategory MessageGeneralizationFailure,
     MessageCategory MessageSuccess
   ]
 
@@ -243,7 +243,7 @@ colorMap =
       (NodeCategory StatusInferredFailure, orange),
       (NodeCategory StatusJustStarted, black),
       (MessageCategory MessageViable, gray),
-      (MessageCategory MessageEasySynthFailure, deeppink),
+      (MessageCategory MessageGeneralizationFailure, deeppink),
       (MessageCategory MessageSuccess, green)
     ]
 
@@ -260,7 +260,7 @@ shapeMap =
       (NodeCategory StatusInferredFailure, PointShapeCross),
       (NodeCategory StatusJustStarted, PointShapeCircle),
       (MessageCategory MessageViable, PointShapePolygon 4 True),
-      (MessageCategory MessageEasySynthFailure, PointShapePolygon 4 True),
+      (MessageCategory MessageGeneralizationFailure, PointShapePolygon 4 True),
       (MessageCategory MessageSuccess, PointShapePolygon 4 True)
     ]
 
@@ -486,7 +486,7 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
         return $ MessageStat nid idx (realToFrac diffTime :: Double)
 
   let viableMsgs = createMessageStats MessageViable
-      easySynthFailureMsgs = createMessageStats MessageEasySynthFailure
+      generalizationFailureMsgs = createMessageStats MessageGeneralizationFailure
       succeedMsgs = createMessageStats MessageSuccess
 
   -- Convert state pairs to NodeStats
@@ -520,7 +520,7 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
       (createSummary inferredFailureNodeStats)
       (createSummary justStartedNodeStats)
       viableMsgs
-      easySynthFailureMsgs
+      generalizationFailureMsgs
       succeedMsgs
 
 -- | Plots statistics to an SVG file
@@ -582,7 +582,7 @@ createPointsMap stats =
     -- Message points data
     messagePointsData =
       [ (MessageCategory MessageViable, convertMessageStats $ viableMessageStats stats),
-        (MessageCategory MessageEasySynthFailure, convertMessageStats $ easySynthFailureMessageStats stats),
+        (MessageCategory MessageGeneralizationFailure, convertMessageStats $ generalizationFailureMessageStats stats),
         (MessageCategory MessageSuccess, convertMessageStats $ succeedMessageStats stats)
       ]
 

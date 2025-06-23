@@ -275,11 +275,11 @@ data
       logConfig :: LogConfig,
       nodeId :: NodeId,
       verifiers :: Logger -> [[SomeVerifier sketch conProg]],
-      easySketchFromFastResult ::
+      generalizationSketchFromFastResult ::
         Maybe (SymbolTable conProg -> SymbolTable sketchSpec),
       transcriptSMT :: Bool,
       doDeadCodeElimination :: Bool,
-      easySynthTimeout :: Int,
+      generalizationTimeout :: Int,
       exactCost :: Maybe Int,
       initialCost :: Maybe Int,
       countNumProgsEvidence ::
@@ -348,7 +348,7 @@ data Message conProg symSemObj symVal conSemObj conVal matcher
         _knownCost :: Maybe Int,
         _prog :: SymbolTable conProg
       }
-  | EasySynthFailure
+  | GeneralizationFailure
       { _curTrack :: Int,
         _knownCost :: Maybe Int,
         _examples :: [Example symSemObj symVal conSemObj conVal matcher]
@@ -358,7 +358,7 @@ data Message conProg symSemObj symVal conSemObj conVal matcher
         _knownCost :: Maybe Int
       }
   | Success
-      { _isEasySuccess :: Bool,
+      { _isGeneralizationSuccess :: Bool,
         _curTrack :: Int,
         _examples :: [Example symSemObj symVal conSemObj conVal matcher],
         _cost :: Int,
@@ -372,7 +372,7 @@ data Message conProg symSemObj symVal conSemObj conVal matcher
 
 data MessageType
   = MessageViable
-  | MessageEasySynthFailure
+  | MessageGeneralizationFailure
   | MessageGotExample
   | MessageSuccess
   | MessageFailure
@@ -381,7 +381,7 @@ derive [''MessageType] [''Eq, ''Show, ''Hashable, ''Ord, ''PPrint]
 
 messageType :: Message conProg symSemObj symVal conSemObj conVal matcher -> MessageType
 messageType Viable {} = MessageViable
-messageType EasySynthFailure {} = MessageEasySynthFailure
+messageType GeneralizationFailure {} = MessageGeneralizationFailure
 messageType GotExample {} = MessageGotExample
 messageType Success {} = MessageSuccess
 messageType Failure {} = MessageFailure
@@ -397,16 +397,16 @@ pformatMessageSummary (Viable curTrack examples cost _) =
     <> ", best known cost: "
     <> pformat cost
     <> ")"
-pformatMessageSummary (EasySynthFailure curTrack cost examples) =
-  "EasySynthFailure (with "
+pformatMessageSummary (GeneralizationFailure curTrack cost examples) =
+  "GeneralizationFailure (with "
     <> pformat (length examples)
     <> " examples, track "
     <> pformat curTrack
     <> ", best known cost: "
     <> pformat cost
     <> ")"
-pformatMessageSummary (Success isEasySuccess curTrack examples cost _) =
-  (if isEasySuccess then "EasySuccess" else "Success")
+pformatMessageSummary (Success isGeneralizationSuccess curTrack examples cost _) =
+  (if isGeneralizationSuccess then "GeneralizationSuccess" else "Success")
     <> " (with "
     <> pformat (length examples)
     <> " examples, track "
@@ -432,7 +432,7 @@ instance
         [ pformatMessageSummary message,
           pformat prog
         ]
-  pformat message@EasySynthFailure {} = pformatMessageSummary message
+  pformat message@GeneralizationFailure {} = pformatMessageSummary message
   pformat message@(GotExample example currentCost) =
     nest 2 $
       vsep
@@ -638,7 +638,7 @@ instance Hashable Process where
 data ProcessStep conProg
   = InitialStep
   | SynthStep {_curTrack :: Int}
-  | EasySynthStep {_curTrack :: Int, _curProg :: SymbolTable conProg}
+  | GeneralizationStep {_curTrack :: Int, _curProg :: SymbolTable conProg}
   | TerminationStep
 
 isTerminationStep :: ProcessStep conProg -> Bool
@@ -699,8 +699,8 @@ runRequestInSubProcess config processConfig@ProcessConfig {..} = do
             InitialStep -> initialStep processConfig stateRef
             SynthStep nextTrack ->
               synthStep solver nextTrack processConfig stateRef
-            EasySynthStep nextTrack prog ->
-              easySynthStep config nextTrack processConfig stateRef prog
+            GeneralizationStep nextTrack prog ->
+              generalizationStep config nextTrack processConfig stateRef prog
             TerminationStep -> error "Should not happen"
           unless (isTerminationStep nextStep) $ loop solver nextStep
     let NodeId nid = nodeId
@@ -833,14 +833,14 @@ synthStep handle curTrack processConfig@ProcessConfig {..} stateRef = do
               pformat prog
             ]
       cost <- _readKnownMinimalCost stateRef
-      let hasEasySynth = isJust easySketchFromFastResult
+      let hasGeneralization = isJust generalizationSketchFromFastResult
       let hasNextTrack = length allVerifiers > curTrack + 1
       if hasNextTrack
         then do
           _sendAndWaitForNewMinimalCost stateRef $
             Viable curTrack examples cost prog
-          if hasEasySynth
-            then return $ EasySynthStep curTrack prog
+          if hasGeneralization
+            then return $ GeneralizationStep curTrack prog
             else return $ SynthStep (curTrack + 1)
         else do
           _updateKnownMinimalCost stateRef (Just synthedCost)
@@ -866,7 +866,7 @@ synthStep handle curTrack processConfig@ProcessConfig {..} stateRef = do
         T.unpack $
           "Verification crashed, please check the code, reason: " <> err
 
-easySynthStep ::
+generalizationStep ::
   forall
     sketchSpec
     sketch
@@ -884,21 +884,21 @@ easySynthStep ::
   IORef (ProcessState sketch conProg) ->
   SymbolTable conProg ->
   IO (ProcessStep conProg)
-easySynthStep
+generalizationStep
   config
   curTrack
   processConfig@ProcessConfig {..}
   stateRef
   conProg = do
-    unless (isJust easySketchFromFastResult) $ error "Should not happen"
-    let sketchSpec = fromJust easySketchFromFastResult conProg
+    unless (isJust generalizationSketchFromFastResult) $ error "Should not happen"
+    let sketchSpec = fromJust generalizationSketchFromFastResult conProg
     minimalCostMessage@NewMinimalCostMessage {..} <-
       _currentNewMinimalCostMessage stateRef
     logger <- _readLogger stateRef
     logMultiLineDoc logger NOTICE $
       nest 2 $
         vsep
-          [ "Easy synth with minimal cost: " <> pformat newMinimalCost,
+          [ "Generalization with minimal cost: " <> pformat newMinimalCost,
             "track: " <> pformat curTrack,
             "sketch: " <> pformat sketchSpec,
             "sketch symbol: " <> pformat sketchSymbol
@@ -928,16 +928,16 @@ easySynthStep
           stateRef
       putMVar r $ Just res
     _ <- async $ do
-      threadDelay (easySynthTimeout * 1000000)
+      threadDelay (generalizationTimeout * 1000000)
       cancelWith a ThreadKilled
       tryPutMVar r Nothing
-    easySynthResult <- takeMVar r
-    case easySynthResult of
+    generalizationResult <- takeMVar r
+    case generalizationResult of
       Just (cost, examples, SynthesisSuccess r) -> do
         logMultiLineDoc logger NOTICE $
           nest 2 $
             vsep
-              [ "Easy synth success: ",
+              [ "Generalization success: ",
                 pformat r,
                 "cost: " <> pformat cost,
                 "track: " <> pformat curTrack
@@ -950,14 +950,14 @@ easySynthStep
         logMultiLineDoc
           logger
           NOTICE
-          ( "Easy synth failed, proceed to next track (track "
+          ( "Generalization failed, proceed to next track (track "
               <> pformat (curTrack + 1)
               <> ")."
           )
         cost <- _readKnownMinimalCost stateRef
         _sendAndWaitForNewMinimalCost
           stateRef
-          ( EasySynthFailure curTrack cost examples ::
+          ( GeneralizationFailure curTrack cost examples ::
               Message conProg symSemObj symVal conSemObj conVal matcher
           )
         return $ SynthStep (curTrack + 1)
@@ -965,14 +965,14 @@ easySynthStep
         logMultiLineDoc
           logger
           NOTICE
-          ( "Easy synth timed out or crashed, proceed to next track (track "
+          ( "Generalization timed out or crashed, proceed to next track (track "
               <> pformat (curTrack + 1)
               <> ")."
           )
         cost <- _readKnownMinimalCost stateRef
         _sendAndWaitForNewMinimalCost
           stateRef
-          ( EasySynthFailure curTrack cost [] ::
+          ( GeneralizationFailure curTrack cost [] ::
               Message conProg symSemObj symVal conSemObj conVal matcher
           )
         return $ SynthStep (curTrack + 1)

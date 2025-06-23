@@ -65,7 +65,7 @@ data
       exactCost :: Maybe Int,
       restartRunningTimeThresholdSeconds :: Int,
       fastTrackTimeoutSeconds :: Int,
-      easySketchFromFastResult ::
+      generalizationSketchFromFastResult ::
         Maybe (SymbolTable conProg -> SymbolTable sketchSpec),
       synthesisSketchSymbol :: T.Text,
       successNodeNewTimeoutSeconds :: Int,

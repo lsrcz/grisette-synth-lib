@@ -28,8 +28,8 @@ import Grisette.Lib.Synth.Program.Concrete (ProgPPrint)
 import Grisette.Lib.Synth.Program.SymbolTable (SymbolTable)
 import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process
   ( Message
-      ( EasySynthFailure,
-        Failure,
+      ( Failure,
+        GeneralizationFailure,
         GotExample,
         Success,
         Viable
@@ -173,7 +173,7 @@ nodeStartedTransition (Right (Failure _ failure)) =
   (NodeFailed failure, MarkFailure)
 nodeStartedTransition (Right (Viable curTrack _ cost prog)) =
   (NodeViable curTrack prog, RefineAndSplitSketch cost)
-nodeStartedTransition (Right EasySynthFailure {}) =
+nodeStartedTransition (Right GeneralizationFailure {}) =
   error "Should not happen"
 nodeStartedTransition (Right (Success _ curTrack _ cost prog)) =
   (NodeRefining curTrack cost prog, RefineAndSplitSketch $ Just cost)
@@ -190,7 +190,7 @@ nodeViableTransition _ (Right (Failure _ failure)) =
   (NodeFailed failure, MarkFailure)
 nodeViableTransition _ (Right (Viable curTrack _ cost prog)) =
   (NodeViable curTrack prog, RefineAndSplitSketch cost)
-nodeViableTransition oldStatus (Right (EasySynthFailure _ cost _)) =
+nodeViableTransition oldStatus (Right (GeneralizationFailure _ cost _)) =
   (oldStatus, RefineAndSplitSketch cost)
 nodeViableTransition _ (Right (Success _ curTrack _ cost prog)) =
   (NodeRefining curTrack cost prog, Refine True $ Just cost)
@@ -224,7 +224,7 @@ nodeRefiningTransition
   _
   oldCost
   oldProg
-  (Right (EasySynthFailure newTrack bestKnownCost _)) =
+  (Right (GeneralizationFailure newTrack bestKnownCost _)) =
     (NodeRefining newTrack oldCost oldProg, Refine True bestKnownCost)
 nodeRefiningTransition
   _

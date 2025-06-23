@@ -47,9 +47,9 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config
         costObj,
         countNumProgsEvidence,
         doDeadCodeElimination,
-        easySketchFromFastResult,
         exactCost,
         fastTrackTimeoutSeconds,
+        generalizationSketchFromFastResult,
         initialMinimalCost,
         initialSplitRatio,
         initialTimeoutSeconds,
@@ -313,8 +313,8 @@ getParallelSynthesisResult
             -- Calculate minimum number of instructions across all solutions
             minInsts <- case countNumProgsEvidence of
               Just CountNumProgsEvidence ->
-                -- We'll need to use easySketchFromFastResult to convert conProg to sketchSpec
-                case easySketchFromFastResult of
+                -- We'll need to use generalizationSketchFromFastResult to convert conProg to sketchSpec
+                case generalizationSketchFromFastResult of
                   Just converter -> do
                     let progInsts =
                           map
