@@ -7,6 +7,12 @@
 
 module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
   ( reportStatistics,
+    MessageStat (..),
+    collectStats,
+    viableMessageStats,
+    generalizationFailureMessageStats,
+    succeedMessageStats,
+    generalizationSucceedMessageStats,
   )
 where
 
@@ -808,21 +814,21 @@ logStatistics
           Just depth -> "Depth " <> pformat depth
           Nothing -> "All started (not fully split depth: " <> pformat currentNotFullySplitDepth <> ")"
 
-    -- Message statistics
-    let numViableMessages = length $ viableMessageStats stats
-    let numGeneralizationFailureMessages = length $ generalizationFailureMessageStats stats
-    let numSucceedMessages = length $ succeedMessageStats stats
-    let numGeneralizationSucceedMessages = length $ generalizationSucceedMessageStats stats
+    -- Message statistics (deduplicated by node ID)
+    let uniqueViableNodes = HS.size $ HS.fromList $ map nodeIdOrigin $ viableMessageStats stats
+    let uniqueGeneralizationFailureNodes = HS.size $ HS.fromList $ map nodeIdOrigin $ generalizationFailureMessageStats stats
+    let uniqueSucceedNodes = HS.size $ HS.fromList $ map nodeIdOrigin $ succeedMessageStats stats
+    let uniqueGeneralizationSucceedNodes = HS.size $ HS.fromList $ map nodeIdOrigin $ generalizationSucceedMessageStats stats
 
     let messageStatsLine =
-          "Messages: "
-            <> pformat numViableMessages
+          "Unique nodes: "
+            <> pformat uniqueViableNodes
             <> " viable, "
-            <> pformat numGeneralizationFailureMessages
+            <> pformat uniqueGeneralizationFailureNodes
             <> " generalization failures, "
-            <> pformat numSucceedMessages
+            <> pformat uniqueSucceedNodes
             <> " regular successes, "
-            <> pformat numGeneralizationSucceedMessages
+            <> pformat uniqueGeneralizationSucceedNodes
             <> " generalization successes"
 
     -- Log the formatted statistics

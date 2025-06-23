@@ -115,6 +115,14 @@ import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler
     getSketchTable,
     getStatus,
   )
+import Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
+  ( MessageStat (nodeIdOrigin),
+    collectStats,
+    generalizationFailureMessageStats,
+    generalizationSucceedMessageStats,
+    succeedMessageStats,
+    viableMessageStats,
+  )
 import Grisette.Lib.Synth.Util.Logging (logMultiLineDoc)
 import Grisette.Lib.Synth.Util.Show (showDiffTime)
 import System.Log.Logger (Priority (NOTICE, WARNING))
@@ -137,7 +145,11 @@ data ParallelSynthesisNoSolutionResult = ParallelSynthesisNoSolutionResult
     numOfUndeterminedPrograms :: Integer,
     undeterminedRatio :: Double,
     avgComponentChoices :: Double,
-    numOfComponents :: Integer
+    numOfComponents :: Integer,
+    uniqueViableNodes :: Int,
+    uniqueGeneralizationFailureNodes :: Int,
+    regularSuccessPercentage :: Double,
+    generalizationSuccessPercentage :: Double
   }
 
 data ParallelSynthesisSolutionFoundResult conProg = ParallelSynthesisSolutionFoundResult
@@ -152,7 +164,11 @@ data ParallelSynthesisSolutionFoundResult conProg = ParallelSynthesisSolutionFou
     undeterminedRatio :: Double,
     avgComponentChoices :: Double,
     minNumInsts :: Integer,
-    numOfComponents :: Integer
+    numOfComponents :: Integer,
+    uniqueViableNodes :: Int,
+    uniqueGeneralizationFailureNodes :: Int,
+    regularSuccessPercentage :: Double,
+    generalizationSuccessPercentage :: Double
   }
 
 data ParallelSynthesisResult conProg
@@ -219,6 +235,22 @@ resultMinNumInsts :: ParallelSynthesisResult conProg -> Maybe Integer
 resultMinNumInsts (NoSolutionFound _) = Nothing
 resultMinNumInsts (SolutionFound ParallelSynthesisSolutionFoundResult {..}) = Just minNumInsts
 
+resultUniqueViableNodes :: ParallelSynthesisResult conProg -> Int
+resultUniqueViableNodes (NoSolutionFound ParallelSynthesisNoSolutionResult {..}) = uniqueViableNodes
+resultUniqueViableNodes (SolutionFound ParallelSynthesisSolutionFoundResult {..}) = uniqueViableNodes
+
+resultUniqueGeneralizationFailureNodes :: ParallelSynthesisResult conProg -> Int
+resultUniqueGeneralizationFailureNodes (NoSolutionFound ParallelSynthesisNoSolutionResult {..}) = uniqueGeneralizationFailureNodes
+resultUniqueGeneralizationFailureNodes (SolutionFound ParallelSynthesisSolutionFoundResult {..}) = uniqueGeneralizationFailureNodes
+
+resultRegularSuccessPercentage :: ParallelSynthesisResult conProg -> Double
+resultRegularSuccessPercentage (NoSolutionFound ParallelSynthesisNoSolutionResult {..}) = regularSuccessPercentage
+resultRegularSuccessPercentage (SolutionFound ParallelSynthesisSolutionFoundResult {..}) = regularSuccessPercentage
+
+resultGeneralizationSuccessPercentage :: ParallelSynthesisResult conProg -> Double
+resultGeneralizationSuccessPercentage (NoSolutionFound ParallelSynthesisNoSolutionResult {..}) = generalizationSuccessPercentage
+resultGeneralizationSuccessPercentage (SolutionFound ParallelSynthesisSolutionFoundResult {..}) = generalizationSuccessPercentage
+
 getParallelSynthesisResult ::
   Scheduler
     sketchSpec
@@ -279,6 +311,23 @@ getParallelSynthesisResult
             )
         Nothing -> return (0 / 0, 0)
 
+    -- Collect message statistics
+    stats <- collectStats curTime scheduler Nothing
+    let uniqueViableNodes = HS.size $ HS.fromList $ map nodeIdOrigin $ viableMessageStats stats
+    let uniqueGeneralizationFailureNodes = HS.size $ HS.fromList $ map nodeIdOrigin $ generalizationFailureMessageStats stats
+    let uniqueRegularSuccessNodes = HS.size $ HS.fromList $ map nodeIdOrigin $ succeedMessageStats stats
+    let uniqueGeneralizationSuccessNodes = HS.size $ HS.fromList $ map nodeIdOrigin $ generalizationSucceedMessageStats stats
+
+    -- Calculate percentages relative to viable nodes
+    let regularSuccessPercentage =
+          if uniqueViableNodes > 0
+            then (fromIntegral uniqueRegularSuccessNodes / fromIntegral uniqueViableNodes) * 100.0
+            else 0.0
+    let generalizationSuccessPercentage =
+          if uniqueViableNodes > 0
+            then (fromIntegral uniqueGeneralizationSuccessNodes / fromIntegral uniqueViableNodes) * 100.0
+            else 0.0
+
     case cost of
       Nothing ->
         return $
@@ -293,6 +342,10 @@ getParallelSynthesisResult
               undeterminedRatio
               avgCompChoices
               numComponents
+              uniqueViableNodes
+              uniqueGeneralizationFailureNodes
+              regularSuccessPercentage
+              generalizationSuccessPercentage
       Just cost -> do
         lst <- go cost $ HM.toList nodeStates
         if null lst
@@ -309,6 +362,10 @@ getParallelSynthesisResult
                   undeterminedRatio
                   avgCompChoices
                   numComponents
+                  uniqueViableNodes
+                  uniqueGeneralizationFailureNodes
+                  regularSuccessPercentage
+                  generalizationSuccessPercentage
           else do
             -- Calculate minimum number of instructions across all solutions
             minInsts <- case countNumProgsEvidence of
@@ -341,6 +398,10 @@ getParallelSynthesisResult
                   avgCompChoices
                   minInsts
                   numComponents
+                  uniqueViableNodes
+                  uniqueGeneralizationFailureNodes
+                  regularSuccessPercentage
+                  generalizationSuccessPercentage
     where
       go _ [] = return []
       go cost ((nid, NodeState {..}) : rest) = do
@@ -382,6 +443,10 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
   let numOfComponents = resultNumOfComponents result
   let undeterminedRatio = resultUndeterminedRatio result
   let avgCompChoices = resultAvgComponentChoices result
+  let uniqueViableNodes = resultUniqueViableNodes result
+  let uniqueGeneralizationFailureNodes = resultUniqueGeneralizationFailureNodes result
+  let regularSuccessPercentage = resultRegularSuccessPercentage result
+  let generalizationSuccessPercentage = resultGeneralizationSuccessPercentage result
   case result of
     NoSolutionFound {} ->
       logMultiLineDoc logger WARNING $
@@ -395,7 +460,8 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
               "Num of components: " <> pformat numOfComponents,
               "Undetermined ratio: " <> pformat undeterminedRatio,
               "Avg component choices: " <> pformat avgCompChoices,
-              "Number of instructions in reference: " <> maybe "inf" pformat referenceNumInsts
+              "Number of instructions in reference: " <> maybe "inf" pformat referenceNumInsts,
+              "Unique nodes: " <> pformat uniqueViableNodes <> " viable, " <> pformat uniqueGeneralizationFailureNodes <> " generalization failures, " <> pformat regularSuccessPercentage <> "% regular successes, " <> pformat generalizationSuccessPercentage <> "% generalization successes"
             ]
     SolutionFound ParallelSynthesisSolutionFoundResult {..} -> do
       let elapsedTime =
@@ -414,6 +480,7 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
               "Avg component choices: " <> pformat avgCompChoices,
               "Min number of instructions: " <> pformat minNumInsts,
               "Number of instructions in reference: " <> maybe "inf" pformat referenceNumInsts,
+              "Unique nodes: " <> pformat uniqueViableNodes <> " viable, " <> pformat uniqueGeneralizationFailureNodes <> " generalization failures, " <> pformat regularSuccessPercentage <> "% regular successes, " <> pformat generalizationSuccessPercentage <> "% generalization successes",
               "Best solution found with cost "
                 <> pformat bestCost
                 <> " in "
@@ -421,7 +488,6 @@ printResults Scheduler {config = SchedulerConfig {..}, ..} result = do
                 <> " (elapsed time: "
                 <> fromString (showDiffTime elapsedTime)
                 <> ")"
-                <> ":"
             ]
               ++ fmap
                 ( \(ParallelSynthesisSolution nid startTime lastResultTime lastMsgTime finished prog) ->
@@ -478,7 +544,11 @@ writeResultsCSV path result scheduler = do
           "num_lattice_nodes",
           "num_undertermined_leaves",
           "num_undertermined_programs",
-          "undetermined_ratio"
+          "undetermined_ratio",
+          "unique_viable_nodes",
+          "unique_generalization_failure_nodes",
+          "regular_success_percentage",
+          "generalization_success_percentage"
         ]
   let initialCost = case result of
         SolutionFound
@@ -530,6 +600,10 @@ writeResultsCSV path result scheduler = do
           show numOfNodesInLattice,
           show numOfUndeterminedLeaves,
           show numOfUndeterminedPrograms,
-          show undeterminedRatio
+          show undeterminedRatio,
+          show (resultUniqueViableNodes result),
+          show (resultUniqueGeneralizationFailureNodes result),
+          show (resultRegularSuccessPercentage result),
+          show (resultGeneralizationSuccessPercentage result)
         ]
   writeFile path $ intercalate "," columns ++ "\n" ++ intercalate "," values
