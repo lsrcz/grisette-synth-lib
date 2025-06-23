@@ -355,7 +355,10 @@ getParallelSynthesisResult
                 ( fst $
                     head $
                       filter
-                        (\(_, r) -> responseType r == Right MessageSuccess)
+                        ( \(_, r) -> case responseType r of
+                            Right (MessageSuccess _) -> True
+                            _ -> False
+                        )
                         nodeMajorResponseReverseLog
                 )
                 ( case nodeEndTime of

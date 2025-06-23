@@ -216,7 +216,8 @@ data Stats = Stats
     justStartedStats :: SummaryStats,
     viableMessageStats :: [MessageStat],
     generalizationFailureMessageStats :: [MessageStat],
-    succeedMessageStats :: [MessageStat]
+    succeedMessageStats :: [MessageStat],
+    generalizationSucceedMessageStats :: [MessageStat]
   }
 
 -- | Categories that should be considered for annotations
@@ -227,7 +228,8 @@ annotationCategories =
     NodeCategory StatusSucceeded,
     MessageCategory MessageViable,
     MessageCategory MessageGeneralizationFailure,
-    MessageCategory MessageSuccess
+    MessageCategory (MessageSuccess False),
+    MessageCategory (MessageSuccess True)
   ]
 
 -- | Color mapping for different node and message types
@@ -244,7 +246,8 @@ colorMap =
       (NodeCategory StatusJustStarted, black),
       (MessageCategory MessageViable, gray),
       (MessageCategory MessageGeneralizationFailure, deeppink),
-      (MessageCategory MessageSuccess, green)
+      (MessageCategory (MessageSuccess False), green),
+      (MessageCategory (MessageSuccess True), yellowgreen)
     ]
 
 -- | Shape mapping for different node and message types
@@ -261,7 +264,8 @@ shapeMap =
       (NodeCategory StatusJustStarted, PointShapeCircle),
       (MessageCategory MessageViable, PointShapePolygon 4 True),
       (MessageCategory MessageGeneralizationFailure, PointShapePolygon 4 True),
-      (MessageCategory MessageSuccess, PointShapePolygon 4 True)
+      (MessageCategory (MessageSuccess False), PointShapePolygon 4 True),
+      (MessageCategory (MessageSuccess True), PointShapePolygon 4 True)
     ]
 
 -- | Validates the node status assignments and logs any inconsistencies
@@ -487,7 +491,8 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
 
   let viableMsgs = createMessageStats MessageViable
       generalizationFailureMsgs = createMessageStats MessageGeneralizationFailure
-      succeedMsgs = createMessageStats MessageSuccess
+      succeedMsgs = createMessageStats (MessageSuccess False)
+      generalizationSucceedMsgs = createMessageStats (MessageSuccess True)
 
   -- Convert state pairs to NodeStats
   let viableNodeStats = toNodeStats viableStatePairs
@@ -522,6 +527,7 @@ collectStats curTime scheduler@Scheduler {config = SchedulerConfig {..}, ..} may
       viableMsgs
       generalizationFailureMsgs
       succeedMsgs
+      generalizationSucceedMsgs
 
 -- | Plots statistics to an SVG file
 plotStatistics :: FilePath -> String -> Stats -> IO ()
@@ -583,7 +589,8 @@ createPointsMap stats =
     messagePointsData =
       [ (MessageCategory MessageViable, convertMessageStats $ viableMessageStats stats),
         (MessageCategory MessageGeneralizationFailure, convertMessageStats $ generalizationFailureMessageStats stats),
-        (MessageCategory MessageSuccess, convertMessageStats $ succeedMessageStats stats)
+        (MessageCategory (MessageSuccess False), convertMessageStats $ succeedMessageStats stats),
+        (MessageCategory (MessageSuccess True), convertMessageStats $ generalizationSucceedMessageStats stats)
       ]
 
     -- Node points data
@@ -801,11 +808,28 @@ logStatistics
           Just depth -> "Depth " <> pformat depth
           Nothing -> "All started (not fully split depth: " <> pformat currentNotFullySplitDepth <> ")"
 
+    -- Message statistics
+    let numViableMessages = length $ viableMessageStats stats
+    let numGeneralizationFailureMessages = length $ generalizationFailureMessageStats stats
+    let numSucceedMessages = length $ succeedMessageStats stats
+    let numGeneralizationSucceedMessages = length $ generalizationSucceedMessageStats stats
+
+    let messageStatsLine =
+          "Messages: "
+            <> pformat numViableMessages
+            <> " viable, "
+            <> pformat numGeneralizationFailureMessages
+            <> " generalization failures, "
+            <> pformat numSucceedMessages
+            <> " regular successes, "
+            <> pformat numGeneralizationSucceedMessages
+            <> " generalization successes"
+
     -- Log the formatted statistics
     logMultiLineDoc logger NOTICE $
       nest 2 $
         vsep $
-          ( firstLine
+          [ firstLine
               <> " ("
               <> pformat (num $ allStartedNodeStats stats)
               <> " nodes + "
@@ -818,9 +842,10 @@ logStatistics
               <> pformat (numNeedSplitNodes stats)
               <> " need split, "
               <> pformat (numEverStartedNodes stats)
-              <> " ever started):"
-          )
-            : (fromString <$> formattedStats)
+              <> " ever started):",
+            messageStatsLine
+          ]
+            <> (fromString <$> formattedStats)
 
 -- | Generates and logs statistics for each depth in the scheduler
 logLayeredStatistics ::

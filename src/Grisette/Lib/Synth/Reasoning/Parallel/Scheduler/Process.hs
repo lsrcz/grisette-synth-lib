@@ -374,7 +374,7 @@ data MessageType
   = MessageViable
   | MessageGeneralizationFailure
   | MessageGotExample
-  | MessageSuccess
+  | MessageSuccess {_isGeneralizationSuccess :: Bool}
   | MessageFailure
 
 derive [''MessageType] [''Eq, ''Show, ''Hashable, ''Ord, ''PPrint]
@@ -383,7 +383,7 @@ messageType :: Message conProg symSemObj symVal conSemObj conVal matcher -> Mess
 messageType Viable {} = MessageViable
 messageType GeneralizationFailure {} = MessageGeneralizationFailure
 messageType GotExample {} = MessageGotExample
-messageType Success {} = MessageSuccess
+messageType (Success isGeneralizationSuccess _ _ _ _) = MessageSuccess isGeneralizationSuccess
 messageType Failure {} = MessageFailure
 
 pformatMessageSummary ::
