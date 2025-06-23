@@ -32,9 +32,9 @@
 </span><span id="line-32"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#costObj"><span class="hs-identifier">costObj</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-33"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#countNumProgsEvidence"><span class="hs-identifier">countNumProgsEvidence</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-34"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#doDeadCodeElimination"><span class="hs-identifier">doDeadCodeElimination</span></a></span><span class="hs-special">,</span><span>
-</span><span id="line-35"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#easySketchFromFastResult"><span class="hs-identifier">easySketchFromFastResult</span></a></span><span class="hs-special">,</span><span>
-</span><span id="line-36"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#exactCost"><span class="hs-identifier">exactCost</span></a></span><span class="hs-special">,</span><span>
-</span><span id="line-37"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#fastTrackTimeoutSeconds"><span class="hs-identifier">fastTrackTimeoutSeconds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#exactCost"><span class="hs-identifier">exactCost</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#fastTrackTimeoutSeconds"><span class="hs-identifier">fastTrackTimeoutSeconds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#generalizationSketchFromFastResult"><span class="hs-identifier">generalizationSketchFromFastResult</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-38"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#initialMinimalCost"><span class="hs-identifier">initialMinimalCost</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-39"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#initialSplitRatio"><span class="hs-identifier">initialSplitRatio</span></a></span><span class="hs-special">,</span><span>
 </span><span id="line-40"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#initialTimeoutSeconds"><span class="hs-identifier">initialTimeoutSeconds</span></a></span><span class="hs-special">,</span><span>
@@ -102,21 +102,21 @@
 </span><span id="line-102"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html"><span class="hs-identifier">Grisette.Lib.Synth.Util.Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Util.Show.html#showDiffTime"><span class="hs-identifier">showDiffTime</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-103"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Log.Logger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Priority</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NOTICE</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
 </span><span id="line-104"></span><span>
-</span><span id="line-105"></span><span id="local-6989586621680158792"><span id="local-6989586621680158793"><span id="local-6989586621680158794"><span id="local-6989586621680158795"><span id="local-6989586621680158796"><span id="local-6989586621680158797"><span id="local-6989586621680158798"><span id="local-6989586621680158799"><span id="local-6989586621680158800"><span id="local-6989586621680158801"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeTransition"><span class="hs-identifier hs-type">nodeTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-105"></span><span id="local-6989586621680161470"><span id="local-6989586621680161471"><span id="local-6989586621680161472"><span id="local-6989586621680161473"><span id="local-6989586621680161474"><span id="local-6989586621680161475"><span id="local-6989586621680161476"><span id="local-6989586621680161477"><span id="local-6989586621680161478"><span id="local-6989586621680161479"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeTransition"><span class="hs-identifier hs-type">nodeTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span>
 </span><span id="line-106"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
 </span><span id="line-107"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span>
-</span><span id="line-108"></span><span>    </span><span class="annot"><a href="#local-6989586621680158792"><span class="hs-identifier hs-type">sketchSpec</span></a></span><span>
-</span><span id="line-109"></span><span>    </span><span class="annot"><a href="#local-6989586621680158793"><span class="hs-identifier hs-type">sketch</span></a></span><span>
-</span><span id="line-110"></span><span>    </span><span class="annot"><a href="#local-6989586621680158794"><span class="hs-identifier hs-type">conProg</span></a></span><span>
-</span><span id="line-111"></span><span>    </span><span class="annot"><a href="#local-6989586621680158795"><span class="hs-identifier hs-type">costObj</span></a></span><span>
-</span><span id="line-112"></span><span>    </span><span class="annot"><a href="#local-6989586621680158796"><span class="hs-identifier hs-type">cost</span></a></span><span>
-</span><span id="line-113"></span><span>    </span><span class="annot"><a href="#local-6989586621680158797"><span class="hs-identifier hs-type">symSemObj</span></a></span><span>
-</span><span id="line-114"></span><span>    </span><span class="annot"><a href="#local-6989586621680158798"><span class="hs-identifier hs-type">symVal</span></a></span><span>
-</span><span id="line-115"></span><span>    </span><span class="annot"><a href="#local-6989586621680158799"><span class="hs-identifier hs-type">conSemObj</span></a></span><span>
-</span><span id="line-116"></span><span>    </span><span class="annot"><a href="#local-6989586621680158800"><span class="hs-identifier hs-type">conVal</span></a></span><span>
-</span><span id="line-117"></span><span>    </span><span class="annot"><a href="#local-6989586621680158801"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><a href="#local-6989586621680161470"><span class="hs-identifier hs-type">sketchSpec</span></a></span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><a href="#local-6989586621680161471"><span class="hs-identifier hs-type">sketch</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><a href="#local-6989586621680161472"><span class="hs-identifier hs-type">conProg</span></a></span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><a href="#local-6989586621680161473"><span class="hs-identifier hs-type">costObj</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><a href="#local-6989586621680161474"><span class="hs-identifier hs-type">cost</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><a href="#local-6989586621680161475"><span class="hs-identifier hs-type">symSemObj</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><a href="#local-6989586621680161476"><span class="hs-identifier hs-type">symVal</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><a href="#local-6989586621680161477"><span class="hs-identifier hs-type">conSemObj</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><a href="#local-6989586621680161478"><span class="hs-identifier hs-type">conVal</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><a href="#local-6989586621680161479"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-118"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
-</span><span id="line-119"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#ProcessResponse"><span class="hs-identifier hs-type">ProcessResponse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680158794"><span class="hs-identifier hs-type">conProg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680158797"><span class="hs-identifier hs-type">symSemObj</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680158798"><span class="hs-identifier hs-type">symVal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680158799"><span class="hs-identifier hs-type">conSemObj</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680158800"><span class="hs-identifier hs-type">conVal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680158801"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-119"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#ProcessResponse"><span class="hs-identifier hs-type">ProcessResponse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680161472"><span class="hs-identifier hs-type">conProg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680161475"><span class="hs-identifier hs-type">symSemObj</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680161476"><span class="hs-identifier hs-type">symVal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680161477"><span class="hs-identifier hs-type">conSemObj</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680161478"><span class="hs-identifier hs-type">conVal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680161479"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-120"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeStatus.html#NodeAction"><span class="hs-identifier hs-type">NodeAction</span></a></span></span></span></span></span></span></span></span></span></span></span><span>
 </span><span id="line-121"></span><span id="nodeTransition"><span class="annot"><span class="annottext">nodeTransition :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
        conSemObj conVal matcher.
@@ -137,7 +137,7 @@ Scheduler
      conProg symSemObj symVal conSemObj conVal matcher
 -&gt; IO NodeAction
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeTransition"><span class="hs-identifier hs-var hs-var">nodeTransition</span></a></span></span><span>
-</span><span id="line-122"></span><span>  </span><span id="local-6989586621680159372"><span class="annot"><span class="annottext">scheduler :: Scheduler
+</span><span id="line-122"></span><span>  </span><span id="local-6989586621680162050"><span class="annot"><span class="annottext">scheduler :: Scheduler
   sketchSpec
   sketch
   conProg
@@ -148,7 +148,7 @@ Scheduler
   conSemObj
   conVal
   matcher
-</span><a href="#local-6989586621680159372"><span class="hs-identifier hs-var">scheduler</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span>
+</span><a href="#local-6989586621680162050"><span class="hs-identifier hs-var">scheduler</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span>
 </span><span id="line-123"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">config :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
        conSemObj conVal matcher.
 Scheduler
@@ -173,7 +173,7 @@ Scheduler
      conSemObj
      conVal
      matcher
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#SchedulerConfig"><span class="hs-identifier hs-type">SchedulerConfig</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680159448"><span id="local-6989586621680159449"><span id="local-6989586621680159450"><span id="local-6989586621680159451"><span id="local-6989586621680159452"><span id="local-6989586621680159453"><span id="local-6989586621680159454"><span id="local-6989586621680159455"><span id="local-6989586621680159456"><span id="local-6989586621680159457"><span id="local-6989586621680159458"><span id="local-6989586621680159459"><span id="local-6989586621680159460"><span id="local-6989586621680159461"><span id="local-6989586621680159462"><span id="local-6989586621680159463"><span id="local-6989586621680159464"><span id="local-6989586621680159465"><span id="local-6989586621680159466"><span id="local-6989586621680159467"><span id="local-6989586621680159468"><span id="local-6989586621680159469"><span id="local-6989586621680159470"><span id="local-6989586621680159471"><span class="annot"><span class="annottext">costObj
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#SchedulerConfig"><span class="hs-identifier hs-type">SchedulerConfig</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680162126"><span id="local-6989586621680162127"><span id="local-6989586621680162128"><span id="local-6989586621680162129"><span id="local-6989586621680162130"><span id="local-6989586621680162131"><span id="local-6989586621680162132"><span id="local-6989586621680162133"><span id="local-6989586621680162134"><span id="local-6989586621680162135"><span id="local-6989586621680162136"><span id="local-6989586621680162137"><span id="local-6989586621680162138"><span id="local-6989586621680162139"><span id="local-6989586621680162140"><span id="local-6989586621680162141"><span id="local-6989586621680162142"><span id="local-6989586621680162143"><span id="local-6989586621680162144"><span id="local-6989586621680162145"><span id="local-6989586621680162146"><span id="local-6989586621680162147"><span id="local-6989586621680162148"><span id="local-6989586621680162149"><span class="annot"><span class="annottext">costObj
 Bool
 Double
 Int
@@ -256,20 +256,6 @@ SchedulerConfig
   conVal
   matcher
 -&gt; Bool
-easySketchFromFastResult :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
-       conSemObj conVal matcher.
-SchedulerConfig
-  sketchSpec
-  sketch
-  conProg
-  costObj
-  cost
-  symSemObj
-  symVal
-  conSemObj
-  conVal
-  matcher
--&gt; Maybe (SymbolTable conProg -&gt; SymbolTable sketchSpec)
 exactCost :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
        conSemObj conVal matcher.
 SchedulerConfig
@@ -298,6 +284,20 @@ SchedulerConfig
   conVal
   matcher
 -&gt; Int
+generalizationSketchFromFastResult :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
+       conSemObj conVal matcher.
+SchedulerConfig
+  sketchSpec
+  sketch
+  conProg
+  costObj
+  cost
+  symSemObj
+  symVal
+  conSemObj
+  conVal
+  matcher
+-&gt; Maybe (SymbolTable conProg -&gt; SymbolTable sketchSpec)
 initialMinimalCost :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
        conSemObj conVal matcher.
 SchedulerConfig
@@ -537,7 +537,7 @@ targetCost :: Int
 exactCost :: Maybe Int
 restartRunningTimeThresholdSeconds :: Int
 fastTrackTimeoutSeconds :: Int
-easySketchFromFastResult :: Maybe (SymbolTable conProg -&gt; SymbolTable sketchSpec)
+generalizationSketchFromFastResult :: Maybe (SymbolTable conProg -&gt; SymbolTable sketchSpec)
 synthesisSketchSymbol :: Text
 successNodeNewTimeoutSeconds :: Int
 cmdline :: Maybe String
@@ -547,7 +547,7 @@ schedulerRandomSeed :: Int
 pollIntervalSeconds :: Double
 biasedDrawProbability :: Double
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Config.html#biasedDrawProbability"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span>
-</span><span id="line-124"></span><span>      </span><span id="local-6989586621680159472"><span id="local-6989586621680159473"><span id="local-6989586621680159474"><span id="local-6989586621680159475"><span id="local-6989586621680159476"><span id="local-6989586621680159477"><span id="local-6989586621680159478"><span id="local-6989586621680159479"><span id="local-6989586621680159480"><span id="local-6989586621680159481"><span id="local-6989586621680159482"><span id="local-6989586621680159483"><span id="local-6989586621680159484"><span class="annot"><span class="annottext">IORef Bool
+</span><span id="line-124"></span><span>      </span><span id="local-6989586621680162150"><span id="local-6989586621680162151"><span id="local-6989586621680162152"><span id="local-6989586621680162153"><span id="local-6989586621680162154"><span id="local-6989586621680162155"><span id="local-6989586621680162156"><span id="local-6989586621680162157"><span id="local-6989586621680162158"><span id="local-6989586621680162159"><span id="local-6989586621680162160"><span id="local-6989586621680162161"><span id="local-6989586621680162162"><span class="annot"><span class="annottext">IORef Bool
 IORef (Maybe Int)
 IORef (HashMap Int (HashSet NodeId))
 IORef (HashMap Int32 NodeId)
@@ -766,10 +766,10 @@ schedulerStartTime :: UTCTime
 everStartedNodesByDepth :: IORef (HashMap Int (HashSet NodeId))
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#currentMinimalCost"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
 </span><span id="line-125"></span><span>    </span><span class="hs-special">}</span><span>
-</span><span id="line-126"></span><span>  </span><span id="local-6989586621680159485"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159485"><span class="hs-identifier hs-var">nid</span></a></span></span><span>
-</span><span id="line-127"></span><span>  </span><span id="local-6989586621680159486"><span class="annot"><span class="annottext">ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159486"><span class="hs-identifier hs-var">response</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621680162163"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680162163"><span class="hs-identifier hs-var">nid</span></a></span></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621680162164"><span class="annot"><span class="annottext">ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
+</span><a href="#local-6989586621680162164"><span class="hs-identifier hs-var">response</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
 </span><span id="line-128"></span><span>    </span><span class="annot"><span class="annottext">Scheduler
   sketchSpec
   sketch
@@ -807,7 +807,7 @@ Scheduler
   conSemObj
   conVal
   matcher
-</span><a href="#local-6989586621680159372"><span class="hs-identifier hs-var">scheduler</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Int -&gt; IO ()) -&gt; Maybe Int -&gt; IO ()
+</span><a href="#local-6989586621680162050"><span class="hs-identifier hs-var">scheduler</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Int -&gt; IO ()) -&gt; Maybe Int -&gt; IO ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
 -&gt; Maybe Int
@@ -815,8 +815,8 @@ forall conProg symSemObj symVal conSemObj conVal matcher.
 ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
 -&gt; Maybe Int
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#processResponseNewCost"><span class="hs-identifier hs-var">processResponseNewCost</span></a></span><span> </span><span class="annot"><span class="annottext">ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159486"><span class="hs-identifier hs-var">response</span></a></span><span>
-</span><span id="line-129"></span><span>    </span><span id="local-6989586621680159487"><span class="annot"><a href="#local-6989586621680159487"><span class="hs-identifier hs-var">nodeStates'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef
+</span><a href="#local-6989586621680162164"><span class="hs-identifier hs-var">response</span></a></span><span>
+</span><span id="line-129"></span><span>    </span><span id="local-6989586621680162165"><span class="annot"><a href="#local-6989586621680162165"><span class="hs-identifier hs-var">nodeStates'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef
   (HashMap
      NodeId
      (NodeState conProg symSemObj symVal conSemObj conVal matcher))
@@ -829,28 +829,28 @@ forall a. IORef a -&gt; IO a
   (HashMap
      NodeId
      (NodeState conProg symSemObj symVal conSemObj conVal matcher))
-</span><a href="#local-6989586621680159474"><span class="hs-identifier hs-var">nodeStates</span></a></span><span>
-</span><span id="line-130"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.lookup</span></span><span> </span><span class="annot"><a href="#local-6989586621680159485"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159487"><span class="hs-identifier hs-type">nodeStates'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-131"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680159489"><span class="annot"><span class="annottext">state :: NodeState conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159489"><span class="hs-identifier hs-var">state</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#NodeState"><span class="hs-identifier hs-type">NodeState</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">nodeStartTime :: forall conProg symSemObj symVal conSemObj conVal matcher.
+</span><a href="#local-6989586621680162152"><span class="hs-identifier hs-var">nodeStates</span></a></span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.lookup</span></span><span> </span><span class="annot"><a href="#local-6989586621680162163"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162165"><span class="hs-identifier hs-type">nodeStates'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-131"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680162167"><span class="annot"><span class="annottext">state :: NodeState conProg symSemObj symVal conSemObj conVal matcher
+</span><a href="#local-6989586621680162167"><span class="hs-identifier hs-var">state</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#NodeState"><span class="hs-identifier hs-type">NodeState</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">nodeStartTime :: forall conProg symSemObj symVal conSemObj conVal matcher.
 NodeState conProg symSemObj symVal conSemObj conVal matcher
 -&gt; Maybe UTCTime
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#nodeStartTime"><span class="hs-identifier hs-var">nodeStartTime</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680159490"><span class="annot"><span class="annottext">UTCTime
-</span><a href="#local-6989586621680159490"><span class="hs-identifier hs-var">startTime</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-132"></span><span>        </span><span id="local-6989586621680159491"><span class="annot"><a href="#local-6989586621680159491"><span class="hs-identifier hs-var">curTime</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO UTCTime
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#nodeStartTime"><span class="hs-identifier hs-var">nodeStartTime</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680162168"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621680162168"><span class="hs-identifier hs-var">startTime</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-132"></span><span>        </span><span id="local-6989586621680162169"><span class="annot"><a href="#local-6989586621680162169"><span class="hs-identifier hs-var">curTime</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO UTCTime
 </span><span class="hs-identifier hs-var">getCurrentTime</span></span><span>
-</span><span id="line-133"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680159492"><span class="annot"><a href="#local-6989586621680159492"><span class="hs-identifier hs-var hs-var">elapsedTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; NominalDiffTime
+</span><span id="line-133"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680162170"><span class="annot"><a href="#local-6989586621680162170"><span class="hs-identifier hs-var hs-var">elapsedTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; NominalDiffTime
 </span><span class="hs-identifier hs-var">diffUTCTime</span></span><span> </span><span class="annot"><span class="annottext">UTCTime
-</span><a href="#local-6989586621680159491"><span class="hs-identifier hs-var">curTime</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
-</span><a href="#local-6989586621680159490"><span class="hs-identifier hs-var">startTime</span></a></span><span>
+</span><a href="#local-6989586621680162169"><span class="hs-identifier hs-var">curTime</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621680162168"><span class="hs-identifier hs-var">startTime</span></a></span><span>
 </span><span id="line-134"></span><span>
-</span><span id="line-135"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">unless</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#responseType"><span class="hs-identifier hs-type">responseType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159486"><span class="hs-identifier hs-type">response</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">==</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#MessageGotExample"><span class="hs-identifier hs-type">MessageGotExample</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-136"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#nodeResponseReverseLog"><span class="hs-identifier hs-var">nodeResponseReverseLog</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159489"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-135"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">unless</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#responseType"><span class="hs-identifier hs-type">responseType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162164"><span class="hs-identifier hs-type">response</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">==</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#MessageGotExample"><span class="hs-identifier hs-type">MessageGotExample</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-136"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#nodeResponseReverseLog"><span class="hs-identifier hs-var">nodeResponseReverseLog</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162167"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-137"></span><span>            </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-138"></span><span>              </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Doc Any -&gt; IO ()
 forall ann. Logger -&gt; Priority -&gt; Doc ann -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-var">logMultiLineDoc</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680159455"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680162133"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">NOTICE</span></span><span> </span><span class="annot"><span class="annottext">(Doc Any -&gt; IO ()) -&gt; Doc Any -&gt; IO ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span>
@@ -871,7 +871,7 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a ann. PPrint a =&gt; a -&gt; Doc ann
 forall ann. NodeId -&gt; Doc ann
 </span><span class="hs-identifier hs-var">pformat</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159485"><span class="hs-identifier hs-var">nid</span></a></span><span>
+</span><a href="#local-6989586621680162163"><span class="hs-identifier hs-var">nid</span></a></span><span>
 </span><span id="line-143"></span><span>                        </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc Any
@@ -882,7 +882,7 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a. IsString a =&gt; String -&gt; a
 </span><span class="hs-identifier hs-var">fromString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NominalDiffTime -&gt; String
 </span><a href="Grisette.Lib.Synth.Util.Show.html#showDiffTime"><span class="hs-identifier hs-var">showDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime
-</span><a href="#local-6989586621680159492"><span class="hs-identifier hs-var">elapsedTime</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621680162170"><span class="hs-identifier hs-var">elapsedTime</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-145"></span><span>                        </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc Any
@@ -894,22 +894,22 @@ ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
 -&gt; Doc ann
 forall a ann. PPrint a =&gt; a -&gt; Doc ann
 </span><span class="hs-identifier hs-var">pformat</span></span><span> </span><span class="annot"><span class="annottext">ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159486"><span class="hs-identifier hs-var">response</span></a></span><span>
+</span><a href="#local-6989586621680162164"><span class="hs-identifier hs-var">response</span></a></span><span>
 </span><span id="line-147"></span><span>                    </span><span class="hs-special">]</span><span>
-</span><span id="line-148"></span><span>            </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621680159493"><span class="annot"><span class="annottext">UTCTime
-</span><a href="#local-6989586621680159493"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
+</span><span id="line-148"></span><span>            </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621680162171"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621680162171"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">NodeMessageAbsoluteTimeLog
   conProg symSemObj symVal conSemObj conVal matcher
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-149"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680159494"><span class="annot"><span class="annottext">diffLastResponseTime :: NominalDiffTime
-</span><a href="#local-6989586621680159494"><span class="hs-identifier hs-var hs-var">diffLastResponseTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; NominalDiffTime
+</span><span id="line-149"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680162172"><span class="annot"><span class="annottext">diffLastResponseTime :: NominalDiffTime
+</span><a href="#local-6989586621680162172"><span class="hs-identifier hs-var hs-var">diffLastResponseTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; NominalDiffTime
 </span><span class="hs-identifier hs-var">diffUTCTime</span></span><span> </span><span class="annot"><span class="annottext">UTCTime
-</span><a href="#local-6989586621680159491"><span class="hs-identifier hs-var">curTime</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
-</span><a href="#local-6989586621680159493"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><a href="#local-6989586621680162169"><span class="hs-identifier hs-var">curTime</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621680162171"><span class="hs-identifier hs-var">t</span></a></span><span>
 </span><span id="line-150"></span><span>              </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Doc Any -&gt; IO ()
 forall ann. Logger -&gt; Priority -&gt; Doc ann -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-var">logMultiLineDoc</span></a></span><span> </span><span class="annot"><span class="annottext">Logger
-</span><a href="#local-6989586621680159455"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680162133"><span class="hs-identifier hs-var">logger</span></a></span><span> </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">NOTICE</span></span><span> </span><span class="annot"><span class="annottext">(Doc Any -&gt; IO ()) -&gt; Doc Any -&gt; IO ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span>
@@ -930,7 +930,7 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a ann. PPrint a =&gt; a -&gt; Doc ann
 forall ann. NodeId -&gt; Doc ann
 </span><span class="hs-identifier hs-var">pformat</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159485"><span class="hs-identifier hs-var">nid</span></a></span><span>
+</span><a href="#local-6989586621680162163"><span class="hs-identifier hs-var">nid</span></a></span><span>
 </span><span id="line-155"></span><span>                        </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc Any
@@ -941,7 +941,7 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a. IsString a =&gt; String -&gt; a
 </span><span class="hs-identifier hs-var">fromString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NominalDiffTime -&gt; String
 </span><a href="Grisette.Lib.Synth.Util.Show.html#showDiffTime"><span class="hs-identifier hs-var">showDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime
-</span><a href="#local-6989586621680159492"><span class="hs-identifier hs-var">elapsedTime</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621680162170"><span class="hs-identifier hs-var">elapsedTime</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-157"></span><span>                        </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc Any
@@ -952,7 +952,7 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a. IsString a =&gt; String -&gt; a
 </span><span class="hs-identifier hs-var">fromString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NominalDiffTime -&gt; String
 </span><a href="Grisette.Lib.Synth.Util.Show.html#showDiffTime"><span class="hs-identifier hs-var">showDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime
-</span><a href="#local-6989586621680159494"><span class="hs-identifier hs-var">diffLastResponseTime</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621680162172"><span class="hs-identifier hs-var">diffLastResponseTime</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-159"></span><span>                        </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc Any
@@ -966,8 +966,8 @@ forall a. IsString a =&gt; String -&gt; a
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; NominalDiffTime
 </span><span class="hs-identifier hs-var">diffUTCTime</span></span><span> </span><span class="annot"><span class="annottext">UTCTime
-</span><a href="#local-6989586621680159491"><span class="hs-identifier hs-var">curTime</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
-</span><a href="#local-6989586621680159483"><span class="hs-identifier hs-var">schedulerStartTime</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621680162169"><span class="hs-identifier hs-var">curTime</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621680162161"><span class="hs-identifier hs-var">schedulerStartTime</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-161"></span><span>                        </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc Any
@@ -979,43 +979,43 @@ ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
 -&gt; Doc ann
 forall a ann. PPrint a =&gt; a -&gt; Doc ann
 </span><span class="hs-identifier hs-var">pformat</span></span><span> </span><span class="annot"><span class="annottext">ProcessResponse conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159486"><span class="hs-identifier hs-var">response</span></a></span><span>
+</span><a href="#local-6989586621680162164"><span class="hs-identifier hs-var">response</span></a></span><span>
 </span><span id="line-163"></span><span>                    </span><span class="hs-special">]</span><span>
-</span><span id="line-164"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621680159495"><span class="annot"><a href="#local-6989586621680159495"><span class="hs-identifier hs-var">newState</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680159496"><span class="annot"><a href="#local-6989586621680159496"><span class="hs-identifier hs-var">nextStep</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#nodeStateTransition"><span class="hs-identifier hs-type">nodeStateTransition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159491"><span class="hs-identifier hs-type">curTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159489"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159486"><span class="hs-identifier hs-type">response</span></a></span><span>
-</span><span id="line-165"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">unless</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#responseType"><span class="hs-identifier hs-type">responseType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159486"><span class="hs-identifier hs-type">response</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">==</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#MessageGotExample"><span class="hs-identifier hs-type">MessageGotExample</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-166"></span><span>          </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-type">logMultiLineDoc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159455"><span class="hs-identifier hs-type">logger</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NOTICE</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
+</span><span id="line-164"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621680162173"><span class="annot"><a href="#local-6989586621680162173"><span class="hs-identifier hs-var">newState</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680162174"><span class="annot"><a href="#local-6989586621680162174"><span class="hs-identifier hs-var">nextStep</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#nodeStateTransition"><span class="hs-identifier hs-type">nodeStateTransition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162169"><span class="hs-identifier hs-type">curTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162167"><span class="hs-identifier hs-type">state</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162164"><span class="hs-identifier hs-type">response</span></a></span><span>
+</span><span id="line-165"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">unless</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#responseType"><span class="hs-identifier hs-type">responseType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162164"><span class="hs-identifier hs-type">response</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">==</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Process.html#MessageGotExample"><span class="hs-identifier hs-type">MessageGotExample</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-166"></span><span>          </span><span class="annot"><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-type">logMultiLineDoc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162133"><span class="hs-identifier hs-type">logger</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NOTICE</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
 </span><span id="line-167"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">vsep</span></span><span>
 </span><span id="line-168"></span><span>              </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="hs-identifier hs-type">nest</span></span><span> </span><span class="annot"><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
 </span><span id="line-169"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">vsep</span></span><span>
-</span><span id="line-170"></span><span>                    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="hs-string">&quot;Node &quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">pformat</span></span><span> </span><span class="annot"><a href="#local-6989586621680159485"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot; transitioned from: &quot;</span></span><span class="hs-special">,</span><span>
-</span><span id="line-171"></span><span>                      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#pformatNodeStateSummary"><span class="hs-identifier hs-type">pformatNodeStateSummary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159489"><span class="hs-identifier hs-type">state</span></a></span><span>
+</span><span id="line-170"></span><span>                    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="hs-string">&quot;Node &quot;</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">pformat</span></span><span> </span><span class="annot"><a href="#local-6989586621680162163"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;&gt;</span></span><span> </span><span class="annot"><span class="hs-string">&quot; transitioned from: &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-171"></span><span>                      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#pformatNodeStateSummary"><span class="hs-identifier hs-type">pformatNodeStateSummary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162167"><span class="hs-identifier hs-type">state</span></a></span><span>
 </span><span id="line-172"></span><span>                    </span><span class="hs-special">]</span><span class="hs-special">,</span><span>
 </span><span id="line-173"></span><span>                </span><span class="annot"><span class="hs-identifier hs-type">nest</span></span><span> </span><span class="annot"><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span>
 </span><span id="line-174"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">vsep</span></span><span>
 </span><span id="line-175"></span><span>                    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="hs-string">&quot;to: &quot;</span></span><span class="hs-special">,</span><span>
-</span><span id="line-176"></span><span>                      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#pformatNodeStateSummaryWithElapsedTime"><span class="hs-identifier hs-type">pformatNodeStateSummaryWithElapsedTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159491"><span class="hs-identifier hs-type">curTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159495"><span class="hs-identifier hs-type">newState</span></a></span><span>
+</span><span id="line-176"></span><span>                      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#pformatNodeStateSummaryWithElapsedTime"><span class="hs-identifier hs-type">pformatNodeStateSummaryWithElapsedTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162169"><span class="hs-identifier hs-type">curTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162173"><span class="hs-identifier hs-type">newState</span></a></span><span>
 </span><span id="line-177"></span><span>                    </span><span class="hs-special">]</span><span>
 </span><span id="line-178"></span><span>              </span><span class="hs-special">]</span><span>
-</span><span id="line-179"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#updateNodeState"><span class="hs-identifier hs-type">updateNodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159372"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159485"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159495"><span class="hs-identifier hs-type">newState</span></a></span><span>
-</span><span id="line-180"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><a href="#local-6989586621680159496"><span class="hs-identifier hs-type">nextStep</span></a></span><span>
+</span><span id="line-179"></span><span>        </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#updateNodeState"><span class="hs-identifier hs-type">updateNodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162050"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162163"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162173"><span class="hs-identifier hs-type">newState</span></a></span><span>
+</span><span id="line-180"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">return</span></span><span> </span><span class="annot"><a href="#local-6989586621680162174"><span class="hs-identifier hs-type">nextStep</span></a></span><span>
 </span><span id="line-181"></span><span>      </span><span class="annot"><span class="annottext">Maybe (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 </span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; IO NodeAction
 forall a. HasCallStack =&gt; String -&gt; a
 </span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;Should not happen: node not found&quot;</span></span><span>
 </span><span id="line-182"></span><span>
-</span><span id="line-183"></span><span id="local-6989586621680159247"><span id="local-6989586621680159248"><span id="local-6989586621680159249"><span id="local-6989586621680159250"><span id="local-6989586621680159251"><span id="local-6989586621680159252"><span id="local-6989586621680159253"><span id="local-6989586621680159254"><span id="local-6989586621680159255"><span id="local-6989586621680159256"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeInferFailureTransition"><span class="hs-identifier hs-type">nodeInferFailureTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-183"></span><span id="local-6989586621680161925"><span id="local-6989586621680161926"><span id="local-6989586621680161927"><span id="local-6989586621680161928"><span id="local-6989586621680161929"><span id="local-6989586621680161930"><span id="local-6989586621680161931"><span id="local-6989586621680161932"><span id="local-6989586621680161933"><span id="local-6989586621680161934"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeInferFailureTransition"><span class="hs-identifier hs-type">nodeInferFailureTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span>
 </span><span id="line-184"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span>
-</span><span id="line-185"></span><span>    </span><span class="annot"><a href="#local-6989586621680159247"><span class="hs-identifier hs-type">sketchSpec</span></a></span><span>
-</span><span id="line-186"></span><span>    </span><span class="annot"><a href="#local-6989586621680159248"><span class="hs-identifier hs-type">sketch</span></a></span><span>
-</span><span id="line-187"></span><span>    </span><span class="annot"><a href="#local-6989586621680159249"><span class="hs-identifier hs-type">conProg</span></a></span><span>
-</span><span id="line-188"></span><span>    </span><span class="annot"><a href="#local-6989586621680159250"><span class="hs-identifier hs-type">costObj</span></a></span><span>
-</span><span id="line-189"></span><span>    </span><span class="annot"><a href="#local-6989586621680159251"><span class="hs-identifier hs-type">cost</span></a></span><span>
-</span><span id="line-190"></span><span>    </span><span class="annot"><a href="#local-6989586621680159252"><span class="hs-identifier hs-type">symSemObj</span></a></span><span>
-</span><span id="line-191"></span><span>    </span><span class="annot"><a href="#local-6989586621680159253"><span class="hs-identifier hs-type">symVal</span></a></span><span>
-</span><span id="line-192"></span><span>    </span><span class="annot"><a href="#local-6989586621680159254"><span class="hs-identifier hs-type">conSemObj</span></a></span><span>
-</span><span id="line-193"></span><span>    </span><span class="annot"><a href="#local-6989586621680159255"><span class="hs-identifier hs-type">conVal</span></a></span><span>
-</span><span id="line-194"></span><span>    </span><span class="annot"><a href="#local-6989586621680159256"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><a href="#local-6989586621680161925"><span class="hs-identifier hs-type">sketchSpec</span></a></span><span>
+</span><span id="line-186"></span><span>    </span><span class="annot"><a href="#local-6989586621680161926"><span class="hs-identifier hs-type">sketch</span></a></span><span>
+</span><span id="line-187"></span><span>    </span><span class="annot"><a href="#local-6989586621680161927"><span class="hs-identifier hs-type">conProg</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="annot"><a href="#local-6989586621680161928"><span class="hs-identifier hs-type">costObj</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span class="annot"><a href="#local-6989586621680161929"><span class="hs-identifier hs-type">cost</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="annot"><a href="#local-6989586621680161930"><span class="hs-identifier hs-type">symSemObj</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><a href="#local-6989586621680161931"><span class="hs-identifier hs-type">symVal</span></a></span><span>
+</span><span id="line-192"></span><span>    </span><span class="annot"><a href="#local-6989586621680161932"><span class="hs-identifier hs-type">conSemObj</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="annot"><a href="#local-6989586621680161933"><span class="hs-identifier hs-type">conVal</span></a></span><span>
+</span><span id="line-194"></span><span>    </span><span class="annot"><a href="#local-6989586621680161934"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-195"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-196"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span><span>
 </span><span id="line-197"></span><span id="nodeInferFailureTransition"><span class="annot"><span class="annottext">nodeInferFailureTransition :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
@@ -1032,7 +1032,7 @@ Scheduler
   conVal
   matcher
 -&gt; NodeId -&gt; IO ()
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeInferFailureTransition"><span class="hs-identifier hs-var hs-var">nodeInferFailureTransition</span></a></span></span><span> </span><span id="local-6989586621680159510"><span class="annot"><span class="annottext">scheduler :: Scheduler
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeInferFailureTransition"><span class="hs-identifier hs-var hs-var">nodeInferFailureTransition</span></a></span></span><span> </span><span id="local-6989586621680162188"><span class="annot"><span class="annottext">scheduler :: Scheduler
   sketchSpec
   sketch
   conProg
@@ -1043,7 +1043,7 @@ Scheduler
   conSemObj
   conVal
   matcher
-</span><a href="#local-6989586621680159510"><span class="hs-identifier hs-var">scheduler</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680159511"><span id="local-6989586621680159512"><span id="local-6989586621680159513"><span id="local-6989586621680159514"><span id="local-6989586621680159515"><span id="local-6989586621680159516"><span id="local-6989586621680159517"><span id="local-6989586621680159518"><span id="local-6989586621680159519"><span id="local-6989586621680159520"><span id="local-6989586621680159521"><span id="local-6989586621680159522"><span id="local-6989586621680159523"><span id="local-6989586621680159524"><span class="annot"><span class="annottext">IORef Bool
+</span><a href="#local-6989586621680162188"><span class="hs-identifier hs-var">scheduler</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680162189"><span id="local-6989586621680162190"><span id="local-6989586621680162191"><span id="local-6989586621680162192"><span id="local-6989586621680162193"><span id="local-6989586621680162194"><span id="local-6989586621680162195"><span id="local-6989586621680162196"><span id="local-6989586621680162197"><span id="local-6989586621680162198"><span id="local-6989586621680162199"><span id="local-6989586621680162200"><span id="local-6989586621680162201"><span id="local-6989586621680162202"><span class="annot"><span class="annottext">IORef Bool
 IORef (Maybe Int)
 IORef (HashMap Int (HashSet NodeId))
 IORef (HashMap Int32 NodeId)
@@ -1306,8 +1306,8 @@ queueLock :: MVar ()
 stopped :: IORef Bool
 schedulerStartTime :: UTCTime
 everStartedNodesByDepth :: IORef (HashMap Int (HashSet NodeId))
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621680159525"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159525"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621680162203"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680162203"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
 </span><span id="line-198"></span><span>  </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Doc Any -&gt; IO ()
 forall ann. Logger -&gt; Priority -&gt; Doc ann -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-var">logMultiLineDoc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SchedulerConfig
@@ -1347,7 +1347,7 @@ SchedulerConfig
   conSemObj
   conVal
   matcher
-</span><a href="#local-6989586621680159511"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680162189"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">NOTICE</span></span><span> </span><span class="annot"><span class="annottext">(Doc Any -&gt; IO ()) -&gt; Doc Any -&gt; IO ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span>
@@ -1358,11 +1358,11 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a ann. PPrint a =&gt; a -&gt; Doc ann
 forall ann. NodeId -&gt; Doc ann
 </span><span class="hs-identifier hs-var">pformat</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159525"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
+</span><a href="#local-6989586621680162203"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc Any
 </span><span class="hs-string">&quot; inferred failure&quot;</span></span><span>
-</span><span id="line-200"></span><span>  </span><span id="local-6989586621680159526"><span class="annot"><a href="#local-6989586621680159526"><span class="hs-identifier hs-var">nodeStates'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef
+</span><span id="line-200"></span><span>  </span><span id="local-6989586621680162204"><span class="annot"><a href="#local-6989586621680162204"><span class="hs-identifier hs-var">nodeStates'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef
   (HashMap
      NodeId
      (NodeState conProg symSemObj symVal conSemObj conVal matcher))
@@ -1375,36 +1375,36 @@ forall a. IORef a -&gt; IO a
   (HashMap
      NodeId
      (NodeState conProg symSemObj symVal conSemObj conVal matcher))
-</span><a href="#local-6989586621680159514"><span class="hs-identifier hs-var">nodeStates</span></a></span><span>
-</span><span id="line-201"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.lookup</span></span><span> </span><span class="annot"><a href="#local-6989586621680159525"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159526"><span class="hs-identifier hs-type">nodeStates'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-202"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680159527"><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159527"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-203"></span><span>      </span><span id="local-6989586621680159528"><span class="annot"><a href="#local-6989586621680159528"><span class="hs-identifier hs-var">newState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
+</span><a href="#local-6989586621680162192"><span class="hs-identifier hs-var">nodeStates</span></a></span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.lookup</span></span><span> </span><span class="annot"><a href="#local-6989586621680162203"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162204"><span class="hs-identifier hs-type">nodeStates'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-202"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680162205"><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
+</span><a href="#local-6989586621680162205"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-203"></span><span>      </span><span id="local-6989586621680162206"><span class="annot"><a href="#local-6989586621680162206"><span class="hs-identifier hs-var">newState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
 -&gt; IO (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 forall conProg symSemObj symVal conSemObj conVal matcher.
 NodeState conProg symSemObj symVal conSemObj conVal matcher
 -&gt; IO (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#nodeStateInferFailureTransition"><span class="hs-identifier hs-var">nodeStateInferFailureTransition</span></a></span><span> </span><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159527"><span class="hs-identifier hs-var">state</span></a></span><span>
-</span><span id="line-204"></span><span>      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#updateNodeState"><span class="hs-identifier hs-type">updateNodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159510"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159525"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159528"><span class="hs-identifier hs-type">newState</span></a></span><span>
+</span><a href="#local-6989586621680162205"><span class="hs-identifier hs-var">state</span></a></span><span>
+</span><span id="line-204"></span><span>      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#updateNodeState"><span class="hs-identifier hs-type">updateNodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162188"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162203"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162206"><span class="hs-identifier hs-type">newState</span></a></span><span>
 </span><span id="line-205"></span><span>    </span><span class="annot"><span class="annottext">Maybe (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 </span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
 forall a. HasCallStack =&gt; String -&gt; a
 </span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;Should not happen&quot;</span></span><span>
 </span><span id="line-206"></span><span>
-</span><span id="line-207"></span><span id="local-6989586621680159529"><span id="local-6989586621680159530"><span id="local-6989586621680159531"><span id="local-6989586621680159532"><span id="local-6989586621680159533"><span id="local-6989586621680159534"><span id="local-6989586621680159535"><span id="local-6989586621680159536"><span id="local-6989586621680159537"><span id="local-6989586621680159538"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeStartTransition"><span class="hs-identifier hs-type">nodeStartTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-207"></span><span id="local-6989586621680162207"><span id="local-6989586621680162208"><span id="local-6989586621680162209"><span id="local-6989586621680162210"><span id="local-6989586621680162211"><span id="local-6989586621680162212"><span id="local-6989586621680162213"><span id="local-6989586621680162214"><span id="local-6989586621680162215"><span id="local-6989586621680162216"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeStartTransition"><span class="hs-identifier hs-type">nodeStartTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span>
 </span><span id="line-208"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span>
-</span><span id="line-209"></span><span>    </span><span class="annot"><a href="#local-6989586621680159529"><span class="hs-identifier hs-type">sketchSpec</span></a></span><span>
-</span><span id="line-210"></span><span>    </span><span class="annot"><a href="#local-6989586621680159530"><span class="hs-identifier hs-type">sketch</span></a></span><span>
-</span><span id="line-211"></span><span>    </span><span class="annot"><a href="#local-6989586621680159531"><span class="hs-identifier hs-type">conProg</span></a></span><span>
-</span><span id="line-212"></span><span>    </span><span class="annot"><a href="#local-6989586621680159532"><span class="hs-identifier hs-type">costObj</span></a></span><span>
-</span><span id="line-213"></span><span>    </span><span class="annot"><a href="#local-6989586621680159533"><span class="hs-identifier hs-type">cost</span></a></span><span>
-</span><span id="line-214"></span><span>    </span><span class="annot"><a href="#local-6989586621680159534"><span class="hs-identifier hs-type">symSemObj</span></a></span><span>
-</span><span id="line-215"></span><span>    </span><span class="annot"><a href="#local-6989586621680159535"><span class="hs-identifier hs-type">symVal</span></a></span><span>
-</span><span id="line-216"></span><span>    </span><span class="annot"><a href="#local-6989586621680159536"><span class="hs-identifier hs-type">conSemObj</span></a></span><span>
-</span><span id="line-217"></span><span>    </span><span class="annot"><a href="#local-6989586621680159537"><span class="hs-identifier hs-type">conVal</span></a></span><span>
-</span><span id="line-218"></span><span>    </span><span class="annot"><a href="#local-6989586621680159538"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-209"></span><span>    </span><span class="annot"><a href="#local-6989586621680162207"><span class="hs-identifier hs-type">sketchSpec</span></a></span><span>
+</span><span id="line-210"></span><span>    </span><span class="annot"><a href="#local-6989586621680162208"><span class="hs-identifier hs-type">sketch</span></a></span><span>
+</span><span id="line-211"></span><span>    </span><span class="annot"><a href="#local-6989586621680162209"><span class="hs-identifier hs-type">conProg</span></a></span><span>
+</span><span id="line-212"></span><span>    </span><span class="annot"><a href="#local-6989586621680162210"><span class="hs-identifier hs-type">costObj</span></a></span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><a href="#local-6989586621680162211"><span class="hs-identifier hs-type">cost</span></a></span><span>
+</span><span id="line-214"></span><span>    </span><span class="annot"><a href="#local-6989586621680162212"><span class="hs-identifier hs-type">symSemObj</span></a></span><span>
+</span><span id="line-215"></span><span>    </span><span class="annot"><a href="#local-6989586621680162213"><span class="hs-identifier hs-type">symVal</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><a href="#local-6989586621680162214"><span class="hs-identifier hs-type">conSemObj</span></a></span><span>
+</span><span id="line-217"></span><span>    </span><span class="annot"><a href="#local-6989586621680162215"><span class="hs-identifier hs-type">conVal</span></a></span><span>
+</span><span id="line-218"></span><span>    </span><span class="annot"><a href="#local-6989586621680162216"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-219"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-220"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span><span>
 </span><span id="line-221"></span><span id="nodeStartTransition"><span class="annot"><span class="annottext">nodeStartTransition :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
@@ -1421,7 +1421,7 @@ Scheduler
   conVal
   matcher
 -&gt; NodeId -&gt; IO ()
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeStartTransition"><span class="hs-identifier hs-var hs-var">nodeStartTransition</span></a></span></span><span> </span><span id="local-6989586621680159557"><span class="annot"><span class="annottext">scheduler :: Scheduler
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeStartTransition"><span class="hs-identifier hs-var hs-var">nodeStartTransition</span></a></span></span><span> </span><span id="local-6989586621680162235"><span class="annot"><span class="annottext">scheduler :: Scheduler
   sketchSpec
   sketch
   conProg
@@ -1432,7 +1432,7 @@ Scheduler
   conSemObj
   conVal
   matcher
-</span><a href="#local-6989586621680159557"><span class="hs-identifier hs-var">scheduler</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680159558"><span id="local-6989586621680159559"><span id="local-6989586621680159560"><span id="local-6989586621680159561"><span id="local-6989586621680159562"><span id="local-6989586621680159563"><span id="local-6989586621680159564"><span id="local-6989586621680159565"><span id="local-6989586621680159566"><span id="local-6989586621680159567"><span id="local-6989586621680159568"><span id="local-6989586621680159569"><span id="local-6989586621680159570"><span id="local-6989586621680159571"><span class="annot"><span class="annottext">IORef Bool
+</span><a href="#local-6989586621680162235"><span class="hs-identifier hs-var">scheduler</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680162236"><span id="local-6989586621680162237"><span id="local-6989586621680162238"><span id="local-6989586621680162239"><span id="local-6989586621680162240"><span id="local-6989586621680162241"><span id="local-6989586621680162242"><span id="local-6989586621680162243"><span id="local-6989586621680162244"><span id="local-6989586621680162245"><span id="local-6989586621680162246"><span id="local-6989586621680162247"><span id="local-6989586621680162248"><span id="local-6989586621680162249"><span class="annot"><span class="annottext">IORef Bool
 IORef (Maybe Int)
 IORef (HashMap Int (HashSet NodeId))
 IORef (HashMap Int32 NodeId)
@@ -1695,8 +1695,8 @@ queueLock :: MVar ()
 stopped :: IORef Bool
 schedulerStartTime :: UTCTime
 everStartedNodesByDepth :: IORef (HashMap Int (HashSet NodeId))
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621680159572"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159572"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621680162250"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680162250"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
 </span><span id="line-222"></span><span>  </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Doc Any -&gt; IO ()
 forall ann. Logger -&gt; Priority -&gt; Doc ann -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-var">logMultiLineDoc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SchedulerConfig
@@ -1736,7 +1736,7 @@ SchedulerConfig
   conSemObj
   conVal
   matcher
-</span><a href="#local-6989586621680159558"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680162236"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">NOTICE</span></span><span> </span><span class="annot"><span class="annottext">(Doc Any -&gt; IO ()) -&gt; Doc Any -&gt; IO ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span>
@@ -1747,11 +1747,11 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a ann. PPrint a =&gt; a -&gt; Doc ann
 forall ann. NodeId -&gt; Doc ann
 </span><span class="hs-identifier hs-var">pformat</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159572"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
+</span><a href="#local-6989586621680162250"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc Any
 </span><span class="hs-string">&quot; started&quot;</span></span><span>
-</span><span id="line-224"></span><span>  </span><span id="local-6989586621680159573"><span class="annot"><a href="#local-6989586621680159573"><span class="hs-identifier hs-var">nodeStates'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef
+</span><span id="line-224"></span><span>  </span><span id="local-6989586621680162251"><span class="annot"><a href="#local-6989586621680162251"><span class="hs-identifier hs-var">nodeStates'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef
   (HashMap
      NodeId
      (NodeState conProg symSemObj symVal conSemObj conVal matcher))
@@ -1764,45 +1764,45 @@ forall a. IORef a -&gt; IO a
   (HashMap
      NodeId
      (NodeState conProg symSemObj symVal conSemObj conVal matcher))
-</span><a href="#local-6989586621680159561"><span class="hs-identifier hs-var">nodeStates</span></a></span><span>
-</span><span id="line-225"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.lookup</span></span><span> </span><span class="annot"><a href="#local-6989586621680159572"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159573"><span class="hs-identifier hs-type">nodeStates'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-226"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680159574"><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159574"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-227"></span><span>      </span><span id="local-6989586621680159575"><span class="annot"><a href="#local-6989586621680159575"><span class="hs-identifier hs-var">newState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
+</span><a href="#local-6989586621680162239"><span class="hs-identifier hs-var">nodeStates</span></a></span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.lookup</span></span><span> </span><span class="annot"><a href="#local-6989586621680162250"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162251"><span class="hs-identifier hs-type">nodeStates'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-226"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680162252"><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
+</span><a href="#local-6989586621680162252"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-227"></span><span>      </span><span id="local-6989586621680162253"><span class="annot"><a href="#local-6989586621680162253"><span class="hs-identifier hs-var">newState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
 -&gt; IO (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 forall conProg symSemObj symVal conSemObj conVal matcher.
 NodeState conProg symSemObj symVal conSemObj conVal matcher
 -&gt; IO (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#nodeStateStartTransition"><span class="hs-identifier hs-var">nodeStateStartTransition</span></a></span><span> </span><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159574"><span class="hs-identifier hs-var">state</span></a></span><span>
-</span><span id="line-228"></span><span>      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#updateNodeState"><span class="hs-identifier hs-type">updateNodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159557"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159572"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159575"><span class="hs-identifier hs-type">newState</span></a></span><span>
+</span><a href="#local-6989586621680162252"><span class="hs-identifier hs-var">state</span></a></span><span>
+</span><span id="line-228"></span><span>      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#updateNodeState"><span class="hs-identifier hs-type">updateNodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162235"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162250"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162253"><span class="hs-identifier hs-type">newState</span></a></span><span>
 </span><span id="line-229"></span><span>
 </span><span id="line-230"></span><span>      </span><span class="hs-comment">-- Get the depth of the node</span><span>
-</span><span id="line-231"></span><span>      </span><span id="local-6989586621680159576"><span class="annot"><a href="#local-6989586621680159576"><span class="hs-identifier hs-var">tree</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="hs-identifier hs-type">readIORef</span></span><span> </span><span class="annot"><a href="#local-6989586621680159566"><span class="hs-identifier hs-type">dcTree</span></a></span><span>
-</span><span id="line-232"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680159577"><span class="annot"><a href="#local-6989586621680159577"><span class="hs-identifier hs-var hs-var">depth</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DCTree (SymbolTable sketchSpec) -&gt; NodeId -&gt; Int
+</span><span id="line-231"></span><span>      </span><span id="local-6989586621680162254"><span class="annot"><a href="#local-6989586621680162254"><span class="hs-identifier hs-var">tree</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="hs-identifier hs-type">readIORef</span></span><span> </span><span class="annot"><a href="#local-6989586621680162244"><span class="hs-identifier hs-type">dcTree</span></a></span><span>
+</span><span id="line-232"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680162255"><span class="annot"><a href="#local-6989586621680162255"><span class="hs-identifier hs-var hs-var">depth</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DCTree (SymbolTable sketchSpec) -&gt; NodeId -&gt; Int
 forall sketchSpec. DCTree sketchSpec -&gt; NodeId -&gt; Int
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.html#nodeDepth"><span class="hs-identifier hs-var">nodeDepth</span></a></span><span> </span><span class="annot"><span class="annottext">DCTree (SymbolTable sketchSpec)
-</span><a href="#local-6989586621680159576"><span class="hs-identifier hs-var">tree</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159572"><span class="hs-identifier hs-var">nid</span></a></span><span>
+</span><a href="#local-6989586621680162254"><span class="hs-identifier hs-var">tree</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680162250"><span class="hs-identifier hs-var">nid</span></a></span><span>
 </span><span id="line-233"></span><span>
 </span><span id="line-234"></span><span>      </span><span class="hs-comment">-- Add the node to the everStartedNodesByDepth for its depth</span><span>
-</span><span id="line-235"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">modifyIORef'</span></span><span> </span><span class="annot"><a href="#local-6989586621680159571"><span class="hs-identifier hs-type">everStartedNodesByDepth</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680159578"><span class="annot"><span class="annottext">HashMap Int (HashSet NodeId)
-</span><a href="#local-6989586621680159578"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
-</span><span id="line-236"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680159581"><span class="annot"><span class="annottext">existingNodes :: HashSet NodeId
-</span><a href="#local-6989586621680159581"><span class="hs-identifier hs-var hs-var">existingNodes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashSet NodeId
+</span><span id="line-235"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">modifyIORef'</span></span><span> </span><span class="annot"><a href="#local-6989586621680162249"><span class="hs-identifier hs-type">everStartedNodesByDepth</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680162256"><span class="annot"><span class="annottext">HashMap Int (HashSet NodeId)
+</span><a href="#local-6989586621680162256"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-236"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680162259"><span class="annot"><span class="annottext">existingNodes :: HashSet NodeId
+</span><a href="#local-6989586621680162259"><span class="hs-identifier hs-var hs-var">existingNodes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashSet NodeId
 -&gt; Int -&gt; HashMap Int (HashSet NodeId) -&gt; HashSet NodeId
 forall k v. (Eq k, Hashable k) =&gt; v -&gt; k -&gt; HashMap k v -&gt; v
 </span><span class="hs-identifier hs-var">HM.lookupDefault</span></span><span> </span><span class="annot"><span class="annottext">HashSet NodeId
 forall a. HashSet a
 </span><span class="hs-identifier hs-var">HS.empty</span></span><span> </span><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621680159577"><span class="hs-identifier hs-var">depth</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Int (HashSet NodeId)
-</span><a href="#local-6989586621680159578"><span class="hs-identifier hs-var">m</span></a></span><span>
-</span><span id="line-237"></span><span>            </span><span id="local-6989586621680159586"><span class="annot"><span class="annottext">updatedNodes :: HashSet NodeId
-</span><a href="#local-6989586621680159586"><span class="hs-identifier hs-var hs-var">updatedNodes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; HashSet NodeId -&gt; HashSet NodeId
+</span><a href="#local-6989586621680162255"><span class="hs-identifier hs-var">depth</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Int (HashSet NodeId)
+</span><a href="#local-6989586621680162256"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-237"></span><span>            </span><span id="local-6989586621680162264"><span class="annot"><span class="annottext">updatedNodes :: HashSet NodeId
+</span><a href="#local-6989586621680162264"><span class="hs-identifier hs-var hs-var">updatedNodes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; HashSet NodeId -&gt; HashSet NodeId
 forall a. (Eq a, Hashable a) =&gt; a -&gt; HashSet a -&gt; HashSet a
 </span><span class="hs-identifier hs-var">HS.insert</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159572"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashSet NodeId
-</span><a href="#local-6989586621680159581"><span class="hs-identifier hs-var">existingNodes</span></a></span><span>
+</span><a href="#local-6989586621680162250"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">HashSet NodeId
+</span><a href="#local-6989586621680162259"><span class="hs-identifier hs-var">existingNodes</span></a></span><span>
 </span><span id="line-238"></span><span>         </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int
 -&gt; HashSet NodeId
 -&gt; HashMap Int (HashSet NodeId)
@@ -1811,27 +1811,27 @@ forall k v.
 (Eq k, Hashable k) =&gt;
 k -&gt; v -&gt; HashMap k v -&gt; HashMap k v
 </span><span class="hs-identifier hs-var">HM.insert</span></span><span> </span><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621680159577"><span class="hs-identifier hs-var">depth</span></a></span><span> </span><span class="annot"><span class="annottext">HashSet NodeId
-</span><a href="#local-6989586621680159586"><span class="hs-identifier hs-var">updatedNodes</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Int (HashSet NodeId)
-</span><a href="#local-6989586621680159578"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><a href="#local-6989586621680162255"><span class="hs-identifier hs-var">depth</span></a></span><span> </span><span class="annot"><span class="annottext">HashSet NodeId
+</span><a href="#local-6989586621680162264"><span class="hs-identifier hs-var">updatedNodes</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Int (HashSet NodeId)
+</span><a href="#local-6989586621680162256"><span class="hs-identifier hs-var">m</span></a></span><span>
 </span><span id="line-239"></span><span>    </span><span class="annot"><span class="annottext">Maybe (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 </span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
 forall a. HasCallStack =&gt; String -&gt; a
 </span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;Should not happen&quot;</span></span><span>
 </span><span id="line-240"></span><span>
-</span><span id="line-241"></span><span id="local-6989586621680159589"><span id="local-6989586621680159590"><span id="local-6989586621680159591"><span id="local-6989586621680159592"><span id="local-6989586621680159593"><span id="local-6989586621680159594"><span id="local-6989586621680159595"><span id="local-6989586621680159596"><span id="local-6989586621680159597"><span id="local-6989586621680159598"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeResetTransition"><span class="hs-identifier hs-type">nodeResetTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-241"></span><span id="local-6989586621680162267"><span id="local-6989586621680162268"><span id="local-6989586621680162269"><span id="local-6989586621680162270"><span id="local-6989586621680162271"><span id="local-6989586621680162272"><span id="local-6989586621680162273"><span id="local-6989586621680162274"><span id="local-6989586621680162275"><span id="local-6989586621680162276"><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeResetTransition"><span class="hs-identifier hs-type">nodeResetTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span>
 </span><span id="line-242"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span>
-</span><span id="line-243"></span><span>    </span><span class="annot"><a href="#local-6989586621680159589"><span class="hs-identifier hs-type">sketchSpec</span></a></span><span>
-</span><span id="line-244"></span><span>    </span><span class="annot"><a href="#local-6989586621680159590"><span class="hs-identifier hs-type">sketch</span></a></span><span>
-</span><span id="line-245"></span><span>    </span><span class="annot"><a href="#local-6989586621680159591"><span class="hs-identifier hs-type">conProg</span></a></span><span>
-</span><span id="line-246"></span><span>    </span><span class="annot"><a href="#local-6989586621680159592"><span class="hs-identifier hs-type">costObj</span></a></span><span>
-</span><span id="line-247"></span><span>    </span><span class="annot"><a href="#local-6989586621680159593"><span class="hs-identifier hs-type">cost</span></a></span><span>
-</span><span id="line-248"></span><span>    </span><span class="annot"><a href="#local-6989586621680159594"><span class="hs-identifier hs-type">symSemObj</span></a></span><span>
-</span><span id="line-249"></span><span>    </span><span class="annot"><a href="#local-6989586621680159595"><span class="hs-identifier hs-type">symVal</span></a></span><span>
-</span><span id="line-250"></span><span>    </span><span class="annot"><a href="#local-6989586621680159596"><span class="hs-identifier hs-type">conSemObj</span></a></span><span>
-</span><span id="line-251"></span><span>    </span><span class="annot"><a href="#local-6989586621680159597"><span class="hs-identifier hs-type">conVal</span></a></span><span>
-</span><span id="line-252"></span><span>    </span><span class="annot"><a href="#local-6989586621680159598"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-243"></span><span>    </span><span class="annot"><a href="#local-6989586621680162267"><span class="hs-identifier hs-type">sketchSpec</span></a></span><span>
+</span><span id="line-244"></span><span>    </span><span class="annot"><a href="#local-6989586621680162268"><span class="hs-identifier hs-type">sketch</span></a></span><span>
+</span><span id="line-245"></span><span>    </span><span class="annot"><a href="#local-6989586621680162269"><span class="hs-identifier hs-type">conProg</span></a></span><span>
+</span><span id="line-246"></span><span>    </span><span class="annot"><a href="#local-6989586621680162270"><span class="hs-identifier hs-type">costObj</span></a></span><span>
+</span><span id="line-247"></span><span>    </span><span class="annot"><a href="#local-6989586621680162271"><span class="hs-identifier hs-type">cost</span></a></span><span>
+</span><span id="line-248"></span><span>    </span><span class="annot"><a href="#local-6989586621680162272"><span class="hs-identifier hs-type">symSemObj</span></a></span><span>
+</span><span id="line-249"></span><span>    </span><span class="annot"><a href="#local-6989586621680162273"><span class="hs-identifier hs-type">symVal</span></a></span><span>
+</span><span id="line-250"></span><span>    </span><span class="annot"><a href="#local-6989586621680162274"><span class="hs-identifier hs-type">conSemObj</span></a></span><span>
+</span><span id="line-251"></span><span>    </span><span class="annot"><a href="#local-6989586621680162275"><span class="hs-identifier hs-type">conVal</span></a></span><span>
+</span><span id="line-252"></span><span>    </span><span class="annot"><a href="#local-6989586621680162276"><span class="hs-identifier hs-type">matcher</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-253"></span><span>  </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.DCTree.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-254"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span><span>
 </span><span id="line-255"></span><span id="nodeResetTransition"><span class="annot"><span class="annottext">nodeResetTransition :: forall sketchSpec sketch conProg costObj cost symSemObj symVal
@@ -1848,7 +1848,7 @@ Scheduler
   conVal
   matcher
 -&gt; NodeId -&gt; IO ()
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeResetTransition"><span class="hs-identifier hs-var hs-var">nodeResetTransition</span></a></span></span><span> </span><span id="local-6989586621680159611"><span class="annot"><span class="annottext">scheduler :: Scheduler
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Transition.html#nodeResetTransition"><span class="hs-identifier hs-var hs-var">nodeResetTransition</span></a></span></span><span> </span><span id="local-6989586621680162289"><span class="annot"><span class="annottext">scheduler :: Scheduler
   sketchSpec
   sketch
   conProg
@@ -1859,7 +1859,7 @@ Scheduler
   conSemObj
   conVal
   matcher
-</span><a href="#local-6989586621680159611"><span class="hs-identifier hs-var">scheduler</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680159612"><span id="local-6989586621680159613"><span id="local-6989586621680159614"><span id="local-6989586621680159615"><span id="local-6989586621680159616"><span id="local-6989586621680159617"><span id="local-6989586621680159618"><span id="local-6989586621680159619"><span id="local-6989586621680159620"><span id="local-6989586621680159621"><span id="local-6989586621680159622"><span id="local-6989586621680159623"><span id="local-6989586621680159624"><span id="local-6989586621680159625"><span class="annot"><span class="annottext">IORef Bool
+</span><a href="#local-6989586621680162289"><span class="hs-identifier hs-var">scheduler</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#Scheduler"><span class="hs-identifier hs-type">Scheduler</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621680162290"><span id="local-6989586621680162291"><span id="local-6989586621680162292"><span id="local-6989586621680162293"><span id="local-6989586621680162294"><span id="local-6989586621680162295"><span id="local-6989586621680162296"><span id="local-6989586621680162297"><span id="local-6989586621680162298"><span id="local-6989586621680162299"><span id="local-6989586621680162300"><span id="local-6989586621680162301"><span id="local-6989586621680162302"><span id="local-6989586621680162303"><span class="annot"><span class="annottext">IORef Bool
 IORef (Maybe Int)
 IORef (HashMap Int (HashSet NodeId))
 IORef (HashMap Int32 NodeId)
@@ -2122,8 +2122,8 @@ queueLock :: MVar ()
 stopped :: IORef Bool
 schedulerStartTime :: UTCTime
 everStartedNodesByDepth :: IORef (HashMap Int (HashSet NodeId))
-</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621680159626"><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159626"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#config"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621680162304"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621680162304"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
 </span><span id="line-256"></span><span>  </span><span class="annot"><span class="annottext">Logger -&gt; Priority -&gt; Doc Any -&gt; IO ()
 forall ann. Logger -&gt; Priority -&gt; Doc ann -&gt; IO ()
 </span><a href="Grisette.Lib.Synth.Util.Logging.html#logMultiLineDoc"><span class="hs-identifier hs-var">logMultiLineDoc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SchedulerConfig
@@ -2163,7 +2163,7 @@ SchedulerConfig
   conSemObj
   conVal
   matcher
-</span><a href="#local-6989586621680159612"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="#local-6989586621680162290"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Priority
 </span><span class="hs-identifier hs-var">NOTICE</span></span><span> </span><span class="annot"><span class="annottext">(Doc Any -&gt; IO ()) -&gt; Doc Any -&gt; IO ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span>
@@ -2174,11 +2174,11 @@ forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 forall a ann. PPrint a =&gt; a -&gt; Doc ann
 forall ann. NodeId -&gt; Doc ann
 </span><span class="hs-identifier hs-var">pformat</span></span><span> </span><span class="annot"><span class="annottext">NodeId
-</span><a href="#local-6989586621680159626"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
+</span><a href="#local-6989586621680162304"><span class="hs-identifier hs-var">nid</span></a></span><span> </span><span class="annot"><span class="annottext">Doc Any -&gt; Doc Any -&gt; Doc Any
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc Any
 </span><span class="hs-string">&quot; reset&quot;</span></span><span>
-</span><span id="line-258"></span><span>  </span><span id="local-6989586621680159627"><span class="annot"><a href="#local-6989586621680159627"><span class="hs-identifier hs-var">nodeStates'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef
+</span><span id="line-258"></span><span>  </span><span id="local-6989586621680162305"><span class="annot"><a href="#local-6989586621680162305"><span class="hs-identifier hs-var">nodeStates'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef
   (HashMap
      NodeId
      (NodeState conProg symSemObj symVal conSemObj conVal matcher))
@@ -2191,18 +2191,18 @@ forall a. IORef a -&gt; IO a
   (HashMap
      NodeId
      (NodeState conProg symSemObj symVal conSemObj conVal matcher))
-</span><a href="#local-6989586621680159615"><span class="hs-identifier hs-var">nodeStates</span></a></span><span>
-</span><span id="line-259"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.lookup</span></span><span> </span><span class="annot"><a href="#local-6989586621680159626"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159627"><span class="hs-identifier hs-type">nodeStates'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-260"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680159628"><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159628"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-261"></span><span>      </span><span id="local-6989586621680159629"><span class="annot"><a href="#local-6989586621680159629"><span class="hs-identifier hs-var">newState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
+</span><a href="#local-6989586621680162293"><span class="hs-identifier hs-var">nodeStates</span></a></span><span>
+</span><span id="line-259"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.lookup</span></span><span> </span><span class="annot"><a href="#local-6989586621680162304"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162305"><span class="hs-identifier hs-type">nodeStates'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-260"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621680162306"><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
+</span><a href="#local-6989586621680162306"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-261"></span><span>      </span><span id="local-6989586621680162307"><span class="annot"><a href="#local-6989586621680162307"><span class="hs-identifier hs-var">newState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
 -&gt; IO (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 forall conProg symSemObj symVal conSemObj conVal matcher.
 NodeState conProg symSemObj symVal conSemObj conVal matcher
 -&gt; IO (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 </span><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.NodeState.html#nodeStateResetTransition"><span class="hs-identifier hs-var">nodeStateResetTransition</span></a></span><span> </span><span class="annot"><span class="annottext">NodeState conProg symSemObj symVal conSemObj conVal matcher
-</span><a href="#local-6989586621680159628"><span class="hs-identifier hs-var">state</span></a></span><span>
-</span><span id="line-262"></span><span>      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#updateNodeState"><span class="hs-identifier hs-type">updateNodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159611"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159626"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680159629"><span class="hs-identifier hs-type">newState</span></a></span><span>
+</span><a href="#local-6989586621680162306"><span class="hs-identifier hs-var">state</span></a></span><span>
+</span><span id="line-262"></span><span>      </span><span class="annot"><a href="Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Scheduler.html#updateNodeState"><span class="hs-identifier hs-type">updateNodeState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162289"><span class="hs-identifier hs-type">scheduler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162304"><span class="hs-identifier hs-type">nid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680162307"><span class="hs-identifier hs-type">newState</span></a></span><span>
 </span><span id="line-263"></span><span>    </span><span class="annot"><span class="annottext">Maybe (NodeState conProg symSemObj symVal conSemObj conVal matcher)
 </span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
 forall a. HasCallStack =&gt; String -&gt; a

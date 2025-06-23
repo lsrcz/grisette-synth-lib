@@ -1728,7 +1728,7 @@ Viable :: Int -> [Example symSemObj symVal conSemObj conVal matcher] -> Maybe In
 [_examples] :: Message conProg symSemObj symVal conSemObj conVal matcher -> [Example symSemObj symVal conSemObj conVal matcher]
 [_knownCost] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
 [_prog] :: Message conProg symSemObj symVal conSemObj conVal matcher -> SymbolTable conProg
-EasySynthFailure :: Int -> Maybe Int -> [Example symSemObj symVal conSemObj conVal matcher] -> Message conProg symSemObj symVal conSemObj conVal matcher
+GeneralizationFailure :: Int -> Maybe Int -> [Example symSemObj symVal conSemObj conVal matcher] -> Message conProg symSemObj symVal conSemObj conVal matcher
 [_curTrack] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Int
 [_knownCost] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
 [_examples] :: Message conProg symSemObj symVal conSemObj conVal matcher -> [Example symSemObj symVal conSemObj conVal matcher]
@@ -1736,7 +1736,7 @@ GotExample :: Example symSemObj symVal conSemObj conVal matcher -> Maybe Int -> 
 [_example] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Example symSemObj symVal conSemObj conVal matcher
 [_knownCost] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
 Success :: Bool -> Int -> [Example symSemObj symVal conSemObj conVal matcher] -> Int -> SymbolTable conProg -> Message conProg symSemObj symVal conSemObj conVal matcher
-[_isEasySuccess] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Bool
+[_isGeneralizationSuccess] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Bool
 [_curTrack] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Int
 [_examples] :: Message conProg symSemObj symVal conSemObj conVal matcher -> [Example symSemObj symVal conSemObj conVal matcher]
 [_cost] :: Message conProg symSemObj symVal conSemObj conVal matcher -> Int
@@ -1760,9 +1760,10 @@ sendNewMinimalCost :: Maybe Int -> Process -> IO ()
 processResponseNewCost :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Maybe Int
 data MessageType
 MessageViable :: MessageType
-MessageEasySynthFailure :: MessageType
+MessageGeneralizationFailure :: MessageType
 MessageGotExample :: MessageType
-MessageSuccess :: MessageType
+MessageSuccess :: Bool -> MessageType
+[_isGeneralizationSuccess] :: MessageType -> Bool
 MessageFailure :: MessageType
 messageType :: Message conProg symSemObj symVal conSemObj conVal matcher -> MessageType
 responseType :: ProcessResponse conProg symSemObj symVal conSemObj conVal matcher -> Either Text MessageType
@@ -1961,6 +1962,20 @@ module Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats
 
 -- | Reports statistics for a scheduler
 reportStatistics :: Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> IO ()
+
+-- | Statistics for a message
+data MessageStat
+MessageStat :: NodeId -> Int -> Double -> MessageStat
+[nodeIdOrigin] :: MessageStat -> NodeId
+[sortedIdx] :: MessageStat -> Int
+[msgTime] :: MessageStat -> Double
+
+-- | Collects statistics about nodes in the scheduler
+collectStats :: UTCTime -> Scheduler sketchSpec sketch conProg costObj cost symSemObj symVal conSemObj conVal matcher -> Maybe Int -> IO Stats
+viableMessageStats :: Stats -> [MessageStat]
+generalizationFailureMessageStats :: Stats -> [MessageStat]
+succeedMessageStats :: Stats -> [MessageStat]
+generalizationSucceedMessageStats :: Stats -> [MessageStat]
 instance GHC.Classes.Eq Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats.StatCategory
 instance Data.Hashable.Class.Hashable Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats.StatCategory
 instance GHC.Classes.Ord Grisette.Lib.Synth.Reasoning.Parallel.Scheduler.Stats.StatCategory
@@ -1975,7 +1990,7 @@ data ParallelSynthesisResult conProg
 NoSolutionFound :: ParallelSynthesisNoSolutionResult -> ParallelSynthesisResult conProg
 SolutionFound :: ParallelSynthesisSolutionFoundResult conProg -> ParallelSynthesisResult conProg
 data ParallelSynthesisNoSolutionResult
-ParallelSynthesisNoSolutionResult :: UTCTime -> Maybe Int -> Int -> Int -> Integer -> Integer -> Double -> Double -> Integer -> ParallelSynthesisNoSolutionResult
+ParallelSynthesisNoSolutionResult :: UTCTime -> Maybe Int -> Int -> Int -> Integer -> Integer -> Double -> Double -> Integer -> Int -> Int -> Double -> Double -> ParallelSynthesisNoSolutionResult
 [aggregatedTime] :: ParallelSynthesisNoSolutionResult -> UTCTime
 [initialCost] :: ParallelSynthesisNoSolutionResult -> Maybe Int
 [numOfNodesInLattice] :: ParallelSynthesisNoSolutionResult -> Int
@@ -1985,8 +2000,12 @@ ParallelSynthesisNoSolutionResult :: UTCTime -> Maybe Int -> Int -> Int -> Integ
 [undeterminedRatio] :: ParallelSynthesisNoSolutionResult -> Double
 [avgComponentChoices] :: ParallelSynthesisNoSolutionResult -> Double
 [numOfComponents] :: ParallelSynthesisNoSolutionResult -> Integer
+[uniqueViableNodes] :: ParallelSynthesisNoSolutionResult -> Int
+[uniqueGeneralizationFailureNodes] :: ParallelSynthesisNoSolutionResult -> Int
+[regularSuccessPercentage] :: ParallelSynthesisNoSolutionResult -> Double
+[generalizationSuccessPercentage] :: ParallelSynthesisNoSolutionResult -> Double
 data ParallelSynthesisSolutionFoundResult conProg
-ParallelSynthesisSolutionFoundResult :: UTCTime -> Maybe Int -> Int -> [ParallelSynthesisSolution conProg] -> Int -> Int -> Integer -> Integer -> Double -> Double -> Integer -> Integer -> ParallelSynthesisSolutionFoundResult conProg
+ParallelSynthesisSolutionFoundResult :: UTCTime -> Maybe Int -> Int -> [ParallelSynthesisSolution conProg] -> Int -> Int -> Integer -> Integer -> Double -> Double -> Integer -> Integer -> Int -> Int -> Double -> Double -> ParallelSynthesisSolutionFoundResult conProg
 [aggregatedTime] :: ParallelSynthesisSolutionFoundResult conProg -> UTCTime
 [initialCost] :: ParallelSynthesisSolutionFoundResult conProg -> Maybe Int
 [bestCost] :: ParallelSynthesisSolutionFoundResult conProg -> Int
@@ -1999,6 +2018,10 @@ ParallelSynthesisSolutionFoundResult :: UTCTime -> Maybe Int -> Int -> [Parallel
 [avgComponentChoices] :: ParallelSynthesisSolutionFoundResult conProg -> Double
 [minNumInsts] :: ParallelSynthesisSolutionFoundResult conProg -> Integer
 [numOfComponents] :: ParallelSynthesisSolutionFoundResult conProg -> Integer
+[uniqueViableNodes] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[uniqueGeneralizationFailureNodes] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[regularSuccessPercentage] :: ParallelSynthesisSolutionFoundResult conProg -> Double
+[generalizationSuccessPercentage] :: ParallelSynthesisSolutionFoundResult conProg -> Double
 data ParallelSynthesisSolution conProg
 ParallelSynthesisSolution :: NodeId -> UTCTime -> UTCTime -> UTCTime -> Bool -> SymbolTable conProg -> ParallelSynthesisSolution conProg
 [_nodeId] :: ParallelSynthesisSolution conProg -> NodeId
@@ -2041,7 +2064,7 @@ data ParallelSynthesisResult conProg
 NoSolutionFound :: ParallelSynthesisNoSolutionResult -> ParallelSynthesisResult conProg
 SolutionFound :: ParallelSynthesisSolutionFoundResult conProg -> ParallelSynthesisResult conProg
 data ParallelSynthesisSolutionFoundResult conProg
-ParallelSynthesisSolutionFoundResult :: UTCTime -> Maybe Int -> Int -> [ParallelSynthesisSolution conProg] -> Int -> Int -> Integer -> Integer -> Double -> Double -> Integer -> Integer -> ParallelSynthesisSolutionFoundResult conProg
+ParallelSynthesisSolutionFoundResult :: UTCTime -> Maybe Int -> Int -> [ParallelSynthesisSolution conProg] -> Int -> Int -> Integer -> Integer -> Double -> Double -> Integer -> Integer -> Int -> Int -> Double -> Double -> ParallelSynthesisSolutionFoundResult conProg
 [aggregatedTime] :: ParallelSynthesisSolutionFoundResult conProg -> UTCTime
 [initialCost] :: ParallelSynthesisSolutionFoundResult conProg -> Maybe Int
 [bestCost] :: ParallelSynthesisSolutionFoundResult conProg -> Int
@@ -2054,8 +2077,12 @@ ParallelSynthesisSolutionFoundResult :: UTCTime -> Maybe Int -> Int -> [Parallel
 [avgComponentChoices] :: ParallelSynthesisSolutionFoundResult conProg -> Double
 [minNumInsts] :: ParallelSynthesisSolutionFoundResult conProg -> Integer
 [numOfComponents] :: ParallelSynthesisSolutionFoundResult conProg -> Integer
+[uniqueViableNodes] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[uniqueGeneralizationFailureNodes] :: ParallelSynthesisSolutionFoundResult conProg -> Int
+[regularSuccessPercentage] :: ParallelSynthesisSolutionFoundResult conProg -> Double
+[generalizationSuccessPercentage] :: ParallelSynthesisSolutionFoundResult conProg -> Double
 data ParallelSynthesisNoSolutionResult
-ParallelSynthesisNoSolutionResult :: UTCTime -> Maybe Int -> Int -> Int -> Integer -> Integer -> Double -> Double -> Integer -> ParallelSynthesisNoSolutionResult
+ParallelSynthesisNoSolutionResult :: UTCTime -> Maybe Int -> Int -> Int -> Integer -> Integer -> Double -> Double -> Integer -> Int -> Int -> Double -> Double -> ParallelSynthesisNoSolutionResult
 [aggregatedTime] :: ParallelSynthesisNoSolutionResult -> UTCTime
 [initialCost] :: ParallelSynthesisNoSolutionResult -> Maybe Int
 [numOfNodesInLattice] :: ParallelSynthesisNoSolutionResult -> Int
@@ -2065,6 +2092,10 @@ ParallelSynthesisNoSolutionResult :: UTCTime -> Maybe Int -> Int -> Int -> Integ
 [undeterminedRatio] :: ParallelSynthesisNoSolutionResult -> Double
 [avgComponentChoices] :: ParallelSynthesisNoSolutionResult -> Double
 [numOfComponents] :: ParallelSynthesisNoSolutionResult -> Integer
+[uniqueViableNodes] :: ParallelSynthesisNoSolutionResult -> Int
+[uniqueGeneralizationFailureNodes] :: ParallelSynthesisNoSolutionResult -> Int
+[regularSuccessPercentage] :: ParallelSynthesisNoSolutionResult -> Double
+[generalizationSuccessPercentage] :: ParallelSynthesisNoSolutionResult -> Double
 data ParallelSynthesisSolution conProg
 ParallelSynthesisSolution :: NodeId -> UTCTime -> UTCTime -> UTCTime -> Bool -> SymbolTable conProg -> ParallelSynthesisSolution conProg
 [_nodeId] :: ParallelSynthesisSolution conProg -> NodeId
